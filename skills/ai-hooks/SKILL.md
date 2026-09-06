@@ -28,12 +28,16 @@ ts,session_id,user,branch,turns,input_tokens,output_tokens,cache_read_tokens,cac
 $GITLAB_USER or `git config user.name`.
 
 ## Pricing
-session-stop.js reads prices from ai/models.yaml if present:
+session-stop.js prices a run with the model the transcript says actually ran, so any
+provider costs correctly. It reads ai/models.yaml if present:
 ```yaml
 pricing:            # USD per million tokens
   default: { input: 3, output: 15, cache_read: 0.3, cache_write: 3.75 }
+  claude-haiku-4-5: { input: 1, output: 5, cache_read: 0.1, cache_write: 1.25 }
 ```
-Otherwise it uses the default above and marks the row with `~` in cost.
+Match order: the exact model id, then the longest listed id the model starts with (so
+`claude-haiku-4-5` covers `claude-haiku-4-5-20251001`), then `default`. With no match it
+uses the built-in figures above and marks the row `~` in cost — an estimate, not a price.
 
 ## dont-touch.md format the guard reads
 Lines beginning with "- `" — the backticked path prefix is the rule:

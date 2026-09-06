@@ -17,7 +17,8 @@ Hooks in `hooks/hooks.json` fire on SessionStart, PreToolUse, PostToolUse and St
 
 ## Data ownership
 Owns the templates and the prompt text. Writes only to `ai/runs/` in the repo it runs in.
-Reads `ai/models.yaml` for model aliases; the LiteLLM proxy at llm.nsix.io resolves them.
+Reads `ai/models.yaml` for the model each headless task pins, and for per-model prices.
+Blank there means the tool's own configured model, so no provider is assumed.
 
 ## Environments
 Developer machines and CI. `make ai` / `make review` are the headless path; developers use

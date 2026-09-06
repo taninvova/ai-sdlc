@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.6.0 — 2026-09-06
+- **Any model, any provider.** `ai/models.yaml` now ships blank, meaning "whatever the tool
+  is already configured with", and `make ai` passes no `--model` at all unless a value is
+  set — so a pinned alias is never required and no endpoint is assumed. Commented examples
+  cover a plain model id and a gateway alias. `CMD ?= claude` makes the binary overridable.
+- **Costs are priced by the model that actually ran.** The session-stop hook reads the model
+  from the transcript and matches `pricing:` by exact id, then by longest id prefix (so
+  `claude-haiku-4-5` covers `claude-haiku-4-5-20251001`), then `default`. Previously every
+  run was costed at one hardcoded Anthropic rate. No match still writes `~` for an estimate.
+- **`make ai` was broken and never invoked a model at all** — pre-existing, since before the
+  0.5.x work. The recipe embedded a blank line and two unindented lines inside the prompt
+  string, and a makefile recipe ends at the first line without a leading tab, so everything
+  from `claude -p` onward was parsed as makefile text rather than run. `make review`
+  inherited the failure. The prompt is now assembled into a temp file on tab-indented
+  continuation lines.
+- **`make review` corrupted diffs containing `$`.** The diff was routed through a make
+  variable, which re-expands `$`; it now goes to a file passed as `INPUT_FILE`, byte for
+  byte. `INPUT_FILE=<path>` works for any task.
+- No n6-specific configuration remains in the templates: the AGENTS.md setup section names
+  no provider, and `ai/docs/architecture.md` no longer claims a LiteLLM proxy resolves aliases.
+
 ## 0.5.1 — 2026-09-06
 - **Standalone.** The plugin names, reads and version-pins no other repo. There was never a
   functional dependency — no package manager, lockfile, submodule or out-of-repo path, and

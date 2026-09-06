@@ -1,6 +1,6 @@
 {
   "name": "sdlc",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "n6 AI SDLC core: the ai/ layout (AGENTS.md, context docs, task prompts, reviewer / tester / architect agents, fleet map), session/edit/usage logging hooks, dont-touch guard, adapter sync. Standalone — no dependency on any other repo; framework overlays build on it through the template slots.",
   "author": { "name": "n6 platform" },
   "keywords": ["ai-sdlc", "hooks", "review", "investigate", "n6"]

@@ -36,7 +36,9 @@ The spec in specs/ for the change · the plan in ai/plans/ if one exists
 /ai-test gaps → /ai-check → commit `ai(<task>): …` → MR (label ai-assisted)
 
 ## Setup (once per developer)
-n6: ANTHROPIC_BASE_URL=https://llm.nsix.io/anthropic and ANTHROPIC_API_KEY=<your virtual key>
+Works with whatever provider your tool is already configured with — nothing here assumes one.
+Pointing at a gateway instead: set the tool's base-URL and key env vars (Claude Code:
+ANTHROPIC_BASE_URL, ANTHROPIC_API_KEY). ai/models.yaml pins a model per task if you need one.
 Personal preferences go in ~/.claude/CLAUDE.md or CLAUDE.local.md, never in ai/.
 
 ## Owner

@@ -24,7 +24,9 @@ Plan first for anything touching more than ~3 files. Reset the working tree betw
 Steering in chat for 20+ minutes with code changed? Stop, write the decision into the plan, commit, continue.
 
 ## Setup (once per developer)
-n6: ANTHROPIC_BASE_URL=https://llm.nsix.io/anthropic and ANTHROPIC_API_KEY=<your virtual key>
+Works with whatever provider your tool is already configured with — nothing here assumes one.
+Pointing at a gateway instead: set the tool's base-URL and key env vars (Claude Code:
+ANTHROPIC_BASE_URL, ANTHROPIC_API_KEY). ai/models.yaml pins a model per task if you need one.
 Personal preferences go in ~/.claude/CLAUDE.md or CLAUDE.local.md, never in ai/.
 
 ## Owner
