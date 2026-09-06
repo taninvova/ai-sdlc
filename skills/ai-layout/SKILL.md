@@ -1,7 +1,7 @@
 ---
 name: ai-layout
 user-invocable: false
-description: The ai/ directory every n6 repo carries — AGENTS.md contract, context docs, task prompts (explore, spec, plan, step, fix, chore, check — exposed as /ai-<name>), reviewer, plans, explorations, run log, Makefile include, tool adapters. Use when adding the layout to a repo, adding or changing a task prompt or context doc, or when a session asks where an AI-related file belongs.
+description: The ai/ directory every n6 repo carries — AGENTS.md contract, context docs, task prompts (explore, spec, plan, test, step, fix, chore, check — exposed as /ai-<name>), reviewer and tester agents, plans, explorations, run log, Makefile include, tool adapters. Use when adding the layout to a repo, adding or changing a task prompt or context doc, or when a session asks where an AI-related file belongs.
 ---
 
 # ai-layout
@@ -19,9 +19,10 @@ ai/docs/architecture.md       shape, module map, data ownership, environments
 ai/docs/coding-standards.md   rules that hold in every repo; overlays add framework rules
 ai/docs/definition-of-done.md
 ai/docs/dont-touch.md         guard-paths.js reads the backticked prefixes
-ai/tasks/*.md                 explore spec plan step fix chore check  → /ai-<name> slash commands
+ai/tasks/*.md                 explore spec plan test step fix chore check  → /ai-<name> slash commands
 ai/skills/                    empty here; overlays add framework skills
 ai/agents/reviewer.md         project copy of the plugin reviewer (may add project checks)
+ai/agents/tester.md           project copy of the plugin tester (test conventions go here)
 ai/explorations/            /ai-explore output: options + recommendation per request
 ai/plans/  ai/plans/done/     plans in flight / merged
 ai/runs/log.csv               header only; hooks append
@@ -49,7 +50,7 @@ Slash commands (generated from ai/tasks/) are the default for developers.
 Both read identical bytes, so the cache is shared.
 
 ## The loop
-/ai-explore → /ai-spec → /ai-plan → /ai-step (one step) → /ai-check → commit → MR.
+/ai-explore → /ai-spec → /ai-plan → /ai-test red → /ai-step (one step) → /ai-test gaps → /ai-check → commit → MR.
 /ai-explore is optional for small, obvious changes; mandatory when the request could be
 built more than one way or touches an RMQ contract, a schema, or a public API.
 
