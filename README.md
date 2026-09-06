@@ -2,6 +2,8 @@
 
 The operating-model half of AI-native delivery, as a Claude Code plugin. Standalone: it depends on no other repo and adds no runtime dependency. Framework-neutral — overlay plugins build on it by filling the `{{…_extra}}` slots in its templates.
 
+**[docs/workflow.md](docs/workflow.md) — how to install it, what each command is for, and the order to run them in.**
+
 ## Commands
 - `/sdlc:adopt` — add the `ai/` layout to an existing repo (any stack)
 - `/sdlc:explore <request>` — before a spec: read the code, present 2–4 implementation options with effort, risk, reversibility, a recommendation and the `/ai-spec` line to run next; writes `ai/explorations/NNNN-slug.md`
@@ -29,6 +31,8 @@ Registered plugin-wide; no-op in repos without `ai/`; never print to stdout (cac
 Local: `claude --plugin-dir ~/code/nsix/ai/ai-sdlc`
 
 ## The loop each repo follows
+Full walkthrough with a worked example: [docs/workflow.md](docs/workflow.md).
+
 `/ai-design` first when the capability spans services or changes a contract between them — `/ai-fleet` fills the service map it reads, `/ai-adr` records the decision. Otherwise start at `/ai-explore`.
 
 `/ai-explore` (options) → `/ai-spec` (Given/When/Then) → `/ai-plan` (checklist) → `/ai-test red` (ACs fail first) → `/ai-step` one step at a time → `/ai-test gaps` → `/ai-check` → commit `ai(<task>): …` → MR labelled `ai-assisted`.
