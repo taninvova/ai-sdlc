@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Regenerates tool adapters from ai/. Never edit .claude/ or .cursor/ by hand.
 set -euo pipefail
+shopt -s nullglob
 if ! ls ai/tasks/*.md >/dev/null 2>&1; then
   echo "sync-adapters: no ai/tasks/*.md found — this repo has no ai/ layout; nothing to sync." >&2
   exit 1
@@ -16,7 +17,9 @@ for s in ai/skills/*/; do
   n=$(basename "$s"); mkdir -p ".claude/skills/$n"
   ln -sfn "../../../ai/skills/$n/SKILL.md" ".claude/skills/$n/SKILL.md"
 done
-ln -sfn ../../ai/agents/reviewer.md .claude/agents/reviewer.md
+for a in ai/agents/*.md; do
+  ln -sfn "../../$a" ".claude/agents/$(basename "$a")"
+done
 cat > .cursor/rules/ai.mdc <<'MDC'
 ---
 description: Project AI instructions
