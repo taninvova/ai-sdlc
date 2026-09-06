@@ -6,14 +6,12 @@ if ! ls ai/tasks/*.md >/dev/null 2>&1; then
   exit 1
 fi
 mkdir -p .claude/commands .claude/skills .claude/agents .cursor/rules
-rm -f .claude/commands/*.md
+rm -f .claude/commands/ai-*.md
 for t in ai/tasks/*.md; do
   n=$(basename "$t" .md)
   d=$(sed -n 's/^description: *//p' "$t" | head -1)
-  printf -- '---\ndescription: %s\n---\n@../../%s\n' "$d" "$t" > ".claude/commands/$n.md"
+  printf -- '---\ndescription: %s\n---\n@../../%s\n' "$d" "$t" > ".claude/commands/ai-$n.md"
 done
-# /feature is the friendlier name for new-feature
-[ -f .claude/commands/new-feature.md ] && cp .claude/commands/new-feature.md .claude/commands/feature.md
 for s in ai/skills/*/; do
   n=$(basename "$s"); mkdir -p ".claude/skills/$n"
   ln -sfn "../../../ai/skills/$n/SKILL.md" ".claude/skills/$n/SKILL.md"

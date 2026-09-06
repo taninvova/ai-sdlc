@@ -19,8 +19,8 @@ $(INPUT)"; \
 
 review:
 	@BASE=$$(git merge-base HEAD main 2>/dev/null || git merge-base HEAD develop); \
-	$(MAKE) ai TASK=review INPUT="$$(git diff $$BASE...HEAD)" && \
-	node ai/make/gate.js $$(ls -t $(RUNS)/*-review.json | head -1)
+	$(MAKE) ai TASK=check INPUT="$$(git diff $$BASE...HEAD)" && \
+	node ai/make/gate.js $$(ls -t $(RUNS)/*-check.json | head -1)
 
 ai-sync:
 	@bash ai/make/sync-adapters.sh

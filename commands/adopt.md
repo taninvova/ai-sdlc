@@ -7,7 +7,7 @@ Add the generic ai-sdlc layout to the current repo. Use the `ai-layout` and `ai-
 skills. Do NOT scaffold an application — that is what the nextjs-scaffold and
 nestjs-scaffold plugins do; they call this same layout and add their overlays.
 
-1. If `ai/` already exists, stop and suggest /sync instead.
+1. If `ai/` already exists, stop and suggest /sdlc:sync instead.
 2. Detect the stack from the repo (package.json, go.mod, pyproject, etc.) and the
    commands that build, lint, typecheck and test it. Fill `{{stack}}` and `{{commands}}`.
 3. Copy `${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/templates/` to the repo root; substitute
