@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.7.0 — 2026-09-06
+- **`ai/runs/log.csv` has one schema.** Two writers were appending rows with different
+  column meanings to the same file: the Stop hook wrote
+  `ts,session_id,user,branch,turns,…` while `ai/make/log.js` wrote
+  `ts,run_id,task,tool,model,…`. Any reader of a repo that used both got nonsense, and only
+  headless runs recorded the model. Both now write the same 16 columns —
+  `ts,session_id,source,user,branch,task,tool,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted`
+  — with `source` naming the writer (`session` or `make`) and each blanking what it cannot
+  know. Fields are CSV-quoted, so a branch or model containing a comma no longer shifts
+  every later column.
+- **Migration is automatic and lossless.** A log.csv with any other header has its rows
+  moved to `ai/runs/log.previous.csv` on the next write, and a clean file started. Old rows
+  are not reinterpreted — they came from two writers and cannot be told apart safely.
+- **`skills/ai-hooks/fixtures/check-log-schema.sh`** pins the two declarations together: the
+  writers must agree, every row must match the header width, and migration must preserve the
+  old rows. Verified to fail when the headers are made to drift.
+
 ## 0.6.0 — 2026-09-06
 - **Any model, any provider.** `ai/models.yaml` now ships blank, meaning "whatever the tool
   is already configured with", and `make ai` passes no `--model` at all unless a value is

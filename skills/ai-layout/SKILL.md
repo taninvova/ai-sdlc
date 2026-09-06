@@ -29,7 +29,7 @@ ai/agents/architect.md        project copy of the plugin architect (boundaries, 
 ai/designs/                   /ai-design output: where a capability lives, contracts, data ownership
 ai/explorations/            /ai-explore output: options + recommendation per request
 ai/plans/  ai/plans/done/     plans in flight / merged
-ai/runs/log.csv               header only; hooks append
+ai/runs/log.csv               header only; the Stop hook and ai/make/log.js append the same 16 columns
 ai/make/ai.mk                 headless runner for CI (make ai / make review)
 ai/make/gate.js  log.js  sync-adapters.sh
 specs/                        one file per feature, Given/When/Then

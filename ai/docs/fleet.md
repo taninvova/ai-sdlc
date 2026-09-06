@@ -62,7 +62,6 @@ carries per-model prices for the cost column of `ai/runs/log.csv`.
   already exists. Designed in `ai/designs/0001-layout-version-and-drift.md`, not built.
 - `skills/ai-layout/templates/specs/0000-scaffold.md` still names "ai-base", the plugin's
   pre-0.2.0 name (d).
-- Two writers append to `ai/runs/log.csv` with different columns (d): the session-stop hook
-  writes `session_id,user,branch,turns,…` while `ai/make/log.js` writes
-  `run_id,task,tool,model,…`. Same file, incompatible rows; only the headless writer records
-  the model. Needs one schema.
+- ~~Two writers appended to `ai/runs/log.csv` with different columns~~ — **fixed** in 0.7.0:
+  one 16-column schema, a `source` column saying which writer produced the row, and
+  `fixtures/check-log-schema.sh` pinning the two declarations together.

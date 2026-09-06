@@ -37,6 +37,24 @@ try {
 const cost = (inp * price.input + out * price.output + cr * price.cache_read + cw * price.cache_write) / 1e6;
 const hit = (cr / (inp + cr + cw || 1)).toFixed(2);
 
+// Same columns as the headless writer, ai/make/log.js. Change one, change both.
+const HEADER = "ts,session_id,source,user,branch,task,tool,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted";
 const file = path.join(ai, "runs", "log.csv");
-if (!fs.existsSync(file)) fs.writeFileSync(file, "ts,session_id,user,branch,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted\n");
-fs.appendFileSync(file, [new Date().toISOString(), ev.session_id, user(cwd), branch(cwd), turns, inp, out, cr, cw, hit, approx + cost.toFixed(4), ""].join(",") + "\n");
+try {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  if (!fs.existsSync(file)) fs.writeFileSync(file, HEADER + "\n");
+  else {
+    const body = fs.readFileSync(file, "utf8");
+    // Pre-schema rows came from two writers with different column meanings and cannot be
+    // reinterpreted safely — move them aside rather than guess.
+    if (body.split("\n")[0] !== HEADER) {
+      fs.appendFileSync(path.join(path.dirname(file), "log.previous.csv"), body);
+      fs.writeFileSync(file, HEADER + "\n");
+    }
+  }
+  const csv = v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  fs.appendFileSync(file, [
+    new Date().toISOString(), ev.session_id, "session", user(cwd), branch(cwd),
+    "", "claude", model, turns, inp, out, cr, cw, hit, approx + cost.toFixed(4), "",
+  ].map(csv).join(",") + "\n");
+} catch {}
