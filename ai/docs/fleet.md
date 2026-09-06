@@ -46,9 +46,9 @@ or version-pinned by anything in this repo — the dependency runs one way only.
 
 ## Environments
 Developer machines (plugin installed from a git marketplace, or `--plugin-dir` locally) and
-CI (`make ai` / `make review`, headless, non-interactive). `ai/models.yaml` maps each tool to
-a model; the n6 aliases resolve through the LiteLLM proxy, and the file documents how to
-replace them with concrete model ids for standalone use.
+CI (`make ai` / `make review`, headless, non-interactive). Provider-agnostic: `ai/models.yaml`
+is blank by default, so each tool runs whatever model it is configured with, and the same file
+carries per-model prices for the cost column of `ai/runs/log.csv`.
 
 ## Known gaps
 - ~~`.claude-plugin/marketplace.json` pinned sdlc at `0.3.0` while `plugin.json` was
@@ -62,3 +62,7 @@ replace them with concrete model ids for standalone use.
   already exists. Designed in `ai/designs/0001-layout-version-and-drift.md`, not built.
 - `skills/ai-layout/templates/specs/0000-scaffold.md` still names "ai-base", the plugin's
   pre-0.2.0 name (d).
+- Two writers append to `ai/runs/log.csv` with different columns (d): the session-stop hook
+  writes `session_id,user,branch,turns,…` while `ai/make/log.js` writes
+  `run_id,task,tool,model,…`. Same file, incompatible rows; only the headless writer records
+  the model. Needs one schema.

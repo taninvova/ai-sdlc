@@ -15,7 +15,7 @@ Never write into `.claude/` or `.cursor/` by hand — `ai/make/sync-adapters.sh`
 
 ```
 ai/AGENTS.md                  the contract, < 60 lines, no dynamic content
-ai/models.yaml                n6: proxy aliases · standalone: one model · pricing block for hooks
+ai/models.yaml                blank = the tool's own model (any provider) · or pin an id · per-model prices
 ai/docs/architecture.md       shape, module map, data ownership, environments
 ai/docs/fleet.md              service map the architect reads; /ai-fleet fills it by asking
 ai/docs/coding-standards.md   rules that hold in every repo; overlays add framework rules
@@ -50,7 +50,9 @@ AGENTS.md  →  "See ai/AGENTS.md"      CLAUDE.md  →  "@ai/AGENTS.md"
 
 ## Interactive vs headless
 Slash commands (generated from ai/tasks/) are the default for developers.
-`make ai TASK=<name> INPUT=…` runs the same file headless — CI uses this.
+`make ai TASK=<name> INPUT=…` runs the same file headless — CI uses this. Pass
+`INPUT_FILE=<path>` instead for anything large or containing `$`, quotes or newlines (a diff):
+make re-expands values routed through a variable, a file is passed through untouched.
 Both read identical bytes, so the cache is shared.
 
 ## The loop
