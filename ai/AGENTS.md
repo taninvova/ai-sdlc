@@ -3,7 +3,8 @@
 ## What this is
 The `sdlc` Claude Code plugin: the operating model for AI-native delivery at n6. It ships
 the `ai/` layout as templates, the task prompts, the reviewer agent, and the logging and
-dont-touch hooks. The nextjs and nestjs scaffolds (ai/nextjs-base, ai/nestjs-base) build on it.
+dont-touch hooks. Standalone: it depends on no other repo. Framework overlay plugins build
+on it through the `{{…_extra}}` template slots.
 Stack: markdown prompts + Node hook scripts + bash. No application code, no build step.
 
 ## Commands

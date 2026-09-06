@@ -1,5 +1,5 @@
 {
   "name": "n6",
   "owner": { "name": "n6 platform" },
-  "plugins": [ { "name": "sdlc", "source": ".", "description": "n6 AI SDLC core plugin (sdlc)", "version": "0.5.0" } ]
+  "plugins": [ { "name": "sdlc", "source": ".", "description": "n6 AI SDLC core plugin (sdlc)", "version": "0.5.1" } ]
 }
