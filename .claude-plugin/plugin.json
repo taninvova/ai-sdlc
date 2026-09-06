@@ -1,7 +1,7 @@
 {
   "name": "sdlc",
-  "version": "0.3.0",
-  "description": "n6 AI SDLC core: the ai/ layout (AGENTS.md, context docs, task prompts incl. /investigate, reviewer), session/edit/usage logging hooks, dont-touch guard, adapter sync. Framework scaffolds (nextjs-scaffold, nestjs-scaffold) build on this.",
+  "version": "0.4.0",
+  "description": "n6 AI SDLC core: the ai/ layout (AGENTS.md, context docs, task prompts, reviewer and tester agents), session/edit/usage logging hooks, dont-touch guard, adapter sync. Framework scaffolds (nextjs-scaffold, nestjs-scaffold) build on this.",
   "author": { "name": "n6 platform" },
   "keywords": ["ai-sdlc", "hooks", "review", "investigate", "n6"]
 }

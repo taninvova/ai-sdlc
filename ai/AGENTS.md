@@ -11,7 +11,7 @@ Syntax check hooks: `for f in skills/ai-hooks/scripts/*.js; do node --check "$f"
 Syntax check bash: `bash -n skills/ai-layout/templates/ai/make/sync-adapters.sh`
 Adapter sync (this repo): `bash ai/make/sync-adapters.sh`
 Hook fixtures: `node skills/ai-hooks/scripts/session-stop.js < skills/ai-hooks/fixtures/stop.json`
-Slash commands: /ai-explore /ai-spec /ai-plan /ai-step /ai-fix /ai-chore /ai-check
+Slash commands: /ai-explore /ai-spec /ai-plan /ai-test /ai-step /ai-fix /ai-chore /ai-check
 Headless (CI only): make ai TASK=<name> INPUT="…"
 
 ## This repo is its own template
@@ -31,8 +31,8 @@ ai/docs/coding-standards.md · ai/docs/definition-of-done.md · ai/docs/architec
 The spec in specs/ for the change · the plan in ai/plans/ if one exists
 
 ## Workflow
-/ai-explore (options) → /ai-spec → /ai-plan → /ai-step one step at a time → /ai-check →
-commit `ai(<task>): …` → MR (label ai-assisted)
+/ai-explore (options) → /ai-spec → /ai-plan → /ai-test red → /ai-step one step at a time →
+/ai-test gaps → /ai-check → commit `ai(<task>): …` → MR (label ai-assisted)
 
 ## Setup (once per developer)
 n6: ANTHROPIC_BASE_URL=https://llm.nsix.io/anthropic and ANTHROPIC_API_KEY=<your virtual key>
