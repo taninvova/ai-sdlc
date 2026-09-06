@@ -28,7 +28,7 @@ The layout exists here so plugin changes run through the loop they prescribe.
 - Template changes are breaking for every adopted repo — say so in the MR and CHANGELOG
 
 ## Read before working
-ai/docs/coding-standards.md · ai/docs/definition-of-done.md · ai/docs/architecture.md · ai/docs/fleet.md
+docs/workflow.md for how the commands fit together · ai/docs/coding-standards.md · ai/docs/definition-of-done.md · ai/docs/architecture.md · ai/docs/fleet.md
 The spec in specs/ for the change · the plan in ai/plans/ if one exists
 
 ## Workflow
