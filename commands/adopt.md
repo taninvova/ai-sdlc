@@ -4,8 +4,8 @@ argument-hint: [--owner <name>]
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep
 ---
 Add the generic ai-sdlc layout to the current repo. Use the `ai-layout` and `ai-hooks`
-skills. Do NOT scaffold an application — that is what the nextjs-scaffold and
-nestjs-scaffold plugins do; they call this same layout and add their overlays.
+skills. Do NOT scaffold an application — that is what the nextjs and nestjs plugins
+(ai/nextjs-base, ai/nestjs-base) do; they call this same layout and add their overlays.
 
 1. If `ai/` already exists, stop and suggest /sdlc:sync instead.
 2. Detect the stack from the repo (package.json, go.mod, pyproject, etc.) and the
