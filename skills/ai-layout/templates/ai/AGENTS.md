@@ -5,7 +5,7 @@ One paragraph: what this project does and who uses it. Stack: {{stack}}. Scaffol
 
 ## Commands
 {{commands}}
-Slash commands: /ai-explore /ai-spec /ai-plan /ai-test /ai-step /ai-fix /ai-chore /ai-check
+Slash commands: /ai-fleet /ai-design /ai-adr /ai-explore /ai-spec /ai-plan /ai-test /ai-step /ai-fix /ai-chore /ai-check
 Headless (CI only): make ai TASK=<name> INPUT="…"
 
 ## Non-negotiable rules
@@ -15,7 +15,7 @@ Headless (CI only): make ai TASK=<name> INPUT="…"
 {{rules_extra}}
 
 ## Read before working
-ai/docs/coding-standards.md · ai/docs/definition-of-done.md · ai/docs/architecture.md
+ai/docs/coding-standards.md · ai/docs/definition-of-done.md · ai/docs/architecture.md · ai/docs/fleet.md
 The spec in specs/ for the feature · the plan in ai/plans/ if one exists · ai/skills/<topic> for the area you touch
 
 ## Workflow
