@@ -32,6 +32,8 @@ ai/plans/  ai/plans/done/     plans in flight / merged
 ai/runs/log.csv               header only; the Stop hook and ai/make/log.js append the same 16 columns
 ai/make/ai.mk                 headless runner for CI (make ai / make review)
 ai/make/gate.js  log.js  sync-adapters.sh
+ai/.sdlc.json                 which sdlc version this repo holds + a hash per received file;
+                              written by /sdlc:adopt, read by /sdlc:sync, never by hand
 specs/                        one file per feature, Given/When/Then
 docs/adr/                     0000-template.md
 AGENTS.md  →  "See ai/AGENTS.md"      CLAUDE.md  →  "@ai/AGENTS.md"

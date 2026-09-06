@@ -7,6 +7,7 @@ Lines starting with "- `" are rules; the backticked prefix is matched against th
 - `.claude/`
 - `.cursor/`
 - `ai/runs/`
+- `ai/.sdlc.json`
 {{dont_touch_extra}}
 
 To change adapters, edit ai/ and run /sync. To change a lockfile, run the package manager.

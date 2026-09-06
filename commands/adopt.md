@@ -17,5 +17,8 @@ this same layout and fills the `{{…_extra}}` slots with its own rules, docs an
 4. Write root `AGENTS.md` ("See ai/AGENTS.md") and `CLAUDE.md` ("@ai/AGENTS.md") if absent.
 5. Append the gitignore lines from the ai-hooks skill. Create `ai/runs/log.csv` header.
 6. Run `bash ai/make/sync-adapters.sh`.
+6b. Record what this repo received, so `/sdlc:sync` can detect drift later:
+   `node "${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/scripts/manifest.js" write . "${CLAUDE_PLUGIN_ROOT}"`
+   This writes `ai/.sdlc.json`. Commit it. Never hand-edit it.
 7. Report the files created and ask the developer to fill the prose in
    ai/docs/architecture.md before the first /spec.

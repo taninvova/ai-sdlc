@@ -16,7 +16,10 @@ Hooks in `hooks/hooks.json` fire on SessionStart, PreToolUse, PostToolUse and St
 - `ai/` — this repo's own layout, symlinked to the templates (see ai/AGENTS.md)
 
 ## Data ownership
-Owns the templates and the prompt text. Writes only to `ai/runs/` in the repo it runs in.
+Owns the templates, the prompt text and the `ai/.sdlc.json` schema. Writes only to `ai/runs/`
+and, at adopt time, `ai/.sdlc.json` in the repo it runs in. Each adopted repo owns its own
+manifest and is the source of truth for its layout version; this plugin keeps no registry of
+adopter versions.
 Reads `ai/models.yaml` for the model each headless task pins, and for per-model prices.
 Blank there means the tool's own configured model, so no provider is assumed.
 

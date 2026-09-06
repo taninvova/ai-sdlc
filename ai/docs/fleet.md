@@ -26,9 +26,12 @@ or version-pinned by anything in this repo — the dependency runs one way only.
 
 - **Overlay plugins** — framework scaffolds that copy this layout and fill the
   `{{overlay_note}}` `{{rules_extra}}` `{{dod_extra}}` `{{dont_touch_extra}}`
-  `{{fleet_extra}}` slots with their own rules, docs and skills.
+  `{{fleet_extra}}` slots with their own rules, docs and skills. An overlay owns the
+  `overlay` block of `ai/.sdlc.json`; sdlc never writes it, which is how it stays ignorant
+  of who its overlays are.
 - **Adopted application repos** — any repo that has run `/sdlc:adopt`, carrying its own copy
-  of the layout under `ai/`.
+  of the layout under `ai/` and an `ai/.sdlc.json` recording which sdlc version it holds.
+  Each is the source of truth for its own version; nothing here keeps a copy.
 
 ## Boundaries
 - **sdlc depends on no repo.** It must never read, name, list or version-pin another repo —
@@ -43,6 +46,8 @@ or version-pinned by anything in this repo — the dependency runs one way only.
   blast radius.
 - Hook scripts must never write to stdout and must no-op in a repo with no `ai/` directory —
   they run in every repo where the plugin is installed, not only adopted ones.
+- Drift is pull-only. sdlc never writes into an adopted repo out of band and stores no copy
+  of adopter state — see docs/adr/0002.
 
 ## Environments
 Developer machines (plugin installed from a git marketplace, or `--plugin-dir` locally) and
@@ -56,10 +61,12 @@ carries per-model prices for the cost column of `ai/runs/log.csv`.
   since they drifted silently through 0.4.0 and 0.5.0. Nothing yet *checks* that they agree.
 - ~~`README.md` installed from `git@gitlab.nsix.io:ai/ai-sdlc.git` while the remote is
   `ai/sdlc.git`~~ — **fixed**; the documented install command works now.
-- An adopted repo has no way to learn its layout is behind these templates, and this repo
-  has no way to learn which version any adopter is on. `/sdlc:sync` regenerates `.claude/`
-  and `.cursor/` from `ai/` and copies nothing back in; `/sdlc:adopt` refuses when `ai/`
-  already exists. Designed in `ai/designs/0001-layout-version-and-drift.md`, not built.
+- ~~An adopted repo has no way to learn its layout is behind these templates~~ — **built** in
+  0.8.0: `/sdlc:adopt` writes `ai/.sdlc.json` and `/sdlc:sync` reports drift against it
+  (docs/adr/0001–0003). Still open: taking an upstream change is manual — there is no
+  `/sdlc:sync --update` — and by design nothing here can answer "which repos are behind?".
+- Nothing checks that `marketplace.json`'s pin agrees with `plugin.json`; the definition of
+  done asks a human to. It drifted twice before (docs/adr/0003).
 - ~~`specs/0000-scaffold.md` and `hooks/hooks.json` still named "ai-base"~~ — **fixed** in
   0.7.1; the plugin was renamed in 0.2.0 and again in 0.3.0.
 - ~~Two writers appended to `ai/runs/log.csv` with different columns~~ — **fixed** in 0.7.0:

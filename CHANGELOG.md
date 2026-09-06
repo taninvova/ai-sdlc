@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.8.0 — 2026-09-06
+- **Layout drift detection.** `/sdlc:adopt` now writes `ai/.sdlc.json` recording which sdlc
+  version a repo received and a hash per file; `/sdlc:sync` compares it against the installed
+  templates and reports six states — upstream changed (safe to take), both changed (merge by
+  hand), locally modified, new upstream, removed upstream, missing locally — plus a version
+  comparison. Before this an adopted repo had no way to learn it was behind, and `/sdlc:sync`
+  regenerated adapters without comparing anything. Implements
+  `ai/designs/0001-layout-version-and-drift.md`; decisions in `docs/adr/0001`-`0003`.
+- **Two hashes per file, not one.** The design sketched a single hash, which cannot work:
+  adopt substitutes `{{app}}`, `{{stack}}` and friends, so a repo file never equals its
+  template and every substituted file would report as modified forever. The manifest records
+  `received` (what landed in the repo) and `template` (what it came from).
+- `/sdlc:sync` still changes nothing under `ai/` — it reports, and taking an upstream change
+  stays a separate reviewable edit. A repo with no manifest is told how to start a baseline
+  rather than treated as an error, and a manifest with a newer `schema` stops the check
+  instead of being misread.
+- `ai/.sdlc.json` is listed in the template `ai/docs/dont-touch.md`, so `guard-paths.js`
+  blocks hand edits — a manifest edited by hand makes the check lie.
+- `skills/ai-layout/scripts/check-manifest.sh` covers all six drift states, version drift,
+  the migration path, the schema guard, that `check` never mutates the repo, and that the
+  plugin's own repo never gets a manifest.
+
 ## 0.7.1 — 2026-09-06
 - Drop the last two uses of "ai-base", the name this plugin left behind in 0.2.0:
   `skills/ai-layout/templates/specs/0000-scaffold.md`, which every adopted repo receives as
