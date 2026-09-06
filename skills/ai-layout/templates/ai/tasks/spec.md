@@ -1,7 +1,7 @@
 ---
 description: Draft a feature spec with Given/When/Then acceptance criteria
 ---
-Read ai/AGENTS.md and ai/docs/architecture.md. If ai/investigations/ has a file for this feature, read it and build the spec on the chosen option. Look at specs/ for the next number.
+Read ai/AGENTS.md and ai/docs/architecture.md. If ai/explorations/ has a file for this feature, read it and build the spec on the chosen option. Look at specs/ for the next number.
 Write specs/<NNNN>-<slug>.md with:
 - Title, one-line summary
 - User story: as a … I want … so that …
