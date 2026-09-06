@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1 — 2026-09-06
+- Drop the last two uses of "ai-base", the name this plugin left behind in 0.2.0:
+  `skills/ai-layout/templates/specs/0000-scaffold.md`, which every adopted repo receives as
+  its first spec, and the `hooks/hooks.json` description. Both now say `ai-sdlc`, matching
+  the templates.
+
 ## 0.7.0 — 2026-09-06
 - **`ai/runs/log.csv` has one schema.** Two writers were appending rows with different
   column meanings to the same file: the Stop hook wrote
