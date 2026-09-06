@@ -21,10 +21,10 @@ Registered plugin-wide; no-op in repos without `ai/`; never print to stdout (cac
 
 ## Install
 ```
-/plugin marketplace add git@gitlab.nsix.io:infra/ai-sdlc.git
+/plugin marketplace add git@gitlab.nsix.io:ai/ai-sdlc.git
 /plugin install sdlc@n6
 ```
-Local: `claude --plugin-dir ~/code/nsix/infra/ai-sdlc`
+Local: `claude --plugin-dir ~/code/nsix/ai/ai-sdlc`
 
 ## The loop each repo follows
 `/ai-explore` (options) → `/ai-spec` (Given/When/Then) → `/ai-plan` (checklist) → `/ai-step` one step at a time → `/ai-check` → commit `ai(<task>): …` → MR labelled `ai-assisted`.
