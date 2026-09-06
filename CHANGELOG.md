@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.1 — 2026-09-06
+- **Standalone.** The plugin names, reads and version-pins no other repo. There was never a
+  functional dependency — no package manager, lockfile, submodule or out-of-repo path, and
+  the hooks use the Node standard library only — but eight documents named the framework
+  scaffold repos and pinned their versions, most of it written into `ai/docs/fleet.md` by
+  the first `/ai-fleet` run reading sibling checkouts off disk. Consumers are now described
+  generically: overlay plugins and adopted repos, named nowhere.
+- `ai/docs/fleet.md` is scoped to this repo alone, its **Consumes** column deliberately
+  empty, with the one-way dependency written into Boundaries so `/ai-design review` enforces
+  it on future plans.
+
 ## 0.5.0 — 2026-09-06
 - New `architect` agent: decides where a capability belongs across services, what contract
   it exposes and who owns the data. Writes design docs and ADRs only — never source, specs

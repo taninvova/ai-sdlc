@@ -24,7 +24,7 @@ Developer machines and CI. `make ai` / `make review` are the headless path; deve
 slash commands. `GATE_ENFORCE=1` turns review blockers into a non-zero exit.
 
 ## What is deliberately not here
-No application scaffolding — that belongs to the nextjs and nestjs scaffolds
-(ai/nextjs-base, ai/nestjs-base).
+No application scaffolding — that belongs to an overlay plugin, which supplies it through
+the template slots. This repo never names, reads or version-pins one.
 No stack-specific rules in the base templates; those arrive as overlay docs and ai/skills/.
 No hook that prints to stdout, and no hook that assumes a repo has the layout.

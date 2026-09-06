@@ -185,3 +185,23 @@ Not yet specified: `/sdlc:sync --update`, which needs specs 1–2 in the field f
    spec 4 is one line or a real change. Not read here — the scaffold repos are out of this tree.
 4. **Who surfaces drift to a human who never runs `/sdlc:sync`?** Deferred with option C; needs a
    channel that is not stdout.
+
+## Amendment — 2026-09-06, standalone constraint
+
+Recorded after this document was written; the body above is left as it was produced.
+
+The plugin must depend on no other repo, and must not name, read or version-pin one
+(`ai/docs/fleet.md` → Boundaries). Effect on this design:
+
+- **The core decision is unaffected and is reinforced by the constraint.** `ai/.sdlc.json`
+  is written into the adopted repo and read there; detection is pull-side at `/sdlc:sync`.
+  sdlc keeps no registry and never reaches into another repo — which is precisely what the
+  standalone rule requires. Option "central registry", already rejected, is now forbidden.
+- **Spec 4 is out of scope for this repo.** An overlay plugin writing its own block of
+  `ai/.sdlc.json` is work for that overlay's repo, driven by its own loop. What belongs here
+  is only the schema's `overlay` field and the rule that sdlc never writes it.
+- **Spec 3 needs rewording.** `/ai-fleet` may not enumerate adopted repos from this repo —
+  that is knowledge of other repos. Open question 1 is therefore answered "not here": an
+  adopted repo records its own version, and whoever wants a fleet-wide view collects it
+  outside sdlc.
+- Open question 3 stands and is unanswerable from this tree by design.

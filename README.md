@@ -1,6 +1,6 @@
 # sdlc — n6 AI SDLC core plugin (repo: ai-sdlc)
 
-The operating-model half of AI-native delivery, as a Claude Code plugin. Framework-neutral; the scaffold plugins **nextjs** (`ai/nextjs-base`) and **nestjs** (`ai/nestjs-base`) build on it.
+The operating-model half of AI-native delivery, as a Claude Code plugin. Standalone: it depends on no other repo and adds no runtime dependency. Framework-neutral — overlay plugins build on it by filling the `{{…_extra}}` slots in its templates.
 
 ## Commands
 - `/sdlc:adopt` — add the `ai/` layout to an existing repo (any stack)
