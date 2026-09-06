@@ -60,8 +60,8 @@ carries per-model prices for the cost column of `ai/runs/log.csv`.
   has no way to learn which version any adopter is on. `/sdlc:sync` regenerates `.claude/`
   and `.cursor/` from `ai/` and copies nothing back in; `/sdlc:adopt` refuses when `ai/`
   already exists. Designed in `ai/designs/0001-layout-version-and-drift.md`, not built.
-- `skills/ai-layout/templates/specs/0000-scaffold.md` still names "ai-base", the plugin's
-  pre-0.2.0 name (d).
+- ~~`specs/0000-scaffold.md` and `hooks/hooks.json` still named "ai-base"~~ — **fixed** in
+  0.7.1; the plugin was renamed in 0.2.0 and again in 0.3.0.
 - ~~Two writers appended to `ai/runs/log.csv` with different columns~~ — **fixed** in 0.7.0:
   one 16-column schema, a `source` column saying which writer produced the row, and
   `fixtures/check-log-schema.sh` pinning the two declarations together.

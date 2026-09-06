@@ -1,6 +1,6 @@
 # 0000 — Scaffold
 
-Summary: the project starts with the AI SDLC layout from ai-base {{plugin_version}}.
+Summary: the project starts with the AI SDLC layout from ai-sdlc {{plugin_version}}.
 
 ## Acceptance criteria
 - AC1 Given a fresh clone, When a developer runs the check command from ai/AGENTS.md, Then lint, typecheck and tests pass.
