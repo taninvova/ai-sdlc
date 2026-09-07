@@ -27,7 +27,7 @@ Registered plugin-wide; no-op in repos without `ai/`; never print to stdout (cac
 ## Install
 ```
 /plugin marketplace add git@gitlab.nsix.io:ai/sdlc.git
-/plugin install t4@t4
+/plugin install t4@sdlc
 ```
 Local: `claude --plugin-dir ~/code/nsix/ai/ai-sdlc`
 
