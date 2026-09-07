@@ -1,6 +1,6 @@
 # 0004 — ai-sdlc may depend on an external tracker, behind one seam and off by default
 
-Date: 2026-09-07 · Status: proposed
+Date: 2026-09-07 · Status: accepted 2026-09-07
 
 ## Context
 `ai/designs/0002-jira-integration.md` proposes that `/t4:spec` accept a Jira ticket key and
@@ -36,10 +36,16 @@ literalism and not dropped**, under three rules that bind together and are not s
    `/t4:spec UTF-8` matches that pattern whole and would otherwise stop a Jira-less repo to ask
    about a ticket that cannot exist.
 
-3. **One seam, never named in a prompt.** The dependency is confined to `ai/docs/jira.md`,
+3. **One seam, never named in a prompt.** The dependency is confined to `ai/docs/tracker.md`,
    which holds the resolution order, the write-back contract and every vendor fact. A task
    prompt may name that document and nothing else — no vendor, no connector, no URL, no JSON
-   shape, no field name. The blast radius of the dependency, and of ever replacing it, is one
+   shape, no field name — and not the seam's own filename either, which is why it is
+   `ai/docs/tracker.md` and not `ai/docs/jira.md`. `ai/jira.yaml` keeps its vendor name
+   deliberately: only the seam document names that file, never a prompt, so the vendor stays
+   on the far side of the boundary. **Amended at acceptance**, after `docs/adr/0005` found
+   that the original filename put the vendor into every prompt that named the seam — this
+   rule breached by the document stating it.
+   The blast radius of the dependency, and of ever replacing it, is one
    file.
 
 This ADR settles *whether*, not *how*. Where the key is recorded and what is written back are
@@ -64,7 +70,7 @@ from a developer's Claude Code session and from nowhere else, so it mirrors the 
 — stale precisely on the work that ran headless. That is a weaker guarantee than never writing
 to the board at all: nobody trusts a board that never moves, everybody trusts one that moves
 most of the time. Until arm two (`ai/make/jira.sh`) exists, ticket status is not evidence of
-repo state, and `ai/docs/jira.md` must say so in those words when it is written.
+repo state, and `ai/docs/tracker.md` must say so in those words when it is written.
 
 Amending the claim is itself a contract change reaching every adopted repo on its next
 `/t4:sync-sdlc`. This ADR proposes the wording; a `/t4:chore` applies it. Nothing below is
@@ -79,7 +85,7 @@ task path may call an external tracker in a repo that configures one — see doc
 optional service dependency, and no other.** A task may call an external tracker, and only in
 a repo that has committed `ai/jira.yaml`. Every task works without one; a repo with no tracker
 configured sees no new prompt, no new question and no new failure mode. The dependency is named
-only in `ai/docs/jira.md`, never in a task prompt (docs/adr/0004)."
+only in `ai/docs/tracker.md`, never in a task prompt (docs/adr/0004)."
 
 **`.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`, `description`.** Necessary: this
 is the only place the claim is read before install. Current: "Standalone — no dependency on any

@@ -1,6 +1,6 @@
 # 0006 — Write-back appends to a ticket always, and moves one only when every runtime can
 
-Date: 2026-09-07 · Status: proposed
+Date: 2026-09-07 · Status: accepted 2026-09-07
 
 ## Context
 `ai/designs/0002-jira-integration.md` §6 decides that each task comments the artefact it
@@ -73,7 +73,7 @@ on configuration alone.
    carry `ai/make/jira.sh`, arm two of the seam. Until arm two exists, a repo's headless and
    Codex runs cannot move a card, and 0004 has already found the name for a status field written
    from one runtime out of three: not evidence. Making the second arm the gate turns that
-   sentence from a warning in `ai/docs/jira.md` into a condition in the code. Transitions ship in
+   sentence from a warning in `ai/docs/tracker.md` into a condition in the code. Transitions ship in
    this release, as the design intends; they are inert in every repo until both conditions hold.
 
 6. **A transition is idempotent and quiet when refused.** Already in the target state is a no-op.
