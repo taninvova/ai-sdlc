@@ -44,6 +44,13 @@ paraphrase of it, and so the spec and the ticket stay findable from each other.
 - **AC9** Given a repo with `ai/jira.yaml` whose tracker is reachable, When two specs already
   carry `Ticket: PROJ-123` and a developer runs `/t4:spec PROJ-123`, Then the session reports
   both paths and stops rather than choosing one.
+- **AC10** Given a resolvable ticket, When the session drafts the spec, Then the acceptance
+  criteria are derived from the ticket's **description** field and from no other field.
+- **AC11** Given a ticket whose description leaves a condition implicit — an unstated error
+  case, an unnamed actor, a threshold with no number — When the session drafts the spec, Then
+  that gap appears under Open questions and is **not** written as a Given/When/Then. A ticket
+  description is prose written for a human, so the criteria it does not state must surface as
+  questions rather than be invented into ACs that look agreed.
 
 ## Out of scope
 - Resolving a key in `/t4:plan`, `/t4:test`, `/t4:run`, `/t4:check` — design §9 spec 2.
@@ -55,16 +62,20 @@ paraphrase of it, and so the spec and the ticket stay findable from each other.
 ## Open questions
 A spec with open questions is not buildable. These are for the developer before implementation:
 
-1. **Which ticket field becomes acceptance criteria?** `/t4:spec`'s whole output is
-   Given/When/Then, and teams keep ACs in the description, in a checklist field, or in a Jira
-   plugin's own field. Design §11 leaves this unresolved and it is the largest unknown here.
-   Proposed default: read the description, and let the spec's own Open Questions carry whatever
-   the ticket left implicit — but this needs one real ticket tried before it is settled.
-2. **Does `ai/docs/tracker.md` ship as a template, and what does that cost adopters?** Adding a
-   template file is a drift event for every adopted repo (`ai/.sdlc.json`, ADR 0002), including
-   the majority with no tracker.
-3. **What exactly is `ai/jira.yaml` required to contain for AC1's gate to be unambiguous?** An
-   empty file, or a file with only comments — configured or not?
+1. ~~**Which ticket field becomes acceptance criteria?**~~ **Answered:** the description, and
+   no other field. AC10 and AC11 carry it. Checklist fields and tracker-plugin AC fields are
+   deliberately not read — one field to read is one field to explain, and a team that keeps
+   ACs elsewhere gets a spec whose Open questions say so rather than a silently empty one.
+2. **Does `ai/docs/tracker.md` ship as a template, and what does that cost adopters?** Design
+   §7 says it is an ai-sdlc template, which makes it a drift event for every adopted repo
+   (`ai/.sdlc.json`, ADR 0002) including the majority with no tracker. *Recommendation:* ship
+   it — a prompt referencing a file that a repo does not have is worse than a doc it never
+   reads — and say so in the CHANGELOG blast-radius line. **Needs confirming.**
+3. **What exactly must `ai/jira.yaml` contain for AC1's gate to be unambiguous?** Existence
+   alone, or existence plus a parseable key? *Recommendation:* the file must exist **and**
+   parse to a mapping with a `base_url`; an empty or comment-only file counts as unconfigured,
+   so a half-finished config fails closed into today's behaviour rather than into AC4's
+   stop-and-ask. **Needs confirming.**
 
 ## Data touched
 No application data; this repo ships prompts and templates.
