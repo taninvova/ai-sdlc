@@ -3,6 +3,11 @@
 Summary: in a repo that has configured a tracker, `/t4:spec PROJ-123` drafts the spec from the
 ticket instead of from typed prose, and records the key in the spec it writes.
 
+**The integration is optional and inert by default.** Every repo receives the seam document;
+no repo acquires the behaviour without committing `ai/jira.yaml`. A repo that never configures
+one must not be able to tell this shipped — that is AC1 and AC12, and it outranks every other
+criterion here.
+
 Implements spec 1 of `ai/designs/0002-jira-integration.md` §9. Bound by `docs/adr/0004`
 (configuration opens the tracker path; one seam, never named in a prompt), `docs/adr/0005`
 (the key lives in the spec body as a vendor-neutral `Ticket:` line) and `docs/adr/0006`
@@ -51,6 +56,14 @@ paraphrase of it, and so the spec and the ticket stay findable from each other.
   that gap appears under Open questions and is **not** written as a Given/When/Then. A ticket
   description is prose written for a human, so the criteria it does not state must surface as
   questions rather than be invented into ACs that look agreed.
+- **AC12** Given a repo that has received `ai/docs/tracker.md` from a plugin update but has no
+  `ai/jira.yaml`, When any of the eleven tasks runs, Then behaviour is byte-identical to the
+  previous release: no new prompt, no new question, no new failure, no `Ticket:` line, and no
+  mention of a tracker in any output. Shipping the seam document activates nothing.
+- **AC13** Given `ai/jira.yaml` that is absent, empty, comment-only, unparseable, or parses to
+  something other than a mapping carrying `base_url`, When `/t4:spec PROJ-123` runs, Then the
+  repo counts as unconfigured and AC1 applies — the argument is free text. A half-written or
+  broken config fails closed into today's behaviour, never into AC4's stop-and-ask.
 
 ## Out of scope
 - Resolving a key in `/t4:plan`, `/t4:test`, `/t4:run`, `/t4:check` — design §9 spec 2.
@@ -60,22 +73,25 @@ paraphrase of it, and so the spec and the ticket stay findable from each other.
 - Teaching `/t4:explore`, `/t4:fix` or `/t4:chore` to take keys — design §11, deferred.
 
 ## Open questions
-A spec with open questions is not buildable. These are for the developer before implementation:
+A spec with open questions is not buildable. All three raised here have been answered; they are
+kept rather than deleted, because each answer is a decision and the reason for it is the part
+worth having later.
 
 1. ~~**Which ticket field becomes acceptance criteria?**~~ **Answered:** the description, and
    no other field. AC10 and AC11 carry it. Checklist fields and tracker-plugin AC fields are
    deliberately not read — one field to read is one field to explain, and a team that keeps
    ACs elsewhere gets a spec whose Open questions say so rather than a silently empty one.
-2. **Does `ai/docs/tracker.md` ship as a template, and what does that cost adopters?** Design
-   §7 says it is an ai-sdlc template, which makes it a drift event for every adopted repo
-   (`ai/.sdlc.json`, ADR 0002) including the majority with no tracker. *Recommendation:* ship
-   it — a prompt referencing a file that a repo does not have is worse than a doc it never
-   reads — and say so in the CHANGELOG blast-radius line. **Needs confirming.**
-3. **What exactly must `ai/jira.yaml` contain for AC1's gate to be unambiguous?** Existence
-   alone, or existence plus a parseable key? *Recommendation:* the file must exist **and**
-   parse to a mapping with a `base_url`; an empty or comment-only file counts as unconfigured,
-   so a half-finished config fails closed into today's behaviour rather than into AC4's
-   stop-and-ask. **Needs confirming.**
+2. ~~**Does `ai/docs/tracker.md` ship as a template?**~~ **Answered:** yes. A prompt naming a
+   file the repo does not have is worse than a doc it never reads. It is a drift event for
+   every adopted repo (`ai/.sdlc.json`, ADR 0002), so the CHANGELOG entry must name that blast
+   radius, and AC12 makes it a testable property that the file activates nothing on its own.
+3. ~~**What must `ai/jira.yaml` contain for the gate to be unambiguous?**~~ **Answered:** it
+   must parse to a mapping carrying `base_url`. Absent, empty, comment-only, unparseable or
+   otherwise shaped all count as unconfigured. AC13 carries it. This also settles where the
+   base URL comes from — the repo's own config, not the connector — so a comment can link a
+   ticket without a fetch.
+
+**No open questions remain. This spec is buildable.**
 
 ## Data touched
 No application data; this repo ships prompts and templates.

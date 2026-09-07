@@ -178,7 +178,8 @@ Spec 1 is useful alone. 2 and 3 are not useful without 1.
   edit.
 - **Should `/t4:explore`, `/t4:fix` and `/t4:chore` take keys too?** They take requests, so it
   is natural. Deferred: they produce no spec, so there is nowhere to record the key.
-- **Does the base URL come from `ai/jira.yaml` or from the connector?** Needed to write a
-  browse link into a comment without a fetch.
+- ~~**Does the base URL come from `ai/jira.yaml` or from the connector?**~~ **Resolved:** from
+  `ai/jira.yaml`, which must carry `base_url` — its presence is also what makes a repo count as
+  configured. `specs/0001-spec-accepts-a-ticket-key.md` AC13.
 - **When does arm two of the seam get built?** Until it exists, CI cannot resolve a ticket, and
   §2 says the board is only sometimes right.
