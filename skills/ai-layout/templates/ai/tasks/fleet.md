@@ -1,5 +1,6 @@
 ---
 description: Fill in ai/docs/fleet.md — the service map the architect reads — by detecting what it can and asking you the rest
+argument-hint: [focus, or blank for the whole map]
 ---
 Run this in the current session. Do NOT delegate to a subagent: this task asks the developer
 questions, and a subagent cannot. Follow the `architect` agent's `fleet` mode rules.

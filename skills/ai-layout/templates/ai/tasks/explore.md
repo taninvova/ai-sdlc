@@ -1,5 +1,6 @@
 ---
 description: Explore a feature request — read the code, present 2–4 implementation approaches with trade-offs and a recommendation, before any spec
+argument-hint: <feature request>
 ---
 Read ai/AGENTS.md, ai/docs/architecture.md, ai/docs/coding-standards.md, and any
 ai/skills/ relevant to the request. Look at the code the request would touch
@@ -20,5 +21,7 @@ Write ai/explorations/<NNNN>-<slug>.md with:
 
 Keep it under two pages. Facts from the code; opinions labelled as such.
 Report the file path and the recommended option in one sentence.
+
+If nothing follows the command name, ask the user what to explore, and stop. Do not guess from the branch name or the last commit.
 
 Feature request: $ARGUMENTS

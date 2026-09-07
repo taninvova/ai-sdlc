@@ -1,5 +1,6 @@
 ---
 description: Independent read-only review of the current branch diff
+argument-hint: [context]
 ---
 Delegate to the `reviewer` subagent with this instruction: review the diff
 `git diff $(git merge-base HEAD main 2>/dev/null || git merge-base HEAD develop)...HEAD`

@@ -1,5 +1,6 @@
 ---
 description: Record one architectural decision as an ADR in docs/adr/
+argument-hint: <decision in one sentence>
 ---
 Every rule that says "no new dependency without an ADR" is served by this task. Use it for a
 decision that outlives the change that prompted it: a dependency, a boundary, a protocol, a
@@ -15,5 +16,7 @@ If it supersedes an earlier ADR, the architect names it and updates that file's 
 
 Do not change any code in this task. Report the file path, the decision in one sentence, and
 the cost it names in Consequences.
+
+If nothing follows the command name, ask the user which decision to record, and stop. Do not infer one from the diff or the last commit.
 
 Decision: $ARGUMENTS

@@ -11,7 +11,14 @@ rm -f .claude/commands/ai-*.md .claude/commands/t4/*.md
 for t in ai/tasks/*.md; do
   n=$(basename "$t" .md)
   d=$(sed -n 's/^description: *//p' "$t" | head -1)
-  printf -- '---\ndescription: %s\n---\n@../../../%s\n' "$d" "$t" > ".claude/commands/t4/$n.md"
+  # argument-hint rides along so the command menu shows what the task expects. A task with no
+  # hint takes no input; emitting an empty one would advertise an argument that does not exist.
+  h=$(sed -n 's/^argument-hint: *//p' "$t" | head -1)
+  {
+    printf -- '---\ndescription: %s\n' "$d"
+    [ -n "$h" ] && printf -- 'argument-hint: %s\n' "$h"
+    printf -- '---\n@../../../%s\n' "$t"
+  } > ".claude/commands/t4/$n.md"
 done
 # Codex reads .codex/skills/<name>/SKILL.md and treats each as a slash command. The skill
 # points at the task file rather than copying it — a copy would fork from ai/tasks/ the first
