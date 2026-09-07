@@ -10,6 +10,9 @@ The operating-model half of AI-native delivery, as a Claude Code plugin. Standal
 
 Works with Claude Code and Codex: `ai/make/sync-adapters.sh` generates `.claude/`, `.cursor/` and `.codex/` from one source. See [docs/workflow.md](docs/workflow.md#8-using-it-from-codex) for what differs under Codex.
 
+`/t4:spec` also accepts a tracker ticket key — `/t4:spec ABC-12` — in a repo that has
+committed `ai/jira.yaml`. Off by default: without that file nothing changes, whatever you type.
+
 Project-level slash commands (generated into each repo from `ai/tasks/`): `/t4:fleet /t4:design /t4:adr /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:check`.
 
 ## Skills (model-invoked, hidden from the menu)

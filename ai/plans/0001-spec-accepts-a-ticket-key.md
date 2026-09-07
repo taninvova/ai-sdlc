@@ -85,7 +85,7 @@ Step 1 builds the seam first so that step 2 has something to point at and no rea
   that is exactly what AC12 forbids. The task now says: when unconfigured, say nothing about
   keys, configuration or that file. Re-ran: zero mentions, spec unchanged.
 
-- [ ] **Step 7 — CHANGELOG, version bump, README.** Name the blast radius: every adopted repo
+- [x] **Step 7 — CHANGELOG, version bump, README.** Name the blast radius: every adopted repo
   receives `ai/docs/tracker.md` on its next sync and gains nothing until it writes
   `ai/jira.yaml`. Carry step 2's decision: `ai/jira.yaml` is deliberately not in
   `dont-touch.md`, because a developer must be able to write it. Bump all three manifests.
