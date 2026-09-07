@@ -1,0 +1,85 @@
+# 0003 — /t4:setup-tracker
+
+**Goal:** one interactive command that turns the tracker on for a repo and proves it, rather
+than leaving a developer to guess a filename and a key.
+
+**Spec:** `specs/0003-tracker-setup.md`
+
+**Blocked on two things**, both real:
+1. `specs/0001` must ship. `ai/jira.yaml` is meaningless until something reads it, and
+   `ai/docs/tracker.md` must be in adopted repos for AC1 and AC7 to mean anything. Plan 0001
+   step 7 is the last of that.
+2. Spec 0003's two open questions. A spec with open questions is not buildable, so this plan
+   is written but must not start.
+
+## Files to create / modify
+| File | Why |
+|---|---|
+| `commands/setup-tracker.md` | **new** — plugin command, not a task: AC7 requires it to run in a repo whose layout predates tracker support, where project tasks do not exist. |
+| `README.md`, `docs/workflow.md` | command table, and the "how do I turn this on" path a developer currently cannot find. |
+| `CHANGELOG.md` + 3 manifests | new command; version bump. |
+
+No script. Every step is a question, a confirmation or a tracker read — none of it
+deterministic enough to fixture, which is the opposite of `specs/0002` and the reason that one
+went first.
+
+## Server vs client components
+Not applicable. The split that matters is **prompt versus seam**: the command asks and
+confirms, `ai/docs/tracker.md` holds every fact about what to detect and what counts as
+configured. AC10 makes that mechanical — `check-adapters.sh` already fails on a vendor name in
+a prompt.
+
+## Steps
+
+- [ ] **Step 1 — Refuse early and clearly.** No `ai/docs/tracker.md` → stop, name
+  `/t4:sync-sdlc` and the drift it reports (AC7). Non-interactive → stop, say the command is
+  interactive (AC8). Both before anything is read or written.
+  *Proves:* AC7, AC8. *Check:* two scratch repos, one without the seam, one run headless.
+
+- [ ] **Step 2 — Detect, show, confirm.** Detect the reachable site, show it, ask before
+  writing (AC1). Unreachable → report why and what to do, write nothing (AC4).
+  *Proves:* AC1, AC4. *Check:* real run; and with the connector deauthorised, which is the
+  state `specs/0001` AC4 was proved in.
+
+- [ ] **Step 3 — Write, without ever silently overwriting.** Write `base_url` (AC2). If the
+  file exists, show it and require a second confirmation (AC3). The file is hand-owned, so the
+  bar for touching it is higher than for anything generated.
+  *Proves:* AC2, AC3. *Check:* run twice; the second must not proceed on one confirmation.
+
+- [ ] **Step 4 — Prove it, or say it is unproven.** Ask for one key, resolve it, report the
+  summary (AC5). No key offered → say the setup is unverified and name what verifies it (AC6).
+  *Proves:* AC5, AC6. *Check:* a real key, then a run where none is given.
+
+- [ ] **Step 5 — Confirm the tracker was not written to.** No comment, no transition, no field
+  (AC9). Check the ticket's status and comment count before and after.
+  *Proves:* AC9. *Check:* compare both, on the same ticket step 4 used.
+
+- [ ] **Step 6 — CHANGELOG, version bump, README, workflow.**
+  *Check:* `check-versions.sh`, definition of done items 3 and 7.
+
+## Risks
+| Risk | How it is checked |
+|---|---|
+| It overwrites a hand-written `ai/jira.yaml` — destroying work the guard deliberately does not protect. | AC3, step 3, by running twice. The highest-consequence failure here. |
+| It writes a file that does not satisfy the seam's own definition, so setup "succeeds" and `/t4:spec` still ignores it. | AC2 uses the seam's condition, not a second copy of it; step 4 proves end to end. |
+| It reports success without proving anything. | AC5 and AC6 make verification explicit, including its absence. |
+| It writes to the tracker while reading. | AC9 compares status and comments before and after. |
+| A vendor name reaches the prompt. | AC10; `check-adapters.sh` already asserts it. |
+
+## Verification
+```
+bash skills/ai-layout/scripts/check-adapters.sh     # AC10
+bash skills/ai-layout/scripts/check-versions.sh
+bash ai/make/sync-adapters.sh && bash ai/make/sync-adapters.sh
+```
+Plus steps 2–5 run for real against a live tracker, and `/t4:check`.
+
+## Planning notes
+- **Almost nothing here is fixturable**, and that is the honest difference from plan 0002. Its
+  value is in questions asked in the right order and a refusal to overwrite; both are proved by
+  running it, not by a check script. Expect the MR to lean on transcripts.
+- **Step 5 exists because ADR 0006 is only paper until something checks it.** The setup command
+  is the first code that touches a tracker with write scope available to it.
+- **Ordering was the point.** The doctor tells a developer the tracker is not configured; this
+  command configures it. Building them the other way round gives you a wizard for a problem
+  nobody has diagnosed yet.
