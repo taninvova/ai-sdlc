@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.16.0 — 2026-09-07
+- **Sync removes the commands it generated under older naming.** Cleanup matched
+  `ai-<task>.md` and `t4/<task>.md` only, so a repo adopted before 0.5.0 kept its bare
+  `.claude/commands/spec.md` through every sync and answered both `/spec` and `/t4:spec` —
+  the same task twice, under two names, one of them pointing at a task file that may no
+  longer exist. Found in a repo scaffolded at ai-base 0.1.2.
+- **Ours is identified by the include, not by the name.** A generated command carries
+  `@../../ai/tasks/<name>.md`; a hand-written one does not. Matching on that is what makes
+  deleting safe — a name glob wide enough to catch `spec.md` would also delete a command
+  someone wrote themselves and called `spec.md`. Codex skills are matched the same way, by
+  the `ai/tasks/` path in the skill body.
+- Pinned by a test that reproduces the case: a pre-0.5.0 bare command, a 0.5.0-era `ai-`
+  command and a stale codex skill must all go, and a hand-written `spec-of-mine.md` must
+  survive. Verified by restoring the old glob, which fails it.
+
 ## 0.15.0 — 2026-09-07
 - **The marketplace is `sdlc`; the handle is `t4@sdlc`.** A handle reads
   `<plugin>@<marketplace>`, so this renames the marketplace only. The plugin stays `t4` —

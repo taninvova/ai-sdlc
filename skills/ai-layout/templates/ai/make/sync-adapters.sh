@@ -7,7 +7,15 @@ if ! ls ai/tasks/*.md >/dev/null 2>&1; then
   exit 1
 fi
 mkdir -p .claude/commands/t4 .claude/skills .claude/agents .cursor/rules .codex/skills
-rm -f .claude/commands/ai-*.md .claude/commands/t4/*.md
+# Remove the commands this generator produced, in whatever naming it used at the time: bare
+# <task>.md before 0.5.0, ai-<task>.md through 0.12.0, t4/<task>.md now. Matching on the
+# include rather than on the name is what makes that safe — a hand-written command that
+# happens to be called spec.md does not point into ai/tasks/, so it survives. Name globs
+# cannot tell the two apart, which is how a repo ends up answering both /spec and /t4:spec.
+for f in .claude/commands/*.md .claude/commands/t4/*.md; do
+  [ -f "$f" ] || continue
+  grep -qE '^@(\.\./)+ai/tasks/[a-z0-9-]+\.md$' "$f" && rm -f "$f"
+done
 for t in ai/tasks/*.md; do
   n=$(basename "$t" .md)
   d=$(sed -n 's/^description: *//p' "$t" | head -1)
@@ -23,7 +31,12 @@ done
 # Codex reads .codex/skills/<name>/SKILL.md and treats each as a slash command. The skill
 # points at the task file rather than copying it — a copy would fork from ai/tasks/ the first
 # time anyone edits one.
-rm -rf .codex/skills/ai-* .codex/skills/t4-*
+# Same for Codex: the skill points at ai/tasks/<name>.md, so that is what identifies it as
+# ours regardless of the ai- or t4- prefix it was generated under.
+for d in .codex/skills/*/; do
+  [ -f "$d/SKILL.md" ] || continue
+  grep -qE 'ai/tasks/[a-z0-9-]+\.md' "$d/SKILL.md" && rm -rf "$d"
+done
 for t in ai/tasks/*.md; do
   n=$(basename "$t" .md)
   d=$(sed -n 's/^description: *//p' "$t" | head -1)
