@@ -3,7 +3,7 @@
 Date: 2026-09-06 · Status: accepted
 
 ## Context
-Two files claim to hold the sdlc version: `.claude-plugin/plugin.json` and the pin in
+Two files claim to hold the ai-sdlc version: `.claude-plugin/plugin.json` and the pin in
 `.claude-plugin/marketplace.json`. They drifted silently through 0.4.0 and 0.5.0 — the
 marketplace pin still read 0.3.0 — because the definition of done named only the first.
 Drift detection is only as trustworthy as the version string it records, so a repo adopted

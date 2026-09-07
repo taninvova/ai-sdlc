@@ -1,13 +1,13 @@
-# sdlc — t4 AI SDLC core plugin (repo: ai-sdlc)
+# ai-sdlc — t4 AI SDLC core plugin (repo: ai-sdlc)
 
 The operating-model half of AI-native delivery, as a Claude Code plugin. Standalone: it depends on no other repo and adds no runtime dependency. Framework-neutral — overlay plugins build on it by filling the `{{…_extra}}` slots in its templates.
 
 **[docs/workflow.md](docs/workflow.md) — how to install it, what each command is for, and the order to run them in.**
 
 ## Commands
-- `/sdlc:adopt` — add the `ai/` layout to an existing repo (any stack)
-- `/sdlc:explore <request>` — before a spec: read the code, present 2–4 implementation options with effort, risk, reversibility, a recommendation and the `/ai-spec` line to run next; writes `ai/explorations/NNNN-slug.md`
-- `/sdlc:sync` — regenerate `.claude/` and `.cursor/` adapters from `ai/`
+- `/ai-sdlc:adopt` — add the `ai/` layout to an existing repo (any stack)
+- `/ai-sdlc:explore <request>` — before a spec: read the code, present 2–4 implementation options with effort, risk, reversibility, a recommendation and the `/ai-spec` line to run next; writes `ai/explorations/NNNN-slug.md`
+- `/ai-sdlc:sync` — regenerate `.claude/` and `.cursor/` adapters from `ai/`
 
 Works with Claude Code and Codex: `ai/make/sync-adapters.sh` generates `.claude/`, `.cursor/` and `.codex/` from one source. See [docs/workflow.md](docs/workflow.md#8-using-it-from-codex) for what differs under Codex.
 
@@ -28,7 +28,7 @@ Registered plugin-wide; no-op in repos without `ai/`; never print to stdout (cac
 ## Install
 ```
 /plugin marketplace add git@gitlab.nsix.io:ai/sdlc.git
-/plugin install sdlc@t4
+/plugin install ai-sdlc@t4
 ```
 Local: `claude --plugin-dir ~/code/nsix/ai/ai-sdlc`
 

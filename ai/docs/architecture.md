@@ -2,7 +2,7 @@
 
 ## Shape
 A Claude Code plugin loaded from `.claude-plugin/plugin.json`. Nothing runs as a service.
-Three surfaces reach a developer: plugin commands (`commands/*.md` → `/sdlc:*`), skills
+Three surfaces reach a developer: plugin commands (`commands/*.md` → `/ai-sdlc:*`), skills
 (`skills/*/SKILL.md`, model-invoked), and the `reviewer` agent (`agents/reviewer.md`).
 Hooks in `hooks/hooks.json` fire on SessionStart, PreToolUse, PostToolUse and Stop.
 
@@ -10,7 +10,7 @@ Hooks in `hooks/hooks.json` fire on SessionStart, PreToolUse, PostToolUse and St
 - `commands/` — the three plugin slash commands
 - `agents/reviewer.md` — canonical reviewer; adopted repos symlink or override it
 - `skills/ai-layout/` — the `ai/` layout skill plus `templates/`, the payload copied into
-  adopted repos by /sdlc:adopt. Task prompts here become `/ai-<name>` there
+  adopted repos by /ai-sdlc:adopt. Task prompts here become `/ai-<name>` there
 - `skills/ai-hooks/` — hook scripts and fixtures; `_common.js` holds event parsing and
   the `ai/` detection that makes every script a no-op elsewhere
 - `ai/` — this repo's own layout, symlinked to the templates (see ai/AGENTS.md)

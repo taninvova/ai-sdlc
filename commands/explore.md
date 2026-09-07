@@ -5,7 +5,7 @@ allowed-tools: Read, Grep, Glob, Bash, Write
 ---
 Run the `explore` task: if `ai/tasks/explore.md` exists in this repo use it;
 otherwise use `${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/templates/ai/tasks/explore.md`
-(and tell the developer to run /sdlc:sync so the repo gets its own copy).
+(and tell the developer to run /ai-sdlc:sync so the repo gets its own copy).
 Do not change any code. Output goes to `ai/explorations/<NNNN>-<slug>.md`
 (create the directory if missing). End with the recommended option in one sentence
 and the exact `/ai-spec …` line to run next.

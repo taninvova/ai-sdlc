@@ -7,7 +7,7 @@ Add the generic ai-sdlc layout to the current repo. Use the `ai-layout` and `ai-
 skills. Do NOT scaffold an application — that is an overlay plugin's job; an overlay calls
 this same layout and fills the `{{…_extra}}` slots with its own rules, docs and skills.
 
-1. If `ai/` already exists, stop and suggest /sdlc:sync instead.
+1. If `ai/` already exists, stop and suggest /ai-sdlc:sync instead.
 2. Detect the stack from the repo (package.json, go.mod, pyproject, etc.) and the
    commands that build, lint, typecheck and test it. Fill `{{stack}}` and `{{commands}}`.
 3. Copy `${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/templates/` to the repo root; substitute
@@ -17,7 +17,7 @@ this same layout and fills the `{{…_extra}}` slots with its own rules, docs an
 4. Write root `AGENTS.md` ("See ai/AGENTS.md") and `CLAUDE.md` ("@ai/AGENTS.md") if absent.
 5. Append the gitignore lines from the ai-hooks skill. Create `ai/runs/log.csv` header.
 6. Run `bash ai/make/sync-adapters.sh`.
-6b. Record what this repo received, so `/sdlc:sync` can detect drift later:
+6b. Record what this repo received, so `/ai-sdlc:sync` can detect drift later:
    `node "${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/scripts/manifest.js" write . "${CLAUDE_PLUGIN_ROOT}"`
    This writes `ai/.sdlc.json`. Commit it. Never hand-edit it.
 7. Report the files created and ask the developer to fill the prose in
