@@ -1,9 +1,26 @@
-# Which model each tool uses. n6: aliases resolved by the LiteLLM proxy.
-claude: n6-task
-codex: n6-task
-review: n6-review
-# Standalone: replace aliases with concrete model ids, e.g. claude: claude-sonnet-4-5
+# Which model each tool uses for headless runs (make ai / make review).
+#
+# Leave a value blank — the default — and the tool runs whatever model it is already
+# configured with. That works with any provider: the Anthropic API, Bedrock, Vertex, or an
+# OpenAI-compatible gateway. Set a value only when a task must pin a specific model.
+claude:
+codex:
+review:
 
-# USD per million tokens — read by the session-stop hook for log.csv
+# Examples. A plain model id goes to whatever endpoint the tool is pointed at:
+#   claude: claude-sonnet-4-5
+#   review: claude-opus-4-5
+# A gateway or proxy alias works the same way, once the tool points at that gateway
+# (for Claude Code: ANTHROPIC_BASE_URL and ANTHROPIC_API_KEY):
+#   claude: my-fast-alias
+#   review: my-review-alias
+
+# USD per million tokens — read by the session-stop hook to cost each row of ai/runs/log.csv.
+# `default` covers anything not listed. Add a block per model id when you run more than one;
+# the hook matches the model recorded in the transcript, falling back to a prefix match, then
+# to `default`. A cost written as "~1.2345" means none of these matched and the built-in
+# figures were used, so treat it as an estimate.
 pricing:
   default: { input: 3, output: 15, cache_read: 0.3, cache_write: 3.75 }
+# claude-sonnet-4-5: { input: 3, output: 15, cache_read: 0.3, cache_write: 3.75 }
+# claude-haiku-4-5:  { input: 1, output: 5,  cache_read: 0.1, cache_write: 1.25 }

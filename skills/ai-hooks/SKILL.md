@@ -21,19 +21,35 @@ The plugin registers these hooks globally (hooks/hooks.json). Every script:
 | PostToolUse Bash | log-cmd.js | ai/runs/cmds.jsonl when the command ran a test, lint or e2e command (vitest, jest, biome, playwright, pnpm/npm test|lint|e2e|check) |
 | Stop | session-stop.js | one line to ai/runs/log.csv with tokens, cache hit rate, cost |
 
-## log.csv header (create in every repo)
-ts,session_id,user,branch,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted
+## log.csv — one schema, two writers
+ts,session_id,source,user,branch,task,tool,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted
 
-`accepted` is filled by the developer at commit time (y/n/partial). `user` is
-$GITLAB_USER or `git config user.name`.
+`source` is `session` (this Stop hook) or `make` (ai/make/log.js, headless). Both write
+these 16 columns; each blanks what it cannot know — an interactive session has no `task`,
+a headless run has no separate turn accounting beyond `num_turns`. `accepted` is filled by
+the developer at commit time (y/n/partial). `user` is $GITLAB_USER or `git config user.name`.
+
+The two writers declare the header separately because they run from different places and
+cannot share a module. `fixtures/check-log-schema.sh` asserts they agree, that every row
+matches the header width, and that migration preserves old rows — run it after touching
+either writer.
+
+A log.csv whose header is not the above predates this schema: its rows came from two
+writers with different column meanings and cannot be reinterpreted, so the first write
+moves them to `ai/runs/log.previous.csv` and starts a clean file. Nothing is lost, nothing
+is mixed.
 
 ## Pricing
-session-stop.js reads prices from ai/models.yaml if present:
+session-stop.js prices a run with the model the transcript says actually ran, so any
+provider costs correctly. It reads ai/models.yaml if present:
 ```yaml
 pricing:            # USD per million tokens
   default: { input: 3, output: 15, cache_read: 0.3, cache_write: 3.75 }
+  claude-haiku-4-5: { input: 1, output: 5, cache_read: 0.1, cache_write: 1.25 }
 ```
-Otherwise it uses the default above and marks the row with `~` in cost.
+Match order: the exact model id, then the longest listed id the model starts with (so
+`claude-haiku-4-5` covers `claude-haiku-4-5-20251001`), then `default`. With no match it
+uses the built-in figures above and marks the row `~` in cost — an estimate, not a price.
 
 ## dont-touch.md format the guard reads
 Lines beginning with "- `" — the backticked path prefix is the rule:

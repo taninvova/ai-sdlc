@@ -3,8 +3,13 @@
 const fs = require("fs");
 const file = process.argv[2];
 if (!file) { console.error("usage: gate.js <run.json>"); process.exit(2); }
-const run = JSON.parse(fs.readFileSync(file, "utf8"));
-const text = typeof run.result === "string" ? run.result : JSON.stringify(run);
+// claude puts the final message in `result`; codex exec writes it to <run>.last.txt via -o.
+let text;
+if (fs.existsSync(file + ".last.txt")) text = fs.readFileSync(file + ".last.txt", "utf8");
+else {
+  const run = JSON.parse(fs.readFileSync(file, "utf8"));
+  text = typeof run.result === "string" ? run.result : JSON.stringify(run);
+}
 const m = text.match(/\{[\s\S]*"verdict"[\s\S]*\}/);
 if (!m) { console.error("gate: no verdict JSON found in run output"); process.exit(process.env.GATE_ENFORCE ? 1 : 0); }
 const v = JSON.parse(m[0]);
