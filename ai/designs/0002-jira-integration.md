@@ -1,0 +1,155 @@
+# 0002 — Jira integration
+
+Date: 2026-09-07 · Status: proposed · Plugin version at time of writing: 0.17.0.
+**No accepted ADR binds this design.** It contradicts a standing boundary — see §2 — so it
+cannot proceed on this document alone.
+
+## 1. Capability
+`/t4:spec PROJ-123` drafts a spec from a Jira ticket instead of from typed prose. The ticket
+key is then recorded, so `/t4:plan`, `/t4:test`, `/t4:run` and `/t4:check` can be given the
+same key and resolve it to the work already in flight. Each of those tasks comments its
+artefact back to the ticket, and may move the ticket's status if the repo has configured it.
+
+## 2. Drivers
+- **This is the plugin's first dependency on an external service.** `.claude-plugin/plugin.json`
+  says "Standalone — no dependency on any other repo; framework overlays build on it through
+  the template slots", and `ai/docs/fleet.md` Boundaries repeats it. Jira is not another repo,
+  so the letter survives, but the spirit does not: a task that cannot run without Atlassian
+  being reachable is not standalone. **This is the ADR that gates the work.**
+- **Three runtimes, one prompt.** Claude Code (plugin commands + subagents + hooks), Codex
+  (`.codex/skills/`, no subagents, no hooks — CHANGELOG 0.9.0), and headless `make ai TASK=…`
+  used by CI. The task prompt is the same file in all three; only the surrounding capability
+  differs. Source: `docs/workflow.md` §8, `skills/ai-layout/templates/ai/make/ai.mk`.
+- **The chosen transport reaches one of those three.** The Atlassian MCP connector is Claude
+  Code only, is currently unauthenticated, and is absent from headless and cron runs. So
+  ticket resolution and write-back happen from a developer's Claude Code session and nowhere
+  else. Accepted deliberately (§6) — but it means the board is updated *sometimes*, which is
+  a weaker guarantee than never, and the design has to say so out loud rather than let a team
+  infer that Jira mirrors reality.
+- **Tasks are prompt files, not code.** `ai/tasks/*.md` carry no `allowed-tools`; only the two
+  plugin commands do. There is no function to put a seam in. Any indirection has to be a
+  document the prompts point at.
+- **Template changes reach every adopted repo.** `ai/docs/coding-standards.md` and fleet.md
+  Boundaries. Adding a `Jira:` line to what `/t4:spec` writes changes the output of every
+  adopter, including those with no Jira at all.
+- **`ai/tasks/*.md` are symlinks into `skills/ai-layout/templates/`**, so a task edit is one
+  edit, not two. Adding a *new* template file is a drift event for every adopted repo
+  (`ai/.sdlc.json`, ADR 0002).
+- **A task that cannot get its input must ask, not invent.** Established in 0.14.0 for empty
+  arguments; an unresolvable ticket key is the same failure with a different cause.
+- **Specs have no frontmatter today.** They open with `# NNNN — Title`
+  (`skills/ai-layout/templates/specs/0000-scaffold.md`). Somewhere has to hold the key.
+
+## 3. Today
+No Jira anywhere: no mention in any tracked file, no `jira`/`acli` binary on PATH, no
+`JIRA_*` environment, no `mcpServers` in either plugin manifest. `/t4:spec` takes free text
+and asks for it when absent. `/t4:plan` takes a spec path. Nothing links a spec to anything
+outside the repo.
+
+## 4. Options
+
+### Transport
+- **A. MCP connector.** Richest data, no token handling, no install. Claude Code only.
+- **B. `ai/make/jira.sh` over REST.** Same behaviour in all three runtimes, no install, three
+  env vars. Prompts stay free of JSON shape.
+- **C. `jira` CLI.** Best ergonomics, but the first binary every developer and CI image must
+  install.
+
+### Linkage
+- **D. Key recorded in the spec.** One fetch point; four resolvers; write-back knows its target.
+- **E. `/t4:spec` only.** Smallest change; nothing downstream can comment or transition,
+  because nothing downstream knows the ticket.
+
+### Write-back
+- **F. Comments always, transitions opt-in.** Additive by default; a repo names its own
+  workflow states before anything moves.
+- **G. Both on.** Most automation; every repo must get state names right before the first run.
+- **H. Comments only.** The board is only ever moved by a person.
+
+## 5. Comparison
+| | CI / Codex parity | Setup cost | Blast radius | Reversible |
+|---|---|---|---|---|
+| A | none | zero | local sessions only | yes |
+| B | full | 3 env vars | everywhere the task runs | yes |
+| C | full | install per machine + image | everywhere | costly |
+| D | n/a | one line per spec | changes every adopter's spec output | yes |
+| E | n/a | none | none | yes |
+| F | follows transport | `ai/jira.yaml` when wanted | comments always, moves on request | yes |
+| G | follows transport | states required up front | moves cards from run one | yes |
+| H | follows transport | none | additive only | yes |
+
+## 6. Decision
+**A + D + F**, with the seam from B built now and its implementation deferred.
+
+- **Transport: the MCP connector, reached through a documented seam.** Tasks never name the
+  connector. They say: resolve this ticket the way `ai/docs/jira.md` describes. That document
+  defines the resolution order — MCP if the session has it, else `ai/make/jira.sh` if the repo
+  has it, else stop and ask. Only the third arm exists in Codex and CI today; adding the
+  second is then a new file plus a paragraph, with no task edited.
+- **Linkage: `/t4:spec` writes the key into the spec it creates**, as a `Jira: PROJ-123` line
+  under the title. Specs stay frontmatter-free; this is body text, greppable, and survives
+  a human editing the file. `/t4:plan`, `/t4:test`, `/t4:run` and `/t4:check` accept either a
+  path (as today) or a key, resolving a key by grepping `specs/`.
+- **Write-back: comment always, transition only when mapped.** Each task comments the artefact
+  it produced. Transitions ship in the same release but are inert unless `ai/jira.yaml` names
+  them, and are skipped silently when the move is unavailable from the current status.
+
+### Rules that fall out
+1. **An argument is a ticket key only if the whole argument matches** `[A-Z][A-Z0-9]+-[0-9]+`.
+   A partial match is free text. Otherwise "PROJ-123 but only the CSV part" resolves as a
+   ticket and silently discards the qualifier.
+2. **An unresolvable key stops the task.** Never fall through to treating `PROJ-123` as the
+   feature description — that produces a confident spec about nothing, which is worse than
+   no spec. Same rule as 0.14.0's empty argument.
+3. **Two specs naming one ticket is an error, not a guess.** Report both paths and stop.
+4. **Write-back never fails the task.** The artefact is already on disk; a rejected comment or
+   transition is reported, not raised.
+5. **A repo with no `ai/jira.yaml` and no Jira behaves exactly as it does today.** Adopters
+   without Jira must see no new prompt, no new question, no new failure mode.
+
+## 7. Contracts and data ownership
+| Thing | Owner | Written by | Notes |
+|---|---|---|---|
+| `ai/jira.yaml` | the adopting repo | a human | base URL, optional transition map. Never generated. |
+| `Jira:` line in a spec | the spec file | `/t4:spec` | body text under the title, not frontmatter |
+| `ai/docs/jira.md` | ai-sdlc template | plugin release | the seam: resolution order and write-back contract |
+| Ticket comments | Jira | any task, via the seam | additive; ai-sdlc owns none of it |
+| Ticket status | Jira | opt-in only | the repo names the states; ai-sdlc names none |
+| Credentials | the developer's environment | never the repo | no token is committed; MCP holds its own |
+
+## 8. ADRs to write
+- **0004 — ai-sdlc may require an external service for one task.** The gating decision. Must
+  state what "standalone" now means and that a Jira-less repo is unaffected.
+- **0005 — the ticket key lives in the spec body.** Why not frontmatter, why not a sidecar
+  index, why grep is enough.
+- **0006 — write-back comments always, transitions only when mapped.** Why a board that moves
+  from one runtime only is still worth having, and why transitions are never inferred.
+
+## 9. Specs to follow
+1. `/t4:spec` accepts a ticket key, fetches it, writes the `Jira:` line. Includes the
+   whole-argument match rule and the stop-on-unresolvable rule.
+2. Key resolution in `/t4:plan`, `/t4:test`, `/t4:run`, `/t4:check`.
+3. Write-back: comments from spec/plan/check, plus `ai/jira.yaml` and transitions.
+
+Spec 1 is useful alone. 2 and 3 are not useful without 1.
+
+## 10. Proposed updates to ai/docs/architecture.md and ai/docs/fleet.md
+- architecture.md: a fourth surface reaching a developer — an external tracker, reached only
+  through `ai/docs/jira.md`.
+- fleet.md Boundaries: amend the standalone claim rather than delete it. Proposed wording —
+  "ai-sdlc depends on no other repo and adds no runtime dependency. One task may call an
+  external tracker when the repo configures one; every task works without it."
+
+## 11. Open questions
+- **Which ticket field becomes acceptance criteria?** Description prose, a checklist field, or
+  a Jira plugin's AC field — differs per team, and `/t4:spec`'s whole output is Given/When/Then.
+  Unresolved. Probably: read the description, and let the spec's own Open Questions carry
+  whatever the ticket left implicit.
+- **Repeated runs comment repeatedly.** Re-running `/t4:spec` on one ticket posts again. Comment
+  only when the spec file did not already exist? That is quiet but surprising.
+- **Should `/t4:explore`, `/t4:fix` and `/t4:chore` take keys too?** They take requests, so it
+  is natural. Deferred: they produce no spec, so there is nowhere to record the key.
+- **Does the base URL come from `ai/jira.yaml` or from the connector?** Needed to write a
+  browse link into a comment without a fetch.
+- **When does arm two of the seam get built?** Until it exists, CI cannot resolve a ticket, and
+  §2 says the board is only sometimes right.
