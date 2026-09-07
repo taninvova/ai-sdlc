@@ -56,7 +56,7 @@ Step 1 builds the seam first so that step 2 has something to point at and no rea
   that it passes. *Proves:* AC7. *Check:* `bash skills/ai-layout/scripts/check-adapters.sh`,
   plus the deliberate-break run.
 
-- [ ] **Step 5 — Make Codex behave the same, or say why not.** AC4 is Codex's *normal* path,
+- [x] **Step 5 — Make Codex behave the same, or say why not.** AC4 is Codex's *normal* path,
   not an edge case, since arm two does not exist. Confirm the generated skill inherits
   stop-and-ask by pointing at the task file; if it does not, add it in `sync-adapters.sh`.
   *Proves:* AC4 under Codex. *Check:* read a generated `.codex/skills/t4-spec/SKILL.md`.
