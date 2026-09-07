@@ -35,6 +35,11 @@ Try in this order and stop at the first that applies:
 3. **Otherwise, stop and ask the developer how to proceed.** Report that the key could not be
    resolved and why. Outside Claude Code this is the normal path today, not an error.
 
+In a non-interactive run — `make ai`, CI — there is nobody to ask. Say plainly that the key
+did not resolve and that nothing was written, and stop there. Do not fall back to specifying
+the key, and do not invent an answer to keep the run green: a run that produces nothing and
+says so is recoverable, one that produces a wrong artefact is not.
+
 Never fall back to treating the key as the feature request. A spec written from the string
 `PROJ-123` is a confident document about nothing, which is worse than no spec. Never guess a
 ticket from the branch name, the last commit, or another spec.
