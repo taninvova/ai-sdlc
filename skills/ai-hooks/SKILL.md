@@ -29,15 +29,24 @@ these 16 columns; each blanks what it cannot know — an interactive session has
 a headless run has no separate turn accounting beyond `num_turns`. `accepted` is filled by
 the developer at commit time (y/n/partial). `user` is $GITLAB_USER or `git config user.name`.
 
-The two writers declare the header separately because they run from different places and
-cannot share a module. `fixtures/check-log-schema.sh` asserts they agree, that every row
-matches the header width, and that migration preserves old rows — run it after touching
-either writer.
+The two writers declare the header — and the schema guard under it — separately, because
+they run from different places and cannot share a module. `fixtures/check-log-schema.sh`
+asserts the two copies have not drifted, that every row matches the header width, and that
+both kinds of migration preserve old rows. Run it after touching either writer.
 
-A log.csv whose header is not the above predates this schema: its rows came from two
-writers with different column meanings and cannot be reinterpreted, so the first write
-moves them to `ai/runs/log.previous.csv` and starts a clean file. Nothing is lost, nothing
-is mixed.
+Two things can be wrong with a log.csv, and both are repaired on the next write:
+
+- **The header is not the above.** The file predates this schema; its rows came from two
+  writers with different column meanings. All of them move to `ai/runs/log.previous.csv`
+  and a clean file is started.
+- **The header matches but a row is not 16 fields.** A writer still on an older schema
+  appended into a current file — an older hook installed elsewhere, say. A header check
+  cannot see this, which is how 12-field rows once sat under a 16-field header for a whole
+  session. Only the offending rows move, under a dated comment naming why.
+
+Rows are never reinterpreted into the new columns: width alone cannot say which writer
+produced a row, and guessing is what caused the original mixed-schema bug. Field counting
+is quote-aware, so a value containing a comma or a newline is one field, not several.
 
 ## Pricing
 session-stop.js prices a run with the model the transcript says actually ran, so any

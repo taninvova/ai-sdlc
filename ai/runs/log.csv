@@ -1,2 +1,6 @@
 ts,session_id,source,user,branch,task,tool,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted
 2026-09-07T14:06:50.828Z,9c657d4e-ba1c-418e-abf9-0f82d0fc2382,session,tanin,ai/log-schema-skew,,claude,claude-opus-5,96,192,65433,8407364,181761,0.98,4.1859,
+2026-09-07T14:10:48.778Z,9c657d4e-ba1c-418e-abf9-0f82d0fc2382,session,tanin,main,,claude,claude-opus-5,132,264,90716,13076383,228143,0.98,6.1400,
+2026-09-07T14:14:16.912Z,9c657d4e-ba1c-418e-abf9-0f82d0fc2382,session,tanin,main,,claude,claude-opus-5,142,284,95794,14495023,236041,0.98,6.6714,
+2026-09-07T14:17:21.222Z,9c657d4e-ba1c-418e-abf9-0f82d0fc2382,session,tanin,main,,claude,claude-opus-5,159,318,113683,17006612,256316,0.99,7.7694,
+2026-09-07T14:17:38.904Z,9c657d4e-ba1c-418e-abf9-0f82d0fc2382,session,tanin,main,,claude,claude-opus-5,161,322,114533,17314694,256376,0.99,7.8748,

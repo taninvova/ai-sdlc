@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.10.0 — 2026-09-07
+- **The log guard measures every row, not just the header.** 0.7.0 moved a log.csv aside when
+  its header was not the current one, which catches a file that predates the schema but not a
+  writer that appends into a current one. An older hook still installed elsewhere kept writing
+  12-field rows under the 16-field header for an entire session, and nothing noticed: the
+  header it was checked against still matched. Both writers now check each row's width and move
+  only the rows that fail, under a dated comment saying why. Rows are still never reinterpreted
+  into the new columns — width cannot say which writer produced a row, and guessing is what
+  caused the mixed-schema bug in the first place.
+- **Field counting is quote-aware.** `csv()` quotes any value holding a comma or a newline, so
+  counting commas would have quarantined a valid row whose `user` is `"Doe, Jane"`, and torn a
+  row with an embedded newline into two malformed halves. Records are split on quote state and
+  an unclosed quote is treated as unmeasurable rather than counted as some width.
+- The guard is duplicated in both writers for the same reason `HEADER` is — they run from
+  different places and cannot share a module — so `fixtures/check-log-schema.sh` now diffs the
+  two copies and fails on drift. Three new cases cover a short row under a matching header, a
+  quoted comma surviving, and the headless writer guarding the same way. Each was verified to
+  fail with the guard removed, the quote handling removed, and the copies drifted — not just
+  to pass today.
+
 ## 0.9.0 — 2026-09-06
 - **Codex support.** `sync-adapters.sh` now generates `.codex/skills/` beside `.claude/` and
   `.cursor/`, so the same eleven tasks are slash commands in Codex. Verified against Codex
