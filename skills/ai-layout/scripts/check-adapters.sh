@@ -80,6 +80,31 @@ bash ai/make/sync-adapters.sh > /dev/null
 [ -f .claude/commands/spec-of-mine.md ]  || fail "sync deleted a hand-written command"
 rm -f .claude/commands/spec-of-mine.md
 
+# ADR 0004 rule 3: a task prompt may name the seam document and nothing else. The vendor, the
+# connector, a URL, a config filename — all of it belongs in ai/docs/tracker.md, so that
+# replacing the tracker touches one file. Checked on the task AND on both generated forms,
+# because the generated command is what a developer actually runs. The word "json" is NOT
+# forbidden: check, design and fleet legitimately describe JSON output of their own.
+BANNED='jira|atlassian|connector|base_url|https?://|\.yaml'
+for f in ai/tasks/*.md .claude/commands/t4/*.md .codex/skills/t4-*/SKILL.md; do
+  [ -f "$f" ] || continue
+  if grep -qiE "$BANNED" "$f"; then
+    fail "$f names a tracker implementation detail — ADR 0004 rule 3 confines those to ai/docs/tracker.md:
+$(grep -inE "$BANNED" "$f" | head -3)"
+  fi
+done
+
+# AC12 of specs/0001: a repo that has configured no tracker must not be able to tell the
+# feature shipped. argument-hint is rendered in the command menu, so it is output, and a hint
+# mentioning tickets would advertise the feature to every repo that cannot use it.
+for t in ai/tasks/*.md; do
+  h=$(sed -n 's/^argument-hint: *//p' "$t" | head -1)
+  case "$h" in
+    *icket*|*racker*|*ira*)
+      fail "$(basename "$t" .md) advertises a tracker in its argument-hint (\"$h\") — the command menu is visible to repos with no tracker configured" ;;
+  esac
+done
+
 # The codex skill must not copy the prompt text — that would fork from ai/tasks/.
 body=$(sed -n '/^---$/,/^---$/!p' .codex/skills/t4-spec/SKILL.md | wc -l | tr -d ' ')
 [ "$body" -lt 15 ] || fail "codex skills look like copies of the task, not pointers ($body lines)"
