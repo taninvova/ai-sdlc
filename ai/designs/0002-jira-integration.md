@@ -164,10 +164,9 @@ Spec 1 is useful alone. 2 and 3 are not useful without 1.
   external tracker when the repo configures one; every task works without it."
 
 ## 11. Open questions
-- **Which ticket field becomes acceptance criteria?** Description prose, a checklist field, or
-  a Jira plugin's AC field — differs per team, and `/t4:spec`'s whole output is Given/When/Then.
-  Unresolved. Probably: read the description, and let the spec's own Open Questions carry
-  whatever the ticket left implicit.
+- ~~**Which ticket field becomes acceptance criteria?**~~ **Resolved:** the description, and no
+  other field. A gap the description leaves implicit becomes an Open question in the spec, not
+  an invented Given/When/Then. Recorded as AC10 and AC11 of `specs/0001-spec-accepts-a-ticket-key.md`.
 - ~~**Repeated runs comment repeatedly.**~~ **Resolved by ADR 0006:** every run comments,
   because a re-spec is a second event and suppressing it hides the interesting fact. Neither
   alternative survived the no-read-before-write rule.
