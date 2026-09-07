@@ -56,6 +56,11 @@ is blank by default, so each tool runs whatever model it is configured with, and
 carries per-model prices for the cost column of `ai/runs/log.csv`.
 
 ## Known gaps
+- **Hooks run from the installed plugin, not the working tree.** This repo's log.csv took
+  three 12-field rows under the 16-field header because the installed copy is 0.3.0, whose
+  session-stop.js appends blind. The 0.7.0 writer moves a mismatched file aside; the older one
+  cannot, so a repo that updates its header before its plugin gets mixed rows until the plugin
+  is updated and the session restarted (d).
 - ~~`.claude-plugin/marketplace.json` pinned sdlc at `0.3.0` while `plugin.json` was
   `0.5.0`~~ — **fixed**; the definition of done now requires both files bumped together,
   since they drifted silently through 0.4.0 and 0.5.0. Nothing yet *checks* that they agree.

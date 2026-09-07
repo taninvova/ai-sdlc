@@ -238,6 +238,12 @@ Silently, into `ai/runs/` — nothing prints to your terminal:
 
 `ai/runs/*.json` and `*.jsonl` are gitignored; `log.csv` is committed.
 
+Hooks run from the **installed** plugin, not from a working copy. After updating the plugin,
+restart the session — until you do, an older hook keeps writing the older row shape, and a
+`log.csv` already migrated to a newer header will collect rows that do not match it. If that
+happens, move the mismatched rows to `ai/runs/log.previous.csv`; that is what the current
+writer does automatically.
+
 ## 10. When something is wrong
 
 | Symptom | Cause |
