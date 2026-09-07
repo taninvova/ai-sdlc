@@ -30,7 +30,7 @@ artefact back to the ticket, and may move the ticket's status if the repo has co
   plugin commands do. There is no function to put a seam in. Any indirection has to be a
   document the prompts point at.
 - **Template changes reach every adopted repo.** `ai/docs/coding-standards.md` and fleet.md
-  Boundaries. Adding a `Jira:` line to what `/t4:spec` writes changes the output of every
+  Boundaries. Adding a `Ticket:` line to what `/t4:spec` writes changes the output of every
   adopter, including those with no Jira at all.
 - **`ai/tasks/*.md` are symlinks into `skills/ai-layout/templates/`**, so a task edit is one
   edit, not two. Adding a *new* template file is a drift event for every adopted repo
@@ -86,13 +86,17 @@ outside the repo.
   defines the resolution order — MCP if the session has it, else `ai/make/jira.sh` if the repo
   has it, else stop and ask. Only the third arm exists in Codex and CI today; adding the
   second is then a new file plus a paragraph, with no task edited.
-- **Linkage: `/t4:spec` writes the key into the spec it creates**, as a `Jira: PROJ-123` line
-  under the title. Specs stay frontmatter-free; this is body text, greppable, and survives
+- **Linkage: `/t4:spec` writes the key into the spec it creates**, as a `Ticket: PROJ-123`
+  line under the title. The label is vendor-neutral per `docs/adr/0005`: `ai/tasks/spec.md`
+  carries it verbatim, so `Jira:` — this design's first wording — would have been the vendor
+  named in a task prompt, which ADR 0004 rule 3 forbids. Specs stay frontmatter-free; this is body text, greppable, and survives
   a human editing the file. `/t4:plan`, `/t4:test`, `/t4:run` and `/t4:check` accept either a
   path (as today) or a key, resolving a key by grepping `specs/`.
-- **Write-back: comment always, transition only when mapped.** Each task comments the artefact
-  it produced. Transitions ship in the same release but are inert unless `ai/jira.yaml` names
-  them, and are skipped silently when the move is unavailable from the current status.
+- **Write-back: comment always, transition only when every runtime can.** Each task comments
+  the artefact it produced, on every run. `docs/adr/0006` narrows what this design proposed:
+  transitions need `ai/jira.yaml` **and** `ai/make/jira.sh` — arm two of the seam — not
+  configuration alone, so no card moves until every runtime can move one. A refused transition
+  is not retried and does not fail the task, but is reported.
 
 ### Rules that fall out
 1. **Configuration opens the tracker path — never the shape of an argument.** Only a repo
@@ -119,10 +123,10 @@ outside the repo.
 | Thing | Owner | Written by | Notes |
 |---|---|---|---|
 | `ai/jira.yaml` | the adopting repo | a human | base URL, optional transition map. Never generated. |
-| `Jira:` line in a spec | the spec file | `/t4:spec` | body text under the title, not frontmatter |
+| `Ticket:` line in a spec | the spec file | `/t4:spec` | body text under the title, not frontmatter; vendor-neutral (ADR 0005) |
 | `ai/docs/jira.md` | ai-sdlc template | plugin release | the seam: resolution order and write-back contract |
 | Ticket comments | Jira | any task, via the seam | additive; ai-sdlc owns none of it |
-| Ticket status | Jira | opt-in only | the repo names the states; ai-sdlc names none |
+| Ticket status | Jira | opt-in **and** arm two present (ADR 0006) | the repo names the states; ai-sdlc names none |
 | Credentials | the developer's environment | never the repo | no token is committed; MCP holds its own |
 
 ## 8. ADRs to write
@@ -131,13 +135,19 @@ outside the repo.
   narrows the standalone claim rather than preserving it by literalism, makes configuration
   the trigger, and confines the dependency to `ai/docs/jira.md`. **Not yet accepted — spec 1
   does not start until it is.**
-- **0005 — the ticket key lives in the spec body.** Why not frontmatter, why not a sidecar
-  index, why grep is enough.
-- **0006 — write-back comments always, transitions only when mapped.** Why a board that moves
-  from one runtime only is still worth having, and why transitions are never inferred.
+- **0005 — the tracker key lives in the spec body, as one vendor-neutral line.**
+  **Written:** `docs/adr/0005-ticket-key-lives-in-the-spec-body.md`, Status: proposed.
+  Changed this design's label from `Jira:` to `Ticket:`; see §6.
+- **0006 — write-back appends always, moves a ticket only when every runtime can.**
+  **Written:** `docs/adr/0006-write-back-comments-always-transitions-gated.md`, Status:
+  proposed. It answered the question this design left to 0004 and 0004 left open — it does
+  *not* accept moving cards from one runtime out of three, on the grounds that a status is a
+  cell people and board automation also write, so automating it partially kills the manual
+  habit without replacing it. That is ADR 0002's two-writers-of-one-fact refusal arriving
+  through a different door.
 
 ## 9. Specs to follow
-1. `/t4:spec` accepts a ticket key, fetches it, writes the `Jira:` line. Gated on
+1. `/t4:spec` accepts a ticket key, fetches it, writes the `Ticket:` line. Gated on
    `ai/jira.yaml` being present (ADR 0004 rule 2), not on the argument's shape; includes the
    whole-argument match rule *within* a configured repo, and the stop-on-unresolvable rule.
 2. Key resolution in `/t4:plan`, `/t4:test`, `/t4:run`, `/t4:check`.
@@ -157,8 +167,15 @@ Spec 1 is useful alone. 2 and 3 are not useful without 1.
   a Jira plugin's AC field — differs per team, and `/t4:spec`'s whole output is Given/When/Then.
   Unresolved. Probably: read the description, and let the spec's own Open Questions carry
   whatever the ticket left implicit.
-- **Repeated runs comment repeatedly.** Re-running `/t4:spec` on one ticket posts again. Comment
-  only when the spec file did not already exist? That is quiet but surprising.
+- ~~**Repeated runs comment repeatedly.**~~ **Resolved by ADR 0006:** every run comments,
+  because a re-spec is a second event and suppressing it hides the interesting fact. Neither
+  alternative survived the no-read-before-write rule.
+- **The seam's filename still names the vendor.** ADR 0005 found the leak it could not close:
+  a task prompt must name `ai/docs/jira.md`, so the vendor reaches the prompt through a
+  filename even with a neutral `Ticket:` label. Renaming the seam — `ai/docs/tracker.md` —
+  closes ADR 0004 rule 3 cleanly and costs nothing while none of this is built. Left unchanged
+  here on purpose: it amends an ADR under review, which is the accepter's call, not a design
+  edit.
 - **Should `/t4:explore`, `/t4:fix` and `/t4:chore` take keys too?** They take requests, so it
   is natural. Deferred: they produce no spec, so there is nowhere to record the key.
 - **Does the base URL come from `ai/jira.yaml` or from the connector?** Needed to write a
