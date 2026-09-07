@@ -61,12 +61,24 @@ Step 1 builds the seam first so that step 2 has something to point at and no rea
   stop-and-ask by pointing at the task file; if it does not, add it in `sync-adapters.sh`.
   *Proves:* AC4 under Codex. *Check:* read a generated `.codex/skills/t4-spec/SKILL.md`.
 
-- [ ] **Step 6 — Run the ACs for real and record the transcripts.** The repo has no test
+- [~] **Step 6 — Run the ACs for real and record the transcripts.** *Partially done — AC2
+  blocked, so this step is NOT complete.* Ran against two scratch repos, one configured and
+  one not, via the same prompt `make ai` builds:
+  **AC1 pass** (unconfigured, `UTF-8` — free text, no key resolved, no `Ticket:` line);
+  **AC3 pass** (configured, `PROJ-123 but only the CSV export part` — treated as prose, no
+  `Ticket:` line); **AC4 pass** (configured, `PROJ-123`, both arms unavailable — stopped, no
+  spec written, did not fall back to specifying the key); **AC12 pass, after a fix** — see
+  below. **AC2 blocked:** needs an authenticated connector and a real ticket. The repo has no test
   runner; behaviour is proved by runs (coding-standards, Tests). Minimum set: AC1
   (`/t4:spec UTF-8` with no config — the regression that shaped the design), AC12 (seam present,
   no config, nothing changes), AC3 (partial match), AC4 (configured, unreachable), AC2 (happy
   path, needs one real ticket). *Proves:* AC1–AC6, AC12. *Check:* transcripts linked in the MR,
   definition of done item 2.
+  **AC12 failed on the first run** and the fix is in `spec.md`. The artefact was correct, but
+  the *report* said "`ai/docs/tracker.md` exists but `ai/jira.yaml` does not, so this repo is
+  unconfigured" — narrating the gate to a repo that configured nothing. A report is output, so
+  that is exactly what AC12 forbids. The task now says: when unconfigured, say nothing about
+  keys, configuration or that file. Re-ran: zero mentions, spec unchanged.
 
 - [ ] **Step 7 — CHANGELOG, version bump, README.** Name the blast radius: every adopted repo
   receives `ai/docs/tracker.md` on its next sync and gains nothing until it writes
