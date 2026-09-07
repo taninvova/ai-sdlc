@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.0 — 2026-09-07
+- **The marketplace is now `t4`, not `n6`.** Breaking for anyone who installed by handle:
+  `sdlc@n6` no longer resolves. Re-point with `/plugin marketplace remove n6`, then
+  `/plugin marketplace add git@gitlab.nsix.io:ai/sdlc.git` and `/plugin install sdlc@t4`.
+  The git remote is unchanged — only the marketplace handle and the org name moved.
+- The rename is total: manifests, install instructions, the owner and author fields, the
+  LICENSE holder, and the historical changelog entry that named n6. Nothing is left saying
+  the old name, which is what a straight org rename calls for — note that this does rewrite
+  a past entry rather than record a change on top of it.
+
 ## 0.10.0 — 2026-09-07
 - **The log guard measures every row, not just the header.** 0.7.0 moved a log.csv aside when
   its header was not the current one, which catches a file that predates the schema but not a
@@ -113,7 +123,7 @@
 - **`make review` corrupted diffs containing `$`.** The diff was routed through a make
   variable, which re-expands `$`; it now goes to a file passed as `INPUT_FILE`, byte for
   byte. `INPUT_FILE=<path>` works for any task.
-- No n6-specific configuration remains in the templates: the AGENTS.md setup section names
+- No t4-specific configuration remains in the templates: the AGENTS.md setup section names
   no provider, and `ai/docs/architecture.md` no longer claims a LiteLLM proxy resolves aliases.
 
 ## 0.5.1 — 2026-09-06

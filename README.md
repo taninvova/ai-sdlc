@@ -1,4 +1,4 @@
-# sdlc — n6 AI SDLC core plugin (repo: ai-sdlc)
+# sdlc — t4 AI SDLC core plugin (repo: ai-sdlc)
 
 The operating-model half of AI-native delivery, as a Claude Code plugin. Standalone: it depends on no other repo and adds no runtime dependency. Framework-neutral — overlay plugins build on it by filling the `{{…_extra}}` slots in its templates.
 
@@ -28,7 +28,7 @@ Registered plugin-wide; no-op in repos without `ai/`; never print to stdout (cac
 ## Install
 ```
 /plugin marketplace add git@gitlab.nsix.io:ai/sdlc.git
-/plugin install sdlc@n6
+/plugin install sdlc@t4
 ```
 Local: `claude --plugin-dir ~/code/nsix/ai/ai-sdlc`
 
