@@ -1,8 +1,9 @@
 # 0002 — Jira integration
 
-Date: 2026-09-07 · Status: proposed · Plugin version at time of writing: 0.17.0.
-**No accepted ADR binds this design.** It contradicts a standing boundary — see §2 — so it
-cannot proceed on this document alone.
+Date: 2026-09-07 · Status: accepted 2026-09-07 · Plugin version at time of writing: 0.17.0.
+Bound by `docs/adr/0004`, `0005` and `0006`, all accepted the same day. Where an ADR and this
+document differ the ADR wins — 0005 changed the label and 0006 narrowed the transition gate,
+and both corrections are folded in below.
 
 ## 1. Capability
 `/t4:spec PROJ-123` drafts a spec from a Jira ticket instead of from typed prose. The ticket
@@ -82,7 +83,7 @@ outside the repo.
 **A + D + F**, with the seam from B built now and its implementation deferred.
 
 - **Transport: the MCP connector, reached through a documented seam.** Tasks never name the
-  connector. They say: resolve this ticket the way `ai/docs/jira.md` describes. That document
+  connector. They say: resolve this ticket the way `ai/docs/tracker.md` describes. That document
   defines the resolution order — MCP if the session has it, else `ai/make/jira.sh` if the repo
   has it, else stop and ask. Only the third arm exists in Codex and CI today; adding the
   second is then a new file plus a paragraph, with no task edited.
@@ -124,7 +125,7 @@ outside the repo.
 |---|---|---|---|
 | `ai/jira.yaml` | the adopting repo | a human | base URL, optional transition map. Never generated. |
 | `Ticket:` line in a spec | the spec file | `/t4:spec` | body text under the title, not frontmatter; vendor-neutral (ADR 0005) |
-| `ai/docs/jira.md` | ai-sdlc template | plugin release | the seam: resolution order and write-back contract |
+| `ai/docs/tracker.md` | ai-sdlc template | plugin release | the seam: resolution order and write-back contract |
 | Ticket comments | Jira | any task, via the seam | additive; ai-sdlc owns none of it |
 | Ticket status | Jira | opt-in **and** arm two present (ADR 0006) | the repo names the states; ai-sdlc names none |
 | Credentials | the developer's environment | never the repo | no token is committed; MCP holds its own |
@@ -133,7 +134,7 @@ outside the repo.
 - **0004 — ai-sdlc may depend on an external tracker, behind one seam and off by default.**
   **Written:** `docs/adr/0004-external-tracker-behind-one-seam.md`, Status: proposed. It
   narrows the standalone claim rather than preserving it by literalism, makes configuration
-  the trigger, and confines the dependency to `ai/docs/jira.md`. **Not yet accepted — spec 1
+  the trigger, and confines the dependency to `ai/docs/tracker.md`. **Not yet accepted — spec 1
   does not start until it is.**
 - **0005 — the tracker key lives in the spec body, as one vendor-neutral line.**
   **Written:** `docs/adr/0005-ticket-key-lives-in-the-spec-body.md`, Status: proposed.
@@ -157,7 +158,7 @@ Spec 1 is useful alone. 2 and 3 are not useful without 1.
 
 ## 10. Proposed updates to ai/docs/architecture.md and ai/docs/fleet.md
 - architecture.md: a fourth surface reaching a developer — an external tracker, reached only
-  through `ai/docs/jira.md`.
+  through `ai/docs/tracker.md`.
 - fleet.md Boundaries: amend the standalone claim rather than delete it. Proposed wording —
   "ai-sdlc depends on no other repo and adds no runtime dependency. One task may call an
   external tracker when the repo configures one; every task works without it."
@@ -171,7 +172,7 @@ Spec 1 is useful alone. 2 and 3 are not useful without 1.
   because a re-spec is a second event and suppressing it hides the interesting fact. Neither
   alternative survived the no-read-before-write rule.
 - **The seam's filename still names the vendor.** ADR 0005 found the leak it could not close:
-  a task prompt must name `ai/docs/jira.md`, so the vendor reaches the prompt through a
+  a task prompt must name `ai/docs/tracker.md`, so the vendor reaches the prompt through a
   filename even with a neutral `Ticket:` label. Renaming the seam — `ai/docs/tracker.md` —
   closes ADR 0004 rule 3 cleanly and costs nothing while none of this is built. Left unchanged
   here on purpose: it amends an ADR under review, which is the accepter's call, not a design

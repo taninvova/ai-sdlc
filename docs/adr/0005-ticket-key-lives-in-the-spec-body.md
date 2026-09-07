@@ -1,7 +1,7 @@
 # 0005 — The tracker key lives in the spec body, as one vendor-neutral line
 
-Date: 2026-09-07 · Status: proposed — it cannot be accepted ahead of its gate,
-`docs/adr/0004-external-tracker-behind-one-seam.md`, which is itself proposed.
+Date: 2026-09-07 · Status: accepted 2026-09-07, together with its gate
+`docs/adr/0004-external-tracker-behind-one-seam.md`.
 
 ## Context
 `ai/designs/0002-jira-integration.md` §6 has `/t4:spec` fetch a ticket and four later tasks —
@@ -29,7 +29,7 @@ so a renamed or deleted spec silently orphans its entry, and two features specce
 branches conflict in one file on every merge. ADR 0002 refused a registry of repos for the same
 reason a sidecar should be refused here: state belongs with the thing it describes.
 
-The last force is a collision. ADR 0004 rule 3 confines the vendor to `ai/docs/jira.md` and
+The last force is a collision. ADR 0004 rule 3 confines the vendor to `ai/docs/tracker.md` and
 forbids a task prompt from naming it; rule 2 promises a repo with no `ai/jira.yaml` sees no new
 line in a generated spec. This decision has a task write a label into a file in every adopting
 repo, so the wording of that label is a rule-3 question, not a matter of taste.
@@ -48,13 +48,13 @@ file, instead of at every spec in every adopted repo. This is a correction to th
 wording, not to its substance; the substance — body text, one line, greppable — stands.
 
 I will not claim more consistency than I have. Rule 3 is still not clean after this change: the
-prompt must name the seam document, and that document is called `ai/docs/jira.md`, so the
+prompt must name the seam document, and that document is called `ai/docs/tracker.md`, so the
 vendor reaches the prompt through a filename whatever the label says. That leak is 0004's to
 close by renaming the seam, and this ADR neither closes nor widens it.
 
 The value is the bare key and nothing else — no URL, no title, no prose, the whole of it
 matching `[A-Z][A-Z0-9]+-[0-9]+`. A link would put the vendor's host in every spec and
-recreate the leak the label just avoided; the base URL stays in `ai/docs/jira.md`.
+recreate the leak the label just avoided; the base URL stays in `ai/docs/tracker.md`.
 
 Resolution is `grep` over `specs/`, matching the key as a whole token so `PROJ-12` never hits
 `PROJ-123`. Tens of files, no index to keep warm. The edges are decided, not left to judgement:
