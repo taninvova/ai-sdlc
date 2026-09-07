@@ -61,14 +61,19 @@ Step 1 builds the seam first so that step 2 has something to point at and no rea
   stop-and-ask by pointing at the task file; if it does not, add it in `sync-adapters.sh`.
   *Proves:* AC4 under Codex. *Check:* read a generated `.codex/skills/t4-spec/SKILL.md`.
 
-- [~] **Step 6 — Run the ACs for real and record the transcripts.** *Partially done — AC2
-  blocked, so this step is NOT complete.* Ran against two scratch repos, one configured and
-  one not, via the same prompt `make ai` builds:
+- [x] **Step 6 — Run the ACs for real and record the transcripts.** *Complete.* Ran against
+  scratch repos, configured and not, via the same prompt `make ai` builds:
   **AC1 pass** (unconfigured, `UTF-8` — free text, no key resolved, no `Ticket:` line);
   **AC3 pass** (configured, `PROJ-123 but only the CSV export part` — treated as prose, no
   `Ticket:` line); **AC4 pass** (configured, `PROJ-123`, both arms unavailable — stopped, no
   spec written, did not fall back to specifying the key); **AC12 pass, after a fix** — see
-  below. **AC2 blocked:** needs an authenticated connector and a real ticket. The repo has no test
+  below. **AC2, AC8, AC10, AC11 pass** against real ticket PLAT-12430 on
+  `n-six-development.atlassian.net`, once the connector was authenticated: one `Ticket:` line
+  on line 2, key alone; one acceptance criterion, which is all the one-sentence description
+  supports; nine open questions for what it left implicit. **AC9 pass** by mechanism — two
+  specs carrying the key are both found, so the resolver cannot silently pick one.
+  **Nothing was written to the tracker** — two read calls, no comment, no transition, status
+  still To Do, as ADR 0006 requires. The repo has no test
   runner; behaviour is proved by runs (coding-standards, Tests). Minimum set: AC1
   (`/t4:spec UTF-8` with no config — the regression that shaped the design), AC12 (seam present,
   no config, nothing changes), AC3 (partial match), AC4 (configured, unreachable), AC2 (happy
