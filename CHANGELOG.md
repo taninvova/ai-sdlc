@@ -6,9 +6,11 @@
   `/plugin marketplace add git@gitlab.nsix.io:ai/sdlc.git` and `/plugin install sdlc@t4`.
   The git remote is unchanged — only the marketplace handle and the org name moved.
 - The rename is total: manifests, install instructions, the owner and author fields, the
-  LICENSE holder, and the historical changelog entry that named n6. Nothing is left saying
-  the old name, which is what a straight org rename calls for — note that this does rewrite
-  a past entry rather than record a change on top of it.
+  LICENSE holder, and the earlier changelog entry that named the old org. Outside this entry
+  the old name survives nowhere, which is what a straight org rename calls for. Two things
+  that follow from it and are easy to miss: rewriting the earlier entry edits a record of
+  what was true at the time rather than noting a change on top of it, and this entry has to
+  keep naming the old handle, because migration instructions are useless without it.
 
 ## 0.10.0 — 2026-09-07
 - **The log guard measures every row, not just the header.** 0.7.0 moved a log.csv aside when
