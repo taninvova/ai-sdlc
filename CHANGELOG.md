@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.18.0 — 2026-09-07
+- **`make ai` never ran a task under `claude`.** `ai.mk` passed the prompt as an argument —
+  `claude -p "$(cat $PF)"` — and every task file opens with YAML frontmatter, so the CLI read
+  `---` as an option and exited before starting. The prompt now goes in on stdin, which is
+  what the Codex branch has always done. Found by running the acceptance criteria of
+  `specs/0001` for real; reproduced with `chore`, so it was never specific to one task.
+- **And it reported that failure as success.** The recipe ran on regardless: it printed
+  `run saved`, appended a row to `ai/runs/log.csv` for a run that never happened, and exited
+  0. CI would have gone green on an empty file. `make ai` now exits non-zero when the tool
+  fails or writes nothing, says how many bytes it got, and logs no row — a failed run is not
+  a run. `make review` inherits this, since it chains on `&&`.
+- **Blast radius: every adopted repo, but not automatically.** `ai/make/ai.mk` is a template,
+  and `/t4:sync-sdlc` regenerates adapters without touching `ai/`, so a repo keeps its broken
+  copy until it takes the drift the sync reports. Any repo relying on `make ai` or
+  `make review` in CI should take this one.
+
 ## 0.17.0 — 2026-09-07
 - **`/t4:step` is now `/t4:run`.** `ai/tasks/step.md` becomes `ai/tasks/run.md`; the task
   itself is unchanged. Breaking for anyone with the old command in a script or a habit.
