@@ -16,7 +16,9 @@ RUN        = $(CMD) exec --json --skip-git-repo-check $(MODEL_ARG) -o $$OUT.last
 else
 CMD       ?= claude
 MODEL_ARG  = $(if $(strip $(MODEL)),--model "$(MODEL)",)
-RUN        = $(CMD) -p "$$(cat $$PF)" $(MODEL_ARG) --output-format json > $$OUT
+# The prompt goes in on stdin, never as an argument: every task file starts with `---`, which
+# the CLI parses as an option and refuses. Codex takes stdin below for the same reason.
+RUN        = $(CMD) -p $(MODEL_ARG) --output-format json < $$PF > $$OUT
 endif
 
 .PHONY: ai review ai-sync clean-runs
@@ -31,8 +33,13 @@ ai:
 	PF=$$(mktemp); \
 	{ cat ai/tasks/$(TASK).md; printf '\n## Input\n'; \
 	  if [ -n "$(INPUT_FILE)" ]; then cat "$(INPUT_FILE)"; else printf '%s\n' "$$INPUT"; fi; } > $$PF; \
-	$(RUN); \
+	$(RUN); ST=$$?; \
 	rm -f $$PF; \
+	if [ $$ST -ne 0 ] || [ ! -s $$OUT ]; then \
+	  echo "make ai: $(TOOL) failed (exit $$ST) and wrote $$(wc -c < $$OUT | tr -d ' ') bytes to $$OUT" >&2; \
+	  echo "make ai: no row logged — a failed run is not a run" >&2; \
+	  exit 1; \
+	fi; \
 	node ai/make/log.js $$OUT $(TASK) $(TOOL) "$(MODEL)" >> $(RUNS)/log.csv; \
 	echo "run saved: $$OUT"
 
