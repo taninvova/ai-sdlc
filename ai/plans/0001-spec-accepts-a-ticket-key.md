@@ -50,7 +50,7 @@ Step 1 builds the seam first so that step 2 has something to point at and no rea
   Keep the task under two pages — it is already near the limit, so prefer deleting a sentence
   to adding one. *Proves:* AC1–AC6, AC8–AC11. *Check:* real runs, per step 6.
 
-- [ ] **Step 4 — Assert the prompt invariants in `check-adapters.sh`.** AC7: the generated
+- [x] **Step 4 — Assert the prompt invariants in `check-adapters.sh`.** AC7: the generated
   `/t4:spec` command names `ai/docs/tracker.md` and contains no vendor name, connector name,
   URL, field name or JSON shape. Verify it fails when a vendor string is reintroduced, not just
   that it passes. *Proves:* AC7. *Check:* `bash skills/ai-layout/scripts/check-adapters.sh`,
