@@ -7,12 +7,17 @@ one. Nothing here is deployed — it is a Claude Code plugin consumed by develop
 and CI, so "service" means "plugin" and "contract" means "the templates and prompts a
 consumer builds on".
 
+Three names are in play and none of them match, which is the first thing to get straight:
+the **repo** is `ai-sdlc` (GitLab `ai/sdlc`), the **plugin** is `t4` — which is why every
+command is `/t4:…` — and the **marketplace** is `sdlc`. The install handle is therefore
+`t4@sdlc` (d).
+
 Provenance: `(d)` detected from the repo, `(t)` told by the developer, `unverified` neither.
 Last refreshed by `/t4:fleet`.
 
 | Service | Repo | Owns | Exposes | Consumes | Owner |
 |---|---|---|---|---|---|
-| ai-sdlc | `ai/ai-sdlc` (d) — local dir `ai-sdlc` | the `ai/` layout, task prompts, reviewer / tester / architect agents, logging and guard hooks | `skills/ai-layout/templates/` · `agents/*.md` · `hooks/hooks.json` · `/t4:adopt-sdlc` `/t4:explore` `/t4:sync-sdlc` (d) | **nothing** (d) | tanin (d) |
+| ai-sdlc (plugin `t4`) | `ai/sdlc` (d) — local dir `ai-sdlc` | the `ai/` layout, task prompts, reviewer / tester / architect agents, logging and guard hooks | `skills/ai-layout/templates/` · `agents/*.md` · `hooks/hooks.json` · `/t4:adopt-sdlc` `/t4:sync-sdlc` (d) | **nothing** (d) | tanin (d) |
 
 - **Owns** — the data and the capability this service is the source of truth for.
 - **Exposes** — the contracts others may depend on. Anything not listed here is internal and
@@ -34,6 +39,10 @@ or version-pinned by anything in this repo — the dependency runs one way only.
   Each is the source of truth for its own version; nothing here keeps a copy.
 
 ## Boundaries
+> **Under review.** `ai/designs/0002-jira-integration.md` proposes one task calling an external
+> tracker, which the first bullet below does not permit as written. `docs/adr/0004` decides it.
+> Nothing here changes until that ADR is accepted — this section is the claim as it stands.
+
 - **ai-sdlc depends on no repo.** It must never read, name, list or version-pin another repo —
   not in a template, a command, a doc or an agent prompt. A capability that needs knowledge
   of a consumer belongs in that consumer.
@@ -56,11 +65,17 @@ is blank by default, so each tool runs whatever model it is configured with, and
 carries per-model prices for the cost column of `ai/runs/log.csv`.
 
 ## Known gaps
-- **Hooks run from the installed plugin, not the working tree.** This repo's log.csv took
-  three 12-field rows under the 16-field header because the installed copy is 0.3.0, whose
-  session-stop.js appends blind. The 0.7.0 writer moves a mismatched file aside; the older one
-  cannot, so a repo that updates its header before its plugin gets mixed rows until the plugin
-  is updated and the session restarted (d).
+- **Hooks run from the installed plugin, not the working tree** (d) — still true, and still
+  the reason a session can behave unlike the code in front of you. What it used to cost is
+  fixed: an older writer appending 12-field rows under the 16-field header went unnoticed
+  because only the header was checked, so this repo's log took several such rows. Since 0.10.0
+  both writers measure every row and quarantine the ones that do not fit, which catches a
+  stale hook rather than trusting it. Editing the installed copy is still not a fix — updating
+  the plugin and restarting the session is.
+- ~~A repo adopted before 0.5.0 kept its bare `.claude/commands/spec.md` through every sync and
+  answered both `/spec` and `/t4:spec`~~ — **fixed** in 0.16.0: cleanup identifies generated
+  commands by the `ai/tasks/` include they carry rather than by a name glob, so older
+  generations go and hand-written commands stay. Found in a repo scaffolded at ai-base 0.1.2.
 - ~~`.claude-plugin/marketplace.json` pinned ai-sdlc at `0.3.0` while `plugin.json` was
   `0.5.0`~~ — **fixed**; the definition of done now requires both files bumped together,
   since they drifted silently through 0.4.0 and 0.5.0. Nothing yet *checks* that they agree.
@@ -74,7 +89,9 @@ carries per-model prices for the cost column of `ai/runs/log.csv`.
   0.9.0: `skills/ai-layout/scripts/check-versions.sh` compares every manifest that carries a
   version. It caught a real drift on its first run (docs/adr/0003).
 - ~~`specs/0000-scaffold.md` and `hooks/hooks.json` still named "ai-base"~~ — **fixed** in
-  0.7.1; the plugin was renamed in 0.2.0 and again in 0.3.0.
+  0.7.1. The plugin has since been renamed twice more — `ai-sdlc` in 0.12.0, `t4` in 0.13.0 —
+  and the marketplace twice, `t4` in 0.11.0 and `sdlc` in 0.15.0. Naming is the most
+  frequently churned thing in this repo; anything quoting a name dates quickly.
 - ~~Two writers appended to `ai/runs/log.csv` with different columns~~ — **fixed** in 0.7.0:
   one 16-column schema, a `source` column saying which writer produced the row, and
   `fixtures/check-log-schema.sh` pinning the two declarations together.
