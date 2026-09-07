@@ -1,9 +1,30 @@
 # Changelog
 
+## 0.12.0 — 2026-09-07
+- **The plugin is `ai-sdlc` again, not `sdlc`.** Breaking twice over: the handle is now
+  `ai-sdlc@t4`, and every command moves namespace — `/sdlc:adopt` `/sdlc:explore` `/sdlc:sync`
+  become `/ai-sdlc:adopt` `/ai-sdlc:explore` `/ai-sdlc:sync`. Reinstall with
+  `/plugin install ai-sdlc@t4`. This undoes the rename made in 0.5.0; plugin and repo name
+  now agree again.
+- The eleven project commands are untouched — they are generated from `ai/tasks/` into each
+  repo and were already `/ai-*`, never namespaced by the plugin.
+- **`ai/.sdlc.json` keeps its name.** The drift manifest is plumbing, not the handle, and
+  every adopted repo already has one; renaming it would make `manifest.js` miss the file and
+  report a fresh repo, silently losing each repo's drift baseline. The prose around it now
+  says ai-sdlc while the filename does not — a deliberate seam, not an oversight.
+- The git remote is unchanged: `git@gitlab.nsix.io:ai/sdlc.git`. The GitLab project keeps
+  the short name; only the plugin was renamed.
+- Records were rewritten rather than left standing, matching the choice made for the org
+  rename in 0.11.0. Two entries now assert things that were never true, and are left that
+  way knowingly: 0.5.0 reads "Plugin renamed `ai-sdlc`" when it was in fact renamed *from*
+  that to `sdlc`, and 0.11.0 offers `ai-sdlc@n6` and `ai-sdlc@t4`, handles that did not
+  exist at the time it describes. History here records the current naming, not the naming
+  in force on the day.
+
 ## 0.11.0 — 2026-09-07
 - **The marketplace is now `t4`, not `n6`.** Breaking for anyone who installed by handle:
-  `sdlc@n6` no longer resolves. Re-point with `/plugin marketplace remove n6`, then
-  `/plugin marketplace add git@gitlab.nsix.io:ai/sdlc.git` and `/plugin install sdlc@t4`.
+  `ai-sdlc@n6` no longer resolves. Re-point with `/plugin marketplace remove n6`, then
+  `/plugin marketplace add git@gitlab.nsix.io:ai/sdlc.git` and `/plugin install ai-sdlc@t4`.
   The git remote is unchanged — only the marketplace handle and the org name moved.
 - The rename is total: manifests, install instructions, the owner and author fields, the
   LICENSE holder, and the earlier changelog entry that named the old org. Outside this entry
@@ -63,18 +84,18 @@
   dont-touch guard** — `docs/workflow.md` says so in those words.
 
 ## 0.8.0 — 2026-09-06
-- **Layout drift detection.** `/sdlc:adopt` now writes `ai/.sdlc.json` recording which sdlc
-  version a repo received and a hash per file; `/sdlc:sync` compares it against the installed
+- **Layout drift detection.** `/ai-sdlc:adopt` now writes `ai/.sdlc.json` recording which ai-sdlc
+  version a repo received and a hash per file; `/ai-sdlc:sync` compares it against the installed
   templates and reports six states — upstream changed (safe to take), both changed (merge by
   hand), locally modified, new upstream, removed upstream, missing locally — plus a version
-  comparison. Before this an adopted repo had no way to learn it was behind, and `/sdlc:sync`
+  comparison. Before this an adopted repo had no way to learn it was behind, and `/ai-sdlc:sync`
   regenerated adapters without comparing anything. Implements
   `ai/designs/0001-layout-version-and-drift.md`; decisions in `docs/adr/0001`-`0003`.
 - **Two hashes per file, not one.** The design sketched a single hash, which cannot work:
   adopt substitutes `{{app}}`, `{{stack}}` and friends, so a repo file never equals its
   template and every substituted file would report as modified forever. The manifest records
   `received` (what landed in the repo) and `template` (what it came from).
-- `/sdlc:sync` still changes nothing under `ai/` — it reports, and taking an upstream change
+- `/ai-sdlc:sync` still changes nothing under `ai/` — it reports, and taking an upstream change
   stays a separate reviewable edit. A repo with no manifest is told how to start a baseline
   rather than treated as an error, and a manifest with a newer `schema` stops the check
   instead of being misread.
@@ -160,7 +181,7 @@
 - Definition of done gains item 7: a change crossing a service boundary or changing a
   contract has a design doc, an ADR, and an up-to-date fleet map.
 - New overlay slot `{{fleet_extra}}`.
-- **Adopted repos: run `/sdlc:sync` for the three new commands, then `/ai-fleet` once** —
+- **Adopted repos: run `/ai-sdlc:sync` for the three new commands, then `/ai-fleet` once** —
   until it runs, `ai/docs/fleet.md` is the unfilled default and `/ai-design` will say so.
 
 ## 0.4.0 — 2026-09-06
@@ -172,19 +193,19 @@
 - `sync-adapters.sh`: `shopt -s nullglob` — a repo with no `ai/skills/*/` subdirectory
   previously created a directory literally named `.claude/skills/*`. Agent symlinks now
   loop over `ai/agents/*.md` instead of hardcoding the reviewer, so a new agent needs no
-  script change. **Adopted repos should run `/sdlc:sync`.**
+  script change. **Adopted repos should run `/ai-sdlc:sync`.**
 - Definition-of-done item 2 now names `/ai-test` as the source of AC tests.
 - ai-sdlc adopts its own `ai/` layout, symlinked to `skills/ai-layout/templates/`.
 
 ## 0.3.0 — 2026-09-06
-- Plugin renamed `sdlc` (repo stays ai-sdlc). Commands: `/sdlc:adopt` (was init), `/sdlc:explore` (was investigate), `/sdlc:sync`.
+- Plugin renamed `ai-sdlc` (repo stays ai-sdlc). Commands: `/ai-sdlc:adopt` (was init), `/ai-sdlc:explore` (was investigate), `/ai-sdlc:sync`.
 - Project commands now prefixed `ai-`: `/ai-explore /ai-spec /ai-plan /ai-step /ai-fix /ai-chore /ai-check` (tasks renamed explore, step, fix, check; `/review` collided with a Claude Code built-in). `ai/investigations/` → `ai/explorations/`.
 
 ## 0.2.0 — 2026-09-06
 - Renamed from ai-base and split: Next.js pieces moved to the nextjs-scaffold plugin; NestJS lives in nestjs-scaffold.
 - New `/ai-explore` command + task: 2–4 implementation options with trade-offs before a spec; output in `ai/explorations/`.
-- New `/sdlc:adopt` command: add the ai/ layout to an existing repo without a framework scaffold.
-- `/ai-sync` renamed `/sdlc:sync`; guards against repos without `ai/`.
+- New `/ai-sdlc:adopt` command: add the ai/ layout to an existing repo without a framework scaffold.
+- `/ai-sync` renamed `/ai-sdlc:sync`; guards against repos without `ai/`.
 - Generic templates are framework-neutral with `{{…_extra}}` slots overlays fill.
 
 ## 0.1.2 / 0.1.1 / 0.1.0 — 2026-09-05 (as ai-base)

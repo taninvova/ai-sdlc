@@ -1,5 +1,5 @@
 {
   "name": "t4",
   "owner": { "name": "t4 platform" },
-  "plugins": [ { "name": "sdlc", "source": ".", "description": "t4 AI SDLC core plugin (sdlc)", "version": "0.11.0" } ]
+  "plugins": [ { "name": "ai-sdlc", "source": ".", "description": "t4 AI SDLC core plugin (ai-sdlc)", "version": "0.12.0" } ]
 }

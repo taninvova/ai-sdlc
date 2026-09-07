@@ -11,7 +11,7 @@ has() { grep -q -- "$2" "$1" || fail "expected \"$2\" in output:$(printf '\n'; c
 hasnt() { if grep -q -- "$2" "$1"; then fail "did not expect \"$2\" in output:$(printf '\n'; cat "$1")"; fi; }
 
 # A copy of the plugin we may edit, and a repo "adopted" from it (placeholders substituted,
-# exactly as /sdlc:adopt does — this is what makes the two-hash design necessary).
+# exactly as /ai-sdlc:adopt does — this is what makes the two-hash design necessary).
 mkdir -p "$PLUG" "$REPO"
 cp -R .claude-plugin skills "$PLUG/"
 cp -R "$PLUG/skills/ai-layout/templates/." "$REPO/"
@@ -22,7 +22,7 @@ echo "== write =="
 node "$M" write "$REPO" "$PLUG" > "$TMP/o"; has "$TMP/o" "wrote ai/.sdlc.json"
 [ -f "$REPO/ai/.sdlc.json" ] || fail "no manifest written"
 node -e 'const m=require(process.argv[1]);
-  if(m.schema!==1||m.plugin!=="sdlc")throw new Error("bad header");
+  if(m.schema!==1||m.plugin!=="ai-sdlc")throw new Error("bad header");
   const f=m.files["ai/AGENTS.md"];
   if(!f||!f.received||!f.template)throw new Error("both hashes required");
   if(f.received===f.template)throw new Error("substituted file must differ from its template");
@@ -80,7 +80,7 @@ node -e 'const f=process.argv[1],p=require("fs");const j=JSON.parse(p.readFileSy
 node "$M" check "$REPO" "$PLUG" > "$TMP/o"; has "$TMP/o" "newer than the plugin"
 
 echo "== the plugin repo itself never gets a manifest =="
-node "$M" write . . > "$TMP/o"; has "$TMP/o" "sdlc plugin itself"
+node "$M" write . . > "$TMP/o"; has "$TMP/o" "ai-sdlc plugin itself"
 [ -f ai/.sdlc.json ] && fail "a manifest was written into the plugin repo"
 
 echo "manifest ok — write, all six drift states, version drift, read-only, migration, schema guard"

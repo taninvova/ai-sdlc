@@ -8,7 +8,7 @@ Frontmatter `description:` is what a developer sees in the slash menu — write 
 
 ## Templates
 A change to `skills/ai-layout/templates/` reaches every adopted repo on its next
-/sdlc:adopt or /sdlc:sync. Placeholders are `{{name}}`; every one must be substituted or
+/ai-sdlc:adopt or /ai-sdlc:sync. Placeholders are `{{name}}`; every one must be substituted or
 removed by the adopt command — a leaked `{{…}}` in a real repo is a bug.
 
 ## Hook scripts

@@ -9,7 +9,7 @@ description: The ai/ directory every t4 repo carries — AGENTS.md contract, con
 Copy `templates/` to the repo root, preserving paths, then substitute
 `{{app}}` `{{stack}}` `{{commands}}` `{{owner}}` `{{backup}}` `{{date}}` `{{plugin_version}}`.
 Slots for framework overlays: `{{overlay_note}}` `{{rules_extra}}` `{{dod_extra}}`
-`{{dont_touch_extra}}` `{{fleet_extra}}` — a scaffold plugin fills them; `/sdlc:adopt`
+`{{dont_touch_extra}}` `{{fleet_extra}}` — a scaffold plugin fills them; `/ai-sdlc:adopt`
 removes them.
 Never write into `.claude/`, `.cursor/` or `.codex/` by hand — `ai/make/sync-adapters.sh`
 generates all three from `ai/`. Codex reads `.codex/skills/<name>/SKILL.md` as slash commands;
@@ -34,8 +34,8 @@ ai/plans/  ai/plans/done/     plans in flight / merged
 ai/runs/log.csv               header only; the Stop hook and ai/make/log.js append the same 16 columns
 ai/make/ai.mk                 headless runner for CI (make ai / make review)
 ai/make/gate.js  log.js  sync-adapters.sh
-ai/.sdlc.json                 which sdlc version this repo holds + a hash per received file;
-                              written by /sdlc:adopt, read by /sdlc:sync, never by hand
+ai/.sdlc.json                 which ai-sdlc version this repo holds + a hash per received file;
+                              written by /ai-sdlc:adopt, read by /ai-sdlc:sync, never by hand
 specs/                        one file per feature, Given/When/Then
 docs/adr/                     0000-template.md
 AGENTS.md  →  "See ai/AGENTS.md"      CLAUDE.md  →  "@ai/AGENTS.md"

@@ -3,7 +3,7 @@
   "interface": { "displayName": "t4 platform" },
   "plugins": [
     {
-      "name": "sdlc",
+      "name": "ai-sdlc",
       "source": { "source": "local", "path": "." },
       "policy": { "installation": "AVAILABLE" },
       "category": "Developer Tools"

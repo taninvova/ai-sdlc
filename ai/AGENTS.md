@@ -1,7 +1,7 @@
 # ai-sdlc — instructions for AI tools
 
 ## What this is
-The `sdlc` Claude Code plugin: the operating model for AI-native delivery at t4. It ships
+The `ai-sdlc` Claude Code plugin: the operating model for AI-native delivery at t4. It ships
 the `ai/` layout as templates, the task prompts, the reviewer agent, and the logging and
 dont-touch hooks. Standalone: it depends on no other repo. Framework overlay plugins build
 on it through the `{{…_extra}}` template slots.
