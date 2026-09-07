@@ -49,4 +49,47 @@ printf '{"session_id":"fx","cwd":"%s","transcript_path":"%s/transcript.jsonl","h
 grep -q ',old,' "$TMP/ai/runs/log.previous.csv" || fail "old rows were not preserved in log.previous.csv"
 if grep -q ',old,' "$TMP/ai/runs/log.csv"; then fail "old rows leaked into the new file"; fi
 
-echo "log schema ok — $cols columns, both writers agree, migration preserves old rows"
+# 4. the guard itself is duplicated, so the two copies must not drift
+guard() { awk '/--- shared schema guard/,/--- end shared schema guard ---/' "$1"; }
+[ -n "$(guard "$HOOK")" ] || fail "no shared schema guard found in $HOOK"
+diff <(guard "$HOOK") <(guard "$MAKE") >/dev/null || fail "the shared schema guard has drifted between the writers:
+$(diff <(guard "$HOOK") <(guard "$MAKE") | head -20)"
+
+# 5. a short row under a header that MATCHES is the case a header check cannot see.
+# This is what an older hook still installed elsewhere appends.
+rm -rf "$TMP/ai/runs"; mkdir -p "$TMP/ai/runs"
+{ echo "$h1"
+  echo '2026-01-01T00:00:00Z,keep,session,me,main,,claude,m,1,1,1,0,0,0.00,0.1,'
+  echo '2026-01-02T00:00:00Z,short,me,main,1,1,1,0,0,0.00,0.1,'
+} > "$TMP/ai/runs/log.csv"
+printf '{"session_id":"fx","cwd":"%s","transcript_path":"%s/transcript.jsonl","hook_event_name":"Stop"}' "$TMP" "$TMP" \
+  | node "$HOOK"
+grep -q ',short,' "$TMP/ai/runs/log.previous.csv" || fail "the short row was not moved aside"
+if grep -q ',short,' "$TMP/ai/runs/log.csv"; then fail "the short row survived in log.csv"; fi
+grep -q ',keep,' "$TMP/ai/runs/log.csv" || fail "a conforming row was moved aside with the short one"
+[ "$(head -1 "$TMP/ai/runs/log.csv")" = "$h1" ] || fail "header lost while moving a short row"
+while read -r line; do
+  n=$(awk -F, '{print NF}' <<<"$line")
+  [ "$n" = "$cols" ] || fail "row left in log.csv has $n fields, header has $cols"
+done < <(tail -n +2 "$TMP/ai/runs/log.csv")
+
+# 6. a quoted comma is one field, not two — a naive split would quarantine a valid row
+rm -rf "$TMP/ai/runs"; mkdir -p "$TMP/ai/runs"
+{ echo "$h1"
+  echo '2026-01-01T00:00:00Z,q,session,"Doe, Jane",main,,claude,m,1,1,1,0,0,0.00,0.1,'
+} > "$TMP/ai/runs/log.csv"
+printf '{"session_id":"fx","cwd":"%s","transcript_path":"%s/transcript.jsonl","hook_event_name":"Stop"}' "$TMP" "$TMP" \
+  | node "$HOOK"
+grep -q 'Doe, Jane' "$TMP/ai/runs/log.csv" || fail "a row with a quoted comma was wrongly moved aside"
+[ ! -f "$TMP/ai/runs/log.previous.csv" ] || fail "nothing should have been quarantined"
+
+# 7. the headless writer guards the same way
+rm -rf "$TMP/ai/runs"; mkdir -p "$TMP/ai/runs"
+{ echo "$h1"; echo '2026-01-02T00:00:00Z,short,me,main,1,1,1,0,0,0.00,0.1,'; } > "$TMP/ai/runs/log.csv"
+printf '{"session_id":"hl","num_turns":2,"total_cost_usd":0.01,"usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}' \
+  > "$TMP/ai/runs/r-check.json"
+node "$MAKE" "$TMP/ai/runs/r-check.json" check claude some-model >> "$TMP/ai/runs/log.csv"
+grep -q ',short,' "$TMP/ai/runs/log.previous.csv" || fail "headless writer did not move the short row aside"
+if grep -q ',short,' "$TMP/ai/runs/log.csv"; then fail "headless writer left the short row in log.csv"; fi
+
+echo "log schema ok — $cols columns, both writers agree, per-row width enforced, migration preserves old rows"
