@@ -24,7 +24,7 @@ Step 1 builds the seam first so that step 2 has something to point at and no rea
 
 ## Steps
 
-- [ ] **Step 1 — Write the seam, `ai/docs/tracker.md`.** Resolution order (connector if the
+- [x] **Step 1 — Write the seam, `ai/docs/tracker.md`.** Resolution order (connector if the
   session has it; `ai/make/jira.sh` if the repo has it; otherwise stop and ask), what counts as
   configured, and the fields read. It is the only file naming the vendor or `ai/jira.yaml`.
   *Proves:* AC13's definition of configured. *Check:* `grep -L` for vendor strings in every
