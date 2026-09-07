@@ -7,6 +7,6 @@
    recorded in CHANGELOG.md with the version bumped in every manifest —
    `bash skills/ai-layout/scripts/check-versions.sh` enforces it, after two silent drifts.
 4. Spec updated if behaviour changed; plan step ticked.
-5. `/ai-check` run; no `blocker` findings open.
+5. `/t4:check` run; no `blocker` findings open.
 6. Commit message `ai(<task>): …` when AI produced the change; MR labelled `ai-assisted`.
 7. README command table still matches what the plugin actually ships.

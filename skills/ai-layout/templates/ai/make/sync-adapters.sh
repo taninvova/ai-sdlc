@@ -6,23 +6,23 @@ if ! ls ai/tasks/*.md >/dev/null 2>&1; then
   echo "sync-adapters: no ai/tasks/*.md found — this repo has no ai/ layout; nothing to sync." >&2
   exit 1
 fi
-mkdir -p .claude/commands .claude/skills .claude/agents .cursor/rules .codex/skills
-rm -f .claude/commands/ai-*.md
+mkdir -p .claude/commands/t4 .claude/skills .claude/agents .cursor/rules .codex/skills
+rm -f .claude/commands/ai-*.md .claude/commands/t4/*.md
 for t in ai/tasks/*.md; do
   n=$(basename "$t" .md)
   d=$(sed -n 's/^description: *//p' "$t" | head -1)
-  printf -- '---\ndescription: %s\n---\n@../../%s\n' "$d" "$t" > ".claude/commands/ai-$n.md"
+  printf -- '---\ndescription: %s\n---\n@../../../%s\n' "$d" "$t" > ".claude/commands/t4/$n.md"
 done
 # Codex reads .codex/skills/<name>/SKILL.md and treats each as a slash command. The skill
 # points at the task file rather than copying it — a copy would fork from ai/tasks/ the first
 # time anyone edits one.
-rm -rf .codex/skills/ai-*
+rm -rf .codex/skills/ai-* .codex/skills/t4-*
 for t in ai/tasks/*.md; do
   n=$(basename "$t" .md)
   d=$(sed -n 's/^description: *//p' "$t" | head -1)
-  mkdir -p ".codex/skills/ai-$n"
+  mkdir -p ".codex/skills/t4-$n"
   {
-    printf -- '---\nname: ai-%s\ndescription: %s\n---\n' "$n" "$d"
+    printf -- '---\nname: t4-%s\ndescription: %s\n---\n' "$n" "$d"
     printf 'Read `%s` in this repo and follow it exactly. Everything the user typed after the\n' "$t"
     printf "command name is that task's input (its \`\$ARGUMENTS\`).\n"
     a=$(sed -n 's/.*Delegate to the `\([a-z]*\)` subagent.*/\1/p' "$t" | head -1)
@@ -35,7 +35,7 @@ for t in ai/tasks/*.md; do
       printf 'tests that restate it, and a reviewer that wrote the code is not an independent review.\n'
       printf 'Here one session does both.\n'
     fi
-  } > ".codex/skills/ai-$n/SKILL.md"
+  } > ".codex/skills/t4-$n/SKILL.md"
 done
 
 for s in ai/skills/*/; do

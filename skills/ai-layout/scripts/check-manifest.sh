@@ -11,7 +11,7 @@ has() { grep -q -- "$2" "$1" || fail "expected \"$2\" in output:$(printf '\n'; c
 hasnt() { if grep -q -- "$2" "$1"; then fail "did not expect \"$2\" in output:$(printf '\n'; cat "$1")"; fi; }
 
 # A copy of the plugin we may edit, and a repo "adopted" from it (placeholders substituted,
-# exactly as /ai-sdlc:adopt does — this is what makes the two-hash design necessary).
+# exactly as /t4:adopt-sdlc does — this is what makes the two-hash design necessary).
 mkdir -p "$PLUG" "$REPO"
 cp -R .claude-plugin skills "$PLUG/"
 cp -R "$PLUG/skills/ai-layout/templates/." "$REPO/"

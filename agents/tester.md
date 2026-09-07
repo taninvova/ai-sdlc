@@ -1,6 +1,6 @@
 ---
 name: tester
-description: Writes acceptance tests from the spec's acceptance criteria, independently of the implementation. Use after /ai-plan to make the ACs fail first, or after /ai-step to close coverage gaps. Writes test files only; never touches production code.
+description: Writes acceptance tests from the spec's acceptance criteria, independently of the implementation. Use after /t4:plan to make the ACs fail first, or after /t4:step to close coverage gaps. Writes test files only; never touches production code.
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: inherit
 ---
@@ -39,7 +39,7 @@ The task names one; if none is given, infer from whether the plan's steps are ti
 - One AC per test where the AC allows it; the test name carries the AC number.
 - Assert on observable behaviour — returned values, responses, rendered output, persisted
   state. Not on call counts, private fields or implementation details.
-- You own acceptance-level tests. Unit tests for internals belong to /ai-step; do not
+- You own acceptance-level tests. Unit tests for internals belong to /t4:step; do not
   duplicate them.
 - Respect ai/docs/dont-touch.md.
 

@@ -1,6 +1,6 @@
 # 0001 — Layout version and drift
 
-Date: 2026-09-06 · Status: proposed · Fleet map: filled (refreshed by `/ai-fleet`), not the
+Date: 2026-09-06 · Status: proposed · Fleet map: filled (refreshed by `/t4:fleet`), not the
 shipped default. `docs/adr/` does not exist in this repo — only
 `skills/ai-layout/templates/docs/adr/0000-template.md`. **No accepted ADR binds this design.**
 
@@ -30,15 +30,15 @@ which version — without a server, an npm package, or CI shared between `ai-sdl
 
 ## 3. Today
 Facts from the code, not the map:
-- `/ai-sdlc:adopt` (`commands/adopt.md` step 3) copies `skills/ai-layout/templates/` and
+- `/t4:adopt-sdlc` (`commands/adopt.md` step 3) copies `skills/ai-layout/templates/` and
   substitutes `{{plugin_version}}`. It lands in exactly two places, both as prose:
   `ai/AGENTS.md` — "Scaffolded with ai-sdlc {{plugin_version}}" — and
   `specs/0000-scaffold.md`, which still says "ai-base {{plugin_version}}" (stale name).
-- **`/ai-sdlc:sync` does not update the layout.** `commands/sync.md` runs
+- **`/t4:sync-sdlc` does not update the layout.** `commands/sync.md` runs
   `ai/make/sync-adapters.sh`, which only regenerates `.claude/` and `.cursor/` from `ai/`; it
   copies `sync-adapters.sh` itself only when missing. Nothing else is re-copied. So fleet.md's
-  claim that "adopters find out by running `/ai-sdlc:sync`" is **not true of the code**: there is
-  no update path at all today. Re-running `/ai-sdlc:adopt` refuses when `ai/` exists (step 1).
+  claim that "adopters find out by running `/t4:sync-sdlc`" is **not true of the code**: there is
+  no update path at all today. Re-running `/t4:adopt-sdlc` refuses when `ai/` exists (step 1).
 - Two files claim to be the plugin version: `.claude-plugin/plugin.json` (`0.5.0`) and
   `.claude-plugin/marketplace.json` (pins `0.3.0`).
 - `README.md` already installs from `git@gitlab.nsix.io:ai/sdlc.git`, matching the remote —
@@ -49,11 +49,11 @@ Facts from the code, not the map:
 
 ## 4. Options
 **A — Version marker, pull, on demand.** The adopted repo carries a machine-readable version
-(a committed file it owns). `/ai-sdlc:sync` compares it to the installed plugin's `plugin.json`
+(a committed file it owns). `/t4:sync-sdlc` compares it to the installed plugin's `plugin.json`
 and reports behind/level. Fleet-wide view stays manual: a human writes versions into fleet.md.
 
 **B — Content manifest, pull, three-way.** The repo carries version *plus* a sha256 per copied
-file, written at adopt. `/ai-sdlc:sync` computes three sets: files the plugin changed since that
+file, written at adopt. `/t4:sync-sdlc` computes three sets: files the plugin changed since that
 version, files the adopter changed locally, and files that are both. Reports; later can safely
 overwrite the untouched ones. Fleet-wide: ai-sdlc reads each adopter's manifest on demand
 (GitLab raw file), keeping no registry — the repos stay the source of truth.
@@ -76,7 +76,7 @@ opens an MR or issue in each adopted repo. Needs GitLab CI, a group token and a 
 
 ## 6. Decision
 **B, pull-only, with no central registry: every adopted repo carries `ai/.sdlc.json` — schema
-version, plugin version, and a sha256 per file received — and `/ai-sdlc:sync` becomes the detector
+version, plugin version, and a sha256 per file received — and `/t4:sync-sdlc` becomes the detector
 that compares it against the installed plugin's templates.** ai-sdlc answers "who is on what" by
 reading that file from the repos listed in fleet.md when asked, not by storing a table.
 
@@ -120,9 +120,9 @@ gitignored), one per adopted repo.
   "files": { "ai/tasks/spec.md": "sha256:…", "ai/docs/dont-touch.md": "sha256:…" } }
 ```
 
-- **Writers:** `/ai-sdlc:adopt`, a future `/ai-sdlc:sync --update`, and the `nextjs` / `nestjs`
+- **Writers:** `/t4:adopt-sdlc`, a future `/t4:sync-sdlc --update`, and the `nextjs` / `nestjs`
   scaffolds when they scaffold (they must fill `overlay`; `ai-sdlc` never names them — the field is
-  free-form, which keeps the one-way dependency intact). **Readers:** `/ai-sdlc:sync`, `/ai-fleet`,
+  free-form, which keeps the one-way dependency intact). **Readers:** `/t4:sync-sdlc`, `/t4:fleet`,
   and any human. Nothing else may write it; add `ai/.sdlc.json` to the template
   `ai/docs/dont-touch.md` so `guard-paths.js` blocks hand edits.
 - **Compatibility:** adding a key is safe. Renaming or removing one, or changing the hash
@@ -138,21 +138,21 @@ gitignored), one per adopted repo.
   the templates, so it is current by construction and gets no manifest.
 
 ## 8. ADRs to write
-- `/ai-adr ai/.sdlc.json is the version and integrity record every adopted repo carries — schema 1, sha256 per received file, written by adopt and by the scaffolds, read-only to everything else`
-- `/ai-adr layout drift is detected by pull at /ai-sdlc:sync; ai-sdlc keeps no registry of adopter versions and never pushes into an adopted repo`
-- `/ai-adr .claude-plugin/plugin.json is the single source of the ai-sdlc plugin version; marketplace.json's pin must be verified against it in the definition of done`
+- `/t4:adr ai/.sdlc.json is the version and integrity record every adopted repo carries — schema 1, sha256 per received file, written by adopt and by the scaffolds, read-only to everything else`
+- `/t4:adr layout drift is detected by pull at /t4:sync-sdlc; ai-sdlc keeps no registry of adopter versions and never pushes into an adopted repo`
+- `/t4:adr .claude-plugin/plugin.json is the single source of the ai-sdlc plugin version; marketplace.json's pin must be verified against it in the definition of done`
 
 ## 9. Specs to follow
 In order, all in repo `ai/ai-sdlc` (local dir `ai-sdlc`) unless stated:
-1. `/ai-spec /ai-sdlc:adopt writes ai/.sdlc.json (schema 1, plugin version from .claude-plugin/plugin.json, sha256 of every file copied from skills/ai-layout/templates/), and the template ai/docs/dont-touch.md lists it`
-2. `/ai-spec /ai-sdlc:sync reports layout drift: compares ai/.sdlc.json against the installed plugin's templates and prints three buckets — upstream-changed, locally-modified, both — plus the migration path for a repo with no manifest; it changes no file under ai/ and adapter regeneration is unaffected`
-3. `/ai-spec /ai-fleet records each adopted repo's ai-sdlc version in ai/docs/fleet.md by reading its ai/.sdlc.json, marked (d), and marks a repo it could not read as unverified`
-4. Later, once each scaffold repo has run `/ai-sdlc:adopt`: `/ai-spec the scaffold writes the overlay block of ai/.sdlc.json when it scaffolds a project` — in `ai/nextjs-base` and again in `ai/nestjs-base`.
+1. `/t4:spec /t4:adopt-sdlc writes ai/.sdlc.json (schema 1, plugin version from .claude-plugin/plugin.json, sha256 of every file copied from skills/ai-layout/templates/), and the template ai/docs/dont-touch.md lists it`
+2. `/t4:spec /t4:sync-sdlc reports layout drift: compares ai/.sdlc.json against the installed plugin's templates and prints three buckets — upstream-changed, locally-modified, both — plus the migration path for a repo with no manifest; it changes no file under ai/ and adapter regeneration is unaffected`
+3. `/t4:spec /t4:fleet records each adopted repo's ai-sdlc version in ai/docs/fleet.md by reading its ai/.sdlc.json, marked (d), and marks a repo it could not read as unverified`
+4. Later, once each scaffold repo has run `/t4:adopt-sdlc`: `/t4:spec the scaffold writes the overlay block of ai/.sdlc.json when it scaffolds a project` — in `ai/nextjs-base` and again in `ai/nestjs-base`.
 
-Not yet specified: `/ai-sdlc:sync --update`, which needs specs 1–2 in the field first.
+Not yet specified: `/t4:sync-sdlc --update`, which needs specs 1–2 in the field first.
 
 ## 10. Proposed updates to ai/docs/architecture.md and ai/docs/fleet.md
-*(Do not apply here — hand to `/ai-chore`.)*
+*(Do not apply here — hand to `/t4:chore`.)*
 
 **`ai/docs/architecture.md`, replace the "Data ownership" section with:**
 > ## Data ownership
@@ -163,17 +163,17 @@ Not yet specified: `/ai-sdlc:sync --update`, which needs specs 1–2 in the fiel
 > llm.nsix.io resolves them.
 
 **`ai/docs/fleet.md`, replace the "adopted app repos" row with:**
-> | adopted app repos | various | their own application code; a copy of the layout under `ai/`; `ai/.sdlc.json`, the record of which ai-sdlc version they hold | `ai/.sdlc.json`, readable by `/ai-fleet` | the templates, via `/ai-sdlc:adopt` and `/ai-sdlc:sync` (d) | per repo |
+> | adopted app repos | various | their own application code; a copy of the layout under `ai/`; `ai/.sdlc.json`, the record of which ai-sdlc version they hold | `ai/.sdlc.json`, readable by `/t4:fleet` | the templates, via `/t4:adopt-sdlc` and `/t4:sync-sdlc` (d) | per repo |
 
 **`ai/docs/fleet.md`, add to Boundaries:**
 > - Drift is pull-only. ai-sdlc never writes into an adopted repo out of band and stores no copy of
->   adopter versions; an adopter learns it is behind by running `/ai-sdlc:sync`.
+>   adopter versions; an adopter learns it is behind by running `/t4:sync-sdlc`.
 
 **`ai/docs/fleet.md`, replace the last Known gap and correct the README one:**
 > - The README install URL gap is closed at HEAD (`ai/sdlc.git`, matching the remote); re-verify
 >   on the next refresh.
-> - Adopted repos learn they are behind only by running `/ai-sdlc:sync` — design 0001 makes that
->   real; until specs 1–2 ship, `/ai-sdlc:sync` regenerates adapters and nothing more.
+> - Adopted repos learn they are behind only by running `/t4:sync-sdlc` — design 0001 makes that
+>   real; until specs 1–2 ship, `/t4:sync-sdlc` regenerates adapters and nothing more.
 
 ## 11. Open questions
 1. **Which repos are actually adopted?** fleet.md says "various". Spec 3 needs a list or a
@@ -181,9 +181,9 @@ Not yet specified: `/ai-sdlc:sync --update`, which needs specs 1–2 in the fiel
 2. **Does the marketplace install expose `plugin.json` or the pinned `marketplace.json` version
    to a running session?** If the pin is what reaches the repo, ADR 3 is not merely tidy — it is
    the correctness of the whole mechanism. Verify before spec 1.
-3. **Do the scaffolds copy the templates themselves, or call `/ai-sdlc:adopt`?** Determines whether
+3. **Do the scaffolds copy the templates themselves, or call `/t4:adopt-sdlc`?** Determines whether
    spec 4 is one line or a real change. Not read here — the scaffold repos are out of this tree.
-4. **Who surfaces drift to a human who never runs `/ai-sdlc:sync`?** Deferred with option C; needs a
+4. **Who surfaces drift to a human who never runs `/t4:sync-sdlc`?** Deferred with option C; needs a
    channel that is not stdout.
 
 ## Amendment — 2026-09-06, standalone constraint
@@ -194,13 +194,13 @@ The plugin must depend on no other repo, and must not name, read or version-pin 
 (`ai/docs/fleet.md` → Boundaries). Effect on this design:
 
 - **The core decision is unaffected and is reinforced by the constraint.** `ai/.sdlc.json`
-  is written into the adopted repo and read there; detection is pull-side at `/ai-sdlc:sync`.
+  is written into the adopted repo and read there; detection is pull-side at `/t4:sync-sdlc`.
   ai-sdlc keeps no registry and never reaches into another repo — which is precisely what the
   standalone rule requires. Option "central registry", already rejected, is now forbidden.
 - **Spec 4 is out of scope for this repo.** An overlay plugin writing its own block of
   `ai/.sdlc.json` is work for that overlay's repo, driven by its own loop. What belongs here
   is only the schema's `overlay` field and the rule that ai-sdlc never writes it.
-- **Spec 3 needs rewording.** `/ai-fleet` may not enumerate adopted repos from this repo —
+- **Spec 3 needs rewording.** `/t4:fleet` may not enumerate adopted repos from this repo —
   that is knowledge of other repos. Open question 1 is therefore answered "not here": an
   adopted repo records its own version, and whoever wants a fleet-wide view collects it
   outside ai-sdlc.

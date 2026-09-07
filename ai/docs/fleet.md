@@ -8,11 +8,11 @@ and CI, so "service" means "plugin" and "contract" means "the templates and prom
 consumer builds on".
 
 Provenance: `(d)` detected from the repo, `(t)` told by the developer, `unverified` neither.
-Last refreshed by `/ai-fleet`.
+Last refreshed by `/t4:fleet`.
 
 | Service | Repo | Owns | Exposes | Consumes | Owner |
 |---|---|---|---|---|---|
-| ai-sdlc | `ai/ai-sdlc` (d) — local dir `ai-sdlc` | the `ai/` layout, task prompts, reviewer / tester / architect agents, logging and guard hooks | `skills/ai-layout/templates/` · `agents/*.md` · `hooks/hooks.json` · `/ai-sdlc:adopt` `/ai-sdlc:explore` `/ai-sdlc:sync` (d) | **nothing** (d) | tanin (d) |
+| ai-sdlc | `ai/ai-sdlc` (d) — local dir `ai-sdlc` | the `ai/` layout, task prompts, reviewer / tester / architect agents, logging and guard hooks | `skills/ai-layout/templates/` · `agents/*.md` · `hooks/hooks.json` · `/t4:adopt-sdlc` `/t4:explore` `/t4:sync-sdlc` (d) | **nothing** (d) | tanin (d) |
 
 - **Owns** — the data and the capability this service is the source of truth for.
 - **Exposes** — the contracts others may depend on. Anything not listed here is internal and
@@ -29,7 +29,7 @@ or version-pinned by anything in this repo — the dependency runs one way only.
   `{{fleet_extra}}` slots with their own rules, docs and skills. An overlay owns the
   `overlay` block of `ai/.sdlc.json`; ai-sdlc never writes it, which is how it stays ignorant
   of who its overlays are.
-- **Adopted application repos** — any repo that has run `/ai-sdlc:adopt`, carrying its own copy
+- **Adopted application repos** — any repo that has run `/t4:adopt-sdlc`, carrying its own copy
   of the layout under `ai/` and an `ai/.sdlc.json` recording which ai-sdlc version it holds.
   Each is the source of truth for its own version; nothing here keeps a copy.
 
@@ -42,7 +42,7 @@ or version-pinned by anything in this repo — the dependency runs one way only.
 - No runtime dependency of any kind: no package manager, no lockfile, no submodule, no
   vendored code. Hook scripts use the Node standard library only (d).
 - A change to `skills/ai-layout/templates/` is a contract change: it reaches every adopted
-  repo on its next `/ai-sdlc:adopt` or `/ai-sdlc:sync`, and needs a CHANGELOG entry naming the
+  repo on its next `/t4:adopt-sdlc` or `/t4:sync-sdlc`, and needs a CHANGELOG entry naming the
   blast radius.
 - Hook scripts must never write to stdout and must no-op in a repo with no `ai/` directory —
   they run in every repo where the plugin is installed, not only adopted ones.
@@ -67,9 +67,9 @@ carries per-model prices for the cost column of `ai/runs/log.csv`.
 - ~~`README.md` installed from `git@gitlab.nsix.io:ai/ai-sdlc.git` while the remote is
   `ai/sdlc.git`~~ — **fixed**; the documented install command works now.
 - ~~An adopted repo has no way to learn its layout is behind these templates~~ — **built** in
-  0.8.0: `/ai-sdlc:adopt` writes `ai/.sdlc.json` and `/ai-sdlc:sync` reports drift against it
+  0.8.0: `/t4:adopt-sdlc` writes `ai/.sdlc.json` and `/t4:sync-sdlc` reports drift against it
   (docs/adr/0001–0003). Still open: taking an upstream change is manual — there is no
-  `/ai-sdlc:sync --update` — and by design nothing here can answer "which repos are behind?".
+  `/t4:sync-sdlc --update` — and by design nothing here can answer "which repos are behind?".
 - ~~Nothing checks that `marketplace.json`'s pin agrees with `plugin.json`~~ — **fixed** in
   0.9.0: `skills/ai-layout/scripts/check-versions.sh` compares every manifest that carries a
   version. It caught a real drift on its first run (docs/adr/0003).
