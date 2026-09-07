@@ -3,7 +3,8 @@
 ## What this is
 The `sdlc` Claude Code plugin: the operating model for AI-native delivery at n6. It ships
 the `ai/` layout as templates, the task prompts, the reviewer agent, and the logging and
-dont-touch hooks. Framework scaffolds (nextjs-scaffold, nestjs-scaffold) build on it.
+dont-touch hooks. Standalone: it depends on no other repo. Framework overlay plugins build
+on it through the `{{…_extra}}` template slots.
 Stack: markdown prompts + Node hook scripts + bash. No application code, no build step.
 
 ## Commands
@@ -11,7 +12,7 @@ Syntax check hooks: `for f in skills/ai-hooks/scripts/*.js; do node --check "$f"
 Syntax check bash: `bash -n skills/ai-layout/templates/ai/make/sync-adapters.sh`
 Adapter sync (this repo): `bash ai/make/sync-adapters.sh`
 Hook fixtures: `node skills/ai-hooks/scripts/session-stop.js < skills/ai-hooks/fixtures/stop.json`
-Slash commands: /ai-explore /ai-spec /ai-plan /ai-test /ai-step /ai-fix /ai-chore /ai-check
+Slash commands: /ai-fleet /ai-design /ai-adr /ai-explore /ai-spec /ai-plan /ai-test /ai-step /ai-fix /ai-chore /ai-check
 Headless (CI only): make ai TASK=<name> INPUT="…"
 
 ## This repo is its own template
@@ -27,7 +28,7 @@ The layout exists here so plugin changes run through the loop they prescribe.
 - Template changes are breaking for every adopted repo — say so in the MR and CHANGELOG
 
 ## Read before working
-ai/docs/coding-standards.md · ai/docs/definition-of-done.md · ai/docs/architecture.md
+docs/workflow.md for how the commands fit together · ai/docs/coding-standards.md · ai/docs/definition-of-done.md · ai/docs/architecture.md · ai/docs/fleet.md
 The spec in specs/ for the change · the plan in ai/plans/ if one exists
 
 ## Workflow
@@ -35,7 +36,9 @@ The spec in specs/ for the change · the plan in ai/plans/ if one exists
 /ai-test gaps → /ai-check → commit `ai(<task>): …` → MR (label ai-assisted)
 
 ## Setup (once per developer)
-n6: ANTHROPIC_BASE_URL=https://llm.nsix.io/anthropic and ANTHROPIC_API_KEY=<your virtual key>
+Works with whatever provider your tool is already configured with — nothing here assumes one.
+Pointing at a gateway instead: set the tool's base-URL and key env vars (Claude Code:
+ANTHROPIC_BASE_URL, ANTHROPIC_API_KEY). ai/models.yaml pins a model per task if you need one.
 Personal preferences go in ~/.claude/CLAUDE.md or CLAUDE.local.md, never in ai/.
 
 ## Owner

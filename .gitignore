@@ -1,3 +1,9 @@
 node_modules/
 *.log
 .DS_Store
+
+# ai-sdlc (skills/ai-hooks/SKILL.md)
+ai/runs/*.json
+ai/runs/*.jsonl
+.claude/settings.local.json
+CLAUDE.local.md

@@ -1,0 +1,1 @@
+../../skills/ai-layout/templates/docs/adr/0000-template.md

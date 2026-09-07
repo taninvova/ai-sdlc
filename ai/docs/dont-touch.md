@@ -6,6 +6,7 @@ Lines starting with "- `" are rules; the backticked prefix is matched against th
 - `.env`
 - `.claude/`
 - `.cursor/`
+- `.codex/`
 - `ai/runs/`
 - `ai/tasks/`
 - `ai/agents/`

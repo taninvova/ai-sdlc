@@ -10,4 +10,9 @@ This command is for repos that carry the `ai/` layout. It does nothing in other 
    `${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/templates/ai/make/sync-adapters.sh`.
 3. Run `bash ai/make/sync-adapters.sh`.
 4. Report what changed under `.claude/` and `.cursor/` (`git status --short`).
+5. Report layout drift — whether this repo's `ai/` is behind the installed templates:
+   `node "${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/scripts/manifest.js" check . "${CLAUDE_PLUGIN_ROOT}"`
+   Print its output as-is. It only reports: it changes nothing under `ai/`, and a repo with
+   no `ai/.sdlc.json` is told how to start one rather than treated as an error. Do not act on
+   the findings in this task — taking an upstream change is a separate, reviewable edit.
 Never edit anything under `.claude/` or `.cursor/` by hand — they are generated.
