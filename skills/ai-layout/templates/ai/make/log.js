@@ -25,18 +25,49 @@ function sh(cmd) {
 }
 const csv = v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
 
+// Two output shapes. claude -p --output-format json writes one object with `usage` and
+// `total_cost_usd`. codex exec --json writes JSONL events: `thread.started` carries the id,
+// each `turn.completed` carries usage. Sniffed, not configured, so the file speaks for itself.
+function parseRun(text) {
+  const t = text.trim();
+  try {
+    const o = JSON.parse(t);
+    const u = o.usage ?? {};
+    return { id: o.session_id ?? "", turns: o.num_turns ?? "", cost: o.total_cost_usd ?? "",
+             inp: u.input_tokens ?? 0, out: u.output_tokens ?? 0,
+             cr: u.cache_read_input_tokens ?? 0, cw: u.cache_creation_input_tokens ?? 0 };
+  } catch {}
+  const r = { id: "", turns: 0, cost: "", inp: 0, out: 0, cr: 0, cw: 0 };
+  for (const line of t.split("\n")) {
+    if (!line.trim()) continue;
+    let e; try { e = JSON.parse(line); } catch { continue; }
+    if (e.type === "thread.started" && e.thread_id) r.id = e.thread_id;
+    if (e.type === "turn.completed" && e.usage) {
+      const u = e.usage;
+      r.turns++;
+      // codex reports input_tokens INCLUSIVE of cached ones (the OpenAI convention), while
+      // claude reports them separately. Subtract so the column means the same in both rows.
+      const cached = u.cached_input_tokens ?? 0;
+      r.inp += Math.max(0, (u.input_tokens ?? 0) - cached);
+      r.cr += cached;
+      r.cw += u.cache_write_input_tokens ?? 0;
+      // output_tokens already includes reasoning_output_tokens.
+      r.out += u.output_tokens ?? 0;
+    }
+  }
+  return r;   // cost stays "" — codex reports none, and a guessed price is worse than none
+}
+
 const [file, task, tool, model] = process.argv.slice(2);
-const run = JSON.parse(fs.readFileSync(file, "utf8"));
-const u = run.usage ?? {};
-const inp = u.input_tokens ?? 0, out = u.output_tokens ?? 0;
-const cr = u.cache_read_input_tokens ?? 0, cw = u.cache_creation_input_tokens ?? 0;
+const run = parseRun(fs.readFileSync(file, "utf8"));
+const { inp, out, cr, cw } = run;
 const hit = (cr / (inp + cr + cw || 1)).toFixed(2);
 
 ensureHeader(path.join(path.dirname(file), "log.csv"));
 process.stdout.write([
-  new Date().toISOString(), run.session_id ?? "", "make",
+  new Date().toISOString(), run.id, "make",
   process.env.GITLAB_USER || sh("git config user.name") || "unknown",
   sh("git rev-parse --abbrev-ref HEAD"),
-  task, tool, model || run.model || "",
-  run.num_turns ?? "", inp, out, cr, cw, hit, run.total_cost_usd ?? "", "",
+  task, tool, model || "",
+  run.turns, inp, out, cr, cw, hit, run.cost, "",
 ].map(csv).join(",") + "\n");

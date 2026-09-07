@@ -65,8 +65,9 @@ carries per-model prices for the cost column of `ai/runs/log.csv`.
   0.8.0: `/sdlc:adopt` writes `ai/.sdlc.json` and `/sdlc:sync` reports drift against it
   (docs/adr/0001–0003). Still open: taking an upstream change is manual — there is no
   `/sdlc:sync --update` — and by design nothing here can answer "which repos are behind?".
-- Nothing checks that `marketplace.json`'s pin agrees with `plugin.json`; the definition of
-  done asks a human to. It drifted twice before (docs/adr/0003).
+- ~~Nothing checks that `marketplace.json`'s pin agrees with `plugin.json`~~ — **fixed** in
+  0.9.0: `skills/ai-layout/scripts/check-versions.sh` compares every manifest that carries a
+  version. It caught a real drift on its first run (docs/adr/0003).
 - ~~`specs/0000-scaffold.md` and `hooks/hooks.json` still named "ai-base"~~ — **fixed** in
   0.7.1; the plugin was renamed in 0.2.0 and again in 0.3.0.
 - ~~Two writers appended to `ai/runs/log.csv` with different columns~~ — **fixed** in 0.7.0:
