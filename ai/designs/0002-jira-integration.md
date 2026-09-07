@@ -95,9 +95,15 @@ outside the repo.
   them, and are skipped silently when the move is unavailable from the current status.
 
 ### Rules that fall out
-1. **An argument is a ticket key only if the whole argument matches** `[A-Z][A-Z0-9]+-[0-9]+`.
-   A partial match is free text. Otherwise "PROJ-123 but only the CSV part" resolves as a
-   ticket and silently discards the qualifier.
+1. **Configuration opens the tracker path — never the shape of an argument.** Only a repo
+   that has committed `ai/jira.yaml` resolves keys at all. *Inside* such a repo an argument is
+   a key only if the whole of it matches `[A-Z][A-Z0-9]+-[0-9]+`, so "PROJ-123 but only the
+   CSV part" is not silently reduced to the ticket. The first draft of this design made the
+   pattern itself the trigger, which cannot work: `UTF-8`, `ISO-8601`, `RFC-7231` and `HTTP-2`
+   all match it end to end, so `/t4:spec UTF-8` in a repo with no Jira would have stopped to
+   ask about a ticket that cannot exist — precisely the new failure mode rule 5 promises
+   Jira-less adopters never see. Corrected per `docs/adr/0004` rule 2, which supersedes the
+   original wording.
 2. **An unresolvable key stops the task.** Never fall through to treating `PROJ-123` as the
    feature description — that produces a confident spec about nothing, which is worse than
    no spec. Same rule as 0.14.0's empty argument.
@@ -105,7 +111,9 @@ outside the repo.
 4. **Write-back never fails the task.** The artefact is already on disk; a rejected comment or
    transition is reported, not raised.
 5. **A repo with no `ai/jira.yaml` and no Jira behaves exactly as it does today.** Adopters
-   without Jira must see no new prompt, no new question, no new failure mode.
+   without Jira must see no new prompt, no new question, no new failure mode, and no new line
+   in a generated spec. Rule 1 is what makes this hold; the two are one decision stated twice
+   and neither survives alone.
 
 ## 7. Contracts and data ownership
 | Thing | Owner | Written by | Notes |
@@ -118,16 +126,20 @@ outside the repo.
 | Credentials | the developer's environment | never the repo | no token is committed; MCP holds its own |
 
 ## 8. ADRs to write
-- **0004 — ai-sdlc may require an external service for one task.** The gating decision. Must
-  state what "standalone" now means and that a Jira-less repo is unaffected.
+- **0004 — ai-sdlc may depend on an external tracker, behind one seam and off by default.**
+  **Written:** `docs/adr/0004-external-tracker-behind-one-seam.md`, Status: proposed. It
+  narrows the standalone claim rather than preserving it by literalism, makes configuration
+  the trigger, and confines the dependency to `ai/docs/jira.md`. **Not yet accepted — spec 1
+  does not start until it is.**
 - **0005 — the ticket key lives in the spec body.** Why not frontmatter, why not a sidecar
   index, why grep is enough.
 - **0006 — write-back comments always, transitions only when mapped.** Why a board that moves
   from one runtime only is still worth having, and why transitions are never inferred.
 
 ## 9. Specs to follow
-1. `/t4:spec` accepts a ticket key, fetches it, writes the `Jira:` line. Includes the
-   whole-argument match rule and the stop-on-unresolvable rule.
+1. `/t4:spec` accepts a ticket key, fetches it, writes the `Jira:` line. Gated on
+   `ai/jira.yaml` being present (ADR 0004 rule 2), not on the argument's shape; includes the
+   whole-argument match rule *within* a configured repo, and the stop-on-unresolvable rule.
 2. Key resolution in `/t4:plan`, `/t4:test`, `/t4:run`, `/t4:check`.
 3. Write-back: comments from spec/plan/check, plus `ai/jira.yaml` and transitions.
 
