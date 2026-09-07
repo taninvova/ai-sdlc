@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.17.0 — 2026-09-07
+- **`/t4:step` is now `/t4:run`.** `ai/tasks/step.md` becomes `ai/tasks/run.md`; the task
+  itself is unchanged. Breaking for anyone with the old command in a script or a habit.
+- The word "step" stays everywhere it means a step *within* a plan, which is most places:
+  the description is still "Implement one step of a plan", the argument hint is still
+  `<plan path> <step>`, and `/t4:plan` still writes `- [ ] Step N — …`. Only the command
+  moved. Two sentences were reworded to avoid "`/t4:run` run".
+- Past CHANGELOG entries keep saying `/t4:step`, unlike the org and plugin renames where
+  the records were rewritten. Rewriting here would turn "tasks renamed explore, step, fix,
+  check" in the 0.5.0 entry into a claim about a rename that happened today, and "step" is
+  an ordinary word in those sentences rather than a name being retired.
+- The stale `step` adapters were removed by the sync fix shipped in 0.16.0 — first real
+  exercise of it.
+
 ## 0.16.0 — 2026-09-07
 - **Sync removes the commands it generated under older naming.** Cleanup matched
   `ai-<task>.md` and `t4/<task>.md` only, so a repo adopted before 0.5.0 kept its bare

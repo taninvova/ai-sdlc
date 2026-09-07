@@ -10,7 +10,7 @@ The operating-model half of AI-native delivery, as a Claude Code plugin. Standal
 
 Works with Claude Code and Codex: `ai/make/sync-adapters.sh` generates `.claude/`, `.cursor/` and `.codex/` from one source. See [docs/workflow.md](docs/workflow.md#8-using-it-from-codex) for what differs under Codex.
 
-Project-level slash commands (generated into each repo from `ai/tasks/`): `/t4:fleet /t4:design /t4:adr /t4:explore /t4:spec /t4:plan /t4:test /t4:step /t4:fix /t4:chore /t4:check`.
+Project-level slash commands (generated into each repo from `ai/tasks/`): `/t4:fleet /t4:design /t4:adr /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:check`.
 
 ## Skills (model-invoked, hidden from the menu)
 - `ai-layout` — the `ai/` directory and its templates; where an AI-related file belongs
@@ -36,7 +36,7 @@ Full walkthrough with a worked example: [docs/workflow.md](docs/workflow.md).
 
 `/t4:design` first when the capability spans services or changes a contract between them — `/t4:fleet` fills the service map it reads, `/t4:adr` records the decision. Otherwise start at `/t4:explore`.
 
-`/t4:explore` (options) → `/t4:spec` (Given/When/Then) → `/t4:plan` (checklist) → `/t4:test red` (ACs fail first) → `/t4:step` one step at a time → `/t4:test gaps` → `/t4:check` → commit `ai(<task>): …` → MR labelled `ai-assisted`.
+`/t4:explore` (options) → `/t4:spec` (Given/When/Then) → `/t4:plan` (checklist) → `/t4:test red` (ACs fail first) → `/t4:run` one step at a time → `/t4:test gaps` → `/t4:check` → commit `ai(<task>): …` → MR labelled `ai-assisted`.
 
 ## Conventions
 Prompt, skill and hook changes go through MR with a before/after run. Tag releases; scaffolds record the tag they used in `ai/AGENTS.md`.

@@ -10,7 +10,7 @@ Write ai/plans/<NNNN>-<slug>.md (same number as the spec):
 - Goal (one sentence) · Spec link
 - Files to create / modify, each with one line on why
 - Server vs client components, with reasons
-- Steps as a numbered checklist `- [ ] Step N — …`, each small enough for one /t4:step run,
+- Steps as a numbered checklist `- [ ] Step N — …`, each small enough for one `/t4:run`,
   each naming the tests that prove it (map to AC numbers)
 - Risks and how each is checked
 - Verification: the exact commands and tests that must pass at the end

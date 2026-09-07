@@ -72,7 +72,7 @@ it exposes, explore decides **how** to build it in one repo whose home is alread
 ## 4. The main loop
 
 ```
-/t4:spec  →  /t4:plan  →  /t4:test red  →  /t4:step ×N  →  /t4:test gaps  →  /t4:check
+/t4:spec  →  /t4:plan  →  /t4:test red  →  /t4:run ×N  →  /t4:test gaps  →  /t4:check
 ```
 
 A worked example — adding CSV export to a reports page:
@@ -94,7 +94,7 @@ A worked example — adding CSV export to a reports page:
     → tests for AC1…AC5, written from the spec by an agent that has not seen your
       implementation. They MUST fail, and fail for the right reason.
 
-/t4:step ai/plans/0007-csv-export.md step 1
+/t4:run ai/plans/0007-csv-export.md step 1
     → implements step 1 only, runs lint/typecheck/tests, ticks the checkbox
 
     …repeat per step, one at a time…
@@ -110,7 +110,7 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
 
 ### The rules that make it work
 
-- **One step per `/t4:step` run.** It is told not to start the next one. Let it stop.
+- **One step per `/t4:run`.** It is told not to start the next one. Let it stop.
 - **Plan first for anything touching more than ~3 files.** Small changes do not need the
   ceremony; large ones fall apart without it.
 - **Steering in chat for 20+ minutes with code changed?** Stop. Write the decision into the
@@ -139,7 +139,7 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
 | `/t4:spec <feature>` | you know what to build, not yet how | `specs/NNNN-*.md` | write the plan or the code |
 | `/t4:plan <spec>` | the spec's open questions are answered | `ai/plans/NNNN-*.md` | change code |
 | `/t4:test red <spec>` | before implementing | test files | touch production code — if a test needs a change there, it stops and says so |
-| `/t4:step <plan> step N` | implementing, one step at a time | code + tests | start step N+1 |
+| `/t4:run <plan> step N` | implementing, one step at a time | code + tests | start step N+1 |
 | `/t4:test gaps <spec>` | after the steps are done | test files | weaken an assertion to reach green |
 | `/t4:fix <bug>` | something is broken | a failing test first, then the fix | refactor anything unrelated |
 | `/t4:chore <change>` | small maintenance, no behaviour change | code + tests | change behaviour beyond the request |
@@ -261,7 +261,7 @@ writer does automatically.
 ```
 once:      /t4:adopt-sdlc  →  /t4:fleet  →  fill in ai/docs/*
 per change: /t4:design? → /t4:explore? → /t4:spec → /t4:plan
-            → /t4:test red → /t4:step ×N → /t4:test gaps → /t4:check
+            → /t4:test red → /t4:run ×N → /t4:test gaps → /t4:check
             → commit ai(<task>): …  →  MR labelled ai-assisted
 per dependency or lasting decision: /t4:adr
 ```

@@ -23,7 +23,7 @@ ai/docs/fleet.md              service map the architect reads; /t4:fleet fills i
 ai/docs/coding-standards.md   rules that hold in every repo; overlays add framework rules
 ai/docs/definition-of-done.md
 ai/docs/dont-touch.md         guard-paths.js reads the backticked prefixes
-ai/tasks/*.md                 fleet design adr explore spec plan test step fix chore check  → /t4:<name>
+ai/tasks/*.md                 fleet design adr explore spec plan test run fix chore check  → /t4:<name>
 ai/skills/                    empty here; overlays add framework skills
 ai/agents/reviewer.md         project copy of the plugin reviewer (may add project checks)
 ai/agents/tester.md           project copy of the plugin tester (test conventions go here)
@@ -60,7 +60,7 @@ make re-expands values routed through a variable, a file is passed through untou
 Both read identical bytes, so the cache is shared.
 
 ## The loop
-/t4:explore → /t4:spec → /t4:plan → /t4:test red → /t4:step (one step) → /t4:test gaps → /t4:check → commit → MR.
+/t4:explore → /t4:spec → /t4:plan → /t4:test red → /t4:run (one step) → /t4:test gaps → /t4:check → commit → MR.
 /t4:explore is optional for small, obvious changes; mandatory when the request could be
 built more than one way or touches an RMQ contract, a schema, or a public API.
 
