@@ -1,7 +1,7 @@
 ---
 name: ai-layout
 user-invocable: false
-description: The ai/ directory every n6 repo carries — AGENTS.md contract, context docs, task prompts (fleet, design, adr, explore, spec, plan, test, step, fix, chore, check — exposed as /ai-<name>), reviewer, tester and architect agents, plans, explorations, run log, Makefile include, tool adapters. Use when adding the layout to a repo, adding or changing a task prompt or context doc, or when a session asks where an AI-related file belongs.
+description: The ai/ directory every t4 repo carries — AGENTS.md contract, context docs, task prompts (fleet, design, adr, explore, spec, plan, test, step, fix, chore, check — exposed as /ai-<name>), reviewer, tester and architect agents, plans, explorations, run log, Makefile include, tool adapters. Use when adding the layout to a repo, adding or changing a task prompt or context doc, or when a session asks where an AI-related file belongs.
 ---
 
 # ai-layout

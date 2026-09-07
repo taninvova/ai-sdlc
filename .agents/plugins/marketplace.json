@@ -1,6 +1,6 @@
 {
-  "name": "n6",
-  "interface": { "displayName": "n6 platform" },
+  "name": "t4",
+  "interface": { "displayName": "t4 platform" },
   "plugins": [
     {
       "name": "sdlc",

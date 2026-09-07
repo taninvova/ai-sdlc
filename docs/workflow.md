@@ -13,7 +13,7 @@ needing steering in chat, the prompt is missing a line; fix the prompt, don't re
 
 ```
 /plugin marketplace add git@gitlab.nsix.io:ai/sdlc.git
-/plugin install sdlc@n6
+/plugin install sdlc@t4
 ```
 
 Working on the plugin itself: `claude --plugin-dir ~/code/nsix/ai/ai-sdlc`.

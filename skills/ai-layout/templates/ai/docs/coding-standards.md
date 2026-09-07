@@ -1,6 +1,6 @@
 # Coding standards — {{app}}
 
-Framework-specific rules live in the overlay docs and ai/skills/ (installed by the scaffold plugin). These are the rules that hold in every n6 repo.
+Framework-specific rules live in the overlay docs and ai/skills/ (installed by the scaffold plugin). These are the rules that hold in every t4 repo.
 
 ## Formatting and lint
 The linter (Biome) owns formatting. Run the fix command; never argue with the linter in reviews.
