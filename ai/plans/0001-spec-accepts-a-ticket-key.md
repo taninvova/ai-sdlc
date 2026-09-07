@@ -11,7 +11,7 @@ with no `ai/jira.yaml` cannot tell the feature shipped.
 |---|---|
 | `skills/ai-layout/templates/ai/docs/tracker.md` | **new** — the seam. The only file naming the vendor, the connector or `ai/jira.yaml`. ADR 0004 rule 3. |
 | `skills/ai-layout/templates/ai/tasks/spec.md` | the gate, the whole-argument rule, stop-and-ask, and the `Ticket:` line. `ai/tasks/spec.md` is a symlink, so one edit. |
-| `skills/ai-layout/templates/ai/docs/dont-touch.md` | `ai/jira.yaml` is hand-written config; decide in step 2 whether it belongs. |
+| ~~`skills/ai-layout/templates/ai/docs/dont-touch.md`~~ | **not changed** — step 2 decided `ai/jira.yaml` stays unguarded; the reasoning goes in the CHANGELOG at step 7. |
 | `skills/ai-layout/scripts/check-adapters.sh` | AC7 and AC12 are static properties of generated output — assert them where the other prompt invariants already live. |
 | `skills/ai-layout/templates/ai/make/sync-adapters.sh` | only if the Codex skill needs the stop-and-ask arm spelled out (step 5). |
 | `CHANGELOG.md` + 3 manifests | definition of done item 3: template change, blast radius named, version bumped everywhere. |
@@ -30,13 +30,19 @@ Step 1 builds the seam first so that step 2 has something to point at and no rea
   *Proves:* AC13's definition of configured. *Check:* `grep -L` for vendor strings in every
   other file touched.
 
-- [ ] **Step 2 — Decide and record whether `ai/jira.yaml` is dont-touch.** It is hand-written,
-  unlike `ai/.sdlc.json` which is generated and guarded. Read `skills/ai-hooks/scripts/guard-paths.js`
-  before deciding; guarding a file a human is meant to edit would be a bug, so the likely answer
-  is no, and the step exists to record the reasoning rather than leave it unasked.
-  *Proves:* nothing directly. *Check:* one line in the CHANGELOG entry either way.
+- [x] **Step 2 — Decided: `ai/jira.yaml` is not dont-touch.** Everything on that list is
+  generated (`.claude/`, `.cursor/`, `.codex/`, `ai/runs/`, `ai/.sdlc.json`) or secret
+  (`.env`). This is neither — it is hand-written config a developer is meant to author, and
+  `guard-paths.js` blocks Edit/Write with exit 2, so listing it would stop a session creating
+  the very file that turns the feature on. It holds no credential either: ADR 0004 keeps those
+  in the environment. Same category as `ai/docs/architecture.md`, which is also unguarded.
+  **Output folded into step 7** — the CHANGELOG line records it; `dont-touch.md` is unchanged,
+  so this step edits nothing.
+  *Noted while reading the guard:* its last match clause is a basename **prefix** test, so
+  `.env` also blocks `.envrc`. Not a problem here, but the list matches more loosely than it
+  reads, and anyone adding a rule should know.
 
-- [ ] **Step 3 — Teach `ai/tasks/spec.md` the gate and the rules.** Configuration opens the
+- [x] **Step 3 — Teach `ai/tasks/spec.md` the gate and the rules.** Configuration opens the
   path (AC1, AC13); whole-argument match inside a configured repo (AC2, AC3); stop and ask on
   unresolvable or unknown (AC4, AC5); empty argument unchanged (AC6); `Ticket:` line, one line,
   key alone, under the title (AC2, AC8); two matches is an error (AC9); criteria from the
@@ -64,7 +70,9 @@ Step 1 builds the seam first so that step 2 has something to point at and no rea
 
 - [ ] **Step 7 — CHANGELOG, version bump, README.** Name the blast radius: every adopted repo
   receives `ai/docs/tracker.md` on its next sync and gains nothing until it writes
-  `ai/jira.yaml`. Bump all three manifests. Check the README command table still matches.
+  `ai/jira.yaml`. Carry step 2's decision: `ai/jira.yaml` is deliberately not in
+  `dont-touch.md`, because a developer must be able to write it. Bump all three manifests.
+  Check the README command table still matches.
   *Proves:* nothing. *Check:* `check-versions.sh`, definition of done items 3 and 7.
 
 ## Risks
