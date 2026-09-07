@@ -11,3 +11,5 @@ ts,session_id,user,branch,turns,input_tokens,output_tokens,cache_read_tokens,cac
 2026-09-06T20:24:23.194Z,5aaa13f6-f4c7-40d7-9012-9d406a821c00,tanin,ai/architect-agent,258,516,350084,47162276,524985,0.99,21.3702,
 2026-09-06T20:36:38.451Z,5aaa13f6-f4c7-40d7-9012-9d406a821c00,tanin,ai/architect-agent,259,518,350971,47459007,525016,0.99,21.4726,
 2026-09-07T01:13:04.639Z,5aaa13f6-f4c7-40d7-9012-9d406a821c00,tanin,ai/architect-agent,355,710,509099,80520046,1364604,0.98,36.9119,
+# rows below were written by the older hook after the 0.7.0 header change, under a header it did not match
+2026-09-07T13:59:30.566Z,9c657d4e-ba1c-418e-abf9-0f82d0fc2382,tanin,main,30,60,13222,1949564,95897,0.95,1.1430,
