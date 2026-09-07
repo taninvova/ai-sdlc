@@ -9,6 +9,8 @@ The operating-model half of AI-native delivery, as a Claude Code plugin. Standal
 - `/sdlc:explore <request>` — before a spec: read the code, present 2–4 implementation options with effort, risk, reversibility, a recommendation and the `/ai-spec` line to run next; writes `ai/explorations/NNNN-slug.md`
 - `/sdlc:sync` — regenerate `.claude/` and `.cursor/` adapters from `ai/`
 
+Works with Claude Code and Codex: `ai/make/sync-adapters.sh` generates `.claude/`, `.cursor/` and `.codex/` from one source. See [docs/workflow.md](docs/workflow.md#8-using-it-from-codex) for what differs under Codex.
+
 Project-level slash commands (generated into each repo from `ai/tasks/`): `/ai-fleet /ai-design /ai-adr /ai-explore /ai-spec /ai-plan /ai-test /ai-step /ai-fix /ai-chore /ai-check`.
 
 ## Skills (model-invoked, hidden from the menu)

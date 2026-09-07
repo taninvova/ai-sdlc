@@ -11,7 +11,9 @@ Copy `templates/` to the repo root, preserving paths, then substitute
 Slots for framework overlays: `{{overlay_note}}` `{{rules_extra}}` `{{dod_extra}}`
 `{{dont_touch_extra}}` `{{fleet_extra}}` — a scaffold plugin fills them; `/sdlc:adopt`
 removes them.
-Never write into `.claude/` or `.cursor/` by hand — `ai/make/sync-adapters.sh` generates them.
+Never write into `.claude/`, `.cursor/` or `.codex/` by hand — `ai/make/sync-adapters.sh`
+generates all three from `ai/`. Codex reads `.codex/skills/<name>/SKILL.md` as slash commands;
+since it cannot take subagents, the four agent-backed tasks get an inline-the-agent note.
 
 ```
 ai/AGENTS.md                  the contract, < 60 lines, no dynamic content

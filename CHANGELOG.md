@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.9.0 — 2026-09-06
+- **Codex support.** `sync-adapters.sh` now generates `.codex/skills/` beside `.claude/` and
+  `.cursor/`, so the same eleven tasks are slash commands in Codex. Verified against Codex
+  0.153.4: `.codex/skills/` is picked up with no configuration. The skills point at
+  `ai/tasks/<name>.md` rather than copying it, so there is still one source of truth.
+- **Agents are inlined under Codex, and say so.** Codex plugin manifests support only
+  `skills` and `mcpServers` — no subagents — so the four agent-backed tasks (`check`, `test`,
+  `design`, `adr`) tell the session to follow `ai/agents/<name>.md` itself. The generated
+  skill states the cost plainly: a tester that has seen the implementation writes tests that
+  restate it, and a reviewer that wrote the code is not an independent review.
+- **`make ai TOOL=codex`.** `ai.mk` builds the invocation per tool — `codex exec --json` with
+  the prompt on stdin and the final message via `-o`, versus `claude -p --output-format json`.
+  `log.js` sniffs which shape it was given; `gate.js` reads Codex's `-o` file. Both parsers
+  were written from real captured output, not from assumption.
+- Codex reports **no cost**, so `cost_usd` stays empty for its rows rather than being guessed,
+  and its `input_tokens` include cached tokens (the OpenAI convention), which `log.js`
+  subtracts back out so the column means the same thing in every row.
+- `.codex-plugin/plugin.json` and `.agents/plugins/marketplace.json` ship for Codex-native
+  discovery. Codex also reads the `.claude-plugin/` manifests — confirmed by test — so these
+  are belt-and-braces rather than required.
+- **`skills/ai-layout/scripts/check-versions.sh`** asserts every manifest carrying a version
+  agrees. It caught a real drift on its first run. Definition of done item 3 now points at it
+  instead of asking a human to remember.
+- `skills/ai-layout/scripts/check-adapters.sh` asserts all three adapter sets are generated,
+  that the inline-agent note appears exactly where a task delegates and nowhere else, and that
+  a second sync changes nothing. Verified to fail when the generator drifts either way.
+- `.codex/` is in the template `dont-touch.md` — it is generated, like `.claude/` and `.cursor/`.
+- **Not supported under Codex:** hooks. No session or edit log, no cost row, and **no
+  dont-touch guard** — `docs/workflow.md` says so in those words.
+
 ## 0.8.0 — 2026-09-06
 - **Layout drift detection.** `/sdlc:adopt` now writes `ai/.sdlc.json` recording which sdlc
   version a repo received and a hash per file; `/sdlc:sync` compares it against the installed
