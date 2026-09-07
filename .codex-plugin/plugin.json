@@ -1,6 +1,6 @@
 {
   "name": "t4",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "t4 AI SDLC core: the ai/ layout (AGENTS.md, context docs, task prompts, reviewer / tester / architect agents, fleet map), dont-touch guard, adapter sync. Standalone — no dependency on any other repo; framework overlays build on it through the template slots.",
   "author": { "name": "t4 platform" },
   "repository": "git@gitlab.nsix.io:ai/sdlc.git",

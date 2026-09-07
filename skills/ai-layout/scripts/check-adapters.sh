@@ -42,6 +42,29 @@ for t in ai/tasks/*.md; do
   [ "$target" = "$PWD/$t" ] || fail "$c resolves to $target, expected $PWD/$t"
 done
 
+# A task's argument-hint must reach the generated command, or the menu advertises no input
+# and the user discovers the requirement only by running it. A task without a hint must not
+# gain an empty one.
+for t in ai/tasks/*.md; do
+  n=$(basename "$t" .md); c=".claude/commands/t4/$n.md"
+  h=$(sed -n 's/^argument-hint: *//p' "$t" | head -1)
+  g=$(sed -n 's/^argument-hint: *//p' "$c" | head -1)
+  [ "$h" = "$g" ] || fail "$n: task hint '$h' but command hint '$g'"
+done
+
+# A task that takes input must say what to do when it gets none, or an empty invocation
+# leaves a dangling label and the task guesses. Hint present => prompt present.
+for t in ai/tasks/*.md; do
+  n=$(basename "$t" .md)
+  h=$(sed -n 's/^argument-hint: *//p' "$t" | head -1)
+  case "$h" in
+    "" ) continue ;;                       # takes no input
+    \[*\] ) continue ;;                     # optional input, marked by brackets
+  esac
+  grep -q "If nothing follows the command name" "$t" \
+    || fail "$n requires input ($h) but never says what to do when it gets none"
+done
+
 # The codex skill must not copy the prompt text — that would fork from ai/tasks/.
 body=$(sed -n '/^---$/,/^---$/!p' .codex/skills/t4-spec/SKILL.md | wc -l | tr -d ' ')
 [ "$body" -lt 15 ] || fail "codex skills look like copies of the task, not pointers ($body lines)"

@@ -1,5 +1,6 @@
 ---
 description: Decide where a capability belongs across services, what contract it exposes and who owns the data — before any spec
+argument-hint: <capability> | review <plan path>
 ---
 Use this when the capability spans services, its home is undecided, or it creates or changes
 a contract between services. When the home is known, it is one repo and no cross-service
@@ -20,5 +21,7 @@ If ai/docs/fleet.md is missing or still the shipped default, say so first and su
 
 End with the decision in one sentence and the exact `/t4:adr …` and `/t4:spec …` lines to
 run next.
+
+If nothing follows the command name, ask the user which capability to place, and stop.
 
 Capability, or `review <plan path>`: $ARGUMENTS

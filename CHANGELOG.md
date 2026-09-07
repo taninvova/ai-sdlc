@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.14.0 — 2026-09-07
+- **A task that needs input now asks for it.** Every task ended with a label — `Feature:
+  $ARGUMENTS`, `Bug: $ARGUMENTS` — and an empty invocation left a dangling colon, which a
+  session fills in by guessing: a feature inferred from the branch name, a bug it went
+  looking for, the newest spec assumed to be the one you meant. The nine tasks that require
+  input now say what to do when they get none, and say it specifically — `/t4:plan` lists the
+  paths in `specs/` rather than assuming the newest, `/t4:step` names the unticked steps
+  rather than starting one.
+- **`/t4:check` and `/t4:fleet` deliberately do not ask.** Both work with no argument by
+  design — check reviews the branch diff, fleet maps the whole repo — so a prompt would be an
+  obstacle rather than a safeguard. Their input is marked optional with brackets instead.
+- **`argument-hint` reaches the command menu.** Each task declares one and
+  `sync-adapters.sh` copies it into the generated command, so the expected input is visible
+  before running rather than discovered by running. A task with no hint gets no empty one.
+- Two assertions pin this, both verified by breaking them: a task whose hint says it takes
+  input must carry the prompt, and the generated command's hint must match its task's. The
+  first catches a task that gains an argument without gaining the question; the second
+  catches a generator that quietly stops propagating.
+- Codex needs no separate handling — its skills point at `ai/tasks/<name>.md` rather than
+  copying it, so the prompt arrives with the task.
+
 ## 0.13.0 — 2026-09-07
 - **Every command lives under `/t4:`.** The eleven project tasks become `/t4:spec`,
   `/t4:plan`, `/t4:step` and so on; the plugin's two become `/t4:adopt-sdlc` and
