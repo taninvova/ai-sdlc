@@ -5,7 +5,7 @@ One paragraph: what this project does and who uses it. Stack: {{stack}}. Scaffol
 
 ## Commands
 {{commands}}
-Slash commands: /t4:fleet /t4:design /t4:adr /t4:explore /t4:spec /t4:plan /t4:test /t4:step /t4:fix /t4:chore /t4:check
+Slash commands: /t4:fleet /t4:design /t4:adr /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:check
 Headless (CI only): make ai TASK=<name> INPUT="…"
 
 ## Non-negotiable rules
@@ -19,7 +19,7 @@ ai/docs/coding-standards.md · ai/docs/definition-of-done.md · ai/docs/architec
 The spec in specs/ for the feature · the plan in ai/plans/ if one exists · ai/skills/<topic> for the area you touch
 
 ## Workflow
-/t4:explore (options) → /t4:spec → /t4:plan → /t4:test red → /t4:step one step at a time → /t4:test gaps → /t4:check → commit `ai(<task>): …` → MR (label ai-assisted)
+/t4:explore (options) → /t4:spec → /t4:plan → /t4:test red → /t4:run one step at a time → /t4:test gaps → /t4:check → commit `ai(<task>): …` → MR (label ai-assisted)
 Plan first for anything touching more than ~3 files. Reset the working tree between steps.
 Steering in chat for 20+ minutes with code changed? Stop, write the decision into the plan, commit, continue.
 
