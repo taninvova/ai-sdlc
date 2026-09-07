@@ -1,0 +1,12 @@
+{
+  "name": "n6",
+  "interface": { "displayName": "n6 platform" },
+  "plugins": [
+    {
+      "name": "sdlc",
+      "source": { "source": "local", "path": "." },
+      "policy": { "installation": "AVAILABLE" },
+      "category": "Developer Tools"
+    }
+  ]
+}

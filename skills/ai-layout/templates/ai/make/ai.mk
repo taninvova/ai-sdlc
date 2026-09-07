@@ -2,24 +2,47 @@
 TOOL  ?= claude
 TASK  ?= chore
 RUNS  := ai/runs
-MODEL  = $(shell sed -n 's/^$(TOOL): *//p' ai/models.yaml | head -1)
+MODEL  = $(shell sed -n 's/^$(TOOL): *//p' ai/models.yaml 2>/dev/null | head -1)
+
+# Blank in models.yaml means "whatever the tool is configured with" — pass no model flag at
+# all, so this works against any provider rather than requiring an id the endpoint may not
+# know. The two CLIs differ in flags and in output shape, so RUN is built per tool.
+ifeq ($(TOOL),codex)
+CMD       ?= codex
+MODEL_ARG  = $(if $(strip $(MODEL)),-m "$(MODEL)",)
+# codex exec takes the prompt on stdin (`-`), streams JSONL events to stdout, and writes the
+# final message to -o. log.js and gate.js read both.
+RUN        = $(CMD) exec --json --skip-git-repo-check $(MODEL_ARG) -o $$OUT.last.txt - < $$PF > $$OUT
+else
+CMD       ?= claude
+MODEL_ARG  = $(if $(strip $(MODEL)),--model "$(MODEL)",)
+RUN        = $(CMD) -p "$$(cat $$PF)" $(MODEL_ARG) --output-format json > $$OUT
+endif
 
 .PHONY: ai review ai-sync clean-runs
 
+# INPUT reaches the recipe as an environment variable, never interpolated into the shell
+# line — `make review` passes a whole diff through it, quotes and all.
+export INPUT
+
 ai:
 	@mkdir -p $(RUNS)
-	@PROMPT="$$(cat ai/tasks/$(TASK).md)
-
-## Input
-$(INPUT)"; \
-	OUT=$(RUNS)/$$(date +%Y%m%d-%H%M%S)-$(TOOL)-$(TASK).json; \
-	claude -p "$$PROMPT" --model "$(MODEL)" --output-format json > $$OUT; \
+	@OUT=$(RUNS)/$$(date +%Y%m%d-%H%M%S)-$(TOOL)-$(TASK).json; \
+	PF=$$(mktemp); \
+	{ cat ai/tasks/$(TASK).md; printf '\n## Input\n'; \
+	  if [ -n "$(INPUT_FILE)" ]; then cat "$(INPUT_FILE)"; else printf '%s\n' "$$INPUT"; fi; } > $$PF; \
+	$(RUN); \
+	rm -f $$PF; \
 	node ai/make/log.js $$OUT $(TASK) $(TOOL) "$(MODEL)" >> $(RUNS)/log.csv; \
 	echo "run saved: $$OUT"
 
+# The diff goes to a file, never through a make variable: make re-expands `$` in a value,
+# which would silently corrupt any diff containing one.
 review:
-	@BASE=$$(git merge-base HEAD main 2>/dev/null || git merge-base HEAD develop); \
-	$(MAKE) ai TASK=check INPUT="$$(git diff $$BASE...HEAD)" && \
+	@mkdir -p $(RUNS); \
+	BASE=$$(git merge-base HEAD main 2>/dev/null || git merge-base HEAD develop); \
+	git diff $$BASE...HEAD > $(RUNS)/.review-input; \
+	$(MAKE) ai TASK=check INPUT_FILE=$(RUNS)/.review-input && \
 	node ai/make/gate.js $$(ls -t $(RUNS)/*-check.json | head -1)
 
 ai-sync:
