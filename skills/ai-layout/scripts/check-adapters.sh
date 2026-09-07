@@ -65,6 +65,21 @@ for t in ai/tasks/*.md; do
     || fail "$n requires input ($h) but never says what to do when it gets none"
 done
 
+# A repo adopted under an older naming keeps its old command files unless sync removes them,
+# and then answers both /spec and /t4:spec. Reproduce that: a pre-0.5.0 bare command, a
+# 0.5.0-era ai- command, a stale codex skill — and a hand-written command that must survive,
+# because the only thing separating it from ours is the include, not the name.
+printf -- '---\ndescription: stale\n---\n@../../ai/tasks/spec.md\n' > .claude/commands/spec.md
+printf -- '---\ndescription: stale\n---\n@../../ai/tasks/plan.md\n' > .claude/commands/ai-plan.md
+mkdir -p .codex/skills/ai-spec && printf -- '---\nname: ai-spec\n---\nRead `ai/tasks/spec.md`\n' > .codex/skills/ai-spec/SKILL.md
+printf -- '---\ndescription: mine\n---\nMy own prompt, nothing to do with ai/tasks.\n' > .claude/commands/spec-of-mine.md
+bash ai/make/sync-adapters.sh > /dev/null
+[ ! -f .claude/commands/spec.md ]        || fail "sync left the pre-0.5.0 bare command in place"
+[ ! -f .claude/commands/ai-plan.md ]     || fail "sync left the 0.5.0-era ai- command in place"
+[ ! -d .codex/skills/ai-spec ]           || fail "sync left a stale codex skill in place"
+[ -f .claude/commands/spec-of-mine.md ]  || fail "sync deleted a hand-written command"
+rm -f .claude/commands/spec-of-mine.md
+
 # The codex skill must not copy the prompt text — that would fork from ai/tasks/.
 body=$(sed -n '/^---$/,/^---$/!p' .codex/skills/t4-spec/SKILL.md | wc -l | tr -d ' ')
 [ "$body" -lt 15 ] || fail "codex skills look like copies of the task, not pointers ($body lines)"
