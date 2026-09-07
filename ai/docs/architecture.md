@@ -16,14 +16,19 @@ Hooks in `hooks/hooks.json` fire on SessionStart, PreToolUse, PostToolUse and St
 - `ai/` — this repo's own layout, symlinked to the templates (see ai/AGENTS.md)
 
 ## Data ownership
-Owns the templates and the prompt text. Writes only to `ai/runs/` in the repo it runs in.
-Reads `ai/models.yaml` for model aliases; the LiteLLM proxy at llm.nsix.io resolves them.
+Owns the templates, the prompt text and the `ai/.sdlc.json` schema. Writes only to `ai/runs/`
+and, at adopt time, `ai/.sdlc.json` in the repo it runs in. Each adopted repo owns its own
+manifest and is the source of truth for its layout version; this plugin keeps no registry of
+adopter versions.
+Reads `ai/models.yaml` for the model each headless task pins, and for per-model prices.
+Blank there means the tool's own configured model, so no provider is assumed.
 
 ## Environments
 Developer machines and CI. `make ai` / `make review` are the headless path; developers use
 slash commands. `GATE_ENFORCE=1` turns review blockers into a non-zero exit.
 
 ## What is deliberately not here
-No application scaffolding — that belongs to nextjs-scaffold and nestjs-scaffold.
+No application scaffolding — that belongs to an overlay plugin, which supplies it through
+the template slots. This repo never names, reads or version-pins one.
 No stack-specific rules in the base templates; those arrive as overlay docs and ai/skills/.
 No hook that prints to stdout, and no hook that assumes a repo has the layout.

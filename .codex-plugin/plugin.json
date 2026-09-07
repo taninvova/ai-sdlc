@@ -1,0 +1,15 @@
+{
+  "name": "sdlc",
+  "version": "0.9.0",
+  "description": "n6 AI SDLC core: the ai/ layout (AGENTS.md, context docs, task prompts, reviewer / tester / architect agents, fleet map), dont-touch guard, adapter sync. Standalone — no dependency on any other repo; framework overlays build on it through the template slots.",
+  "author": { "name": "n6 platform" },
+  "repository": "git@gitlab.nsix.io:ai/sdlc.git",
+  "license": "MIT",
+  "keywords": ["ai-sdlc", "review", "spec", "plan", "adr", "n6"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "n6 AI SDLC",
+    "shortDescription": "Spec, plan, test and review loop for any repo",
+    "category": "Developer Tools"
+  }
+}
