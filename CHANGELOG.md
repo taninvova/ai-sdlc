@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.15.0 — 2026-09-07
+- **The marketplace is `sdlc`; the handle is `t4@sdlc`.** A handle reads
+  `<plugin>@<marketplace>`, so this renames the marketplace only. The plugin stays `t4` —
+  its name is what makes the commands `/t4:`, and renaming it would take them with it.
+  0.13.0 had both called `t4`, which worked but read as a stutter and hid which half meant
+  what.
+- The marketplace now matches the git project it is served from, `ai/sdlc.git`, so the name
+  in the manifest and the name in the URL finally agree.
+- Unchanged: the org is still `t4 platform`, the plugin is still `t4`, the repo is still
+  `ai-sdlc`, and `/plugin marketplace add git@gitlab.nsix.io:ai/sdlc.git` is the same line
+  as before. Only the handle's right-hand side moved.
+- The 0.13.0 entry's claim that "plugin and marketplace share a name" was left in place as a
+  sentence but is no longer true, so it is removed there rather than left to mislead.
+
 ## 0.14.0 — 2026-09-07
 - **A task that needs input now asks for it.** Every task ended with a label — `Feature:
   $ARGUMENTS`, `Bug: $ARGUMENTS` — and an empty invocation left a dangling colon, which a
@@ -24,10 +38,10 @@
 ## 0.13.0 — 2026-09-07
 - **Every command lives under `/t4:`.** The eleven project tasks become `/t4:spec`,
   `/t4:plan`, `/t4:step` and so on; the plugin's two become `/t4:adopt-sdlc` and
-  `/t4:sync-sdlc`. Reinstall with `/plugin install t4@t4`.
+  `/t4:sync-sdlc`. Reinstall with `/plugin install t4@sdlc`.
 - **The plugin is named `t4`.** That is not cosmetic: a plugin's command namespace *is* its
-  name, so `/t4:adopt-sdlc` is only reachable by renaming the plugin. The handle is therefore
-  `t4@t4` — plugin and marketplace share a name. The repo stays `ai-sdlc`.
+  name, so `/t4:adopt-sdlc` is only reachable by renaming the plugin. The repo stays
+  `ai-sdlc`.
 - **The project commands are namespaced by directory, not by prefix.** `sync-adapters.sh`
   now writes `.claude/commands/t4/<task>.md` instead of `.claude/commands/ai-<task>.md`,
   because a subdirectory under `.claude/commands/` is what Claude Code reads as a namespace.
