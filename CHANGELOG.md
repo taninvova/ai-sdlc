@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.19.0 — 2026-09-07
+- **`/t4:spec` can draft from a tracker ticket.** In a repo that has committed `ai/jira.yaml`,
+  `/t4:spec ABC-12` resolves the key and specs the ticket, recording it as a vendor-neutral
+  `Ticket: ABC-12` line under the title so later work can find its way back. Implements
+  `specs/0001-spec-accepts-a-ticket-key.md`; decided in `docs/adr/0004`, `0005` and `0006`.
+- **Off unless you turn it on, and the gate is configuration — never the shape of what you
+  typed.** A repo with no `ai/jira.yaml` behaves exactly as it did before: `/t4:spec UTF-8`
+  specs UTF-8. That matters because `UTF-8`, `ISO-8601` and `RFC-7231` all match a ticket-key
+  pattern end to end, so keying off the argument would have made a repo with no tracker stop
+  and ask about a ticket that cannot exist.
+- **A repo without a tracker cannot tell this shipped — including from what the session says.**
+  The first real run failed exactly there: the artefact was right, but the report announced
+  that `ai/jira.yaml` was missing, which told a repo that had configured nothing that a
+  mechanism existed. A report is output. `argument-hint` is unchanged for the same reason: the
+  command menu is output too.
+- **Criteria come from the ticket's description and nothing else**, and what the description
+  leaves implicit becomes an Open question rather than an invented Given/When/Then. Proved
+  against a real ticket whose entire description was one sentence: one criterion, nine open
+  questions. Eight plausible criteria would have looked more useful and been a fabrication.
+- **New template: `ai/docs/tracker.md`** — the one file allowed to name a vendor, a connector,
+  a URL or a config filename. `check-adapters.sh` now fails if any of those reach a task prompt
+  or a generated command.
+- **`ai/jira.yaml` is deliberately not in `dont-touch.md`.** Everything on that list is
+  generated or secret; this is hand-written config a developer must author, and the guard
+  blocks edits outright — listing it would stop a session creating the file that turns the
+  feature on.
+- **Nothing writes to a tracker.** `docs/adr/0006` allows comments and gates transitions behind
+  a seam arm that does not exist yet; neither is built. Setup and resolution read only.
+- **Blast radius: every adopted repo**, on its next sync, receives `ai/docs/tracker.md` and
+  gains nothing else until it writes `ai/jira.yaml`. Outside Claude Code — Codex, and headless
+  `make ai` — a key cannot be resolved at all until `ai/make/jira.sh` exists, and the task
+  stops and says so rather than guessing.
+
 ## 0.18.0 — 2026-09-07
 - **`make ai` never ran a task under `claude`.** `ai.mk` passed the prompt as an argument —
   `claude -p "$(cat $PF)"` — and every task file opens with YAML frontmatter, so the CLI read
