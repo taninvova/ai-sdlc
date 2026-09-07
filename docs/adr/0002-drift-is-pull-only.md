@@ -8,7 +8,7 @@ ai-sdlc records which repo is on which version and reports centrally. That requi
 enumerate and read other repos.
 
 ## Decision
-Drift is detected only when someone runs `/ai-sdlc:sync` inside the repo, comparing that repo's
+Drift is detected only when someone runs `/t4:sync-sdlc` inside the repo, comparing that repo's
 `ai/.sdlc.json` against the installed plugin's templates. ai-sdlc keeps no list of adopters,
 never reads another repo, and never writes into one out of band. Each adopted repo is the
 source of truth for its own version.
@@ -19,6 +19,6 @@ may not name, read, list or version-pin one. A registry would break that rule ou
 ## Consequences
 ai-sdlc stays standalone and has no state to keep correct or secure. Nothing can answer
 "which repos are behind?" from here — that view has to be assembled outside ai-sdlc, by whoever
-wants it. A repo nobody runs `/ai-sdlc:sync` in drifts silently and forever; the check surfaces
+wants it. A repo nobody runs `/t4:sync-sdlc` in drifts silently and forever; the check surfaces
 drift, it does not chase it. A repo adopted before manifests existed is not an error: it is
 told how to start a baseline from its files as they stand.

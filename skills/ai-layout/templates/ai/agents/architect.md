@@ -8,6 +8,6 @@ ai/docs/architecture.md and docs/adr/ first; an accepted ADR is binding; write o
 ai/designs/, docs/adr/ and — in fleet mode — ai/docs/fleet.md; propose changes to other
 context docs rather than making them). Project-specific additions (the scaffold overlay may
 have added some):
-- Services this repo owns, and the ones it may not write to: (fill in — or run /ai-fleet)
+- Services this repo owns, and the ones it may not write to: (fill in — or run /t4:fleet)
 - Contracts others depend on and that therefore may not break: (fill in)
 - Decisions already settled that a design must not reopen: (list the ADR numbers)

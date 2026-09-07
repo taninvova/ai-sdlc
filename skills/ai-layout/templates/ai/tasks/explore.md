@@ -16,7 +16,7 @@ Write ai/explorations/<NNNN>-<slug>.md with:
    architecture.md · recommendation.
 5. **Recommendation** — one option, with the reason, and what would change your mind.
 6. **Open questions** — for the developer or the spec owner; anything blocking a spec.
-7. **Next** — the /ai-spec command line to run once an option is chosen.
+7. **Next** — the /t4:spec command line to run once an option is chosen.
 
 Keep it under two pages. Facts from the code; opinions labelled as such.
 Report the file path and the recommended option in one sentence.

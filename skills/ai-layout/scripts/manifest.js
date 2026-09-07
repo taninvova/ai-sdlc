@@ -5,7 +5,7 @@
 //   manifest.js write <repo-root> <plugin-root> [--overlay name=version]
 //   manifest.js check <repo-root> <plugin-root>
 //
-// Two hashes per file, not one. /ai-sdlc:adopt substitutes {{app}}, {{stack}} and friends, so a
+// Two hashes per file, not one. /t4:adopt-sdlc substitutes {{app}}, {{stack}} and friends, so a
 // repo file never equals its template. `received` is what landed in the repo (detects local
 // edits); `template` is the template it came from (detects upstream change). Comparing a
 // repo file to a template directly would report every substituted file as modified forever.
@@ -71,7 +71,7 @@ function readManifest(repoRoot) {
 
 function cmdWrite(repoRoot, pluginRoot, args) {
   if (isPluginItself(repoRoot, pluginRoot)) { console.log("manifest: this is the ai-sdlc plugin itself — no manifest written."); return 0; }
-  if (!fs.existsSync(path.join(repoRoot, "ai"))) die("no ai/ directory — run /ai-sdlc:adopt first");
+  if (!fs.existsSync(path.join(repoRoot, "ai"))) die("no ai/ directory — run /t4:adopt-sdlc first");
   const prev = readManifest(repoRoot);
   const m = build(repoRoot, pluginRoot, prev);
   const ov = args.find(a => a.startsWith("--overlay="));
@@ -134,7 +134,7 @@ function cmdCheck(repoRoot, pluginRoot) {
   const drifted = b.upstream.length + b.both.length + b.added.length + b.removed.length + b.gone.length;
   if (!drifted && !b.local.length) console.log("\n  up to date — every tracked file matches.");
   else if (!drifted) console.log("\n  up to date with upstream; the differences above are your own.");
-  console.log("\n  Reported only — /ai-sdlc:sync changes nothing under ai/.");
+  console.log("\n  Reported only — /t4:sync-sdlc changes nothing under ai/.");
   return 0;
 }
 

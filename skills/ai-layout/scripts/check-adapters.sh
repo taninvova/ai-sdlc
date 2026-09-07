@@ -12,15 +12,15 @@ bash ai/make/sync-adapters.sh > /dev/null
   || fail "sync-adapters is not idempotent"
 
 tasks=$(ls ai/tasks/*.md | wc -l | tr -d ' ')
-cmds=$(ls .claude/commands/ai-*.md 2>/dev/null | wc -l | tr -d ' ')
-skills=$(ls -d .codex/skills/ai-*/ 2>/dev/null | wc -l | tr -d ' ')
+cmds=$(ls .claude/commands/t4/*.md 2>/dev/null | wc -l | tr -d ' ')
+skills=$(ls -d .codex/skills/t4-*/ 2>/dev/null | wc -l | tr -d ' ')
 [ "$tasks" = "$cmds" ]   || fail "$tasks tasks but $cmds claude commands"
 [ "$tasks" = "$skills" ] || fail "$tasks tasks but $skills codex skills"
 
 for t in ai/tasks/*.md; do
-  n=$(basename "$t" .md); s=".codex/skills/ai-$n/SKILL.md"
+  n=$(basename "$t" .md); s=".codex/skills/t4-$n/SKILL.md"
   [ -f "$s" ] || fail "missing $s"
-  grep -q "^name: ai-$n$" "$s" || fail "$s has the wrong name in its frontmatter"
+  grep -q "^name: t4-$n$" "$s" || fail "$s has the wrong name in its frontmatter"
   grep -q "ai/tasks/$n.md" "$s" || fail "$s does not point at its task file"
   # A task that delegates must carry the note; one that does not must not.
   if grep -q 'Delegate to the `[a-z]*` subagent' "$t"; then
@@ -32,8 +32,18 @@ for t in ai/tasks/*.md; do
   fi
 done
 
+for t in ai/tasks/*.md; do
+  n=$(basename "$t" .md); c=".claude/commands/t4/$n.md"
+  [ -f "$c" ] || fail "missing $c"
+  inc=$(sed -n 's/^@//p' "$c" | head -1)
+  [ -n "$inc" ] || fail "$c has no @include"
+  target=$(cd "$(dirname "$c")" && cd "$(dirname "$inc")" 2>/dev/null && pwd)/$(basename "$inc")
+  [ -f "$target" ] || fail "$c includes $inc, which does not resolve to a file"
+  [ "$target" = "$PWD/$t" ] || fail "$c resolves to $target, expected $PWD/$t"
+done
+
 # The codex skill must not copy the prompt text — that would fork from ai/tasks/.
-body=$(sed -n '/^---$/,/^---$/!p' .codex/skills/ai-spec/SKILL.md | wc -l | tr -d ' ')
+body=$(sed -n '/^---$/,/^---$/!p' .codex/skills/t4-spec/SKILL.md | wc -l | tr -d ' ')
 [ "$body" -lt 15 ] || fail "codex skills look like copies of the task, not pointers ($body lines)"
 
 echo "adapters ok — $tasks tasks → claude commands + codex skills, idempotent, agent notes correct"

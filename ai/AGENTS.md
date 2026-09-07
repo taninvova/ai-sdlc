@@ -12,7 +12,7 @@ Syntax check hooks: `for f in skills/ai-hooks/scripts/*.js; do node --check "$f"
 Syntax check bash: `bash -n skills/ai-layout/templates/ai/make/sync-adapters.sh`
 Adapter sync (this repo): `bash ai/make/sync-adapters.sh`
 Hook fixtures: `node skills/ai-hooks/scripts/session-stop.js < skills/ai-hooks/fixtures/stop.json`
-Slash commands: /ai-fleet /ai-design /ai-adr /ai-explore /ai-spec /ai-plan /ai-test /ai-step /ai-fix /ai-chore /ai-check
+Slash commands: /t4:fleet /t4:design /t4:adr /t4:explore /t4:spec /t4:plan /t4:test /t4:step /t4:fix /t4:chore /t4:check
 Headless (CI only): make ai TASK=<name> INPUT="…"
 
 ## This repo is its own template
@@ -32,8 +32,8 @@ docs/workflow.md for how the commands fit together · ai/docs/coding-standards.m
 The spec in specs/ for the change · the plan in ai/plans/ if one exists
 
 ## Workflow
-/ai-explore (options) → /ai-spec → /ai-plan → /ai-test red → /ai-step one step at a time →
-/ai-test gaps → /ai-check → commit `ai(<task>): …` → MR (label ai-assisted)
+/t4:explore (options) → /t4:spec → /t4:plan → /t4:test red → /t4:step one step at a time →
+/t4:test gaps → /t4:check → commit `ai(<task>): …` → MR (label ai-assisted)
 
 ## Setup (once per developer)
 Works with whatever provider your tool is already configured with — nothing here assumes one.
