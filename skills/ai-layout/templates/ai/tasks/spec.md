@@ -10,6 +10,9 @@ resolve the key, and spec what it returns. If it does not resolve, stop and ask 
 the key itself. If one spec already records that key, report its path and stop; if two do,
 report both and stop. In every other case — not configured, no such file, or an argument that
 is not wholly a key — the argument IS the request, exactly as typed, and no key is resolved.
+When this repo is not configured, say nothing about keys, configuration or that file in what
+you report: describe the spec exactly as you would have before this paragraph existed. A repo
+that has configured nothing must not learn from your report that the mechanism is there.
 
 Write specs/<NNNN>-<slug>.md with:
 - Title, one-line summary
