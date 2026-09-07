@@ -13,3 +13,6 @@ ts,session_id,user,branch,turns,input_tokens,output_tokens,cache_read_tokens,cac
 2026-09-07T01:13:04.639Z,5aaa13f6-f4c7-40d7-9012-9d406a821c00,tanin,ai/architect-agent,355,710,509099,80520046,1364604,0.98,36.9119,
 # rows below were written by the older hook after the 0.7.0 header change, under a header it did not match
 2026-09-07T13:59:30.566Z,9c657d4e-ba1c-418e-abf9-0f82d0fc2382,tanin,main,30,60,13222,1949564,95897,0.95,1.1430,
+# rows below came from ai/architect-agent (c25ab2d), same older-hook shape
+2026-09-07T13:55:24.831Z,5aaa13f6-f4c7-40d7-9012-9d406a821c00,tanin,ai/architect-agent,418,836,583245,107086798,2331905,0.98,49.6219,
+2026-09-07T13:57:41.868Z,9c657d4e-ba1c-418e-abf9-0f82d0fc2382,tanin,ai/architect-agent,2,4,694,55026,8352,0.87,0.0582,
