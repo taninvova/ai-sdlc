@@ -4,7 +4,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/../../.."   # repo root
 M=skills/ai-layout/scripts/manifest.js
-TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
+TMP=$(mktemp -d)
+# A failing assertion exits before any inline cleanup, so a test that provokes a manifest into
+# this repo would leave it behind. The trap is the only place that reliably runs.
+HAD_MANIFEST=$([ -f ai/.sdlc.json ] && echo yes || echo no)
+trap 'rm -rf "$TMP"; [ "$HAD_MANIFEST" = no ] && rm -f ai/.sdlc.json' EXIT
 REPO=$TMP/app; PLUG=$TMP/plugin
 fail() { echo "FAIL: $*" >&2; exit 1; }
 has() { grep -q -- "$2" "$1" || fail "expected \"$2\" in output:$(printf '\n'; cat "$1")"; }
@@ -81,6 +85,15 @@ node "$M" check "$REPO" "$PLUG" > "$TMP/o"; has "$TMP/o" "newer than the plugin"
 
 echo "== the plugin repo itself never gets a manifest =="
 node "$M" write . . > "$TMP/o"; has "$TMP/o" "ai-sdlc plugin itself"
-[ -f ai/.sdlc.json ] && fail "a manifest was written into the plugin repo"
+[ -f ai/.sdlc.json ] && { rm -f ai/.sdlc.json; fail "a manifest was written into the plugin repo"; }
+
+echo "== ...including when the plugin runs from an install elsewhere =="
+# The case the check above cannot see. It passes repo-root and plugin-root as the same path,
+# which is only true when the plugin is loaded from its working tree. Once it is installed,
+# plugin-root is the cache, the two differ, and a path comparison stops recognising the source
+# repo — so a manifest was written into it. $PLUG is a copy of this plugin, which is exactly
+# the shape of an install.
+node "$M" write . "$PLUG" > "$TMP/o-installed" 2>&1; has "$TMP/o-installed" "ai-sdlc plugin itself"
+[ -f ai/.sdlc.json ] && { rm -f ai/.sdlc.json; fail "a manifest was written into the plugin repo when the plugin ran from an install"; }
 
 echo "manifest ok — write, all six drift states, version drift, read-only, migration, schema guard"

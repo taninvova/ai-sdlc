@@ -63,8 +63,13 @@ stale=(.claude/commands/*.md)
 # manifest there. Without the same test, this script tells a maintainer standing in the plugin
 # repo to create a baseline that manifest.js will decline to write. Same rule, mirrored — not a
 # second opinion about what counts as the plugin.
+# Same identity test manifest.js uses, and for the same reason: comparing paths only works
+# while the plugin is loaded from its working tree. Installed, pluginRoot is the cache, the
+# paths differ, and this repo would be told to start a baseline it must never have.
 SELF=no
-if [ "$(cd . && pwd -P)" = "$(cd "$PLUGIN" 2>/dev/null && pwd -P)" ]; then
+_name() { sed -n 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$1/.claude-plugin/plugin.json" 2>/dev/null | head -1; }
+if [ "$(cd . && pwd -P)" = "$(cd "$PLUGIN" 2>/dev/null && pwd -P)" ] \
+   || { [ -n "$(_name .)" ] && [ "$(_name .)" = "$(_name "$PLUGIN")" ]; }; then
   say ok layout-source "this is the plugin's own repo — the templates are the source, so there is no manifest and nothing to compare"
   SELF=yes
 fi
