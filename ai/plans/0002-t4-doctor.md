@@ -44,7 +44,7 @@ trusted when something is already wrong.
   follows, so `check-adapters.sh` already asserts it.
   *Proves:* AC1, AC8, AC9, AC10, AC11. *Check:* real runs, step 5.
 
-- [ ] **Step 4 — `check-doctor.sh`.** Four scratch repos: no layout, drift, no manifest,
+- [x] **Step 4 — `check-doctor.sh`.** Four scratch repos: no layout, drift, no manifest,
   healthy. Assert the expected finding appears and that the command exits 0 in all four —
   a doctor that fails when it finds something is a doctor nobody runs in CI. Verify by breaking
   each fixture, not by passing.
