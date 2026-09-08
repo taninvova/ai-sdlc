@@ -17,9 +17,13 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 # A config dir where the plugin IS installed at user scope, with exactly one cached copy.
 NAME=$(sed -n 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' .claude-plugin/plugin.json | head -1)
 VER=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' .claude-plugin/plugin.json | head -1)
-CFG=$TMP/config; mkdir -p "$CFG/plugins/cache/sdlc/$NAME/$VER"
+CFG=$TMP/config; mkdir -p "$CFG/plugins/cache/sdlc/$NAME/$VER" "$CFG/plugins/marketplaces/sdlc/.claude-plugin"
 printf '{"version":2,"plugins":{"%s@sdlc":[{"scope":"user","installPath":"x","version":"%s"}]}}\n' \
   "$NAME" "$VER" > "$CFG/plugins/installed_plugins.json"
+# A marketplace copy at the same version, so "healthy" means nothing to report about updates
+# either. Without it the baseline case carries an unknown that has nothing to do with the repo.
+printf '{"name":"sdlc","plugins":[{"name":"%s","source":".","version":"%s"}]}\n' \
+  "$NAME" "$VER" > "$CFG/plugins/marketplaces/sdlc/.claude-plugin/marketplace.json"
 
 # Builds a repo carrying the current layout. $1 = name.
 make_repo() {
@@ -85,4 +89,33 @@ $out"
 grep -q '^\[finding\]' <<<"$out" && fail "an absent config dir must not invent findings:
 $out"
 
-echo "doctor ok — 5 cases: no layout, no manifest, behind, healthy, no config dir"
+# 6. the install is behind the marketplace copy ---------------------------------------------
+# 0.9.0 vs 0.10.0 on purpose: a string comparison calls 0.9.0 the newer one, so this fixture
+# fails if the version compare is ever simplified to <.
+CFG2=$TMP/config2; mkdir -p "$CFG2/plugins/cache/sdlc/$NAME/0.9.0" "$CFG2/plugins/marketplaces/sdlc/.claude-plugin"
+printf '{"version":2,"plugins":{"%s@sdlc":[{"scope":"user","installPath":"x","version":"0.9.0"}]}}\n' \
+  "$NAME" > "$CFG2/plugins/installed_plugins.json"
+printf '{"name":"sdlc","plugins":[{"name":"%s","source":".","version":"0.10.0"}]}\n' \
+  "$NAME" > "$CFG2/plugins/marketplaces/sdlc/.claude-plugin/marketplace.json"
+out=$(CLAUDE_CONFIG_DIR="$CFG2" CLAUDE_PLUGIN_ROOT="$ROOT" bash "$ROOT/$DOCTOR" "$d" "$ROOT" 2>&1)
+grep -q '^\[finding\] update .*0\.9\.0.*0\.10\.0' <<<"$out" \
+  || fail "an install behind the marketplace copy was not reported (0.9.0 vs 0.10.0):
+$out"
+grep -q 'plugin install' <<<"$out" || fail "the update finding carries no remedy (AC9)"
+
+# 7. the install is current — say nothing about updates ---------------------------------------
+printf '{"name":"sdlc","plugins":[{"name":"%s","source":".","version":"0.9.0"}]}\n' \
+  "$NAME" > "$CFG2/plugins/marketplaces/sdlc/.claude-plugin/marketplace.json"
+out=$(CLAUDE_CONFIG_DIR="$CFG2" CLAUDE_PLUGIN_ROOT="$ROOT" bash "$ROOT/$DOCTOR" "$d" "$ROOT" 2>&1)
+grep -q '^\[finding\] update' <<<"$out" && fail "a current install was told it is behind:
+$out"
+
+# 8. no marketplace copy at all — unknown, never a finding -------------------------------------
+rm -rf "$CFG2/plugins/marketplaces"
+out=$(CLAUDE_CONFIG_DIR="$CFG2" CLAUDE_PLUGIN_ROOT="$ROOT" bash "$ROOT/$DOCTOR" "$d" "$ROOT" 2>&1)
+grep -q '^\[unknown\] update' <<<"$out" || fail "an unreadable marketplace copy should be unknown:
+$out"
+grep -q '^\[finding\] update' <<<"$out" && fail "an unreadable marketplace copy must not become a finding:
+$out"
+
+echo "doctor ok — 8 cases: no layout, no manifest, behind, healthy, no config dir, update available, up to date, no marketplace"

@@ -181,6 +181,26 @@ try{ for(const mk of fs.readdirSync(cacheRoot)){ const d=path.join(cacheRoot,mk,
       try{ for(const v of fs.readdirSync(d)) vers.push(`${mk}/${name}/${v}`);}catch{} } }catch{}
 if(vers.length>1) out.push(["finding","cache",`${vers.length} cached copies of ${name}: ${vers.join(", ")} — a session that has not restarted may still be running an older one`]);
 else if(vers.length===1) out.push(["ok","cache",`one cached copy: ${vers[0]}`]);
+
+// Is the install behind the marketplace copy already on disk? A repo can be perfectly in step
+// with an install that is itself several releases old, which is invisible to every check above
+// — they all compare against whatever plugin they were handed. Local copy only: reaching the
+// network would answer a different, larger question and this must not imply it.
+const cmp=(a,b)=>{const A=String(a).split(".").map(Number),B=String(b).split(".").map(Number);
+  for(let i=0;i<Math.max(A.length,B.length);i++){const x=A[i]||0,y=B[i]||0; if(x!==y) return x<y?-1:1;} return 0;};
+const installedVers=[];
+if(inst&&inst.plugins) for(const [ref,entries] of Object.entries(inst.plugins))
+  if(ref.split("@")[0]===name) for(const e of entries) if(e.version) installedVers.push(e.version);
+if(installedVers.length){
+  const have=installedVers.sort(cmp).slice(-1)[0];
+  let published=null, mkName=null;
+  try{ for(const mk of fs.readdirSync(path.join(cfg,"plugins","marketplaces"))){
+    const j=read(path.join(cfg,"plugins","marketplaces",mk,".claude-plugin","marketplace.json"));
+    for(const pl of (j&&j.plugins)||[]) if(pl.name===name&&pl.version&&(!published||cmp(pl.version,published)>0)){published=pl.version;mkName=mk;}
+  } }catch{}
+  if(!published) out.push(["unknown","update",`no marketplace copy of ${name} could be read, so it is not known whether ${have} is current`]);
+  else if(cmp(have,published)<0) out.push(["finding","update",`installed ${have}, but the ${mkName} marketplace copy on this machine is ${published} — /plugin install ${name}@${mkName}, then restart. (Compares against the copy already fetched, not the remote.)`]);
+}
 for(const r of out) console.log(r.join("|"));
 ' "$CFG" "$PLUGIN_NAME" "$HERE" 2>/dev/null)
 EOF_NODE

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.22.0 — 2026-09-07
+- **`/t4:doctor` now says when your install is behind.** It compared a repo against whichever
+  plugin it was handed and never looked at whether that plugin was current, so a repo could be
+  perfectly in step with an install several releases old and report entirely green. That is the
+  exact invisible state the command exists for, and it was blind to it. `specs/0002` AC13.
+- **It compares against the marketplace copy already on disk, not the remote**, and says so in
+  the message. "Behind what you have fetched" is a smaller claim than "behind the world", it
+  needs no network, and conflating the two would make the command lie on a stale clone.
+  `specs/0002` AC14.
+- Version comparison is numeric per component, not lexical. The fixture uses 0.9.0 against
+  0.10.0 for that reason: a string comparison calls 0.9.0 the newer, and would have reported a
+  behind install as current. Verified by replacing the comparison with `<` and watching the
+  fixture fail.
+- `check-doctor.sh` is now eight cases, adding update-available, up-to-date, and no-marketplace.
+- `specs/0001` AC4 and AC5 said the session "asks how to proceed" when a key does not resolve.
+  Impossible on the path AC4 itself names — `make ai` runs with no session behind it — so both
+  now say report and write nothing, asking only where there is someone to ask. Wording only;
+  the behaviour has been report-and-stop since 0.19.0.
+
 ## 0.21.0 — 2026-09-07
 - **`/t4:setup-tracker`** — points a repo at a tracker and proves it, so turning `specs/0001`
   on no longer means knowing a filename, a key and its exact shape from reading a design
