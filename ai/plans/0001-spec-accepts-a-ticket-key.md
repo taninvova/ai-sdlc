@@ -61,30 +61,29 @@ Step 1 builds the seam first so that step 2 has something to point at and no rea
   stop-and-ask by pointing at the task file; if it does not, add it in `sync-adapters.sh`.
   *Proves:* AC4 under Codex. *Check:* read a generated `.codex/skills/t4-spec/SKILL.md`.
 
-- [x] **Step 6 — Run the ACs for real and record the transcripts.** *Complete.* Ran against
-  scratch repos, configured and not, via the same prompt `make ai` builds:
-  **AC1 pass** (unconfigured, `UTF-8` — free text, no key resolved, no `Ticket:` line);
-  **AC3 pass** (configured, `PROJ-123 but only the CSV export part` — treated as prose, no
-  `Ticket:` line); **AC4 pass** (configured, `PROJ-123`, both arms unavailable — stopped, no
-  spec written, did not fall back to specifying the key); **AC12 pass, after a fix** — see
-  below. **AC2, AC8, AC10, AC11 pass** against a real ticket on the team's tracker, once the
-  connector was authenticated — a real one rather than a mock, which is what made these four
-  worth waiting for: one `Ticket:` line on line 2, key alone; one acceptance criterion, which
-  is all the one-sentence description supports; nine open questions for what it left implicit.
-  **AC9 pass** by mechanism — two
-  specs carrying the key are both found, so the resolver cannot silently pick one.
-  **Nothing was written to the tracker** — two read calls, no comment, no transition, status
-  still To Do, as ADR 0006 requires. The repo has no test
+- [x] **Step 6 — Run the ACs for real and record the transcripts.** The repo has no test
   runner; behaviour is proved by runs (coding-standards, Tests). Minimum set: AC1
   (`/t4:spec UTF-8` with no config — the regression that shaped the design), AC12 (seam present,
   no config, nothing changes), AC3 (partial match), AC4 (configured, unreachable), AC2 (happy
   path, needs one real ticket). *Proves:* AC1–AC6, AC12. *Check:* transcripts linked in the MR,
   definition of done item 2.
-  **AC12 failed on the first run** and the fix is in `spec.md`. The artefact was correct, but
-  the *report* said "`ai/docs/tracker.md` exists but `ai/jira.yaml` does not, so this repo is
-  unconfigured" — narrating the gate to a repo that configured nothing. A report is output, so
-  that is exactly what AC12 forbids. The task now says: when unconfigured, say nothing about
-  keys, configuration or that file. Re-ran: zero mentions, spec unchanged.
+
+  **Result — complete.** Ran against scratch repos, configured and not, through the same prompt
+  `make ai` builds. **AC1 pass** — unconfigured, `UTF-8` treated as free text, no key resolved,
+  no `Ticket:` line. **AC3 pass** — configured, `PROJ-123 but only the CSV export part` treated
+  as prose. **AC4 pass** — configured, both arms unavailable: stopped, wrote nothing, did not
+  fall back to specifying the key. **AC2, AC8, AC10, AC11 pass** against a real ticket on the
+  team's tracker rather than a mock: one `Ticket:` line on line 2, key alone; one acceptance
+  criterion, which is all the one-sentence description supports; nine open questions for what
+  it left implicit. **AC9 pass** by mechanism — two specs carrying the key are both found, so
+  the resolver cannot silently pick one. Nothing was written to the tracker: two read calls, no
+  comment, no transition, status unchanged, as ADR 0006 requires.
+
+  **AC12 failed on the first run**, and only running it could have found that. The artefact was
+  correct, but the *report* said "`ai/docs/tracker.md` exists but `ai/jira.yaml` does not, so
+  this repo is unconfigured" — narrating the gate to a repo that had configured nothing. A
+  report is output, which is exactly what AC12 forbids. The task now says: when unconfigured,
+  say nothing about keys, configuration or that file. Re-ran: zero mentions, spec unchanged.
 
 - [x] **Step 7 — CHANGELOG, version bump, README.** Name the blast radius: every adopted repo
   receives `ai/docs/tracker.md` on its next sync and gains nothing until it writes
