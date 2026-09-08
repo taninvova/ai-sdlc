@@ -30,6 +30,7 @@ configured with, whatever the provider.
 ```
 /t4:adopt-sdlc                 # detects your stack and its build/lint/test commands
 /t4:fleet                   # fills in ai/docs/fleet.md by asking you
+/t4:setup-tracker           # optional — only if you want /t4:spec ABC-12 to work
 ```
 
 `/t4:adopt-sdlc` copies the layout in, writes `ai/.sdlc.json`, and generates `.claude/` and

@@ -70,7 +70,7 @@ a prompt.
   (AC9). Check the ticket's status and comment count before and after.
   *Proves:* AC9. *Check:* compare both, on the same ticket step 4 used.
 
-- [ ] **Step 6 — CHANGELOG, version bump, README, workflow.**
+- [x] **Step 6 — CHANGELOG, version bump, README, workflow.**
   *Check:* `check-versions.sh`, definition of done items 3 and 7.
 
 ## Risks
