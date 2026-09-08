@@ -24,7 +24,7 @@ trusted when something is already wrong.
 
 ## Steps
 
-- [ ] **Step 1 — `doctor.sh`: layout and drift.** No `ai/` → report and exit 0 (AC2). Present →
+- [x] **Step 1 — `doctor.sh`: layout and drift.** No `ai/` → report and exit 0 (AC2). Present →
   report the recorded version, shell out to `manifest.js check` for drift (AC5), and handle the
   no-manifest case by naming the baseline command (AC6). Every check prints one line with a
   status of `ok` / `finding` / `unknown`.
