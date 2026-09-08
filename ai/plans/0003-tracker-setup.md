@@ -52,7 +52,12 @@ a prompt.
   *Proves:* AC2, AC3, AC11, AC12, AC13. *Check:* run twice; the second must not proceed on one
   confirmation. Choose ignore once and confirm both the `.gitignore` line and the warning.
 
-- [ ] **Step 4 — Prove it, or say it is unproven.** Ask for one key, resolve it, report the
+- [x] **Step 4 — Prove it, or say it is unproven.** AC5 proved live: the `base_url` written in
+  step 3 was used to resolve a real key through the seam's first arm, and the ticket came back
+  with a summary and a status — so the configuration was exercised, not merely written. AC6
+  exercised as the no-key branch: with nothing offered to verify against, the report says the
+  configuration is unverified and names what would verify it, rather than treating a written
+  file as success. The key is not recorded in this repo, by request; it was a test ticket. Ask for one key, resolve it, report the
   summary (AC5). No key offered → say the setup is unverified and name what verifies it (AC6).
   *Proves:* AC5, AC6. *Check:* a real key, then a run where none is given.
 
