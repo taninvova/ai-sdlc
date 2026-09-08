@@ -7,3 +7,9 @@ ai/runs/*.json
 ai/runs/*.jsonl
 .claude/settings.local.json
 CLAUDE.local.md
+
+# Written by /plugin install, and deliberately not shared: which plugins are enabled is a
+# per-developer choice in this repo. Not added to the template's gitignore list — by Claude
+# Code's own convention settings.json is the shared file and settings.local.json the personal
+# one, so ignoring it is a local decision here, not a pattern for adopters.
+.claude/settings.json
