@@ -33,6 +33,15 @@ a prompt.
   interactive (AC8). Both before anything is read or written.
   *Proves:* AC7, AC8. *Check:* two scratch repos, one without the seam, one run headless.
 
+  **Result.** Both run headless through the command's own prompt, after the step had already
+  been ticked on the strength of the prompt containing the rules — which is not the same thing
+  as the rules firing. **AC7 pass:** in a repo whose `ai/docs/` has no `tracker.md`, the first
+  refusal fired, named `/t4:sync-sdlc`, and refused to create the seam because a local copy
+  would fork from the one that ships. **AC8 pass:** with the seam present so only the second
+  refusal could fire, it stopped as non-interactive and said why, explicitly declining to write
+  from assumed answers because a repo that merely *looks* configured is worse than one that is
+  not. Nothing was written in either: no `ai/jira.yaml`, no `.gitignore`.
+
 - [~] **Step 2 — Detect, show, confirm.** Detect the reachable site, show it, ask before
   writing (AC1). Unreachable → report why and what to do, write nothing (AC4).
   *Proves:* AC1, AC4. *Check:* real run; and with the connector unavailable, which is the state
