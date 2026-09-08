@@ -65,6 +65,15 @@ trusted when something is already wrong.
   if `/t4:doctor` does not exist, the plugin is not enabled here — and say where that is fixed.
   *Check:* `check-versions.sh`, definition of done items 3 and 7.
 
+- [x] **Step 7 — Report when a newer version is published.** Closes the gap step 5 found, now
+  `specs/0002` AC13 and AC14. Compare the installed version against the marketplace's local
+  copy; report the pair and the install command when it is behind, stay silent when it is not,
+  and report `unknown` when the copy cannot be read. Do not reach the network — the claim is
+  "behind what you have fetched", not "behind the world", and the message must not imply the
+  stronger one. *Proves:* AC13, AC14. *Check:* a fixture where the marketplace copy is newer,
+  one where it is not, and one where it is absent; plus this machine, whose install is several
+  releases behind a published copy.
+
 ## Risks
 | Risk | How it is checked |
 |---|---|
@@ -84,7 +93,7 @@ bash ai/make/sync-adapters.sh && bash ai/make/sync-adapters.sh
 ```
 Plus step 5's two transcripts, and `/t4:check` with no blocker findings.
 
-## Found in step 5 — not fixed, not in scope
+## Found in step 5 — fixed in step 7, as AC13 and AC14
 **The doctor compares a repo against the plugin it was handed, and never says a newer one
 exists.** Run in coach against its installed 0.17.0, everything reports green. Run against the
 0.19.0 working tree, the same repo is a version behind with two files to take. Both answers are

@@ -43,6 +43,16 @@ that I stop guessing at plugin scope, cache versions and layout drift in that or
   nothing. `/t4:doctor` reports; it never interviews.
 - **AC11** Given every check passes, When it runs, Then it says so in one line rather than
   printing a clean bill of health per check.
+- **AC13** Given the plugin was installed from a marketplace whose local copy is newer than
+  the installed one, When `/t4:doctor` runs, Then it reports that a newer version is available,
+  names both versions, and gives the command that installs it. A repo can otherwise be entirely
+  in step with an install that is itself several releases behind, which is the case this
+  command exists to make visible and the one it was blind to.
+- **AC14** Given the marketplace's local copy cannot be read, or is not newer, When it runs,
+  Then it says nothing about updates beyond an `unknown` with the reason if it could not look.
+  Comparing the local copy against its own remote needs the network and is out of scope: the
+  check answers "is my install behind what I have already fetched", not "is it behind the
+  world", and must not imply the stronger claim.
 - **AC12** Given a check cannot be answered — a file unreadable, a tool absent — When it runs,
   Then that check reports "unknown" with the reason, and the command still completes. One
   unanswerable check must not suppress the others.
