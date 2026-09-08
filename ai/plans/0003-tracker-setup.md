@@ -61,7 +61,12 @@ a prompt.
   summary (AC5). No key offered → say the setup is unverified and name what verifies it (AC6).
   *Proves:* AC5, AC6. *Check:* a real key, then a run where none is given.
 
-- [ ] **Step 5 — Confirm the tracker was not written to.** No comment, no transition, no field
+- [x] **Step 5 — Confirm the tracker was not written to.** Five fields compared against the
+  step-4 baseline: comments 0, status To Do, resolution null, labels empty, and `updated`
+  identical to the millisecond. That last one is the check that carries the weight — Jira moves
+  it on any field write, so an unchanged timestamp rules out a write that happened to leave the
+  visible fields looking the same. `getTransitionsForJiraIssue` was called while offering to
+  close the ticket earlier; it reads, and none of the transitions it listed was applied. No comment, no transition, no field
   (AC9). Check the ticket's status and comment count before and after.
   *Proves:* AC9. *Check:* compare both, on the same ticket step 4 used.
 
