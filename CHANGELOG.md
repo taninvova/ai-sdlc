@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.20.0 — 2026-09-07
+- **`/t4:doctor`** — one read-only command that reports what is wrong with a repo's setup and
+  the command that fixes each thing. Layout, adapters against tasks, the version the repo
+  records against the one the session loaded, drift, where the plugin is installed, and whether
+  older cached copies are still around. Implements `specs/0002-t4-doctor.md`.
+- **It never fixes anything, and that is the point.** Every remedy is a command you run. Being
+  read-only is what makes it safe as the *first* thing you try, before you know what is wrong —
+  and it always exits 0, so it stays usable in CI. A doctor that fails the build when it finds
+  something is a doctor nobody runs.
+- **It reports the two things that are hardest to work out by hand:** a plugin installed for a
+  different project than the one you are in, and older cached copies that a session which has
+  not restarted may still be running. Both took several rounds of manual digging to identify
+  while building the tracker work; both are now one line each.
+- **The one thing it cannot report is in `docs/workflow.md` instead.** If `/t4:doctor` does not
+  exist in a repo, the plugin is not enabled there — and no command can say so, because in that
+  repo none of them are there to run. Its absence is the diagnosis.
+- Names are read from the plugin's own manifest rather than hardcoded, because this plugin and
+  its marketplace have each been renamed more than once; a check pinned to a literal handle
+  would have been wrong three renames ago.
+- `check-doctor.sh` covers five cases — no layout, no manifest, behind the templates, healthy,
+  and no config directory at all — each verified by breaking the doctor rather than by passing.
+- **Known gap, recorded in `ai/plans/0002`:** the doctor compares a repo against the plugin it
+  was handed and never says a newer release exists. A repo pinned to an older install therefore
+  reports green while a newer version sits published. Closing it needs a new acceptance
+  criterion, not a quiet addition.
+
 ## 0.19.0 — 2026-09-07
 - **`/t4:spec` can draft from a tracker ticket.** In a repo that has committed `ai/jira.yaml`,
   `/t4:spec ABC-12` resolves the key and specs the ticket, recording it as a vendor-neutral

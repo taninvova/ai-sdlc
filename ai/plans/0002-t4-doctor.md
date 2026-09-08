@@ -61,7 +61,7 @@ trusted when something is already wrong.
   Read-only, so running it there changes nothing.
   *Proves:* AC1, AC3, AC4, AC7, AC9. *Check:* transcripts in the MR.
 
-- [ ] **Step 6 — CHANGELOG, version bump, README, workflow.** Include the not-loaded case:
+- [x] **Step 6 — CHANGELOG, version bump, README, workflow.** Include the not-loaded case:
   if `/t4:doctor` does not exist, the plugin is not enabled here — and say where that is fixed.
   *Check:* `check-versions.sh`, definition of done items 3 and 7.
 
