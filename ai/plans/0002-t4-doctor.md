@@ -30,7 +30,7 @@ trusted when something is already wrong.
   status of `ok` / `finding` / `unknown`.
   *Proves:* AC2, AC5, AC6, AC12. *Check:* fixtures in step 4.
 
-- [ ] **Step 2 — `doctor.sh`: environment.** Loaded plugin version and the path it loaded from
+- [x] **Step 2 — `doctor.sh`: environment.** Loaded plugin version and the path it loaded from
   (AC3, AC4); `~/.claude/plugins` read-only for install scope and cached versions, absent
   without failing (AC12, spec question 2); adapters present and current (AC7). This is the step
   that would have caught what the `specs/0001` session lost hours to, so it is worth being
