@@ -32,11 +32,13 @@ paraphrase of it, and so the spec and the ticket stay findable from each other.
   no ticket is fetched, and no `Ticket:` line is written.
 - **AC4** Given a repo with `ai/jira.yaml` and a session that cannot reach the tracker — Codex,
   or headless `make ai`, where `ai/docs/tracker.md` resolves to its stop-and-ask arm — When a
-  developer runs `/t4:spec PROJ-123`, Then the session reports that it cannot resolve the key,
-  asks how to proceed, and writes no spec file.
+  developer runs `/t4:spec PROJ-123`, Then the session reports that it cannot resolve the key
+  and writes no spec file — asking how to proceed where there is someone to ask, and stopping
+  there where there is not. `make ai` builds a prompt and runs it with no session behind it, so
+  "ask" is not a behaviour available to it.
 - **AC5** Given a repo with `ai/jira.yaml` and a reachable tracker, When a developer runs
   `/t4:spec PROJ-999` and no such ticket exists, Then the session reports that the key did not
-  resolve, asks how to proceed, and writes no spec file.
+  resolve and writes no spec file, asking how to proceed only where there is someone to ask.
 - **AC6** Given any repo, When a developer runs `/t4:spec` with nothing after it, Then the
   session asks which feature to specify and stops — the behaviour shipped in 0.14.0, unchanged
   by this spec whether or not a tracker is configured.
