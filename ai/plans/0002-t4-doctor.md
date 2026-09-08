@@ -50,16 +50,19 @@ trusted when something is already wrong.
   each fixture, not by passing.
   *Proves:* AC2, AC5, AC6, AC11, AC12. *Check:* `bash skills/ai-layout/scripts/check-doctor.sh`.
 
-- [x] **Step 5 — Run it where the answers are already known.** Run against both, with
-  `CLAUDE_PLUGIN_ROOT` set as a session sets it. Every answer cross-checked against
-  `manifest.js` run directly, and both repos byte-identical afterwards (AC1). In this repo it
-  correctly self-detects as the plugin source and reports the two environment findings that are
-  genuinely true here. In coach, against the copy actually installed there (0.17.0), it reports
-  green — and that is right, and is also the gap below. This repo (healthy, no tracker),
+- [x] **Step 5 — Run it where the answers are already known.** This repo (healthy, no tracker),
   and `/Users/tanin/code/apps/coach` (drift after its migration, no tracker). coach is the real
   test: its findings are known independently from this session, so a wrong answer is visible.
   Read-only, so running it there changes nothing.
   *Proves:* AC1, AC3, AC4, AC7, AC9. *Check:* transcripts in the MR.
+
+  **Result.** Run against both with `CLAUDE_PLUGIN_ROOT` set as a session sets it. Every answer
+  cross-checked against `manifest.js` run directly, and both repos byte-identical afterwards
+  (AC1) — compared before and after rather than trusting that something called "doctor" does
+  not write. In this repo it self-detects as the plugin source and reports the two environment
+  findings that are true here. In coach, against the copy actually installed there, it agrees
+  with `manifest.js` line for line and reports green — which is correct, and is also the gap
+  recorded below.
 
 - [x] **Step 6 — CHANGELOG, version bump, README, workflow.** Include the not-loaded case:
   if `/t4:doctor` does not exist, the plugin is not enabled here — and say where that is fixed.
