@@ -5,7 +5,8 @@ Date: 2026-09-07 · Status: accepted 2026-09-07
 ## Context
 `ai/designs/0002-jira-integration.md` §6 decides that each task comments the artefact it
 produced back to the ticket, and that status transitions ship in the same release but stay
-inert unless `ai/jira.yaml` names the workflow states. `docs/adr/0004-external-tracker-behind-one-seam.md`
+inert unless `ai/jira.yaml` names the workflow states.
+`docs/adr/0004-external-tracker-behind-one-seam.md`
 settles *whether* ai-sdlc may reach a tracker at all and hands *what it writes* here. 0004 is
 `proposed`, so nothing below may be implemented before it is accepted, and this ADR is
 `proposed` for that reason alone.
