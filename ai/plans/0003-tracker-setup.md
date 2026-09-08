@@ -33,7 +33,13 @@ a prompt.
   interactive (AC8). Both before anything is read or written.
   *Proves:* AC7, AC8. *Check:* two scratch repos, one without the seam, one run headless.
 
-- [ ] **Step 2 — Detect, show, confirm.** Detect the reachable site, show it, ask before
+- [~] **Step 2 — Detect, show, confirm.** *AC1 proved; AC4 not yet.* Detection returned
+  exactly one reachable site, it was shown with its scopes, and the write was declined — so the
+  command's only obligation at that point, to write nothing without a yes, was exercised
+  against a real no rather than assumed. AC4 needs a session where nothing is reachable;
+  `specs/0001` AC4 proved that state for `/t4:spec`, not for this command. Deauthorising to
+  test it is a real cost to the developer, so it waits for a session that is already in that
+  state. Detect the reachable site, show it, ask before
   writing (AC1). Unreachable → report why and what to do, write nothing (AC4).
   *Proves:* AC1, AC4. *Check:* real run; and with the connector deauthorised, which is the
   state `specs/0001` AC4 was proved in.
