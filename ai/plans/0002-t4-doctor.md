@@ -50,7 +50,12 @@ trusted when something is already wrong.
   each fixture, not by passing.
   *Proves:* AC2, AC5, AC6, AC11, AC12. *Check:* `bash skills/ai-layout/scripts/check-doctor.sh`.
 
-- [ ] **Step 5 — Run it where the answers are already known.** This repo (healthy, no tracker),
+- [x] **Step 5 — Run it where the answers are already known.** Run against both, with
+  `CLAUDE_PLUGIN_ROOT` set as a session sets it. Every answer cross-checked against
+  `manifest.js` run directly, and both repos byte-identical afterwards (AC1). In this repo it
+  correctly self-detects as the plugin source and reports the two environment findings that are
+  genuinely true here. In coach, against the copy actually installed there (0.17.0), it reports
+  green — and that is right, and is also the gap below. This repo (healthy, no tracker),
   and `/Users/tanin/code/apps/coach` (drift after its migration, no tracker). coach is the real
   test: its findings are known independently from this session, so a wrong answer is visible.
   Read-only, so running it there changes nothing.
@@ -78,6 +83,18 @@ bash skills/ai-layout/scripts/check-versions.sh
 bash ai/make/sync-adapters.sh && bash ai/make/sync-adapters.sh
 ```
 Plus step 5's two transcripts, and `/t4:check` with no blocker findings.
+
+## Found in step 5 — not fixed, not in scope
+**The doctor compares a repo against the plugin it was handed, and never says a newer one
+exists.** Run in coach against its installed 0.17.0, everything reports green. Run against the
+0.19.0 working tree, the same repo is a version behind with two files to take. Both answers are
+correct; they answer different questions. But the published marketplace clone is at 0.19.0
+while coach's install is 0.17.0, so a developer there sees "all green" while the release
+carrying the `ai.mk` fix they need sits uninstalled.
+
+That is precisely the invisible state this command exists for, and `specs/0002` does not ask
+for it — AC3 promises loaded-versus-recorded, which is delivered. It needs a new AC comparing
+the installed version against the marketplace's, not a quiet addition here.
 
 ## Planning notes
 - **Nothing here can fix the plugin's own installation**, and step 6 exists partly to write
