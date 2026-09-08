@@ -67,10 +67,10 @@ Step 1 builds the seam first so that step 2 has something to point at and no rea
   **AC3 pass** (configured, `PROJ-123 but only the CSV export part` — treated as prose, no
   `Ticket:` line); **AC4 pass** (configured, `PROJ-123`, both arms unavailable — stopped, no
   spec written, did not fall back to specifying the key); **AC12 pass, after a fix** — see
-  below. **AC2, AC8, AC10, AC11 pass** against real ticket PLAT-12430 on
-  `n-six-development.atlassian.net`, once the connector was authenticated: one `Ticket:` line
-  on line 2, key alone; one acceptance criterion, which is all the one-sentence description
-  supports; nine open questions for what it left implicit. **AC9 pass** by mechanism — two
+  below. **AC2, AC8, AC10, AC11 pass** against a real ticket on the team's tracker, once the
+  connector was authenticated — a real one rather than a mock, which is what made these four
+  worth waiting for: one `Ticket:` line on line 2, key alone; one acceptance criterion, which
+  is all the one-sentence description supports; nine open questions for what it left implicit. **AC9 pass** by mechanism — two
   specs carrying the key are both found, so the resolver cannot silently pick one.
   **Nothing was written to the tracker** — two read calls, no comment, no transition, status
   still To Do, as ADR 0006 requires. The repo has no test
