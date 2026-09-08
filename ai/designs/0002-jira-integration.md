@@ -90,9 +90,10 @@ outside the repo.
 - **Linkage: `/t4:spec` writes the key into the spec it creates**, as a `Ticket: PROJ-123`
   line under the title. The label is vendor-neutral per `docs/adr/0005`: `ai/tasks/spec.md`
   carries it verbatim, so `Jira:` — this design's first wording — would have been the vendor
-  named in a task prompt, which ADR 0004 rule 3 forbids. Specs stay frontmatter-free; this is body text, greppable, and survives
-  a human editing the file. `/t4:plan`, `/t4:test`, `/t4:run` and `/t4:check` accept either a
-  path (as today) or a key, resolving a key by grepping `specs/`.
+  named in a task prompt, which ADR 0004 rule 3 forbids. Specs stay frontmatter-free; this is
+  body text, greppable, and survives a human editing the file. `/t4:plan`, `/t4:test`,
+  `/t4:run` and `/t4:check` accept either a path (as today) or a key, resolving a key by
+  grepping `specs/`.
 - **Write-back: comment always, transition only when every runtime can.** Each task comments
   the artefact it produced, on every run. `docs/adr/0006` narrows what this design proposed:
   transitions need `ai/jira.yaml` **and** `ai/make/jira.sh` — arm two of the seam — not
@@ -166,7 +167,8 @@ Spec 1 is useful alone. 2 and 3 are not useful without 1.
 ## 11. Open questions
 - ~~**Which ticket field becomes acceptance criteria?**~~ **Resolved:** the description, and no
   other field. A gap the description leaves implicit becomes an Open question in the spec, not
-  an invented Given/When/Then. Recorded as AC10 and AC11 of `specs/0001-spec-accepts-a-ticket-key.md`.
+  an invented Given/When/Then. Recorded as AC10 and AC11 of
+  `specs/0001-spec-accepts-a-ticket-key.md`.
 - ~~**Repeated runs comment repeatedly.**~~ **Resolved by ADR 0006:** every run comments,
   because a re-spec is a second event and suppressing it hides the interesting fact. Neither
   alternative survived the no-read-before-write rule.
