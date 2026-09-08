@@ -86,7 +86,11 @@ rm -f .claude/commands/spec-of-mine.md
 # because the generated command is what a developer actually runs. The word "json" is NOT
 # forbidden: check, design and fleet legitimately describe JSON output of their own.
 BANNED='jira|atlassian|connector|base_url|https?://|\.yaml'
-for f in ai/tasks/*.md .claude/commands/t4/*.md .codex/skills/t4-*/SKILL.md; do
+# commands/*.md is in this list because a plugin command is read by a session exactly as a task
+# is, and /t4:doctor has to describe tracker state without knowing what a tracker is. ADR 0004
+# rule 3 names task prompts only; the seam is worth just as little if the plugin's own commands
+# leak around it.
+for f in ai/tasks/*.md commands/*.md .claude/commands/t4/*.md .codex/skills/t4-*/SKILL.md; do
   [ -f "$f" ] || continue
   if grep -qiE "$BANNED" "$f"; then
     fail "$f names a tracker implementation detail — ADR 0004 rule 3 confines those to ai/docs/tracker.md:
