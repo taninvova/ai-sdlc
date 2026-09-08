@@ -118,4 +118,19 @@ $out"
 grep -q '^\[finding\] update' <<<"$out" && fail "an unreadable marketplace copy must not become a finding:
 $out"
 
-echo "doctor ok — 8 cases: no layout, no manifest, behind, healthy, no config dir, update available, up to date, no marketplace"
+# 9. the plugin's own repo, with the plugin installed elsewhere --------------------------------
+# The shape that shipped broken: path equality stopped recognising the source repo once the
+# plugin ran from an install, so the doctor told its own maintainer to start a baseline that
+# must never exist.
+PLUGCOPY=$TMP/installed; mkdir -p "$PLUGCOPY/.claude-plugin"
+cp .claude-plugin/plugin.json "$PLUGCOPY/.claude-plugin/"
+cp -R skills "$PLUGCOPY/"
+out=$(CLAUDE_CONFIG_DIR="$CFG" CLAUDE_PLUGIN_ROOT="$PLUGCOPY" bash "$ROOT/$DOCTOR" "$ROOT" "$PLUGCOPY" 2>&1)
+grep -q '^\[ok\] *\] *layout-source\|^\[ok     \] layout-source' <<<"$out" \
+  || fail "the plugin's own repo was not recognised when the plugin runs from an install:
+$out"
+grep -q 'Start a baseline' <<<"$out" \
+  && fail "the plugin's own repo was told to start a baseline it must never have:
+$out"
+
+echo "doctor ok — 9 cases: no layout, no manifest, behind, healthy, no config dir, update available, up to date, no marketplace, plugin repo via an install"

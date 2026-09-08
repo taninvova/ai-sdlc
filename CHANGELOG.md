@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.23.0 — 2026-09-07
+- **The plugin's own repo is recognised again once the plugin is installed.** `isPluginItself`
+  compared repo-root to plugin-root, which is only equal while the plugin runs from its working
+  tree. Installed, plugin-root is the cache, the paths differ, and the source repo looked like
+  an ordinary adopter. Both `manifest.js` and `/t4:doctor` now test identity — a repo carrying
+  this plugin's own name in its own `plugin.json` **is** this plugin — and keep the path
+  comparison as the fast case.
+- **What that cost, found by running `/t4:doctor` for the first time from a real install:** it
+  reported "no `ai/.sdlc.json` — start a baseline" in the plugin's own repo, and following that
+  advice wrote a manifest into it. `check-manifest.sh` asserts that never happens; the invariant
+  was intact and the test could not see the case, because it passed the same path for both
+  arguments.
+- Both tests now cover the installed shape: `check-manifest.sh` runs `write` with the plugin
+  copied elsewhere, and `check-doctor.sh` gains a ninth case for the same. Each verified by
+  reverting its fix and watching the suite fail.
+- `check-manifest.sh` cleans up in its trap rather than inline. A failing assertion exits before
+  any cleanup after it, so the test that provoked a manifest into this repo was leaving it there
+  — a test that fails dirty makes the next run's result meaningless.
+
 ## 0.22.0 — 2026-09-07
 - **`/t4:doctor` now says when your install is behind.** It compared a repo against whichever
   plugin it was handed and never looked at whether that plugin was current, so a repo could be

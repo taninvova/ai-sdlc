@@ -44,7 +44,20 @@ function die(msg) { console.error(`manifest: ${msg}`); process.exit(2); }
 
 // ai-sdlc's own repo symlinks ai/tasks, ai/agents and ai/make into the templates, so it is
 // current by construction and must never carry a manifest.
-const isPluginItself = (repoRoot, pluginRoot) => path.resolve(repoRoot) === path.resolve(pluginRoot);
+// The plugin's own repo is where the templates come from, so it has no manifest and nothing to
+// compare against. Path equality detects that only while the plugin is loaded from its working
+// tree; once installed, pluginRoot is the cache, the paths differ, and the source repo looks
+// like any other adopter — which is how a manifest got written into it. Identity is the durable
+// test: a repo carrying this plugin's own name in its own plugin manifest IS this plugin.
+const pluginName = root => {
+  try { return JSON.parse(fs.readFileSync(path.join(root, ".claude-plugin", "plugin.json"), "utf8")).name || null; }
+  catch { return null; }
+};
+const isPluginItself = (repoRoot, pluginRoot) => {
+  if (path.resolve(repoRoot) === path.resolve(pluginRoot)) return true;
+  const mine = pluginName(repoRoot);
+  return mine !== null && mine === pluginName(pluginRoot);
+};
 
 function build(repoRoot, pluginRoot, prev) {
   const tdir = templatesDir(pluginRoot);
