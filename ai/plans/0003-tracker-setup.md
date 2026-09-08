@@ -44,7 +44,7 @@ a prompt.
   *Proves:* AC1, AC4. *Check:* real run; and with the connector deauthorised, which is the
   state `specs/0001` AC4 was proved in.
 
-- [ ] **Step 3 — Write, without ever silently overwriting.** Write `base_url` and nothing else
+- [x] **Step 3 — Write, without ever silently overwriting.** Write `base_url` and nothing else
   (AC2, AC11). If the file exists, show it and require a second confirmation (AC3). The file is
   hand-owned, so the bar for touching it is higher than for anything generated. Then ask commit
   or `.gitignore` (AC12), and if ignored, say plainly that the repo is now configured for this
