@@ -5,12 +5,9 @@ than leaving a developer to guess a filename and a key.
 
 **Spec:** `specs/0003-tracker-setup.md`
 
-**Blocked on two things**, both real:
-1. `specs/0001` must ship. `ai/jira.yaml` is meaningless until something reads it, and
-   `ai/docs/tracker.md` must be in adopted repos for AC1 and AC7 to mean anything. Plan 0001
-   step 7 is the last of that.
-2. Spec 0003's two open questions. A spec with open questions is not buildable, so this plan
-   is written but must not start.
+**Unblocked 2026-09-07.** `specs/0001` shipped in 0.19.0, and both of spec 0003's open
+questions are answered: `base_url` only (AC11), and setup asks whether to commit or ignore
+(AC12) while stating what ignoring costs (AC13).
 
 ## Files to create / modify
 | File | Why |
@@ -31,7 +28,7 @@ a prompt.
 
 ## Steps
 
-- [ ] **Step 1 — Refuse early and clearly.** No `ai/docs/tracker.md` → stop, name
+- [x] **Step 1 — Refuse early and clearly.** No `ai/docs/tracker.md` → stop, name
   `/t4:sync-sdlc` and the drift it reports (AC7). Non-interactive → stop, say the command is
   interactive (AC8). Both before anything is read or written.
   *Proves:* AC7, AC8. *Check:* two scratch repos, one without the seam, one run headless.
@@ -41,10 +38,13 @@ a prompt.
   *Proves:* AC1, AC4. *Check:* real run; and with the connector deauthorised, which is the
   state `specs/0001` AC4 was proved in.
 
-- [ ] **Step 3 — Write, without ever silently overwriting.** Write `base_url` (AC2). If the
-  file exists, show it and require a second confirmation (AC3). The file is hand-owned, so the
-  bar for touching it is higher than for anything generated.
-  *Proves:* AC2, AC3. *Check:* run twice; the second must not proceed on one confirmation.
+- [ ] **Step 3 — Write, without ever silently overwriting.** Write `base_url` and nothing else
+  (AC2, AC11). If the file exists, show it and require a second confirmation (AC3). The file is
+  hand-owned, so the bar for touching it is higher than for anything generated. Then ask commit
+  or `.gitignore` (AC12), and if ignored, say plainly that the repo is now configured for this
+  developer alone (AC13).
+  *Proves:* AC2, AC3, AC11, AC12, AC13. *Check:* run twice; the second must not proceed on one
+  confirmation. Choose ignore once and confirm both the `.gitignore` line and the warning.
 
 - [ ] **Step 4 — Prove it, or say it is unproven.** Ask for one key, resolve it, report the
   summary (AC5). No key offered → say the setup is unverified and name what verifies it (AC6).

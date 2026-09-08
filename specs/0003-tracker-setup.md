@@ -40,6 +40,16 @@ pass a key and get a stop-and-ask I cannot explain.
   and is not engaged by this spec.
 - **AC10** Given the command's prompt is read, When checked, Then it names `ai/docs/tracker.md`
   and no vendor, connector, URL or field — the rule `check-adapters.sh` already asserts.
+- **AC11** Given setup writes the file, When it is read, Then it carries `base_url` and nothing
+  else. A key nothing reads yet is a key that goes stale without anyone noticing, and a second
+  definition of "configured" would drift from the seam's.
+- **AC12** Given the file has been written, When setup finishes, Then it asks whether to commit
+  it or add it to `.gitignore`, and does what is chosen — appending the line if asked, and
+  never rewriting an existing `.gitignore` entry.
+- **AC13** Given the developer chooses to ignore it, When setup reports, Then it states plainly
+  that the tracker will then resolve keys for this developer only: a teammate cloning the repo
+  gets the unconfigured behaviour, so `/t4:spec ABC-12` means different things to different
+  people on one team. Choosing to ignore is allowed; not being told is not.
 
 ## Out of scope
 - Configuring anything but the tracker. Whole-layout setup was option B and was rejected: it
@@ -49,14 +59,19 @@ pass a key and get a stop-and-ask I cannot explain.
 - Enabling the plugin, which no command can do — `specs/0002` question 1.
 
 ## Open questions
-1. **Does `ai/jira.yaml` need anything beyond `base_url` on day one?** A default project key
-   would let a later command offer a ticket list, but nothing in `specs/0001` reads it, and a
-   key written now that nothing reads is a field that goes stale unnoticed.
-   *Recommendation:* `base_url` only. **Needs confirming.**
-2. **Should it offer to add `ai/jira.yaml` to `.gitignore`?** It holds no credential, so
-   committing it is right and shares the setup with the team — but a developer trying one
-   ticket may not want it committed at all. *Recommendation:* commit it, say so, do not ask.
-   **Needs confirming.**
+1. ~~**Does `ai/jira.yaml` need anything beyond `base_url` on day one?**~~ **Answered:**
+   `base_url` only — AC11. It is exactly what AC13 of `specs/0001` already calls configured, so
+   setup and resolution cannot drift into two definitions. A project key can be added when
+   something reads it.
+2. ~~**Should it offer to add `ai/jira.yaml` to `.gitignore`?**~~ **Answered: yes, ask** — AC12.
+   Chosen over committing by default, which was the recommendation, so the cost it carries is
+   made explicit rather than left implicit: an ignored config means the repo is configured for
+   one developer and unconfigured for everyone else, and the same `/t4:spec ABC-12` behaves
+   differently per machine. AC13 requires setup to say that at the moment the choice is made.
+   The file holds no credential either way — ADR 0004 keeps those in the environment — so this
+   is a workflow preference, not a secrets decision.
+
+**No open questions remain. This spec is buildable.**
 
 ## Data touched
 - `commands/setup-tracker.md` — **new**, the command. Plugin command, not a task: it must run
