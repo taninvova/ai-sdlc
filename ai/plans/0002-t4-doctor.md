@@ -38,7 +38,7 @@ trusted when something is already wrong.
   *Proves:* AC3, AC4, AC7, AC12. *Check:* fixtures, plus running it in this repo where the
   answers are known by hand.
 
-- [ ] **Step 3 — `commands/doctor.md`.** Run the script, report findings worst-first, one line
+- [x] **Step 3 — `commands/doctor.md`.** Run the script, report findings worst-first, one line
   each with its remedy (AC9), a single line when all clear (AC11), ask nothing (AC10). AC8's
   tracker line comes from `ai/docs/tracker.md` and names no vendor — the same rule `spec.md`
   follows, so `check-adapters.sh` already asserts it.
