@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.21.0 — 2026-09-07
+- **`/t4:setup-tracker`** — points a repo at a tracker and proves it, so turning `specs/0001`
+  on no longer means knowing a filename, a key and its exact shape from reading a design
+  document. Detects the reachable site, shows it, asks before writing, writes `base_url` and
+  nothing else, then resolves one key to demonstrate the result works. Implements
+  `specs/0003-tracker-setup.md`.
+- **It refuses before it reads or writes.** No `ai/docs/tracker.md` means the layout predates
+  tracker support, and it will not create that file — it is a template, and a local copy would
+  fork from the one that ships. A non-interactive run stops rather than proceeding on assumed
+  answers: a config written from guesses is worse than none, because the repo then looks
+  configured.
+- **It will not silently replace an existing `ai/jira.yaml`.** That file is hand-owned and
+  deliberately outside `dont-touch.md`, so a second confirmation is required and the current
+  contents are shown first.
+- **Committing it is a choice, and the cost of not committing is stated when you make it.**
+  Choosing `.gitignore` leaves the repo configured for one developer: a teammate who clones it
+  gets the unconfigured behaviour, so `/t4:spec ABC-12` means different things to different
+  people on one team. That is allowed; being surprised by it is not.
+- **Writing the file is not evidence it works.** With a key it resolves one and reports what
+  came back; with none it says the configuration is unverified and names what would verify it.
+- **Nothing is written to the tracker** — checked against a real ticket rather than asserted:
+  comments, status, resolution, labels and the `updated` timestamp all unchanged after the
+  work, the timestamp being the one Jira moves on any field write.
+- **Not yet proved:** the unreachable-tracker path (`specs/0003` AC4). Every other criterion
+  ran. That one needs a session where the connector is unavailable, and manufacturing it costs
+  a re-authorisation, so it waits for a session already in that state.
+
 ## 0.20.0 — 2026-09-07
 - **`/t4:doctor`** — one read-only command that reports what is wrong with a repo's setup and
   the command that fixes each thing. Layout, adapters against tasks, the version the repo

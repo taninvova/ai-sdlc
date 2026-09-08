@@ -7,6 +7,7 @@ The operating-model half of AI-native delivery, as a Claude Code plugin. Standal
 ## Commands
 - `/t4:adopt-sdlc` — add the `ai/` layout to an existing repo (any stack)
 - `/t4:doctor` — report what is wrong with this repo's setup and the command that fixes each thing. Read-only; run it first
+- `/t4:setup-tracker` — point this repo at a tracker so `/t4:spec ABC-12` works, and prove it by resolving a key. Optional; skip it and nothing changes
 - `/t4:sync-sdlc` — regenerate `.claude/` and `.cursor/` adapters from `ai/`
 
 Works with Claude Code and Codex: `ai/make/sync-adapters.sh` generates `.claude/`, `.cursor/` and `.codex/` from one source. See [docs/workflow.md](docs/workflow.md#8-using-it-from-codex) for what differs under Codex.
