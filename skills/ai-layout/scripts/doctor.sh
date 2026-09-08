@@ -63,13 +63,16 @@ stale=(.claude/commands/*.md)
 # manifest there. Without the same test, this script tells a maintainer standing in the plugin
 # repo to create a baseline that manifest.js will decline to write. Same rule, mirrored — not a
 # second opinion about what counts as the plugin.
+SELF=no
 if [ "$(cd . && pwd -P)" = "$(cd "$PLUGIN" 2>/dev/null && pwd -P)" ]; then
   say ok layout-source "this is the plugin's own repo — the templates are the source, so there is no manifest and nothing to compare"
-  done_
+  SELF=yes
 fi
 
 # --- version recorded by this repo -------------------------------------------------------
-if [ ! -f ai/.sdlc.json ]; then
+if [ "$SELF" = yes ]; then
+  : # no manifest and no drift by design; the environment checks below still apply
+elif [ ! -f ai/.sdlc.json ]; then
   say unknown version "no ai/.sdlc.json — this repo was adopted before manifests existed, so drift cannot be computed. Start a baseline: node \"$PLUGIN/skills/ai-layout/scripts/manifest.js\" write . \"$PLUGIN\""
 else
   # The key is `version`, not `plugin_version` — read from the manifest manifest.js writes,
@@ -94,7 +97,9 @@ fi
 # --- drift ------------------------------------------------------------------------------
 # Delegated to manifest.js rather than reimplemented: it owns the six drift states and the
 # two-hash comparison, and a second implementation here would disagree with /t4:sync-sdlc.
-if ! command -v node >/dev/null 2>&1; then
+if [ "$SELF" = yes ]; then
+  :
+elif ! command -v node >/dev/null 2>&1; then
   say unknown drift "node not on PATH, so the layout cannot be compared with the templates"
 elif [ ! -f "$PLUGIN/skills/ai-layout/scripts/manifest.js" ]; then
   say unknown drift "cannot find the plugin's manifest.js (looked in $PLUGIN) — pass the plugin root as the second argument"
@@ -116,6 +121,69 @@ else
     fi
     [ "${local_:-0}" -gt 0 ] && say ok local-edits "${local_} file(s) modified here and not upstream — yours, nothing to do"
   fi
+fi
+
+# --- environment: which copy is actually running -----------------------------------------
+# The repo checks above describe files. These describe the session, and they are the ones that
+# cost the most time to work out by hand: a plugin enabled for a different project, and older
+# cached copies still running the hooks. Nothing here is written to; every path is read-only.
+#
+# Names churn — this plugin and its marketplace have each been renamed more than once — so
+# nothing below hardcodes one. The plugin's own name comes from its manifest and everything
+# else is matched against that.
+PLUGIN_NAME=$(sed -n 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$PLUGIN/.claude-plugin/plugin.json" 2>/dev/null | head -1)
+
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  case "$CLAUDE_PLUGIN_ROOT" in
+    */plugins/cache/*) say ok source "running from the installed copy: $CLAUDE_PLUGIN_ROOT" ;;
+    *) say ok source "running from a working tree, not an install: $CLAUDE_PLUGIN_ROOT" ;;
+  esac
+else
+  say unknown source "CLAUDE_PLUGIN_ROOT is unset — this was not run from inside a session, so the copy a session would load cannot be identified"
+fi
+
+CFG=${CLAUDE_CONFIG_DIR:-$HOME/.claude}
+if [ ! -d "$CFG/plugins" ]; then
+  # Absent under Codex, and on any machine that has never installed a plugin. One unknown,
+  # not one per check below.
+  say unknown install "no $CFG/plugins — install scope and cached versions cannot be read here"
+elif ! command -v node >/dev/null 2>&1; then
+  say unknown install "node not on PATH, so $CFG/plugins cannot be read"
+elif [ -z "$PLUGIN_NAME" ]; then
+  say unknown install "cannot read the plugin's own name from $PLUGIN/.claude-plugin/plugin.json"
+else
+  HERE=$(pwd -P)
+  while IFS='|' read -r status label detail; do
+    [ -n "$status" ] && say "$status" "$label" "$detail"
+  done <<EOF_NODE
+$(node -e '
+const fs=require("fs"), path=require("path");
+const cfg=process.argv[1], name=process.argv[2], here=process.argv[3];
+const out=[];
+const read=f=>{try{return JSON.parse(fs.readFileSync(f,"utf8"))}catch{return null}};
+const inst=read(path.join(cfg,"plugins","installed_plugins.json"));
+if(!inst||!inst.plugins) out.push(["unknown","install","installed_plugins.json is missing or unreadable"]);
+else{
+  const mine=Object.entries(inst.plugins).filter(([k])=>k.split("@")[0]===name);
+  if(!mine.length) out.push(["finding","install",`${name} is not installed on this machine — /plugin install ${name}@<marketplace>`]);
+  else for(const [ref,entries] of mine){
+    const covers=entries.some(e=>e.scope==="user"||(e.projectPath&&path.resolve(e.projectPath)===here));
+    const where=entries.map(e=>`${e.scope}${e.projectPath?" "+e.projectPath:""} @ ${e.version}`).join("; ");
+    out.push([covers?"ok":"finding","install",
+      covers?`${ref} installed — ${where}`
+            :`${ref} is installed, but not for this repo — ${where}. Here its own commands and skills are absent (the /t4:* tasks generated into .claude/ still work); install at user scope, or enable it in this repo`]);
+  }
+}
+// Older cached copies are what a stale session actually runs, so they are worth naming.
+const cacheRoot=path.join(cfg,"plugins","cache");
+let vers=[];
+try{ for(const mk of fs.readdirSync(cacheRoot)){ const d=path.join(cacheRoot,mk,name);
+      try{ for(const v of fs.readdirSync(d)) vers.push(`${mk}/${name}/${v}`);}catch{} } }catch{}
+if(vers.length>1) out.push(["finding","cache",`${vers.length} cached copies of ${name}: ${vers.join(", ")} — a session that has not restarted may still be running an older one`]);
+else if(vers.length===1) out.push(["ok","cache",`one cached copy: ${vers[0]}`]);
+for(const r of out) console.log(r.join("|"));
+' "$CFG" "$PLUGIN_NAME" "$HERE" 2>/dev/null)
+EOF_NODE
 fi
 
 done_
