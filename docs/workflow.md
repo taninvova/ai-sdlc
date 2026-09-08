@@ -246,6 +246,22 @@ writer does automatically.
 
 ## 10. When something is wrong
 
+**Run `/t4:doctor` first.** It reports the layout, the adapters, the version this repo records
+against the one the session loaded, drift, where the plugin is installed and whether older
+cached copies are still around — each with the command that fixes it. It changes nothing, so
+there is no reason not to run it before guessing.
+
+**If `/t4:doctor` itself does not exist, that is the diagnosis.** The plugin is not enabled in
+this repo, and no command can tell you so — in a repo without it, none of them are there to
+run. Install it at user scope, or enable it here:
+
+```
+/plugin install t4@sdlc
+```
+
+Then restart the session: commands and hooks are loaded at startup, so a plugin installed
+mid-session is not yet running.
+
 | Symptom | Cause |
 |---|---|
 | No `/t4:*` commands | this repo has no `ai/` layout, or the adapters were not generated — run `/t4:adopt-sdlc` or `/t4:sync-sdlc` |
