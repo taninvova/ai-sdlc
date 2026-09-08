@@ -24,10 +24,10 @@ trusted when something is already wrong.
 
 ## Steps
 
-- [x] **Step 1 — `doctor.sh`: layout and drift.** No `ai/` → report and exit 0 (AC2). Present →
-  report the recorded version, shell out to `manifest.js check` for drift (AC5), and handle the
-  no-manifest case by naming the baseline command (AC6). Every check prints one line with a
-  status of `ok` / `finding` / `unknown`.
+- [x] **Step 1 — `doctor.sh`: layout and drift.** No `ai/` → report and exit 0 (AC2).
+  Otherwise report the recorded version, shell out to `manifest.js check` for drift (AC5), and
+  name the baseline command when there is no manifest (AC6). Every check prints one line with
+  a status of `ok` / `finding` / `unknown`.
   *Proves:* AC2, AC5, AC6, AC12. *Check:* fixtures in step 4.
 
 - [x] **Step 2 — `doctor.sh`: environment.** Loaded plugin version and the path it loaded from
