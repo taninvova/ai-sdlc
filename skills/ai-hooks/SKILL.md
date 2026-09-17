@@ -17,9 +17,20 @@ The plugin registers these hooks globally (hooks/hooks.json). Every script:
 |---|---|---|
 | SessionStart | session-start.js | ai/runs/sessions.jsonl: session_id, ts, user, branch, plan_in_flight |
 | PreToolUse Edit/Write | guard-paths.js | nothing; exit 2 + stderr reason when the target matches ai/docs/dont-touch.md |
+| PreToolUse Bash | log-flush.js | on `git commit` only: moves the rows in ai/runs/log.pending.csv into ai/runs/log.csv and stages it |
 | PostToolUse Edit/Write | log-edit.js | ai/runs/edits.jsonl: session_id, ts, file |
 | PostToolUse Bash | log-cmd.js | ai/runs/cmds.jsonl when the command ran a test, lint or e2e command (vitest, jest, biome, playwright, pnpm/npm test|lint|e2e|check) |
-| Stop | session-stop.js | one line to ai/runs/log.csv with tokens, cache hit rate, cost |
+| Stop | session-stop.js | one line to ai/runs/log.pending.csv with tokens, cache hit rate, cost |
+
+## Why the session row is buffered
+A Stop fires after every turn. Written straight into the tracked log.csv, the file was dirty for
+the whole session, `git checkout` refused to switch branches, and every branch grew its own tail
+of rows that conflicted on merge. So session-stop.js appends to `ai/runs/log.pending.csv`
+(gitignored), and log-flush.js moves those rows into log.csv when the session runs `git commit`,
+staging the file so the rows land in the commit that produced the work. A commit made from a
+terminal skips the hook; `make log-flush` does the same move by hand, and unflushed rows just
+wait for the next commit. `ai/runs/log.csv merge=union` in .gitattributes keeps two branches'
+rows from conflicting when they merge — the file is append-only, so union is the right merge.
 
 ## log.csv — one schema, two writers
 ts,session_id,source,user,branch,task,tool,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted
@@ -29,12 +40,15 @@ these 16 columns; each blanks what it cannot know — an interactive session has
 a headless run has no separate turn accounting beyond `num_turns`. `accepted` is filled by
 the developer at commit time (y/n/partial). `user` is $GITLAB_USER or `git config user.name`.
 
-The two writers declare the header — and the schema guard under it — separately, because
-they run from different places and cannot share a module. `fixtures/check-log-schema.sh`
-asserts the two copies have not drifted, that every row matches the header width, and that
-both kinds of migration preserve old rows. Run it after touching either writer.
+The plugin-side scripts (session-stop.js, log-flush.js) share `scripts/_log-schema.js`. The
+headless writer runs inside an adopted repo and cannot require it, so it declares the header
+and the schema guard separately. `fixtures/check-log-schema.sh` asserts the two copies have not
+drifted, that every row matches the header width, that both kinds of migration preserve old
+rows, and that the flush moves rows exactly once and only on a commit. Run it after touching
+any of the three.
 
-Two things can be wrong with a log.csv, and both are repaired on the next write:
+Two things can be wrong with a log.csv (or a pending file), and both are repaired on the next
+write — for log.csv that is the flush or a headless run:
 
 - **The header is not the above.** The file predates this schema; its rows came from two
   writers with different column meanings. All of them move to `ai/runs/log.previous.csv`
@@ -69,8 +83,12 @@ Lines beginning with "- `" — the backticked path prefix is the rule:
 ## gitignore lines for every repo
 ai/runs/*.json
 ai/runs/*.jsonl
+ai/runs/log.pending.csv
 .claude/settings.local.json
 CLAUDE.local.md
+
+## gitattributes line for every repo
+ai/runs/log.csv merge=union
 
 ## Fortnightly read
 hit_rate < 0.70 → something dynamic sits in the prefix (AGENTS.md edited mid-session, a hook printing, a restart).
@@ -78,5 +96,5 @@ Sessions with edits but no cmds → tests were not run; tighten the task prompt.
 Files in edits.jsonl not in the commit → what the model changed that you dropped; check why.
 
 ## Without the plugin
-Copy scripts/ to ai/make/hooks/ and register the same hooks in .claude/settings.json
-with `node ai/make/hooks/<script>.js` as the command.
+Copy scripts/ (including `_common.js` and `_log-schema.js`) to ai/make/hooks/ and register the
+same hooks in .claude/settings.json with `node ai/make/hooks/<script>.js` as the command.

@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-// Appends one row for a headless run (make ai) to ai/runs/log.csv.
-// The interactive path — skills/ai-hooks/scripts/session-stop.js — writes the SAME columns.
-// If you change HEADER here, change it there too; the fixture test pins them together.
+// ai/runs/log.csv schema, shared by the two plugin-side scripts that touch the run log:
+// session-stop.js (writes a row to log.pending.csv) and log-flush.js (moves pending rows into
+// log.csv). The headless writer, templates/ai/make/log.js, runs inside an adopted repo and
+// cannot require this file, so it carries a byte-identical copy of the guard below;
+// fixtures/check-log-schema.sh pins the two copies together.
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
 
+// Same columns as the headless writer, ai/make/log.js. Change one, change both.
 const HEADER = "ts,session_id,source,user,branch,task,tool,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted";
 
 // --- shared schema guard: byte-identical in both writers, pinned by fixtures/check-log-schema.sh ---
@@ -65,54 +67,6 @@ function ensureSchema(file) {
 }
 // --- end shared schema guard ---
 
-function sh(cmd) {
-  try { return execSync(cmd, { stdio: ["ignore", "pipe", "ignore"] }).toString().trim(); } catch { return ""; }
-}
 const csv = v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
 
-// Two output shapes. claude -p --output-format json writes one object with `usage` and
-// `total_cost_usd`. codex exec --json writes JSONL events: `thread.started` carries the id,
-// each `turn.completed` carries usage. Sniffed, not configured, so the file speaks for itself.
-function parseRun(text) {
-  const t = text.trim();
-  try {
-    const o = JSON.parse(t);
-    const u = o.usage ?? {};
-    return { id: o.session_id ?? "", turns: o.num_turns ?? "", cost: o.total_cost_usd ?? "",
-             inp: u.input_tokens ?? 0, out: u.output_tokens ?? 0,
-             cr: u.cache_read_input_tokens ?? 0, cw: u.cache_creation_input_tokens ?? 0 };
-  } catch {}
-  const r = { id: "", turns: 0, cost: "", inp: 0, out: 0, cr: 0, cw: 0 };
-  for (const line of t.split("\n")) {
-    if (!line.trim()) continue;
-    let e; try { e = JSON.parse(line); } catch { continue; }
-    if (e.type === "thread.started" && e.thread_id) r.id = e.thread_id;
-    if (e.type === "turn.completed" && e.usage) {
-      const u = e.usage;
-      r.turns++;
-      // codex reports input_tokens INCLUSIVE of cached ones (the OpenAI convention), while
-      // claude reports them separately. Subtract so the column means the same in both rows.
-      const cached = u.cached_input_tokens ?? 0;
-      r.inp += Math.max(0, (u.input_tokens ?? 0) - cached);
-      r.cr += cached;
-      r.cw += u.cache_write_input_tokens ?? 0;
-      // output_tokens already includes reasoning_output_tokens.
-      r.out += u.output_tokens ?? 0;
-    }
-  }
-  return r;   // cost stays "" — codex reports none, and a guessed price is worse than none
-}
-
-const [file, task, tool, model] = process.argv.slice(2);
-const run = parseRun(fs.readFileSync(file, "utf8"));
-const { inp, out, cr, cw } = run;
-const hit = (cr / (inp + cr + cw || 1)).toFixed(2);
-
-ensureSchema(path.join(path.dirname(file), "log.csv"));
-process.stdout.write([
-  new Date().toISOString(), run.id, "make",
-  process.env.GITLAB_USER || sh("git config user.name") || "unknown",
-  sh("git rev-parse --abbrev-ref HEAD"),
-  task, tool, model || "",
-  run.turns, inp, out, cr, cw, hit, run.cost, "",
-].map(csv).join(",") + "\n");
+module.exports = { HEADER, COLS, records, width, ensureSchema, csv };

@@ -6,7 +6,9 @@
     ],
     "PreToolUse": [
       { "matcher": "Edit|Write|MultiEdit",
-        "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/ai-hooks/scripts/guard-paths.js\"" } ] }
+        "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/ai-hooks/scripts/guard-paths.js\"" } ] },
+      { "matcher": "Bash",
+        "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/ai-hooks/scripts/log-flush.js\"" } ] }
     ],
     "PostToolUse": [
       { "matcher": "Edit|Write|MultiEdit",

@@ -15,7 +15,8 @@ this same layout and fills the `{{…_extra}}` slots with its own rules, docs an
    --owner), `{{backup}}` = TBD, `{{date}}`, `{{plugin_version}}`; remove every remaining
    `{{…_extra}}` / `{{overlay_note}}` placeholder line.
 4. Write root `AGENTS.md` ("See ai/AGENTS.md") and `CLAUDE.md` ("@ai/AGENTS.md") if absent.
-5. Append the gitignore lines from the ai-hooks skill. Create `ai/runs/log.csv` header.
+5. Append the gitignore lines and the gitattributes line from the ai-hooks skill. Create
+   `ai/runs/log.csv` header.
 6. Run `bash ai/make/sync-adapters.sh`.
 6b. Record what this repo received, so `/t4:sync-sdlc` can detect drift later:
    `node "${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/scripts/manifest.js" write . "${CLAUDE_PLUGIN_ROOT}"`
