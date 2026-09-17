@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.24.0 — 2026-09-17
+- **`ai/runs/log.csv` no longer blocks `git checkout`.** The Stop hook wrote one row into the
+  tracked file after every turn, so it was dirty for the whole session, every branch switch was
+  refused ("Your local changes … would be overwritten by checkout"), and two branches' rows
+  conflicted on merge. `session-stop.js` now appends to `ai/runs/log.pending.csv` (gitignored);
+  a new PreToolUse Bash hook, `log-flush.js`, moves those rows into `log.csv` and stages it when
+  the session runs `git commit` — and only then; a dry run or any other command leaves them.
+  The log changes inside the commit that produced the work, which is where the `accepted`
+  column was always meant to be filled.
+- `make log-flush` does the same move for a commit made from a terminal; rows never flushed
+  simply wait for the next commit.
+- The schema guard moved out of `session-stop.js` into `scripts/_log-schema.js`, required by
+  both plugin-side scripts. The headless writer keeps its byte-identical copy;
+  `check-log-schema.sh` now diffs against the module, asserts the Stop hook carries no copy of
+  its own, and gains the flush cases: not on `git status`, not on `--dry-run`, once per commit,
+  staged, and a pre-schema `log.csv` migrated when the flush reaches it.
+- Adopted repos: add `ai/runs/log.pending.csv` to `.gitignore` and `ai/runs/log.csv merge=union`
+  to `.gitattributes` (both listed in the ai-hooks skill; `/t4:adopt-sdlc` step 5 writes them
+  for a new repo). Until the plugin is updated and the session restarted, the old hook keeps
+  writing straight into `log.csv`.
+
 ## 0.23.0 — 2026-09-07
 - **The plugin's own repo is recognised again once the plugin is installed.** `isPluginItself`
   compared repo-root to plugin-root, which is only equal while the plugin runs from its working

@@ -21,7 +21,7 @@ MODEL_ARG  = $(if $(strip $(MODEL)),--model "$(MODEL)",)
 RUN        = $(CMD) -p $(MODEL_ARG) --output-format json < $$PF > $$OUT
 endif
 
-.PHONY: ai review ai-sync clean-runs
+.PHONY: ai review ai-sync log-flush clean-runs
 
 # INPUT reaches the recipe as an environment variable, never interpolated into the shell
 # line — `make review` passes a whole diff through it, quotes and all.
@@ -54,6 +54,17 @@ review:
 
 ai-sync:
 	@bash ai/make/sync-adapters.sh
+
+# Sessions buffer their log.csv rows in log.pending.csv (gitignored) so the tracked file is not
+# dirty every turn; a `git commit` run inside a session moves them across through the plugin's
+# log-flush hook. This is the same move for a commit made from a terminal. The two files must
+# carry the same header — a pending file on another schema is left for the hook to migrate.
+log-flush:
+	@P=$(RUNS)/log.pending.csv; L=$(RUNS)/log.csv; \
+	[ -s $$P ] || { echo "log-flush: nothing pending"; exit 0; }; \
+	[ -s $$L ] || head -1 $$P > $$L; \
+	[ "$$(head -1 $$P)" = "$$(head -1 $$L)" ] || { echo "log-flush: $$P and $$L have different headers — commit from a session so the hook migrates them" >&2; exit 1; }; \
+	tail -n +2 $$P >> $$L && rm -f $$P && git add -- $$L && echo "log-flush: rows moved into $$L and staged"
 
 clean-runs:
 	@find $(RUNS) -name '*.json' -mtime +30 -delete

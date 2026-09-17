@@ -60,7 +60,7 @@ function ensureSchema(file) {
     (width(r) === COLS ? keep : move).push(r);
   }
   if (!move.length) return;
-  fs.appendFileSync(prev, `# ${new Date().toISOString()} moved out of log.csv: not ${COLS} fields\n${move.join("\n")}\n`);
+  fs.appendFileSync(prev, `# ${new Date().toISOString()} moved out of ${path.basename(file)}: not ${COLS} fields\n${move.join("\n")}\n`);
   fs.writeFileSync(file, [HEADER, ...keep].join("\n") + "\n");
 }
 // --- end shared schema guard ---

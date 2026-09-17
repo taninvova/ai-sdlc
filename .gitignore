@@ -5,6 +5,7 @@ node_modules/
 # ai-sdlc (skills/ai-hooks/SKILL.md)
 ai/runs/*.json
 ai/runs/*.jsonl
+ai/runs/log.pending.csv
 .claude/settings.local.json
 CLAUDE.local.md
 

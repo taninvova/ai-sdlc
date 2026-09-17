@@ -230,14 +230,18 @@ tokens, which `log.js` subtracts back out so the column means the same thing in 
 
 Silently, into `ai/runs/` — nothing prints to your terminal:
 
-- `log.csv` — one row per session: tokens, cache hit rate, cost, model, branch. Fill the
+- `log.csv` — one row per session: tokens, cache hit rate, cost, model, branch. The row is
+  buffered in `log.pending.csv` (gitignored) and moved into `log.csv` when the session runs
+  `git commit`, so the tracked file changes only inside the commit that produced the work and
+  never blocks a `git checkout`. Committing from a terminal instead? `make log-flush`. Fill the
   `accepted` column (y/n/partial) at commit time; it is the only honest measure of whether
   this is working.
 - `sessions.jsonl`, `edits.jsonl`, `cmds.jsonl` — what ran, what was edited, which test and
   lint commands were used.
 - The guard blocks any edit to a path in `ai/docs/dont-touch.md` and says which rule matched.
 
-`ai/runs/*.json` and `*.jsonl` are gitignored; `log.csv` is committed.
+`ai/runs/*.json`, `*.jsonl` and `log.pending.csv` are gitignored; `log.csv` is committed, with
+`merge=union` in `.gitattributes` so two branches' rows never conflict.
 
 Hooks run from the **installed** plugin, not from a working copy. After updating the plugin,
 restart the session — until you do, an older hook keeps writing the older row shape, and a
