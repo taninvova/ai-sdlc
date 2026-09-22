@@ -1,0 +1,1 @@
+../../skills/ai-layout/templates/ai/tasks/analyse.md

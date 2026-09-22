@@ -2,7 +2,9 @@
 description: Draft a feature spec with Given/When/Then acceptance criteria
 argument-hint: <feature request>
 ---
-Read ai/AGENTS.md and ai/docs/architecture.md. If ai/explorations/ has a file for this feature, read it and build the spec on the chosen option. Look at specs/ for the next number.
+Read ai/AGENTS.md and ai/docs/architecture.md. If ai/explorations/ has a file for this feature, read it and build the spec on the chosen option. If ai/analyses/ has one, read it: take the
+acceptance criteria from its requirements and stories, carry its unresolved questions into Open
+questions, and never promote one of its assumptions or proposals into a criterion. Look at specs/ for the next number.
 
 Where the request comes from. If `ai/docs/tracker.md` exists AND this repo is configured as
 that file defines AND the whole argument is a key in the form it gives, follow that file to

@@ -5,7 +5,7 @@ One paragraph: what this project does and who uses it. Stack: {{stack}}. Scaffol
 
 ## Commands
 {{commands}}
-Slash commands: /t4:fleet /t4:design /t4:adr /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:check
+Slash commands: /t4:fleet /t4:design /t4:adr /t4:analyse /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:check
 Headless (CI only): make ai TASK=<name> INPUT="…"
 
 ## Non-negotiable rules
