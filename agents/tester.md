@@ -41,6 +41,8 @@ The task names one; if none is given, infer from whether the plan's steps are ti
   state. Not on call counts, private fields or implementation details.
 - You own acceptance-level tests. Unit tests for internals belong to /t4:run; do not
   duplicate them.
+- Never consult a declared knowledge source, whatever `ai/docs/knowledge.md` says this repo
+  has. A source may describe the implementation, and the point of you is not to have seen it.
 - Respect ai/docs/dont-touch.md.
 
 ## Report

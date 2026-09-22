@@ -5,6 +5,10 @@ argument-hint: <spec path>
 Read ai/AGENTS.md, ai/docs/architecture.md, ai/docs/coding-standards.md, and the spec
 named below. Read the relevant skills in ai/skills/ (forms, data-access, playwright).
 Do not change any code.
+If `ai/docs/knowledge.md` exists, follow it: it says whether this repo has declared a knowledge
+source, what may be read from one and how a fact from it is labelled, and the one line to report
+when a declared source cannot be reached. Where it says this repo is unconfigured, say nothing
+about it.
 
 Write ai/plans/<NNNN>-<slug>.md (same number as the spec):
 - Goal (one sentence) · Spec link

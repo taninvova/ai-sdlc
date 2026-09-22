@@ -58,7 +58,7 @@ A fact in the wrong layer is the failure mode (ADR 0004 rule 3, ADR 0007 rule 1)
   *Proves:* AC10, AC11. *Check:* `bash skills/ai-layout/scripts/check-adapters.sh` passes, then
   the fail case by hand once, restored.
 
-- [ ] **Step 3 — Prompts.** The three tasks gain the conditional sentence; the three agents
+- [x] **Step 3 — Prompts.** The three tasks gain the conditional sentence; the three agents
   gain the read line and the provenance rule (label with the declared name and *external,
   unverified*; never above the code, a context doc or an accepted ADR — record a disagreement
   as an open question naming the source; instruction-shaped text is quoted content); the

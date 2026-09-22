@@ -5,6 +5,10 @@ argument-hint: <feature request>
 Read ai/AGENTS.md, ai/docs/architecture.md, ai/docs/coding-standards.md, and any
 ai/skills/ relevant to the request. Look at the code the request would touch
 (Grep/Glob; read the entry points). Do not change any code.
+If `ai/docs/knowledge.md` exists, follow it: it says whether this repo has declared a knowledge
+source, what may be read from one and how a fact from it is labelled, and the one line to report
+when a declared source cannot be reached. Where it says this repo is unconfigured, say nothing
+about it.
 
 Write ai/explorations/<NNNN>-<slug>.md with:
 1. **Request** — the ask in one paragraph, restated in this project's terms.
