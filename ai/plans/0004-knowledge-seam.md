@@ -73,7 +73,7 @@ A fact in the wrong layer is the failure mode (ADR 0004 rule 3, ADR 0007 rule 1)
   declaration or a provider — `grep -iE 'knowledge|seam|declar|mcp|source' ` finds nothing
   that is not the ordinary word.
 
-- [ ] **Step 4 — Doctor line.** `commands/doctor.md` step 2b, worded like step 2: follow the
+- [x] **Step 4 — Doctor line.** `commands/doctor.md` step 2b, worded like step 2: follow the
   seam document to decide configured or not; if the document is absent, say the layout predates
   it and name `/t4:sync-sdlc`; name no provider and no filename.
   *Proves:* AC14. *Check:* three scratch repos — configured, unconfigured with the seam,
