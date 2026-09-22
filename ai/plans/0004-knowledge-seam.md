@@ -37,7 +37,7 @@ A fact in the wrong layer is the failure mode (ADR 0004 rule 3, ADR 0007 rule 1)
 
 ## Steps
 
-- [ ] **Step 1 — The seam document.** Write `skills/ai-layout/templates/ai/docs/knowledge.md`
+- [x] **Step 1 — The seam document.** Write `skills/ai-layout/templates/ai/docs/knowledge.md`
   from `tracker.md`'s shape: what configured means (decision 4, table with `name`, `kind`,
   `use`; fail-closed list); each supported `kind` and what "read" means for it; per runtime
   which kinds are reachable and how reachability is decided (decision 5); which executors
