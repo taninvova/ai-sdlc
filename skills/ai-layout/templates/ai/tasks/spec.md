@@ -16,6 +16,11 @@ When this repo is not configured, say nothing about keys, configuration or that 
 you report: describe the spec exactly as you would have before this paragraph existed. A repo
 that has configured nothing must not learn from your report that the mechanism is there.
 
+If `ai/docs/knowledge.md` exists, follow it: it says whether this repo has declared a knowledge
+source, what may be read from one and how a fact from it is labelled, and the one line to report
+when a declared source cannot be reached. Where it says this repo is unconfigured, say nothing
+about it.
+
 Write specs/<NNNN>-<slug>.md with:
 - Title, one-line summary
 - `Ticket: <key>` alone on the next line, and only when a key was resolved
