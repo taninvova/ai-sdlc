@@ -49,7 +49,7 @@ A fact in the wrong layer is the failure mode (ADR 0004 rule 3, ADR 0007 rule 1)
   'token|secret|https?://' ` over the file finds nothing; `check-adapters.sh` still passes,
   since the seam document is not in its search set.
 
-- [ ] **Step 2 — Enforcement, before any prompt changes.** Add a second banned block to
+- [x] **Step 2 — Enforcement, before any prompt changes.** Add a second banned block to
   `check-adapters.sh` for the knowledge seam: `knowledge_base\.md` and every provider or
   product name the seam document names (decision 2), searched over the same files as the
   tracker block. Add the self-tests: insert a banned term into a scratch task prompt → FAIL
