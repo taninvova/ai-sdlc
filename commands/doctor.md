@@ -20,6 +20,12 @@ headless run.
    service, no URL, no configuration filename. That document is the only thing allowed to know
    them, and repeating one here would put it in every repo that reads this command.
 
+2b. Add one line about the knowledge seam, the same way. If `ai/docs/knowledge.md` exists,
+   follow it to decide whether this repo has declared a source, and report configured or
+   not. If it does not exist, say this layout predates knowledge-source support and name
+   `/t4:sync-sdlc`. Name nothing specific — no source, no provider, no filename; that
+   document is the only thing allowed to know them.
+
 3. Report, worst first: findings, then unknowns. An `[ok]` line is noise unless nothing else
    is wrong — if there are no findings and no unknowns, say so in one line and stop.
 
