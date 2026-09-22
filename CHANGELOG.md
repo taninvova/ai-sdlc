@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.25.0 — 2026-09-22
+- **New `analyst` agent and `/t4:analyse` task.** A request that is still a business
+  description — several actors, permissions, business rules, a lifecycle, integrations, policy
+  nobody has decided — had nowhere to go: `/t4:spec` needs a buildable feature and
+  `/t4:explore` needs a settled home. `/t4:analyse <description>` delegates to the `analyst`,
+  which writes `ai/analyses/NNNN-*.md`: objectives with success measures, scope and boundary,
+  permission matrix, use cases and state transitions, functional and non-functional
+  requirements, business rules and decision tables, data dictionary, integrations, stories with
+  Given/When/Then ACs, test scenarios (`Not run`), a traceability matrix, and separate registers
+  for assumptions, proposals, open questions, risks and source conflicts. Every statement
+  carries one label — supplied fact, confirmed decision, assumption, proposal, open question —
+  and none is promoted to another by repetition. It invents no policy, estimate, approval or
+  existing architecture; current behaviour comes from the code's public surface, cited as a
+  source. Modes: `document` (default), `lean`, `questions`, `review`, `update` (change control
+  with ids preserved), `explain`.
+- `/t4:spec` reads `ai/analyses/` when a pack exists for the feature: ACs come from its
+  requirements and stories, its open questions carry over, and an assumption or proposal never
+  becomes a criterion.
+- Adopted repos: new upstream files `ai/agents/analyst.md`, `ai/tasks/analyse.md` and
+  `ai/analyses/.gitkeep`; `ai/tasks/spec.md` changed (one paragraph). Not breaking — nothing
+  that exists behaves differently until the new task is run. `/t4:sync-sdlc` lists them; take
+  them and run it again to get `/t4:analyse`.
+
 ## 0.24.0 — 2026-09-17
 - **`ai/runs/log.csv` no longer blocks `git checkout`.** The Stop hook wrote one row into the
   tracked file after every turn, so it was dirty for the whole session, every branch switch was

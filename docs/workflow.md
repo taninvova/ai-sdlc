@@ -3,7 +3,7 @@
 How to install it, what each command is for, and the order to run them in.
 
 The plugin gives you three things: an `ai/` directory in your repo that holds the project's
-context and prompts, slash commands generated from it, and three agents. Everything a command
+context and prompts, slash commands generated from it, and four agents. Everything a command
 does is written in a file you can read and change — `ai/tasks/<name>.md`. If a command keeps
 needing steering in chat, the prompt is missing a line; fix the prompt, don't repeat yourself.
 
@@ -49,7 +49,7 @@ that decides whether any of the rest is worth running:
 
 An agent with a placeholder `architecture.md` produces placeholder-quality work.
 
-Restart the session (or `/reload-plugins`) and the eleven `/t4:*` commands appear.
+Restart the session (or `/reload-plugins`) and the twelve `/t4:*` commands appear.
 
 ---
 
@@ -58,6 +58,8 @@ Restart the session (or `/reload-plugins`) and the eleven `/t4:*` commands appea
 ```
 Is it a bug?                              → /t4:fix
 Is it a small chore, no behaviour change? → /t4:chore
+Is it a business description — actors,
+  rules, permissions, undecided policy?   → /t4:analyse  then /t4:spec
 Does it cross a service boundary,
   change a contract, or have no home yet? → /t4:design   then /t4:adr, then /t4:spec
 Could it be built more than one way?      → /t4:explore  then /t4:spec
@@ -69,6 +71,10 @@ be built more than one way, or touches a queue contract, a schema, or a public A
 
 `/t4:design` sits above `/t4:explore`: design decides **where** a capability lives and what
 it exposes, explore decides **how** to build it in one repo whose home is already settled.
+
+`/t4:analyse` sits before both when the request is still a business description: it settles
+**what** is needed — actors, permissions, rules, states, data, undecided policy — as a pack in
+`ai/analyses/` that `/t4:spec` reads. A small, well-understood change does not need it.
 
 ## 4. The main loop
 
@@ -136,6 +142,7 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
 | `/t4:design <capability>` | the capability spans services or changes a contract | `ai/designs/NNNN-*.md` | write specs, plans or code |
 | `/t4:design review <plan>` | a plan crosses a boundary or adds a dependency | nothing — JSON verdict | review correctness or style; that is `/t4:check` |
 | `/t4:adr <decision>` | any decision that outlives the change, **every new dependency** | `docs/adr/NNNN-*.md` | reopen a decision an accepted ADR settled |
+| `/t4:analyse <feature description>` | the request is a business description — actors, rules, permissions, a lifecycle, undecided policy | `ai/analyses/NNNN-*.md` | write specs, plans or code; invent policy, estimates or approvals; create anything outside the repo |
 | `/t4:explore <request>` | the request could be built more than one way | `ai/explorations/NNNN-*.md` | change code |
 | `/t4:spec <feature>` | you know what to build, not yet how | `specs/NNNN-*.md` | write the plan or the code |
 | `/t4:plan <spec>` | the spec's open questions are answered | `ai/plans/NNNN-*.md` | change code |
@@ -148,7 +155,7 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
 
 ### The agents
 
-Three subagents do the work the commands delegate. Each is deliberately narrow:
+Four subagents do the work the commands delegate. Each is deliberately narrow:
 
 - **`reviewer`** — reads the branch diff against the spec, plan and standards. Read-only,
   JSON verdict. Checks correctness, scope, tests, spec drift, boundaries, security,
@@ -158,6 +165,12 @@ Three subagents do the work the commands delegate. Each is deliberately narrow:
   restates it instead of checking it. Writes test files only.
 - **`architect`** — decides where a capability belongs, writes designs and ADRs. Treats an
   accepted ADR as binding. Proposes changes to context docs rather than making them.
+- **`analyst`** — turns a feature description into a requirements pack: objectives, scope,
+  permission matrix, use cases and lifecycles, functional and non-functional requirements,
+  business rules, data dictionary, integrations, stories with Given/When/Then ACs, test
+  scenarios and traceability. Labels every statement a supplied fact, assumption, proposal
+  or open question and never lets one become another. Invents no policy, estimate, approval
+  or existing architecture. Writes `ai/analyses/` only.
 
 Their project copies live in `ai/agents/` — add project-specific checks there, not to the
 plugin.
@@ -198,21 +211,21 @@ file by hand; a hook blocks it, because a manifest edited by hand makes the chec
 ## 8. Using it from Codex
 
 `sync-adapters.sh` generates `.codex/skills/` alongside `.claude/` and `.cursor/`, so the same
-eleven tasks are slash commands in Codex too. Nothing extra to install — Codex picks up
+twelve tasks are slash commands in Codex too. Nothing extra to install — Codex picks up
 `.codex/skills/` with no configuration.
 
 | | Claude Code | Codex |
 |---|---|---|
-| The eleven `/t4:*` tasks | yes | yes |
+| The twelve `/t4:*` tasks | yes | yes |
 | Headless | `make ai` | `make ai TOOL=codex` |
-| `reviewer` / `tester` / `architect` | separate subagent, own context | **inlined into the same session** |
+| `reviewer` / `tester` / `architect` / `analyst` | separate subagent, own context | **inlined into the same session** |
 | Session log, edit log, cost row | yes | no |
 | `dont-touch.md` guard | enforced by a hook | **not enforced** |
 
 Two differences are worth taking seriously rather than skimming:
 
 **The agents lose their independence.** Codex plugins cannot ship subagents, so `/t4:check`,
-`/t4:test`, `/t4:design` and `/t4:adr` tell the session to follow `ai/agents/<name>.md` itself.
+`/t4:test`, `/t4:design`, `/t4:adr` and `/t4:analyse` tell the session to follow `ai/agents/<name>.md` itself.
 The generated skill says so. It matters because independence is the whole point of those two
 agents: a tester that has seen the implementation writes tests that restate it, and a reviewer
 that wrote the code is not reviewing it. Under Codex, treat their findings as a self-check —
@@ -281,7 +294,7 @@ mid-session is not yet running.
 
 ```
 once:      /t4:adopt-sdlc  →  /t4:fleet  →  fill in ai/docs/*
-per change: /t4:design? → /t4:explore? → /t4:spec → /t4:plan
+per change: /t4:design? → /t4:analyse? → /t4:explore? → /t4:spec → /t4:plan
             → /t4:test red → /t4:run ×N → /t4:test gaps → /t4:check
             → commit ai(<task>): …  →  MR labelled ai-assisted
 per dependency or lasting decision: /t4:adr

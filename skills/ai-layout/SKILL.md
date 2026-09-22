@@ -1,7 +1,7 @@
 ---
 name: ai-layout
 user-invocable: false
-description: The ai/ directory every t4 repo carries — AGENTS.md contract, context docs, task prompts (fleet, design, adr, explore, spec, plan, test, step, fix, chore, check — exposed as /t4:<name>), reviewer, tester and architect agents, plans, explorations, run log, Makefile include, tool adapters. Use when adding the layout to a repo, adding or changing a task prompt or context doc, or when a session asks where an AI-related file belongs.
+description: The ai/ directory every t4 repo carries — AGENTS.md contract, context docs, task prompts (fleet, design, adr, analyse, explore, spec, plan, test, run, fix, chore, check — exposed as /t4:<name>), reviewer, tester, architect and analyst agents, plans, explorations, run log, Makefile include, tool adapters. Use when adding the layout to a repo, adding or changing a task prompt or context doc, or when a session asks where an AI-related file belongs.
 ---
 
 # ai-layout
@@ -13,7 +13,7 @@ Slots for framework overlays: `{{overlay_note}}` `{{rules_extra}}` `{{dod_extra}
 removes them.
 Never write into `.claude/`, `.cursor/` or `.codex/` by hand — `ai/make/sync-adapters.sh`
 generates all three from `ai/`. Codex reads `.codex/skills/<name>/SKILL.md` as slash commands;
-since it cannot take subagents, the four agent-backed tasks get an inline-the-agent note.
+since it cannot take subagents, the five agent-backed tasks get an inline-the-agent note.
 
 ```
 ai/AGENTS.md                  the contract, < 60 lines, no dynamic content
@@ -23,12 +23,14 @@ ai/docs/fleet.md              service map the architect reads; /t4:fleet fills i
 ai/docs/coding-standards.md   rules that hold in every repo; overlays add framework rules
 ai/docs/definition-of-done.md
 ai/docs/dont-touch.md         guard-paths.js reads the backticked prefixes
-ai/tasks/*.md                 fleet design adr explore spec plan test run fix chore check  → /t4:<name>
+ai/tasks/*.md                 fleet design adr analyse explore spec plan test run fix chore check  → /t4:<name>
 ai/skills/                    empty here; overlays add framework skills
 ai/agents/reviewer.md         project copy of the plugin reviewer (may add project checks)
 ai/agents/tester.md           project copy of the plugin tester (test conventions go here)
 ai/agents/architect.md        project copy of the plugin architect (boundaries, settled ADRs)
+ai/agents/analyst.md          project copy of the plugin analyst (domain terms, decision owners)
 ai/designs/                   /t4:design output: where a capability lives, contracts, data ownership
+ai/analyses/                  /t4:analyse output: requirements pack — facts, assumptions, proposals, questions apart
 ai/explorations/            /t4:explore output: options + recommendation per request
 ai/plans/  ai/plans/done/     plans in flight / merged
 ai/runs/log.csv               header only; the Stop hook and ai/make/log.js append the same 16 columns
@@ -70,6 +72,11 @@ capability lives and feeds one or more specs, possibly across repos. /t4:explore
 to build it in one repo whose home is already known. /t4:adr records any decision that
 outlives the change, including every new dependency. /t4:fleet fills ai/docs/fleet.md, the
 map /t4:design reads — run it once per repo, then whenever a service or contract changes.
+
+/t4:analyse comes before /t4:explore and /t4:spec when the request is still a business
+description — several actors, permissions, rules, a lifecycle, undecided policy. It settles
+WHAT is needed as a pack in ai/analyses/ that /t4:spec reads; it never writes a spec, a plan
+or code, and never turns an assumption into a fact.
 
 ## Adding a task
 1. Write ai/tasks/<name>.md with a `description:` front-matter line.
