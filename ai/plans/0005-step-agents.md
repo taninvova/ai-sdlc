@@ -96,7 +96,7 @@ sees the chat it was meant not to see.
   `cmds.jsonl` grew, and the flush hook moved pending rows into `log.csv` on the scratch
   commits.
 
-- [ ] **Step 5 — Questions come back; red stays red; the guard holds.** In the scratch repo:
+- [x] **Step 5 — Questions come back; red stays red; the guard holds.** In the scratch repo:
   a plan step whose test cannot go green → the implementer stops, box unticked, explanation
   (AC7); a plan step naming a test file that does not exist → stop and explain, naming what it
   tried (decision 3); `/t4:plan` with two specs and none named → the session asks (AC6). Then
@@ -106,6 +106,26 @@ sees the chat it was meant not to see.
   This run is what turns DEC-010's first half into evidence; if the guard does not fire, stop
   and report — the release does not ship an unguarded implementer.
   *Proves:* AC6, AC7, AC8. *Check:* transcripts; `ls` of the guarded path.
+
+  **Result — AC6, AC7, AC8 proved.** Same scratch repo and headless-session method as step 4;
+  the scaffold's test script fixed first so red and green mean something; `prisma/migrations/`
+  added to its `ai/docs/dont-touch.md`; a three-step plan of deliberate stop cases.
+  **AC7 pass:** a step demanding a test that contradicts the spec, with the only fix forbidden
+  — the implementer wrote the test, saw 13 pass / 1 fail, deleted it, left the box unticked and
+  explained the contradiction. **Decision 3 pass:** a step naming `npm run e2e`, which does
+  not exist — it stopped, quoted the npm error, named what it tried, invented nothing.
+  **AC6:** the two-specs case was proved in step 4 (`/t4:plan` listed the paths and asked); the
+  implementer's two stops above came back to the session as explanations, not guesses. The
+  unresolvable-tracker-key case was not run — no tracker is configured in the scratch repo and
+  that path did not change in this plan.
+  **AC8 pass, two ways.** (1) The implementer, given a step that writes under
+  `prisma/migrations/`, read the rule and refused before calling Write; no file, box unticked.
+  (2) Because that proves the prompt and not the hook, a probe: a plain `general-purpose`
+  subagent with no knowledge of the rule, told to write the file and report the tool result
+  verbatim. Its Write was blocked by the PreToolUse hook with the guard's own message —
+  `Blocked by ai/docs/dont-touch.md: "prisma/migrations/0001_init.sql" matches rule
+  "prisma/migrations/"` — the file was not created, and the hook's stderr appears five times in
+  the outer transcript. DEC-010's first half is now evidence, not a supplied fact.
 
 - [ ] **Step 6 — Docs, release notes, version.** AC9's sentence in `skills/ai-hooks/SKILL.md`
   and workflow §9; workflow §5 (eight agents, one line each) and §8 (Codex row names eight);
