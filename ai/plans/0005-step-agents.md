@@ -37,7 +37,7 @@ sees the chat it was meant not to see.
 
 ## Steps
 
-- [ ] **Step 1 — The four agents.** Write `agents/explorer.md`, `specifier.md`, `planner.md`,
+- [x] **Step 1 — The four agents.** Write `agents/explorer.md`, `specifier.md`, `planner.md`,
   `implementer.md`. Each: frontmatter (`name`, `description`, `tools: Read, Grep, Glob, Write,
   Edit, Bash`, `model: inherit`); "What you read"; "What you may write" with the single target
   and the prohibitions moved verbatim from the task prompt; the artefact format the prompt
