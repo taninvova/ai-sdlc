@@ -1,7 +1,7 @@
 {
   "name": "t4",
-  "version": "0.26.0",
-  "description": "t4 AI SDLC core: the ai/ layout (AGENTS.md, context docs, task prompts, reviewer / tester / architect / analyst agents, fleet map), dont-touch guard, adapter sync. Standalone — no dependency on any other repo and no runtime dependency; two optional task paths reach services a repo configures (a tracker, a read-only knowledge source), each inert where nothing is declared; framework overlays build on it through the template slots.",
+  "version": "0.27.0",
+  "description": "t4 AI SDLC core: the ai/ layout (AGENTS.md, context docs, task prompts, reviewer / tester / architect / analyst agents and the explorer / specifier / planner / implementer step agents, fleet map), dont-touch guard, adapter sync. Standalone — no dependency on any other repo and no runtime dependency; two optional task paths reach services a repo configures (a tracker, a read-only knowledge source), each inert where nothing is declared; framework overlays build on it through the template slots.",
   "author": { "name": "t4 platform" },
   "repository": "git@gitlab.nsix.io:ai/sdlc.git",
   "license": "MIT",

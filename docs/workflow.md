@@ -3,7 +3,7 @@
 How to install it, what each command is for, and the order to run them in.
 
 The plugin gives you three things: an `ai/` directory in your repo that holds the project's
-context and prompts, slash commands generated from it, and four agents. Everything a command
+context and prompts, slash commands generated from it, and eight agents. Everything a command
 does is written in a file you can read and change — `ai/tasks/<name>.md`. If a command keeps
 needing steering in chat, the prompt is missing a line; fix the prompt, don't repeat yourself.
 
@@ -155,7 +155,24 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
 
 ### The agents
 
-Four subagents do the work the commands delegate. Each is deliberately narrow:
+Eight subagents do the work the commands delegate. Each is deliberately narrow. Four run the
+loop steps, so that each step starts from its artefacts and not from the chat that produced
+them; the session keeps what only a session can do — refuse an empty argument, ask a question,
+resolve a tracker key, relay the report:
+
+- **`explorer`** — `/t4:explore`: reads the code the request touches, writes two to four
+  options with a comparison and one recommendation to `ai/explorations/`. Never code.
+- **`specifier`** — `/t4:spec`: builds on the exploration's chosen option and the analysis if
+  either exists, writes Given/When/Then criteria to `specs/`; anything implicit is an open
+  question, never a criterion. Never the plan or code.
+- **`planner`** — `/t4:plan`: turns one spec into steps sized for one `/t4:run`, each naming
+  the tests that prove it, in `ai/plans/`. Never code.
+- **`implementer`** — `/t4:run`: implements exactly one step, runs lint, typecheck and tests,
+  ticks the box only when green. Red, or a test it cannot find: stops and explains. Never the
+  next step, never a knowledge source, and the dont-touch guard blocks it like anyone else.
+
+Four stand outside the loop's steps:
+
 
 - **`reviewer`** — reads the branch diff against the spec, plan and standards. Read-only,
   JSON verdict. Checks correctness, scope, tests, spec drift, boundaries, security,
@@ -178,7 +195,7 @@ plugin.
 ### External knowledge, read-only
 
 Declare a source in `ai/knowledge_base.md` — one table with `name`, `kind` and `use` — and the
-explore, spec and plan tasks and the analyst, architect and reviewer agents read it. Every fact
+explorer, specifier, planner, analyst, architect and reviewer agents read it. Every fact
 they take from it is labelled with the source's name and *external, unverified*, ranks below the
 code and an accepted ADR, and a disagreement becomes an open question. Nothing is ever written
 back. A source that cannot be reached — Codex, headless, not attached — is one line in the
@@ -229,14 +246,15 @@ twelve tasks are slash commands in Codex too. Nothing extra to install — Codex
 |---|---|---|
 | The twelve `/t4:*` tasks | yes | yes |
 | Headless | `make ai` | `make ai TOOL=codex` |
-| `reviewer` / `tester` / `architect` / `analyst` | separate subagent, own context | **inlined into the same session** |
+| the eight agents — reviewer, tester, architect, analyst, explorer, specifier, planner, implementer | separate subagent, own context | **inlined into the same session** |
 | Session log, edit log, cost row | yes | no |
 | `dont-touch.md` guard | enforced by a hook | **not enforced** |
 
 Two differences are worth taking seriously rather than skimming:
 
 **The agents lose their independence.** Codex plugins cannot ship subagents, so `/t4:check`,
-`/t4:test`, `/t4:design`, `/t4:adr` and `/t4:analyse` tell the session to follow `ai/agents/<name>.md` itself.
+`/t4:test`, `/t4:design`, `/t4:adr`, `/t4:analyse`, `/t4:explore`, `/t4:spec`, `/t4:plan` and
+`/t4:run` tell the session to follow `ai/agents/<name>.md` itself.
 The generated skill says so. It matters because independence is the whole point of those two
 agents: a tester that has seen the implementation writes tests that restate it, and a reviewer
 that wrote the code is not reviewing it. Under Codex, treat their findings as a self-check —
@@ -259,7 +277,10 @@ Silently, into `ai/runs/` — nothing prints to your terminal:
   `git commit`, so the tracked file changes only inside the commit that produced the work and
   never blocks a `git checkout`. Committing from a terminal instead? `make log-flush`. Fill the
   `accepted` column (y/n/partial) at commit time; it is the only honest measure of whether
-  this is working.
+  this is working. The row counts the session's own transcript: tokens spent inside a
+  subagent — including the explorer, specifier, planner and implementer that `/t4:explore`,
+  `/t4:spec`, `/t4:plan` and `/t4:run` delegate to — are not in it, so a session that
+  delegated a step under-counts by that step's cost.
 - `sessions.jsonl`, `edits.jsonl`, `cmds.jsonl` — what ran, what was edited, which test and
   lint commands were used.
 - The guard blocks any edit to a path in `ai/docs/dont-touch.md` and says which rule matched.

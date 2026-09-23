@@ -1,5 +1,5 @@
 ---
-description: Add the ai/ layout (AGENTS.md, docs, tasks, reviewer, tester, architect and analyst agents, hooks log, adapters) to an existing repo without a framework scaffold
+description: Add the ai/ layout (AGENTS.md, docs, tasks, eight agents, hooks log, adapters) to an existing repo without a framework scaffold
 argument-hint: [--owner <name>]
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep
 ---
