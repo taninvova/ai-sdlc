@@ -51,7 +51,7 @@ sees the chat it was meant not to see.
   four task prompts found in the matching agent by grep; `check-adapters.sh` AC10 sweep passes
   over `agents/*.md`.
 
-- [ ] **Step 2 — The stubs and the seam list.** Four project stubs under the templates in the
+- [x] **Step 2 — The stubs and the seam list.** Four project stubs under the templates in the
   shape of the existing ones; `ai/docs/knowledge.md` executor section in both copies names
   explorer, specifier, planner and says the implementer consults nothing.
   *Proves:* AC1 (stubs half), AC12. *Check:* `diff` of the two seam copies empty;

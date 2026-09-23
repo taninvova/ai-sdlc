@@ -47,13 +47,15 @@ future ADR, not to configuration.
 
 ## Who consults a source
 
-Only in a configured repo, and only these executors: the `explore`, `spec` and `plan` tasks,
-and the `analyst`, `architect` and `reviewer` agents (so `/t4:analyse`, `/t4:design`,
-`/t4:adr` and `/t4:check` reach a source through the agent they delegate to).
+Only in a configured repo, and only these executors: the `explorer`, `specifier`, `planner`,
+`analyst`, `architect` and `reviewer` agents — so `/t4:explore`, `/t4:spec`, `/t4:plan`,
+`/t4:analyse`, `/t4:design`, `/t4:adr` and `/t4:check` reach a source through the agent they
+delegate to.
 
 **The `tester` never does.** Its independence rule forbids input that may describe the
-implementation, and a knowledge base may. `/t4:run`, `/t4:fix`, `/t4:chore` and `/t4:fleet`
-consult nothing; whether an implementer agent may is decided with the step agents, not here.
+implementation, and a knowledge base may. **The `implementer` never does either:** a source
+shapes what is built, and that was settled before the plan existed; a step is implemented
+from the plan it was given. `/t4:run`, `/t4:fix`, `/t4:chore` and `/t4:fleet` consult nothing.
 
 An executor queries a source for what the request needs and what the row's `use` says, and
 no more. It does not read a source to fill a section the request did not ask for.
