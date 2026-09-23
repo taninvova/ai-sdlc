@@ -66,7 +66,7 @@ sees the chat it was meant not to see.
   four name the right agent; `check-adapters.sh` hint→prompt assertion still passes; sync
   twice, no diff.
 
-- [ ] **Step 4 — Prove the four steps live.** Scratch repo built from the templates with a
+- [x] **Step 4 — Prove the four steps live.** Scratch repo built from the templates with a
   small fake project and two specs. Under Claude Code, through the task prompts:
   `/t4:explore` (explorer in the transcript; report = path and option), `/t4:spec` (specifier;
   path and open questions), `/t4:plan` (planner; path and ambiguities), `/t4:run … step 1`
@@ -75,6 +75,26 @@ sees the chat it was meant not to see.
   Then one headless `make ai TASK=explore` in the same repo, reported either way (decision 4).
   *Proves:* AC4, AC5, and the headless measurement. *Check:* transcript greps for the agent
   names; report shapes compared with a pre-change run of the same request.
+
+  **Result — AC4 and AC5 proved; headless measured.** Scratch repo from the release templates
+  (a Node library with two functions and two tests), the plugin loaded from this working tree,
+  each command run as a real headless Claude Code session (`claude -p "/t4:<task> …"`,
+  stream-json transcript kept). Same feature through all four steps:
+  `/t4:explore` → `explorer` in the transcript, `ai/explorations/0001-export-report-csv.md`,
+  report = path and recommended option. `/t4:spec` → `specifier`, `specs/0001-…md`, report =
+  path and open questions. `/t4:plan` → `planner`, `ai/plans/0001-…md`, report = path and what
+  made planning ambiguous — and it found a real defect in the scratch scaffold: on Node 22
+  `node --test test/` treats the argument as a glob and fails before any change. `/t4:run …
+  step 1` → `implementer`: added `renderCsv` and its tests, tests pass by direct path, and it
+  left the checkbox unticked with an explanation because the plan's own `npm test` command
+  cannot go green — decision 3's behaviour, unprompted. No session edited a file itself.
+  **AC5 pass:** all four commands with nothing after the name → the session asked and stopped;
+  no `subagent_type` in any of the four transcripts; `/t4:plan` listed the three spec paths.
+  **Headless reach (decision 4): yes.** `make ai TASK=explore` invoked the `explorer` inside
+  `claude -p`; as before, the runner's `Write` was denied so the exploration came back in the
+  result text. The hooks also fired in every headless session: `ai/runs/sessions.jsonl` and
+  `cmds.jsonl` grew, and the flush hook moved pending rows into `log.csv` on the scratch
+  commits.
 
 - [ ] **Step 5 — Questions come back; red stays red; the guard holds.** In the scratch repo:
   a plan step whose test cannot go green → the implementer stops, box unticked, explanation
