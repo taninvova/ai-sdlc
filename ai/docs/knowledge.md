@@ -18,7 +18,7 @@ columns `name`, `kind` and `use`, carrying at least one row.
 
 | Column | Required | Meaning |
 |---|---|---|
-| `name` | yes, non-empty, unique in the file | the identifier the session shows for the source — the attached server's name for `mcp`, the tool's name for `tool` — and the label every citation carries |
+| `name` | yes, non-empty, unique in the file | the identifier the session shows for the source — for `mcp`, the server segment of its tool names as the session lists them (a server whose tools appear as `mcp__example_wiki__…` is declared `example_wiki`); for `tool`, the tool's name — and the label every citation carries |
 | `kind` | yes, one of the kinds below | how the source is reached |
 | `use` | no | what it is for; an executor queries it only for that |
 
@@ -64,7 +64,7 @@ no more. It does not read a source to fill a section the request did not ask for
 |---|---|---|
 | Claude Code | reachable when the session lists the server | reachable when the session has the tool |
 | Codex | reachable only if that session lists the server; otherwise unreachable, which is the normal state | same |
-| Headless `make ai` | unreachable — no server is attached to a headless run | unreachable |
+| Headless `make ai` | unreachable in practice — a headless run has nobody to grant a server's tools, so the first call is denied and the denial is the reason reported | unreachable, for the same reason |
 
 Reachability is decided from what the session lists, not by trying and failing. A source that
 is listed but errors when called is unreachable from that call on, and the error is the reason.

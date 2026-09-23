@@ -80,7 +80,7 @@ A fact in the wrong layer is the failure mode (ADR 0004 rule 3, ADR 0007 rule 1)
   layout without the seam — run through the command's prompt headless, as plan 0003 step 1
   did; `check-adapters.sh` covers `commands/*.md`, so the line cannot leak the filename.
 
-- [ ] **Step 5 — Prove it live.** In a scratch repo with a valid declaration naming one MCP
+- [~] **Step 5 — Prove it live.** In a scratch repo with a valid declaration naming one MCP
   server this session has attached and the developer controls: `/t4:explore` on a request
   whose answer is in that source — every fact from it is labelled (AC3); the transcript shows
   read tools only, zero write-tool calls, with a source that offers writes (AC5); a document in
@@ -93,6 +93,39 @@ A fact in the wrong layer is the failure mode (ADR 0004 rule 3, ADR 0007 rule 1)
   exit 0, a row in `ai/runs/log.csv` (AC7, AC8).
   *Proves:* AC3, AC4, AC5, AC6, AC7, AC8. *Check:* transcripts and the log row, recorded in
   the MR as the before/after run.
+
+  **Result — AC3, AC4, AC5, AC7, AC8 proved; AC6 outstanding.** Scratch repo: a `telephony-svc`
+  stub declaring `claude_ai_docs_nsix_io` (`mcp`), whose `ai/docs/architecture.md` was written to
+  say cross-service calls are HTTP — the fleet map in the source says the opposite. Request:
+  "send the merchant a notification when a call is missed".
+  **AC3 pass:** every fact from the source carries `[claude_ai_docs_nsix_io, external,
+  unverified]`; the report ends `Sources consulted: claude_ai_docs_nsix_io`. **AC4 pass:** the
+  exploration follows the repo's HTTP rule and records the disagreement as Open question 1,
+  naming the source. **AC5 pass:** the transcript shows 5 × `fetch`, 4 × `list_documents`,
+  1 × `list_collections` on the source and nothing else, against a server that exposes create,
+  update, delete and comment tools. **AC7 pass (headless):** under `make ai TASK=explore` the
+  source's first call was denied — a headless run has nobody to grant it — and the run
+  proceeded, asked nothing, and carried exactly one line: `claude_ai_docs_nsix_io (mcp) not
+  consulted: error: …`. **AC8 pass:** exit 0, one row appended to `ai/runs/log.csv`.
+  Two seam sentences were tightened by what the runs showed: `name` for `mcp` is the server
+  segment of the session's tool names, and headless is unreachable because the call is denied,
+  not because no server is attached.
+
+  **AC6 is outstanding — deferred 2026-09-23.** It needs instruction-shaped text planted in a
+  document the developer owns in the declared source, then one more run. Planting it is a write
+  into the source, which no agent may do (AC5). The developer added a neutral sentence to the
+  Fleet map page and a second run behaved identically (labelled facts, read-only calls, the
+  sentence not repeated) — consistent with AC6 but not a proof, since the text was not an
+  instruction. The imperative replacement never reached the server during the session, so the
+  owner chose to defer: run AC6 once the source's page carries the line, against a fresh copy
+  of the scratch repo.
+
+  **Two things seen, not part of this spec.** In headless mode `claude -p` denied the artefact
+  `Write` as well, so the exploration came back in the run's result text and no file was
+  written — the headless runner has never granted writes, so this is pre-existing, but AC7's
+  "the artefact is written" holds only for interactive runs. And the appended `log.csv` row has
+  blank turns and zero tokens — `log.js` did not find usage in this CLI version's JSON shape;
+  worth a `/t4:fix` of its own.
 
 - [ ] **Step 6 — Wording, release notes, version.** Apply ADR 0007's replacement text to
   `ai/docs/fleet.md` (opening line and Boundaries; remove the "Under review" banner 0004 left)
