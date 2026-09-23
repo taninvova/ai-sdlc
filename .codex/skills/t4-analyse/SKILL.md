@@ -11,5 +11,6 @@ it specifies.
 
 Weigh its findings knowing what this costs: under Claude Code that agent runs in its own
 context, which is the whole point of it. A tester that has seen the implementation writes
-tests that restate it, and a reviewer that wrote the code is not an independent review.
+tests that restate it, and a reviewer that wrote the code is not an independent review;
+a step agent that shares the session sees the chat it was meant to start without.
 Here one session does both.

@@ -134,5 +134,5 @@ developer's alone.
 in the layout writes to a source, and no declaration can enable it. Do not infer a contract
 for it from this file.
 
-**A declaration at a workspace root** above several repos, and **whether an implementer agent
-consults a source** — both wait for their own specs (`ai/analyses/0001` EPIC-004 and EPIC-002).
+**A declaration at a workspace root** above several repos — waits for its own spec
+(`ai/analyses/0001` EPIC-004).

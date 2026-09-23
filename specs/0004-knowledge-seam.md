@@ -134,7 +134,8 @@ agents that gain one sentence naming the seam document: `ai/tasks/explore.md`,
 - `skills/ai-layout/scripts/check-adapters.sh` — the knowledge banned-term list and its test
   cases; `skills/ai-layout/scripts/check-doctor.sh` — a configured / unconfigured / predates
   case for AC14.
-- `commands/doctor.md` — the one line.
+- `commands/doctor.md` — the one line. It is the prompt's, as the tracker line is;
+  `doctor.sh` and `check-doctor.sh` do not carry it, so AC14 is proved by running the prompt.
 - `docs/workflow.md`, `skills/ai-layout/SKILL.md`, `ai/docs/fleet.md` Boundaries and both
   manifest descriptions — the wording `docs/adr/0007` proposes for the narrowed standalone
   claim; `CHANGELOG.md` and a version bump in every manifest.

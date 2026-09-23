@@ -52,7 +52,8 @@ for t in ai/tasks/*.md; do
       printf 'it specifies.\n'
       printf '\nWeigh its findings knowing what this costs: under Claude Code that agent runs in its own\n'
       printf 'context, which is the whole point of it. A tester that has seen the implementation writes\n'
-      printf 'tests that restate it, and a reviewer that wrote the code is not an independent review.\n'
+      printf 'tests that restate it, and a reviewer that wrote the code is not an independent review;\n'
+      printf 'a step agent that shares the session sees the chat it was meant to start without.\n'
       printf 'Here one session does both.\n'
     fi
   } > ".codex/skills/t4-$n/SKILL.md"

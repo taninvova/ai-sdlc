@@ -4,6 +4,7 @@
 # that no prompt names what only a seam document may (ADR 0004 for the tracker, 0007 for the
 # knowledge source).
 set -euo pipefail
+shopt -s nullglob
 cd "$(dirname "$0")/../../.."
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
@@ -114,6 +115,13 @@ scan_banned "$BANNED" "names a tracker implementation detail — ADR 0004 rule 3
 # name the seam document names (specs/0004 decision 2); today the seam names none, so the list
 # is one term. "MCP" and "knowledge base" are deliberately not here: they are ordinary prose.
 KNOWLEDGE_BANNED='knowledge_base\.md'
+# This repo keeps a real-file copy of the seam document in its own layout (ai/docs/ here is not a
+# symlink). A template edit that misses the copy would leave this repo's own agents following a
+# stale seam, so the two must be byte-identical wherever both exist.
+if [ -f ai/docs/knowledge.md ] && [ -f skills/ai-layout/templates/ai/docs/knowledge.md ]; then
+  cmp -s ai/docs/knowledge.md skills/ai-layout/templates/ai/docs/knowledge.md \
+    || fail "ai/docs/knowledge.md has drifted from skills/ai-layout/templates/ai/docs/knowledge.md"
+fi
 scan_banned "$KNOWLEDGE_BANNED" "names the knowledge declaration — ADR 0007 rule 1 confines it to ai/docs/knowledge.md" "${PROMPTS[@]}"
 
 # The scan proves itself against a scratch prompt (specs/0004 AC11): a pattern that silently

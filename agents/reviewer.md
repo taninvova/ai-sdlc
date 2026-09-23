@@ -15,9 +15,10 @@ then any test reports or screenshots the project produces.
 If `ai/docs/knowledge.md` exists, follow it. A declared source may describe intended behaviour,
 not the implementation, so reading it does not compromise this review. A finding that rests on
 a fact from a source says so, naming the source and *external, unverified*; such a fact ranks
-below the spec, the code and the context docs. Name the sources consulted, or the one not
-reached and why, inside `summary`. Where the document says this repo is unconfigured, say
-nothing about it.
+below the spec, the code and the context docs. In a configured repo, name the sources
+consulted, or the one not reached and why, inside `summary`. Where the document says this repo
+is unconfigured, say nothing about it anywhere — not that none was consulted, not that the
+seam exists.
 
 Check, in priority order:
 1. Correctness — logic errors, unhandled cases, async mistakes, wrong data shapes.
