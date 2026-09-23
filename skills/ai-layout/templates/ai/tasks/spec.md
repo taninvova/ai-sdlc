@@ -2,38 +2,30 @@
 description: Draft a feature spec with Given/When/Then acceptance criteria
 argument-hint: <feature request>
 ---
-Read ai/AGENTS.md and ai/docs/architecture.md. If ai/explorations/ has a file for this feature, read it and build the spec on the chosen option. If ai/analyses/ has one, read it: take the
-acceptance criteria from its requirements and stories, carry its unresolved questions into Open
-questions, and never promote one of its assumptions or proposals into a criterion. Look at specs/ for the next number.
-
 Where the request comes from. If `ai/docs/tracker.md` exists AND this repo is configured as
 that file defines AND the whole argument is a key in the form it gives, follow that file to
-resolve the key, and spec what it returns. If it does not resolve, stop and ask — never spec
-the key itself. If one spec already records that key, report its path and stop; if two do,
-report both and stop. In every other case — not configured, no such file, or an argument that
-is not wholly a key — the argument IS the request, exactly as typed, and no key is resolved.
-When this repo is not configured, say nothing about keys, configuration or that file in what
-you report: describe the spec exactly as you would have before this paragraph existed. A repo
-that has configured nothing must not learn from your report that the mechanism is there.
+resolve the key; the description it returns is the request, and the key is handed on with it.
+If it does not resolve, stop and ask — never spec the key itself. If one spec already records
+that key, report its path and stop; if two do, report both and stop. In every other case — not
+configured, no such file, or an argument that is not wholly a key — the argument IS the
+request, exactly as typed, and no key is resolved. When this repo is not configured, say
+nothing about keys, configuration or that file in what you report: describe the spec exactly
+as you would have before this paragraph existed. A repo that has configured nothing must not
+learn from your report that the mechanism is there.
 
-If `ai/docs/knowledge.md` exists, follow it: it says whether this repo has declared a knowledge
-source, what may be read from one and how a fact from it is labelled, and the one line to report
-when a declared source cannot be reached. Where it says this repo is unconfigured, say nothing
-about it.
+Delegate to the `specifier` subagent with this instruction: write the spec for the request
+below (with the resolved key and description, when there is one). Read ai/AGENTS.md,
+ai/docs/architecture.md, and the exploration and analysis for this feature if either exists;
+write specs/<NNNN>-<slug>.md with a title and summary, `Ticket: <key>` only when a key was
+handed over, the user story, Given/When/Then criteria numbered AC1… that each stand on their
+own, out of scope, open questions, and data, routes and components touched; what a description
+leaves implicit is an open question, never a criterion; write no code and no plan. Return its
+report unchanged: the file path and the open questions.
 
-Write specs/<NNNN>-<slug>.md with:
-- Title, one-line summary
-- `Ticket: <key>` alone on the next line, and only when a key was resolved
-- User story: as a … I want … so that …
-- Acceptance criteria as Given/When/Then, each independently testable, numbered AC1…
-  From a resolved key, take these from the description it returned and from nothing else.
-  What the description leaves implicit — an unnamed actor, an unstated error case, a threshold
-  with no number — goes under Open questions. Never write it as a criterion: an inferred
-  criterion gets tested and reviewed by people who do not know it was never agreed.
-- Out of scope
-- Open questions — a spec with open questions is not buildable; list them for the developer
-- Data touched (models, fields) · Routes touched · Components likely involved
-Do not write code. Do not write the plan. Report the file path and the open questions.
+If it returns a question instead of a file, ask the developer that question and stop. In a
+headless run there is nobody to ask: report the question, say nothing was written, and stop.
+
+Do not write the spec yourself in this task, and do not edit any file yourself.
 
 If nothing follows the command name, ask the user which feature to specify, and stop. Do not invent one, and do not take it from the branch name.
 
