@@ -20,6 +20,7 @@ ai/AGENTS.md                  the contract, < 60 lines, no dynamic content
 ai/models.yaml                blank = the tool's own model (any provider) · or pin an id · per-model prices
 ai/docs/architecture.md       shape, module map, data ownership, environments
 ai/docs/fleet.md              service map the architect reads; /t4:fleet fills it by asking
+ai/docs/knowledge.md          knowledge seam: the only file that names how a declared source is read (ADR 0007)
 ai/docs/coding-standards.md   rules that hold in every repo; overlays add framework rules
 ai/docs/definition-of-done.md
 ai/docs/dont-touch.md         guard-paths.js reads the backticked prefixes
