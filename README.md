@@ -16,8 +16,8 @@ Works with Claude Code and Codex: `ai/make/sync-adapters.sh` generates `.claude/
 committed `ai/jira.yaml`. Off by default: without that file nothing changes, whatever you type.
 
 A repo can also declare a read-only knowledge source — an MCP server the developer's tool has
-attached, or a knowledge base — in `ai/knowledge_base.md`. The explore, spec and plan tasks and
-the analyst, architect and reviewer agents then read it and cite what they used as external and
+attached, or a knowledge base — in `ai/knowledge_base.md`. The explorer, specifier, planner,
+analyst, architect and reviewer agents then read it and cite what they used as external and
 unverified; an unreachable source is one report line, never a halt. `ai/docs/knowledge.md` is the
 only file that knows how; a repo that declares nothing sees nothing.
 
@@ -32,6 +32,7 @@ Project-level slash commands (generated into each repo from `ai/tasks/`): `/t4:f
 - `tester` — writes acceptance tests from the spec's ACs, blind to the implementation; test files only
 - `architect` — decides where a capability belongs across the services in `ai/docs/fleet.md`; writes design docs and ADRs
 - `analyst` — turns a feature description into a requirements pack in `ai/analyses/`, with supplied facts kept apart from assumptions, proposals and open questions; never specs, plans or code
+- `explorer`, `specifier`, `planner`, `implementer` — the four loop steps, `/t4:explore` `/t4:spec` `/t4:plan` `/t4:run`, each run in its own agent from its artefacts alone; the session keeps the questions and the report
 
 ## Hooks
 Registered plugin-wide; no-op in repos without `ai/`; never print to stdout (cache-neutral).

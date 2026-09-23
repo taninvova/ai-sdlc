@@ -1,7 +1,7 @@
 ---
 name: ai-layout
 user-invocable: false
-description: The ai/ directory every t4 repo carries — AGENTS.md contract, context docs, task prompts (fleet, design, adr, analyse, explore, spec, plan, test, run, fix, chore, check — exposed as /t4:<name>), reviewer, tester, architect and analyst agents, plans, explorations, run log, Makefile include, tool adapters. Use when adding the layout to a repo, adding or changing a task prompt or context doc, or when a session asks where an AI-related file belongs.
+description: The ai/ directory every t4 repo carries — AGENTS.md contract, context docs, task prompts (fleet, design, adr, analyse, explore, spec, plan, test, run, fix, chore, check — exposed as /t4:<name>), reviewer, tester, architect, analyst, explorer, specifier, planner and implementer agents, plans, explorations, run log, Makefile include, tool adapters. Use when adding the layout to a repo, adding or changing a task prompt or context doc, or when a session asks where an AI-related file belongs.
 ---
 
 # ai-layout
@@ -13,7 +13,7 @@ Slots for framework overlays: `{{overlay_note}}` `{{rules_extra}}` `{{dod_extra}
 removes them.
 Never write into `.claude/`, `.cursor/` or `.codex/` by hand — `ai/make/sync-adapters.sh`
 generates all three from `ai/`. Codex reads `.codex/skills/<name>/SKILL.md` as slash commands;
-since it cannot take subagents, the five agent-backed tasks get an inline-the-agent note.
+since it cannot take subagents, the nine agent-backed tasks get an inline-the-agent note.
 
 ```
 ai/AGENTS.md                  the contract, < 60 lines, no dynamic content
@@ -30,6 +30,10 @@ ai/agents/reviewer.md         project copy of the plugin reviewer (may add proje
 ai/agents/tester.md           project copy of the plugin tester (test conventions go here)
 ai/agents/architect.md        project copy of the plugin architect (boundaries, settled ADRs)
 ai/agents/analyst.md          project copy of the plugin analyst (domain terms, decision owners)
+ai/agents/explorer.md         project copy of the plugin explorer — /t4:explore runs in it
+ai/agents/specifier.md        project copy of the plugin specifier — /t4:spec runs in it
+ai/agents/planner.md          project copy of the plugin planner — /t4:plan runs in it
+ai/agents/implementer.md      project copy of the plugin implementer — /t4:run runs in it (test commands go here)
 ai/designs/                   /t4:design output: where a capability lives, contracts, data ownership
 ai/analyses/                  /t4:analyse output: requirements pack — facts, assumptions, proposals, questions apart
 ai/explorations/            /t4:explore output: options + recommendation per request

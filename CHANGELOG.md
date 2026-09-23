@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.27.0 — 2026-09-22
+- **The four loop steps run in agents of their own** (`specs/0005`, `ai/analyses/0001` EPIC-002).
+  `/t4:explore`, `/t4:spec`, `/t4:plan` and `/t4:run` delegate to new `explorer`, `specifier`,
+  `planner` and `implementer` agents, each carrying its task prompt's reading list, artefact
+  format, prohibitions and report word for word, so a step starts from its artefacts and not
+  from the chat that produced them. The session keeps what only a session can do: refuse an
+  empty argument, resolve a tracker key and stop when it does not resolve, ask the question an
+  agent returns instead of a file, relay the report unchanged. Report shapes are unchanged.
+- **The implementer stops honestly.** Red tests: box unticked, explanation. A test or command
+  the step names but the repo does not have: stop, name what was tried. It never weakens an
+  assertion, never starts the next step, and never consults a declared knowledge source — a
+  source shapes what is built, and that was settled before the plan.
+- **The dont-touch guard holds inside a subagent — proved, not assumed.** A plain subagent told
+  to write under a guarded path was blocked by the PreToolUse hook with the guard's own message.
+  The implementer refused the same step on the rule before reaching the hook.
+- Codex: nine of the twelve tasks now carry the inline-agent note. The session row in `log.csv`
+  counts the main transcript only; tokens spent inside a subagent are not in it, and the hooks
+  skill and workflow §9 say so.
+- Adopted repos: four task prompts changed (`ai/tasks/explore.md`, `spec.md`, `plan.md`,
+  `run.md`), four new upstream agent stubs (`ai/agents/explorer.md`, `specifier.md`,
+  `planner.md`, `implementer.md`), and one paragraph in `ai/docs/knowledge.md`. Not breaking:
+  a repo that edited one of the four prompts sees it as changed on both sides and merges by
+  hand, as with 0.19.0. Run `/t4:sync-sdlc` and take the eight files.
+
 ## 0.26.0 — 2026-09-22
 - **Agents may read a knowledge source the repo declares** (`docs/adr/0007`, `specs/0004`). A
   repo commits `ai/knowledge_base.md` — one table of `name`, `kind` (`mcp` or `tool`) and `use` —

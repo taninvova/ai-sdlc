@@ -19,7 +19,7 @@ Last refreshed by `/t4:fleet`.
 
 | Service | Repo | Owns | Exposes | Consumes | Owner |
 |---|---|---|---|---|---|
-| ai-sdlc (plugin `t4`) | `ai/sdlc` (d) — local dir `ai-sdlc` | the `ai/` layout, task prompts, reviewer / tester / architect / analyst agents, logging and guard hooks | `skills/ai-layout/templates/` · `agents/*.md` · `hooks/hooks.json` · `/t4:adopt-sdlc` `/t4:sync-sdlc` (d) | **nothing** (d) | tanin (d) |
+| ai-sdlc (plugin `t4`) | `ai/sdlc` (d) — local dir `ai-sdlc` | the `ai/` layout, task prompts, eight agents (reviewer, tester, architect, analyst, explorer, specifier, planner, implementer), logging and guard hooks | `skills/ai-layout/templates/` · `agents/*.md` · `hooks/hooks.json` · `/t4:adopt-sdlc` `/t4:sync-sdlc` (d) | **nothing** (d) | tanin (d) |
 
 - **Owns** — the data and the capability this service is the source of truth for.
 - **Exposes** — the contracts others may depend on. Anything not listed here is internal and

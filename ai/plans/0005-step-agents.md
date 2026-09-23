@@ -127,7 +127,7 @@ sees the chat it was meant not to see.
   "prisma/migrations/"` — the file was not created, and the hook's stderr appears five times in
   the outer transcript. DEC-010's first half is now evidence, not a supplied fact.
 
-- [ ] **Step 6 — Docs, release notes, version.** AC9's sentence in `skills/ai-hooks/SKILL.md`
+- [x] **Step 6 — Docs, release notes, version.** AC9's sentence in `skills/ai-hooks/SKILL.md`
   and workflow §9; workflow §5 (eight agents, one line each) and §8 (Codex row names eight);
   ai-layout skill tree (four stubs); README agents list; CHANGELOG 0.27.0 naming the blast
   radius per decision 2; version bump. Then AC14: a scratch repo adopted at 0.26.0, one prompt
@@ -135,6 +135,14 @@ sees the chat it was meant not to see.
   edited one "both changed"), four stubs new upstream, nothing else.
   *Proves:* AC9, AC13, AC14; definition of done 3 and 7. *Check:* `check-versions.sh`,
   `check-manifest.sh`, the scratch check.
+
+  **Result.** AC9: the hooks skill and workflow §9 state the under-count. AC13: workflow §5
+  lists eight agents, §8's Codex row names all eight, the seam paragraph names the agents.
+  AC14: a repo adopted from the 0.26.0 templates with `ai/tasks/spec.md` edited by hand,
+  checked against this tree — four upstream changed (three prompts and the seam document's
+  executor paragraph), `spec.md` both changed, four agent stubs new upstream, nothing else.
+  AC10: `git diff` on the four existing agents and their stubs since the spec commit is
+  empty. check-versions, check-adapters, check-manifest, check-doctor pass; sync idempotent.
 
 ## Risks
 | Risk | How it is checked |

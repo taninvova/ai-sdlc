@@ -22,6 +22,12 @@ The plugin registers these hooks globally (hooks/hooks.json). Every script:
 | PostToolUse Bash | log-cmd.js | ai/runs/cmds.jsonl when the command ran a test, lint or e2e command (vitest, jest, biome, playwright, pnpm/npm test|lint|e2e|check) |
 | Stop | session-stop.js | one line to ai/runs/log.pending.csv with tokens, cache hit rate, cost |
 
+The row counts the session's own transcript. Tokens spent inside a subagent — the reviewer,
+tester, architect, analyst, or the explorer, specifier, planner and implementer that the four
+loop steps delegate to — are not in the main transcript and so not in the row: a session that
+delegated a step under-counts by that step's cost. The hook does not read subagent transcripts
+today; recovering them is a separate change.
+
 ## Why the session row is buffered
 A Stop fires after every turn. Written straight into the tracked log.csv, the file was dirty for
 the whole session, `git checkout` refused to switch branches, and every branch grew its own tail
