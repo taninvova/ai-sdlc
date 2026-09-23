@@ -57,7 +57,7 @@ sees the chat it was meant not to see.
   *Proves:* AC1 (stubs half), AC12. *Check:* `diff` of the two seam copies empty;
   `check-adapters.sh`.
 
-- [ ] **Step 3 — The task prompts delegate.** `explore.md`, `spec.md`, `plan.md`, `run.md`: keep
+- [x] **Step 3 — The task prompts delegate.** `explore.md`, `spec.md`, `plan.md`, `run.md`: keep
   the empty-argument paragraph first, in the session; for `spec.md` keep the tracker paragraph
   in the session and pass the resolved description to the specifier as the request; add
   ``Delegate to the `<agent>` subagent`` with the relay instruction ("return its report

@@ -2,15 +2,19 @@
 description: Implement one step of a plan
 argument-hint: <plan path> <step>
 ---
-Read ai/AGENTS.md, ai/docs/coding-standards.md, and the plan named below.
-Implement ONLY the step named. Do not start the next step.
+Delegate to the `implementer` subagent with this instruction: implement ONLY the step named
+below of the plan named below, and never start the next one. Read ai/AGENTS.md,
+ai/docs/coding-standards.md, the plan, the spec it names and the ai/skills/ that apply;
+restate the step and the files it expects to touch; implement; write or update tests for the
+behaviour added; run lint, typecheck and tests until green; tick that step's checkbox in the
+plan only when green. If the tests cannot be made green, or the step names tests or a command
+that cannot be found or run, stop with the checkbox unticked and explain what was tried.
+Return its report unchanged: files changed · tests added · anything the plan or spec got wrong.
 
-1. Restate the step; list the files you expect to touch.
-2. Implement, following the ai/skills/ that apply to the area.
-3. Write or update tests for behaviour you added.
-4. Run lint, typecheck and tests. Fix until green. If you cannot, stop and explain.
-5. Tick the step's checkbox in the plan file.
-6. Report: files changed · tests added · anything the plan or spec got wrong.
+If it stopped with an explanation instead of a ticked step, relay the explanation and ask the
+developer how to proceed. In a headless run there is nobody to ask: report it and stop.
+
+Do not implement anything yourself in this task, and do not edit any file yourself.
 
 If nothing follows the command name, ask the user which plan and which step, and stop. Name the unticked steps if the plan is obvious — do not start one on your own.
 

@@ -2,23 +2,18 @@
 description: Turn a spec into an ordered implementation plan with checkboxes
 argument-hint: <spec path>
 ---
-Read ai/AGENTS.md, ai/docs/architecture.md, ai/docs/coding-standards.md, and the spec
-named below. Read the relevant skills in ai/skills/ (forms, data-access, playwright).
-Do not change any code.
-If `ai/docs/knowledge.md` exists, follow it: it says whether this repo has declared a knowledge
-source, what may be read from one and how a fact from it is labelled, and the one line to report
-when a declared source cannot be reached. Where it says this repo is unconfigured, say nothing
-about it.
+Delegate to the `planner` subagent with this instruction: turn the spec named below into
+ai/plans/<NNNN>-<slug>.md, same number as the spec. Read ai/AGENTS.md, ai/docs/architecture.md,
+ai/docs/coding-standards.md, the spec and the relevant ai/skills/; write the goal and spec
+link, files to create or modify with one line each on why, server versus client components,
+steps as `- [ ] Step N — …` each small enough for one `/t4:run` and naming the tests that prove
+it, risks and how each is checked, and the exact verification commands; change no code. Return
+its report unchanged: the plan path and anything in the spec that made planning ambiguous.
 
-Write ai/plans/<NNNN>-<slug>.md (same number as the spec):
-- Goal (one sentence) · Spec link
-- Files to create / modify, each with one line on why
-- Server vs client components, with reasons
-- Steps as a numbered checklist `- [ ] Step N — …`, each small enough for one `/t4:run`,
-  each naming the tests that prove it (map to AC numbers)
-- Risks and how each is checked
-- Verification: the exact commands and tests that must pass at the end
-Report the plan path and anything in the spec that made planning ambiguous.
+If it returns a question instead of a file, ask the developer that question and stop. In a
+headless run there is nobody to ask: report the question, say nothing was written, and stop.
+
+Do not plan anything yourself in this task, and do not edit any file yourself.
 
 If nothing follows the command name, ask the user which spec to plan, and stop. List the paths in specs/ if there are several — do not assume the newest.
 
