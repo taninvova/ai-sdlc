@@ -21,6 +21,7 @@ No open questions.
 | `skills/ai-hooks/SKILL.md`, `docs/workflow.md` §9 | one sentence: tokens spent inside a subagent are not in the session row (AC9). |
 | `docs/workflow.md` §5, §8; `skills/ai-layout/SKILL.md`; `README.md` | eight agents listed; Codex table names all eight as inlined; the tree gains four stub lines. |
 | `CHANGELOG.md` + 3 manifests | 0.27.0; blast radius: four prompts changed, four stubs new, not breaking, merge by hand if a prompt was edited. |
+| `ai/docs/fleet.md`, `commands/adopt-sdlc.md` | one-line consistency: "four agents" becomes eight. |
 
 Not touched: `check-adapters.sh` — its delegation assertions already cover any task that
 delegates, and it fails if a note is missing (AC2). `guard-paths.js` — AC8 proves it, it does
@@ -58,7 +59,7 @@ sees the chat it was meant not to see.
   `check-adapters.sh`.
 
 - [x] **Step 3 — The task prompts delegate.** `explore.md`, `spec.md`, `plan.md`, `run.md`: keep
-  the empty-argument paragraph first, in the session; for `spec.md` keep the tracker paragraph
+  the empty-argument paragraph in the session, where it was — last, before `$ARGUMENTS`; for `spec.md` keep the tracker paragraph
   in the session and pass the resolved description to the specifier as the request; add
   ``Delegate to the `<agent>` subagent`` with the relay instruction ("return its report
   unchanged"); remove the moved steps. Then `sync-adapters.sh` and `check-adapters.sh`.

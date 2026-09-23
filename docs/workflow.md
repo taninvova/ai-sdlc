@@ -255,10 +255,12 @@ Two differences are worth taking seriously rather than skimming:
 **The agents lose their independence.** Codex plugins cannot ship subagents, so `/t4:check`,
 `/t4:test`, `/t4:design`, `/t4:adr`, `/t4:analyse`, `/t4:explore`, `/t4:spec`, `/t4:plan` and
 `/t4:run` tell the session to follow `ai/agents/<name>.md` itself.
-The generated skill says so. It matters because independence is the whole point of those two
-agents: a tester that has seen the implementation writes tests that restate it, and a reviewer
-that wrote the code is not reviewing it. Under Codex, treat their findings as a self-check —
-useful, but not the second opinion the Claude Code path gives you.
+The generated skill says so. It matters most for the tester and the reviewer, whose whole point
+is independence: a tester that has seen the implementation writes tests that restate it, and a
+reviewer that wrote the code is not reviewing it. The four step agents lose something quieter:
+under Codex the step runs in the session that held the chat, so a spec can absorb twenty minutes
+of discussion that never reached the exploration. Treat every inlined agent's output as a
+self-check — useful, but not the second opinion the Claude Code path gives you.
 
 **The dont-touch guard does not run.** The hooks are Claude Code's; under Codex a path listed
 in `ai/docs/dont-touch.md` is protected by nothing but the prompt. If a repo relies on that

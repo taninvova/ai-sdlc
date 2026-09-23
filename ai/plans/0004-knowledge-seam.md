@@ -73,12 +73,26 @@ A fact in the wrong layer is the failure mode (ADR 0004 rule 3, ADR 0007 rule 1)
   declaration or a provider — `grep -iE 'knowledge|seam|declar|mcp|source' ` finds nothing
   that is not the ordinary word.
 
+  **Result.** Three scratch repos built from the release templates (no declaration; empty
+  file; a table missing `kind`), each run once through the explore task by an independent
+  session on the same request. Artefacts of 133, 85 and 99 lines, seven sections each; the
+  grep over knowledge/seam/declar/mcp/external/unverified/consulted/source found only ordinary
+  uses ("no dependencies are declared", "source row fields"); no other file written; all
+  three reports silent about the mechanism. Transcripts: session task outputs, outside the repo.
+
 - [x] **Step 4 — Doctor line.** `commands/doctor.md` step 2b, worded like step 2: follow the
   seam document to decide configured or not; if the document is absent, say the layout predates
   it and name `/t4:sync-sdlc`; name no provider and no filename.
   *Proves:* AC14. *Check:* three scratch repos — configured, unconfigured with the seam,
   layout without the seam — run through the command's prompt headless, as plan 0003 step 1
   did; `check-adapters.sh` covers `commands/*.md`, so the line cannot leak the filename.
+
+  **Result.** Three scratch repos — valid declaration; seam document with no declaration;
+  layout without the seam document — each run through the doctor prompt by an independent
+  session, nothing changed. Lines reported: "configured — one source is declared"; "present
+  … has not declared a source — not configured"; "does not exist — this layout predates
+  knowledge-source support; run /t4:sync-sdlc". No provider, kind or filename in any of them.
+  The line is the command prompt's, as the tracker line is; `doctor.sh` does not carry it.
 
 - [~] **Step 5 — Prove it live.** In a scratch repo with a valid declaration naming one MCP
   server this session has attached and the developer controls: `/t4:explore` on a request
@@ -103,10 +117,12 @@ A fact in the wrong layer is the failure mode (ADR 0004 rule 3, ADR 0007 rule 1)
   exploration follows the repo's HTTP rule and records the disagreement as Open question 1,
   naming the source. **AC5 pass:** the transcript shows 5 × `fetch`, 4 × `list_documents`,
   1 × `list_collections` on the source and nothing else, against a server that exposes create,
-  update, delete and comment tools. **AC7 pass (headless):** under `make ai TASK=explore` the
+  update, delete and comment tools. **AC7 partially proved (headless):** under `make ai TASK=explore` the
   source's first call was denied — a headless run has nobody to grant it — and the run
   proceeded, asked nothing, and carried exactly one line: `claude_ai_docs_nsix_io (mcp) not
-  consulted: error: …`. **AC8 pass:** exit 0, one row appended to `ai/runs/log.csv`.
+  consulted: error: …`. AC7's first clause, "the artefact is written", holds only in the
+  interactive run; headless, the runner denied the Write (see below). **AC8 pass:** exit 0, one
+  row appended to `ai/runs/log.csv`.
   Two seam sentences were tightened by what the runs showed: `name` for `mcp` is the server
   segment of the session's tool names, and headless is unreachable because the call is denied,
   not because no server is attached.

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.27.1 — 2026-09-22
+- Review follow-ups for 0.26.0 and 0.27.0, no behaviour change.
+- `ai/docs/knowledge.md`: the "Not defined here yet" section no longer says the implementer's
+  position waits for a spec — the executor paragraph above it settled it in 0.27.0, and the two
+  sentences contradicted each other.
+- `tester` and `reviewer` prompts: in an unconfigured repo, say nothing about a knowledge source —
+  not even that none was used. The reviewer's summary had been ending with exactly that leak.
+- `check-adapters.sh`: `shopt -s nullglob` per the shell standard, and a check that this repo's
+  real-file copy of the seam document is byte-identical to the template.
+- Codex inline note and workflow §8 now say what the four step agents lose when inlined: the
+  step sees the chat it was meant to start without.
+- Plans 0004 and 0005 and spec 0004: AC7 recorded as partially proved headless; result blocks for
+  0004 steps 3 and 4; the 0005 file table names `fleet.md` and `adopt-sdlc.md`; the doctor line is
+  stated to be the prompt's. 0.27.0's adopter note said eight files; it is nine.
+- Adopted repos: `ai/docs/knowledge.md` changes one paragraph; the Codex notes regenerate on
+  `/t4:sync-sdlc`. Not breaking.
+
 ## 0.27.0 — 2026-09-22
 - **The four loop steps run in agents of their own** (`specs/0005`, `ai/analyses/0001` EPIC-002).
   `/t4:explore`, `/t4:spec`, `/t4:plan` and `/t4:run` delegate to new `explorer`, `specifier`,
@@ -22,7 +39,7 @@
   `run.md`), four new upstream agent stubs (`ai/agents/explorer.md`, `specifier.md`,
   `planner.md`, `implementer.md`), and one paragraph in `ai/docs/knowledge.md`. Not breaking:
   a repo that edited one of the four prompts sees it as changed on both sides and merges by
-  hand, as with 0.19.0. Run `/t4:sync-sdlc` and take the eight files.
+  hand, as with 0.19.0. Run `/t4:sync-sdlc` and take the nine files.
 
 ## 0.26.0 — 2026-09-22
 - **Agents may read a knowledge source the repo declares** (`docs/adr/0007`, `specs/0004`). A

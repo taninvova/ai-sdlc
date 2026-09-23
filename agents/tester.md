@@ -43,6 +43,7 @@ The task names one; if none is given, infer from whether the plan's steps are ti
   duplicate them.
 - Never consult a declared knowledge source, whatever `ai/docs/knowledge.md` says this repo
   has. A source may describe the implementation, and the point of you is not to have seen it.
+  Never mention a source, or that file, in your report — not even to say none was used.
 - Respect ai/docs/dont-touch.md.
 
 ## Report
