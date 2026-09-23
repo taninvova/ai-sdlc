@@ -2,8 +2,10 @@
 
 The services the `architect` agent reads before it decides where a capability belongs.
 
-This plugin is standalone: it has no dependency on any other repo, and it must not acquire
-one. Nothing here is deployed — it is a Claude Code plugin consumed by developer machines
+This plugin is standalone: it has no dependency on any other repo and no runtime dependency,
+and it must not acquire either. Two optional task paths reach services a repo configures — a
+tracker (docs/adr/0004) and a read-only knowledge source (docs/adr/0007) — each behind one
+seam document and each inert where the repo declares nothing. Nothing here is deployed — it is a Claude Code plugin consumed by developer machines
 and CI, so "service" means "plugin" and "contract" means "the templates and prompts a
 consumer builds on".
 
@@ -39,13 +41,17 @@ or version-pinned by anything in this repo — the dependency runs one way only.
   Each is the source of truth for its own version; nothing here keeps a copy.
 
 ## Boundaries
-> **Under review.** `ai/designs/0002-jira-integration.md` proposes one task calling an external
-> tracker, which the first bullet below does not permit as written. `docs/adr/0004` decides it.
-> Nothing here changes until that ADR is accepted — this section is the claim as it stands.
-
 - **ai-sdlc depends on no repo.** It must never read, name, list or version-pin another repo —
   not in a template, a command, a doc or an agent prompt. A capability that needs knowledge
   of a consumer belongs in that consumer.
+- **Two optional service dependencies, and no other.** A task may call an external tracker in a
+  repo that has committed `ai/jira.yaml`, and an agent may read an external knowledge source in
+  a repo that has committed `ai/knowledge_base.md`. Every task works without either; a repo
+  that configures neither sees no new prompt, no new question and no new failure mode. The
+  tracker is named only in `ai/docs/tracker.md` and the knowledge source only in
+  `ai/docs/knowledge.md`, never in a task prompt (docs/adr/0004, 0007). The tracker stops when
+  its input cannot be resolved; the knowledge seam proceeds and reports when its source cannot
+  be reached.
 - ai-sdlc must not contain framework-specific content. Framework rules reach a project through
   the overlay slots, supplied by whoever installed the overlay.
 - No runtime dependency of any kind: no package manager, no lockfile, no submodule, no

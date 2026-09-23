@@ -127,7 +127,7 @@ A fact in the wrong layer is the failure mode (ADR 0004 rule 3, ADR 0007 rule 1)
   blank turns and zero tokens — `log.js` did not find usage in this CLI version's JSON shape;
   worth a `/t4:fix` of its own.
 
-- [ ] **Step 6 — Wording, release notes, version.** Apply ADR 0007's replacement text to
+- [x] **Step 6 — Wording, release notes, version.** Apply ADR 0007's replacement text to
   `ai/docs/fleet.md` (opening line and Boundaries; remove the "Under review" banner 0004 left)
   and reword both manifest descriptions to name two optional paths. README, workflow §5 and
   the ai-layout skill: where the seam sits and the rule in one sentence each. CHANGELOG 0.26.0

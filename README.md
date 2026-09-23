@@ -15,6 +15,12 @@ Works with Claude Code and Codex: `ai/make/sync-adapters.sh` generates `.claude/
 `/t4:spec` also accepts a tracker ticket key — `/t4:spec ABC-12` — in a repo that has
 committed `ai/jira.yaml`. Off by default: without that file nothing changes, whatever you type.
 
+A repo can also declare a read-only knowledge source — an MCP server the developer's tool has
+attached, or a knowledge base — in `ai/knowledge_base.md`. The explore, spec and plan tasks and
+the analyst, architect and reviewer agents then read it and cite what they used as external and
+unverified; an unreachable source is one report line, never a halt. `ai/docs/knowledge.md` is the
+only file that knows how; a repo that declares nothing sees nothing.
+
 Project-level slash commands (generated into each repo from `ai/tasks/`): `/t4:fleet /t4:design /t4:adr /t4:analyse /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:check`.
 
 ## Skills (model-invoked, hidden from the menu)

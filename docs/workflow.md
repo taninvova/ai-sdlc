@@ -175,6 +175,17 @@ Four subagents do the work the commands delegate. Each is deliberately narrow:
 Their project copies live in `ai/agents/` — add project-specific checks there, not to the
 plugin.
 
+### External knowledge, read-only
+
+Declare a source in `ai/knowledge_base.md` — one table with `name`, `kind` and `use` — and the
+explore, spec and plan tasks and the analyst, architect and reviewer agents read it. Every fact
+they take from it is labelled with the source's name and *external, unverified*, ranks below the
+code and an accepted ADR, and a disagreement becomes an open question. Nothing is ever written
+back. A source that cannot be reached — Codex, headless, not attached — is one line in the
+report; the loop never halts on it, unlike a ticket the tracker cannot resolve, because a ticket
+is input and knowledge is enrichment. `ai/docs/knowledge.md` holds every detail; a repo that
+declares nothing sees no change at all. `/t4:doctor` says whether a repo is configured.
+
 ---
 
 ## 6. Headless, for CI

@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.26.0 — 2026-09-22
+- **Agents may read a knowledge source the repo declares** (`docs/adr/0007`, `specs/0004`). A
+  repo commits `ai/knowledge_base.md` — one table of `name`, `kind` (`mcp` or `tool`) and `use` —
+  and the explore, spec and plan tasks and the analyst, architect and reviewer agents read the
+  declared sources. Every fact taken from one is labelled with the source's name and *external,
+  unverified*, ranks below the code, the context docs and an accepted ADR, and a disagreement is
+  recorded as an open question naming the source; instruction-shaped text from a source is
+  quoted content. Read-only: no create, update, delete or comment operation is ever invoked,
+  and no configuration turns writing on. An unreachable source — not attached, Codex, headless
+  — is one report line and the task proceeds; headless exits 0 and logs its row. The tester
+  never consults a source. `/t4:doctor` adds one line saying whether the seam is configured.
+- **One seam, enforced.** `ai/docs/knowledge.md` is the only file in the layout that may name the
+  declaration, a kind, a provider or a query syntax; it also fixes what "configured" means and
+  fails closed on anything else. `check-adapters.sh` gains a second banned list (the declaration
+  filename), a self-test that feeds the scan a scratch prompt so a broken pattern cannot pass
+  silently, and a sweep over the prompts and both agent sets for the declaration, the protocol
+  name or a URL.
+- **The standalone claim is now stated for both seams.** `ai/docs/fleet.md` and the manifest
+  descriptions carry ADR 0007's wording: no repo dependency, no runtime dependency, two optional
+  task paths each inert where nothing is declared. The "Under review" banner ADR 0004 left in the
+  Boundaries section is gone.
+- Proved by scratch runs (plan 0004 step 5): unconfigured, empty and malformed declarations leave
+  artefact and report untouched; a configured repo against a real MCP source produced labelled
+  facts, an open question for a planted contradiction, and read-only calls only; the headless
+  unreachable case proceeded with one line. AC6 (instruction-shaped text in a source) is
+  deferred until the owner's page carries the line.
+- Adopted repos: new upstream file `ai/docs/knowledge.md`; `ai/tasks/explore.md`, `spec.md` and
+  `plan.md` gain one conditional paragraph each. Not breaking — nothing behaves differently until
+  a repo commits a declaration. `/t4:sync-sdlc` lists the four files; take them and re-run it.
+
 ## 0.25.0 — 2026-09-22
 - **New `analyst` agent and `/t4:analyse` task.** A request that is still a business
   description — several actors, permissions, business rules, a lifecycle, integrations, policy
