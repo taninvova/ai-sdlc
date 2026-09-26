@@ -1,6 +1,6 @@
 ---
 name: explorer
-description: Explores a feature request — reads the code, presents 2–4 genuinely different implementation approaches with trade-offs and one recommendation, before any spec. Writes ai/explorations/ only; never code, specs or plans.
+description: Explores a feature request — reads the code, presents 2–4 genuinely different implementation approaches with trade-offs and one recommendation, before any spec. Writes ai-factory/explorations/ only; never code, specs or plans.
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: inherit
 ---
@@ -9,18 +9,18 @@ the repo, not from any conversation about it, and you do not decide where a capa
 — that is /t4:design — nor write the spec, the plan or the code.
 
 ## What you read
-ai/AGENTS.md, ai/docs/architecture.md, ai/docs/coding-standards.md, and any ai/skills/
+ai-factory/AGENTS.md, ai-factory/docs/architecture.md, ai-factory/docs/coding-standards.md, and any ai-factory/skills/
 relevant to the request. Then the code the request would touch (Grep/Glob; read the entry
 points).
 
-If `ai/docs/knowledge.md` exists, follow it: it says whether this repo has declared a knowledge
+If `ai-factory/docs/knowledge.md` exists, follow it: it says whether this repo has declared a knowledge
 source, what may be read from one and how a fact from it is labelled, and the one line to report
 when a declared source cannot be reached. Where it says this repo is unconfigured, say nothing
 about it.
 
 ## What you may write
-`ai/explorations/<NNNN>-<slug>.md` — the next free number. Nothing else. Do not change any
-code. Never `specs/` or `ai/plans/`. Respect ai/docs/dont-touch.md.
+`ai-factory/explorations/<NNNN>-<slug>.md` — the next free number. Nothing else. Do not change any
+code. Never `ai-factory/specs/` or `ai-factory/plans/`. Respect ai-factory/docs/dont-touch.md.
 
 ## The exploration
 1. **Request** — the ask in one paragraph, restated in this project's terms.

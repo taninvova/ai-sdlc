@@ -32,19 +32,28 @@ cd "$REPO" || { say unknown repo "cannot enter $REPO"; done_; }
 # --- layout -----------------------------------------------------------------------------
 # A repo with no layout is a finding, not an error: most repos on a machine do not have one,
 # and the command must be runnable anywhere.
-if [ ! -d ai ]; then
-  say finding layout "no ai/ directory — this repo has not adopted the layout. Run /t4:adopt-sdlc"
+# 1.0.0 renamed ai/ to ai-factory/. Three states are worth telling apart, because the remedy  # path-scan-ok
+# differs and the hooks behave differently in each: never adopted, adopted but not yet migrated,
+# and half migrated. The hooks prefer ai-factory/ and fall back to ai/ until 2.0.0, so saying which  # path-scan-ok
+# directory they are actually reading is the difference between "my log stopped" and a diagnosis.
+if [ -d ai-factory ] && [ -d ai ]; then
+  say finding layout "both ai/ and ai-factory/ exist — this repo is half migrated. The hooks are using ai-factory/; the prompts name it too. Decide which is current, remove the other, then run /t4:migrate-layout"  # path-scan-ok
+elif [ ! -d ai-factory ] && [ -d ai ]; then
+  say finding layout "ai/ but no ai-factory/ — this repo is on the pre-1.0.0 layout. The hooks still work (they accept ai/ until 2.0.0), but every prompt names ai-factory/, so the tasks will look in the wrong place. Run /t4:migrate-layout"  # path-scan-ok
+  done_
+elif [ ! -d ai-factory ]; then
+  say finding layout "no ai-factory/ directory — this repo has not adopted the layout. Run /t4:adopt-sdlc"
   done_
 fi
-tasks=(ai/tasks/*.md)
+tasks=(ai-factory/tasks/*.md)
 if [ ${#tasks[@]} -eq 0 ]; then
-  say finding layout "ai/ exists but ai/tasks/ is empty — run /t4:adopt-sdlc, or /t4:sync-sdlc if this is a partial copy"
+  say finding layout "ai-factory/ exists but ai-factory/tasks/ is empty — run /t4:adopt-sdlc, or /t4:sync-sdlc if this is a partial copy"
 else
-  say ok layout "ai/ present, ${#tasks[@]} tasks"
+  say ok layout "ai-factory/ present, ${#tasks[@]} tasks"
 fi
 
 # --- adapters ---------------------------------------------------------------------------
-# Generated from ai/tasks/. Fewer commands than tasks means a sync was missed, which is the
+# Generated from ai-factory/tasks/. Fewer commands than tasks means a sync was missed, which is the
 # usual cause of "my slash commands are gone".
 cmds=(.claude/commands/t4/*.md)
 if [ ${#cmds[@]} -eq 0 ]; then
@@ -77,16 +86,16 @@ fi
 # --- version recorded by this repo -------------------------------------------------------
 if [ "$SELF" = yes ]; then
   : # no manifest and no drift by design; the environment checks below still apply
-elif [ ! -f ai/.sdlc.json ]; then
-  say unknown version "no ai/.sdlc.json — this repo was adopted before manifests existed, so drift cannot be computed. Start a baseline: node \"$PLUGIN/skills/ai-layout/scripts/manifest.js\" write . \"$PLUGIN\""
+elif [ ! -f ai-factory/.sdlc.json ]; then
+  say unknown version "no ai-factory/.sdlc.json — this repo was adopted before manifests existed, so drift cannot be computed. Start a baseline: node \"$PLUGIN/skills/ai-layout/scripts/manifest.js\" write . \"$PLUGIN\""
 else
   # The key is `version`, not `plugin_version` — read from the manifest manifest.js writes,
   # not from what the field is called in prose. Getting this wrong reported "unknown" for a
   # repo whose version was recorded perfectly well.
-  recorded=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' ai/.sdlc.json | head -1)
+  recorded=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' ai-factory/.sdlc.json | head -1)
   installed=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$PLUGIN/.claude-plugin/plugin.json" 2>/dev/null | head -1)
   if [ -z "$recorded" ]; then
-    say unknown version "ai/.sdlc.json has no version — it may be hand-edited or from a newer schema"
+    say unknown version "ai-factory/.sdlc.json has no version — it may be hand-edited or from a newer schema"
   elif [ -z "$installed" ]; then
     # Never report agreement that was not checked. An empty $installed means plugin.json could
     # not be read, and "agree" would be a claim with no evidence behind it — the one thing a
@@ -108,7 +117,7 @@ elif ! command -v node >/dev/null 2>&1; then
   say unknown drift "node not on PATH, so the layout cannot be compared with the templates"
 elif [ ! -f "$PLUGIN/skills/ai-layout/scripts/manifest.js" ]; then
   say unknown drift "cannot find the plugin's manifest.js (looked in $PLUGIN) — pass the plugin root as the second argument"
-elif [ ! -f ai/.sdlc.json ]; then
+elif [ ! -f ai-factory/.sdlc.json ]; then
   : # already reported above as version/unknown; saying it twice helps nobody
 else
   out=$(node "$PLUGIN/skills/ai-layout/scripts/manifest.js" check . "$PLUGIN" 2>&1)

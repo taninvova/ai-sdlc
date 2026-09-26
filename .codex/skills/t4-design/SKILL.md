@@ -2,11 +2,11 @@
 name: t4-design
 description: Decide where a capability belongs across services, what contract it exposes and who owns the data — before any spec
 ---
-Read `ai/tasks/design.md` in this repo and follow it exactly. Everything the user typed after the
+Read `ai-factory/tasks/design.md` in this repo and follow it exactly. Everything the user typed after the
 command name is that task's input (its `$ARGUMENTS`).
 
 That task delegates to the `architect` subagent. Codex plugins cannot ship subagents, so read
-`ai/agents/architect.md` and follow it yourself, in this session, producing exactly the output
+`ai-factory/agents/architect.md` and follow it yourself, in this session, producing exactly the output
 it specifies.
 
 Weigh its findings knowing what this costs: under Claude Code that agent runs in its own

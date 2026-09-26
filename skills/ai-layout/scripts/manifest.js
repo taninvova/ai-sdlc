@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// ai/.sdlc.json — the record of which ai-sdlc layout an adopted repo holds, and the drift
-// check that reads it. Design: ai/designs/0001-layout-version-and-drift.md.
+// ai-factory/.sdlc.json — the record of which ai-sdlc layout an adopted repo holds, and the drift
+// check that reads it. Design: ai-factory/designs/0001-layout-version-and-drift.md.
 //
 //   manifest.js write <repo-root> <plugin-root> [--overlay name=version]
 //   manifest.js check <repo-root> <plugin-root>
@@ -14,9 +14,9 @@ const path = require("path");
 const crypto = require("crypto");
 
 const SCHEMA = 1;
-const MANIFEST = "ai/.sdlc.json";
+const MANIFEST = "ai-factory/.sdlc.json";
 // Volatile or per-project by nature — tracking them would report drift on every run.
-const SKIP = [/^ai\/runs\//, /(^|\/)\.gitkeep$/, /(^|\/)\.DS_Store$/];
+const SKIP = [/^ai-factory\/runs\//, /(^|\/)\.gitkeep$/, /(^|\/)\.DS_Store$/];
 
 const sha = b => "sha256:" + crypto.createHash("sha256").update(b).digest("hex");
 const rel = (root, p) => path.relative(root, p).split(path.sep).join("/");
@@ -42,7 +42,7 @@ function pluginVersion(pluginRoot) {
 }
 function die(msg) { console.error(`manifest: ${msg}`); process.exit(2); }
 
-// ai-sdlc's own repo symlinks ai/tasks, ai/agents and ai/make into the templates, so it is
+// ai-sdlc's own repo symlinks ai-factory/tasks, ai-factory/agents and ai-factory/make into the templates, so it is
 // current by construction and must never carry a manifest.
 // The plugin's own repo is where the templates come from, so it has no manifest and nothing to
 // compare against. Path equality detects that only while the plugin is loaded from its working
@@ -84,7 +84,14 @@ function readManifest(repoRoot) {
 
 function cmdWrite(repoRoot, pluginRoot, args) {
   if (isPluginItself(repoRoot, pluginRoot)) { console.log("manifest: this is the ai-sdlc plugin itself — no manifest written."); return 0; }
-  if (!fs.existsSync(path.join(repoRoot, "ai"))) die("no ai/ directory — run /t4:adopt-sdlc first");
+  // The same trap cmdCheck short-circuits: a repo on the pre-1.0.0 layout has a layout, so sending it
+  // to /t4:adopt-sdlc would scaffold a second one beside the first. Reachable by hand, from a
+  // developer who ran the baseline command this file used to print.
+  if (!fs.existsSync(path.join(repoRoot, "ai-factory"))) {
+    if (fs.existsSync(path.join(repoRoot, "ai")))
+      die("this repo is on the pre-1.0.0 layout — ai/, not ai-factory/. Run /t4:migrate-layout first; /t4:adopt-sdlc would add a second layout beside it.");  // path-scan-ok
+    die("no ai-factory/ directory — run /t4:adopt-sdlc first");
+  }
   const prev = readManifest(repoRoot);
   const m = build(repoRoot, pluginRoot, prev);
   const ov = args.find(a => a.startsWith("--overlay="));
@@ -98,13 +105,29 @@ function cmdCheck(repoRoot, pluginRoot) {
   if (isPluginItself(repoRoot, pluginRoot)) { console.log("layout: this is the ai-sdlc plugin itself — templates are the source, nothing to compare."); return 0; }
   const tdir = templatesDir(pluginRoot);
   const now = pluginVersion(pluginRoot);
+
+  // An unmigrated repo, before anything is compared. Not for brevity — measured, the failure is
+  // worse than a long report. MANIFEST is now ai-factory/.sdlc.json, so a repo holding a perfectly
+  // good pre-1.0.0 manifest looks like it has none: the branch below tells it "adopted before
+  // manifests existed" (false), sends it to manifest.js write (which refuses, having no ai-factory/),
+  // from there to /t4:adopt-sdlc, which would scaffold a SECOND layout beside the first. Three
+  // wrong answers in a row to a repo whose only problem is that it has not run one command.
+  if (!fs.existsSync(path.join(repoRoot, "ai-factory")) && fs.existsSync(path.join(repoRoot, "ai"))) {
+    console.log(`layout: this repo is on the pre-1.0.0 layout — ai/, with specs/ and docs/adr/ outside it.`);  // path-scan-ok
+    console.log(`  ai-sdlc here is ${now}, which expects ai-factory/. Drift cannot be compared across the`);
+    console.log(`  rename: every tracked path changed prefix, so the usual report would be one line per file.`);
+    console.log(`  Move this repo first, in a commit of its own:  /t4:migrate-layout`);
+    console.log(`  Until then the hooks keep working — they accept the old directory name until 2.0.0.`);
+    return 0;
+  }
+
   const m = readManifest(repoRoot);
 
   if (!m) {
     let guess = "";
-    try { guess = (fs.readFileSync(path.join(repoRoot, "ai", "AGENTS.md"), "utf8").match(/ai-sdlc\s+([0-9]+\.[0-9]+\.[0-9]+)/) || [])[1] || ""; } catch {}
+    try { guess = (fs.readFileSync(path.join(repoRoot, "ai-factory", "AGENTS.md"), "utf8").match(/ai-sdlc\s+([0-9]+\.[0-9]+\.[0-9]+)/) || [])[1] || ""; } catch {}
     console.log(`layout: no ${MANIFEST} — this repo was adopted before manifests existed.`);
-    console.log(`  version: unknown${guess ? ` (ai/AGENTS.md says it was scaffolded with ${guess})` : ""} · plugin here: ${now}`);
+    console.log(`  version: unknown${guess ? ` (ai-factory/AGENTS.md says it was scaffolded with ${guess})` : ""} · plugin here: ${now}`);
     console.log(`  Drift cannot be computed without a baseline. To start one from the files as they`);
     console.log(`  stand now — which assumes they are correct — run:`);
     console.log(`    node "${path.join(pluginRoot, "skills/ai-layout/scripts/manifest.js")}" write . "${pluginRoot}"`);
@@ -147,7 +170,7 @@ function cmdCheck(repoRoot, pluginRoot) {
   const drifted = b.upstream.length + b.both.length + b.added.length + b.removed.length + b.gone.length;
   if (!drifted && !b.local.length) console.log("\n  up to date — every tracked file matches.");
   else if (!drifted) console.log("\n  up to date with upstream; the differences above are your own.");
-  console.log("\n  Reported only — /t4:sync-sdlc changes nothing under ai/.");
+  console.log("\n  Reported only — /t4:sync-sdlc changes nothing under ai-factory/.");
   return 0;
 }
 

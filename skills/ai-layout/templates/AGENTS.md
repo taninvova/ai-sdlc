@@ -1,1 +1,1 @@
-See ai/AGENTS.md
+See ai-factory/AGENTS.md

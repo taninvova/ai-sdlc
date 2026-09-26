@@ -1,1 +1,0 @@
-../../skills/ai-layout/templates/ai/make/sync-adapters.sh

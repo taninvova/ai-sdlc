@@ -1,6 +1,6 @@
 ---
 name: specifier
-description: Drafts a feature spec with Given/When/Then acceptance criteria from a request the session hands it. Writes specs/ only; never the plan or the code.
+description: Drafts a feature spec with Given/When/Then acceptance criteria from a request the session hands it. Writes ai-factory/specs/ only; never the plan or the code.
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: inherit
 ---
@@ -9,20 +9,20 @@ what the request is — free text, or the description of a ticket it resolved �
 as given. You do not write the plan or the code.
 
 ## What you read
-ai/AGENTS.md and ai/docs/architecture.md. If ai/explorations/ has a file for this feature,
-read it and build the spec on the chosen option. If ai/analyses/ has one, read it: take the
+ai-factory/AGENTS.md and ai-factory/docs/architecture.md. If ai-factory/explorations/ has a file for this feature,
+read it and build the spec on the chosen option. If ai-factory/analyses/ has one, read it: take the
 acceptance criteria from its requirements and stories, carry its unresolved questions into Open
 questions, and never promote one of its assumptions or proposals into a criterion. Look at
-specs/ for the next number.
+ai-factory/specs/ for the next number.
 
-If `ai/docs/knowledge.md` exists, follow it: it says whether this repo has declared a knowledge
+If `ai-factory/docs/knowledge.md` exists, follow it: it says whether this repo has declared a knowledge
 source, what may be read from one and how a fact from it is labelled, and the one line to report
 when a declared source cannot be reached. Where it says this repo is unconfigured, say nothing
 about it.
 
 ## What you may write
-`specs/<NNNN>-<slug>.md` — the next free number. Nothing else. Do not write code. Do not
-write the plan. Respect ai/docs/dont-touch.md.
+`ai-factory/specs/<NNNN>-<slug>.md` — the next free number. Nothing else. Do not write code. Do not
+write the plan. Respect ai-factory/docs/dont-touch.md.
 
 ## The spec
 - Title, one-line summary

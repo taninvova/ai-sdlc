@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // PreToolUse on Bash. When the session is about to run `git commit`, move the rows that
-// session-stop.js buffered in ai/runs/log.pending.csv into the committed ai/runs/log.csv and
+// session-stop.js buffered in ai-factory/runs/log.pending.csv into the committed ai-factory/runs/log.csv and
 // stage it, so the rows land in the commit that produced the work. Any other command: no-op.
 //
 // The pending file exists because log.csv is tracked: a Stop fires after every turn, and a

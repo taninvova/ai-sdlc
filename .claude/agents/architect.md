@@ -1,1 +1,1 @@
-../../ai/agents/architect.md
+../../ai-factory/agents/architect.md

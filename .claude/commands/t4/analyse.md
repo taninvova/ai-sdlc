@@ -2,4 +2,4 @@
 description: Turn a feature description into a business-analysis pack — objectives, scope, actors and permissions, use cases, requirements, rules, data, stories with acceptance criteria, test scenarios — facts, assumptions and open questions kept apart; before any spec
 argument-hint: <feature description> | lean|questions <feature description> | review|update|explain <analysis path> […]
 ---
-@../../../ai/tasks/analyse.md
+@../../../ai-factory/tasks/analyse.md

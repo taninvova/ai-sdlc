@@ -1,5 +1,5 @@
 {
-  "description": "ai-sdlc logging and guard hooks. All scripts no-op unless the cwd contains an ai/ directory. None print to stdout.",
+  "description": "ai-sdlc logging and guard hooks. All scripts no-op unless the cwd contains an ai-factory/ directory, or — for a repo that has not yet run /t4:migrate-layout — an ai/ directory; that fallback goes in 2.0.0. None print to stdout.",
   "hooks": {
     "SessionStart": [
       { "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/ai-hooks/scripts/session-start.js\"" } ] }
