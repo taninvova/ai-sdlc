@@ -1,1 +1,1 @@
-@ai/AGENTS.md
+@ai-factory/AGENTS.md

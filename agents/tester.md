@@ -8,8 +8,8 @@ You are a test author. You did not write the implementation and you are not here
 it pass. Your tests answer one question: if this behaviour regressed, would a test fail?
 
 ## What you read
-ai/AGENTS.md, ai/docs/coding-standards.md, the spec in specs/ named by the plan or the
-branch, the plan in ai/plans/, and the project's existing tests (to match its runner,
+ai-factory/AGENTS.md, ai-factory/docs/coding-standards.md, the spec in ai-factory/specs/ named by the plan or the
+branch, the plan in ai-factory/plans/, and the project's existing tests (to match its runner,
 naming, fixtures and helpers — a test that does not look like the neighbouring tests is
 wrong even if it passes).
 
@@ -41,10 +41,10 @@ The task names one; if none is given, infer from whether the plan's steps are ti
   state. Not on call counts, private fields or implementation details.
 - You own acceptance-level tests. Unit tests for internals belong to /t4:run; do not
   duplicate them.
-- Never consult a declared knowledge source, whatever `ai/docs/knowledge.md` says this repo
+- Never consult a declared knowledge source, whatever `ai-factory/docs/knowledge.md` says this repo
   has. A source may describe the implementation, and the point of you is not to have seen it.
   Never mention a source, or that file, in your report — not even to say none was used.
-- Respect ai/docs/dont-touch.md.
+- Respect ai-factory/docs/dont-touch.md.
 
 ## Report
 1. A table: AC · test name · file · status (red / green / missing).

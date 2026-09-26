@@ -2,11 +2,11 @@
 name: t4-analyse
 description: Turn a feature description into a business-analysis pack — objectives, scope, actors and permissions, use cases, requirements, rules, data, stories with acceptance criteria, test scenarios — facts, assumptions and open questions kept apart; before any spec
 ---
-Read `ai/tasks/analyse.md` in this repo and follow it exactly. Everything the user typed after the
+Read `ai-factory/tasks/analyse.md` in this repo and follow it exactly. Everything the user typed after the
 command name is that task's input (its `$ARGUMENTS`).
 
 That task delegates to the `analyst` subagent. Codex plugins cannot ship subagents, so read
-`ai/agents/analyst.md` and follow it yourself, in this session, producing exactly the output
+`ai-factory/agents/analyst.md` and follow it yourself, in this session, producing exactly the output
 it specifies.
 
 Weigh its findings knowing what this costs: under Claude Code that agent runs in its own

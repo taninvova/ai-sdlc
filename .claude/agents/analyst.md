@@ -1,1 +1,1 @@
-../../ai/agents/analyst.md
+../../ai-factory/agents/analyst.md
