@@ -130,9 +130,9 @@ node "$PLUGIN/skills/ai-layout/scripts/manifest.js" write . "$PLUGIN" >/dev/null
 # Deliberately NOT staged beyond the moves. `git mv` has put pure renames in the index; the
 # rewrite, the adapters and the manifest sit in the working tree on top of them. That split is the
 # whole point: committed as one change, the move and the rewrite together drop each file below
-# git's rename threshold and `git log --follow` stops at the migration — measured, not assumed, on
-# a repo with real history. Committed as two, every file's history survives. The report below asks
-# for exactly that, in that order.
+# git's rename threshold and `git log --follow` stops at the migration — for any file whose path
+# lines are a large share of its content, which many prompts and stubs are. Longer files survive one
+# commit; two make the outcome independent of file size. The report below asks for that order.
 
 # --- report: what moved and what was rewritten, kept apart ----------------------------------
 echo "migrate-layout: done. Nothing has been committed — review and commit this as its own change."
@@ -161,6 +161,7 @@ echo "Commit it as TWO commits, in this order — that is what keeps file histor
 echo "  git commit -m 'ai(chore): move the layout to ai-factory/ (paths unchanged)'"
 echo "  git add -A && git commit -m 'ai(chore): point the prompts at ai-factory/'"
 echo "The first is staged already and is nothing but renames, so git log --follow keeps working."
-echo "Folded into one commit, the moves fall below git's rename threshold and history is severed."
+echo "One commit instead risks it: git pairs a rename by similarity, so any file whose path lines are"
+echo "most of its content — a short prompt, a stub — drops below the threshold and loses its history."
 echo
 echo "Take upstream prompt changes separately with /t4:sync-sdlc."
