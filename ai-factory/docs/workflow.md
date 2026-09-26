@@ -139,8 +139,9 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
 
 1.0.0 renamed the layout: `ai/` became `ai-factory/`, and `specs/` and `docs/adr/` moved inside it.  <!-- path-scan-ok -->
 Run `/t4:migrate-layout` once, in the repo, then commit what it leaves in **two** commits, in the
-order it prints — the moves first, the path rewrite second. One commit drops the files below git's
-rename threshold and `git log --follow` loses everything before the migration; two keeps it.
+order it prints — the moves first, the path rewrite second. Git pairs a rename by similarity, so in
+one commit a file whose path lines are most of its content loses its history; two commits make that
+independent of how big the file is.
 
 Until you run it the hooks still work: they accept the old directory name until 2.0.0, so the
 dont-touch guard and the run log keep going. The prompts do not — they name `ai-factory/` only, so

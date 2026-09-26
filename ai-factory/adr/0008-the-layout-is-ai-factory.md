@@ -62,11 +62,20 @@ Breaking for every adopted repo. Each runs `/t4:migrate-layout` itself; ai-sdlc 
 adopters and cannot know which have (ADR 0002). Until a repo runs it, its hooks work and its
 prompts do not.
 
-The migration must be committed as two commits — the moves, then the rewrite. This is not a style
-preference. Measured on a repo with real history: in one commit the files fall below git's rename
-threshold and `git log --follow` stops at the migration, losing everything before it; in two, every
-file's history survives. The command stages the moves and leaves the rewrite unstaged so that
-order is the easy one to follow, and prints it.
+The migration should be committed as two commits — the moves, then the rewrite — and the command
+stages the moves and leaves the rewrite unstaged so that order is the easy one to follow.
+
+How much this matters depends on how much of each file the rewrite changes, and the first version of
+this ADR overstated it. Git pairs a rename by similarity, so a file where the path lines are most of
+the content — a short task prompt, a one-line context doc, a stub — falls below the 50% threshold
+when the move and the rewrite land together, and `git log --follow` then stops at the migration.
+A file of ordinary length survives a single commit: measured on this repo's own release, which
+GitLab squashed into one commit, every real content file kept its history and only the symlinks lost
+theirs, and they were unpairable either way because their target string changed completely.
+
+Two commits are still the instruction, because they make the outcome independent of file size
+instead of leaving each file to its own similarity score. But a repo that ends up with one commit —
+a squash merge, most likely — has not necessarily lost anything, and should check rather than assume.
 
 Paths this plugin cannot see do not get fixed: CI jobs, pipeline config and tooling in an adopted
 repo that name `ai/`. The 1.0.0 release note says to grep for them.
