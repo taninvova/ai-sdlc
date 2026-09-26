@@ -9,7 +9,7 @@ comments on or moves anything.
 
 Refuse early, before reading or writing anything:
 
-1. **No `ai/docs/tracker.md`?** Stop. Say this repo's layout predates tracker support, and that
+1. **No `ai-factory/docs/tracker.md`?** Stop. Say this repo's layout predates tracker support, and that
    `/t4:sync-sdlc` will report it as an upstream file to take. Do not create the file yourself —
    it is a template, and writing a local copy would fork it from the one that ships.
 
@@ -18,7 +18,7 @@ Refuse early, before reading or writing anything:
    with assumed answers: a config file written from guesses is worse than none, because the
    repo then looks configured. If you cannot tell, assume you cannot ask.
 
-Then follow `ai/docs/tracker.md` — it is the only place that knows what a tracker is, what
+Then follow `ai-factory/docs/tracker.md` — it is the only place that knows what a tracker is, what
 counts as configured, and what to detect. Name nothing specific yourself: no product, no
 service, no URL, no configuration filename.
 

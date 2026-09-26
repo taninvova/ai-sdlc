@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// ai/runs/log.csv schema, shared by the two plugin-side scripts that touch the run log:
+// ai-factory/runs/log.csv schema, shared by the two plugin-side scripts that touch the run log:
 // session-stop.js (writes a row to log.pending.csv) and log-flush.js (moves pending rows into
-// log.csv). The headless writer, templates/ai/make/log.js, runs inside an adopted repo and
+// log.csv). The headless writer, templates/ai-factory/make/log.js, runs inside an adopted repo and
 // cannot require this file, so it carries a byte-identical copy of the guard below;
 // fixtures/check-log-schema.sh pins the two copies together.
 const fs = require("fs");
 const path = require("path");
 
-// Same columns as the headless writer, ai/make/log.js. Change one, change both.
+// Same columns as the headless writer, ai-factory/make/log.js. Change one, change both.
 const HEADER = "ts,session_id,source,user,branch,task,tool,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted";
 
 // --- shared schema guard: byte-identical in both writers, pinned by fixtures/check-log-schema.sh ---

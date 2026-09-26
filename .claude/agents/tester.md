@@ -1,1 +1,1 @@
-../../ai/agents/tester.md
+../../ai-factory/agents/tester.md

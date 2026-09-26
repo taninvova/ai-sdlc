@@ -1,5 +1,69 @@
 # Changelog
 
+## 1.0.0 — 2026-09-25
+
+**Breaking for every adopted repo. Run `/t4:migrate-layout` once, in each repo.**
+
+The layout directory is now `ai-factory/`, and the two directories the loop kept outside it have
+moved in:
+
+| was | is |
+|---|---|
+| `ai/` | `ai-factory/` |
+| `specs/` | `ai-factory/specs/` |
+| `docs/adr/` | `ai-factory/adr/` |
+| `docs/workflow.md` | `ai-factory/docs/workflow.md` |
+
+An adopted repo now gains exactly one directory. `AGENTS.md`, `CLAUDE.md` and `Makefile` stay at
+the root, because the tools look for them there. Decided in `ai-factory/adr/0008`.
+
+### What to do
+
+1. Update the plugin.
+2. In each adopted repo, with a clean tree: `/t4:migrate-layout`.
+3. Commit what it leaves as **two** commits, in the order it prints — the moves, then the path
+   rewrite. This is not a style preference: measured on a repo with real history, one commit drops
+   the files below git's rename threshold and `git log --follow` loses everything before the
+   migration. Two commits keep every file's history. The command stages the moves and leaves the
+   rewrite unstaged so the right order is the easy one.
+4. **Grep your own CI, pipeline config and tooling for `ai/`.** The plugin cannot see those paths
+   and does not touch them.
+
+The migration refuses rather than guess: no layout at all, both layouts present, the same file
+under both, or uncommitted changes to tracked files — an untracked file is named, not refused.
+It commits nothing, and it rewrites path strings only — no new
+prompt text arrives with it. Taking upstream prompt changes is still `/t4:sync-sdlc`, separately.
+
+### Nothing breaks while you wait
+
+The hooks accept the old directory name as well as the new one, so a repo that has updated the
+plugin but not yet migrated keeps its dont-touch guard and its run log. A rename that silently
+disarmed the guard would be the worst outcome here, because nothing would look wrong. The prompts
+are not so forgiving — they name `ai-factory/` only, so the tasks will look in a directory that is
+not there until the migration runs. `/t4:doctor` reports which of the three states a repo is in, and
+`/t4:sync-sdlc` stops with the migration instruction instead of a drift report it cannot compute.
+
+### Deprecated
+
+- `/t4:migrate-layout` — **removed in 1.1.0.** A one-shot migration; its absence is a missing
+  command, which is loud, and the script can still be run from an older checkout.
+- The hooks' fallback to the old directory name — **kept until 2.0.0.** Removing it disarms the
+  dont-touch guard and stops the run log in any repo that never migrated, and does so silently.
+  That is not a minor-release change.
+
+### Also
+
+- New `/t4:migrate-layout` command, with `skills/ai-layout/scripts/migrate-layout.sh` and
+  `rewrite-paths.js` behind it.
+- New `check-paths.sh`: no prompt, agent, skill, command or context doc may name a pre-1.0.0 path.
+  Records — specs, plans, designs, analyses, ADRs, this file — are exempt and keep the paths that
+  were true when they were written.
+- New `check-migrate.sh`: the migration against synthetic repos, including every refusal, the
+  path-only guarantee and the history check.
+- `check-doctor.sh` goes from 9 cases to 12: unmigrated, half migrated, migrated.
+- `manifest.js` no longer tells an unmigrated repo it "was adopted before manifests existed" and
+  then sends it to two commands that cannot help. It says what to run.
+
 ## 0.27.1 — 2026-09-22
 - Review follow-ups for 0.26.0 and 0.27.0, no behaviour change.
 - `ai/docs/knowledge.md`: the "Not defined here yet" section no longer says the implementer's

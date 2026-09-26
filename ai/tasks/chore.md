@@ -1,1 +1,0 @@
-../../skills/ai-layout/templates/ai/tasks/chore.md

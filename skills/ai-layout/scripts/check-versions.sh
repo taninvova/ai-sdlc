@@ -2,7 +2,7 @@
 # Every manifest that carries a version must carry the SAME version.
 # .claude-plugin/plugin.json and marketplace.json drifted silently through 0.4.0 and 0.5.0,
 # guarded only by a line in the definition of done. Codex support added a third field, so the
-# checklist stopped being a reasonable defence. See docs/adr/0003.
+# checklist stopped being a reasonable defence. See ai-factory/adr/0003.
 set -euo pipefail
 cd "$(dirname "$0")/../../.."
 node -e '

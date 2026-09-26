@@ -1,2 +1,2 @@
 # ai-sdlc (skills/ai-hooks/SKILL.md): log.csv is append-only, so union is the right merge
-ai/runs/log.csv merge=union
+ai-factory/runs/log.csv merge=union
