@@ -22,10 +22,11 @@ paths only, so `/t4:spec` and friends will look in `ai-factory/` before this has
    not a refusal; it is named in the output, because the second commit's `git add -A` would
    include it.
 4. Do not commit. Relay the two-commit instruction it prints, in that order and unchanged: the
-   moves are staged and the rewrite is not, because committing both together drops the files
-   below git's rename threshold and severs `git log --follow`. Two commits keep every file's
-   history; one loses it. Tell the developer to review `git diff --cached -M` for the moves and
-   `git diff` for the rewrite.
+   moves are staged and the rewrite is not, because git pairs a rename by similarity: a file whose
+   path lines are most of its content — a short prompt, a stub — drops below the threshold when the
+   move and the rewrite land together, and loses its history. Two commits make that independent of
+   file size. Tell the developer to review `git diff --cached -M` for the moves and `git diff` for
+   the rewrite.
 
 What it does NOT do: deliver new prompt text. The rewrite is bounded to path strings, so the
 prompts in this repo keep saying what they said before, about the new paths. Taking an upstream
