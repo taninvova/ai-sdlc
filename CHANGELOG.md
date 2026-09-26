@@ -22,10 +22,11 @@ the root, because the tools look for them there. Decided in `ai-factory/adr/0008
 1. Update the plugin.
 2. In each adopted repo, with a clean tree: `/t4:migrate-layout`.
 3. Commit what it leaves as **two** commits, in the order it prints — the moves, then the path
-   rewrite. This is not a style preference: measured on a repo with real history, one commit drops
-   the files below git's rename threshold and `git log --follow` loses everything before the
-   migration. Two commits keep every file's history. The command stages the moves and leaves the
-   rewrite unstaged so the right order is the easy one.
+   rewrite. The command stages the moves and leaves the rewrite unstaged so the right order is the
+   easy one. *(Corrected after this release merged: the original wording said one commit always
+   severs `git log --follow`. It depends on similarity — a file whose path lines are most of its
+   content loses its history, an ordinary-length file survives. Two commits make the outcome
+   independent of file size. See ai-factory/adr/0008.)*
 4. **Grep your own CI, pipeline config and tooling for `ai/`.** The plugin cannot see those paths
    and does not touch them.
 
