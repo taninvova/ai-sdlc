@@ -14,13 +14,13 @@ headless run.
    to do — and a summary. It always exits 0; a non-zero exit means the script itself failed,
    which is itself worth reporting.
 
-2. Add one line about the tracker. If `ai/docs/tracker.md` exists, follow it to decide whether
+2. Add one line about the tracker. If `ai-factory/docs/tracker.md` exists, follow it to decide whether
    this repo is configured, and report which. If it does not exist, say this layout predates
    tracker support and name `/t4:sync-sdlc`. Name nothing specific yourself — no product, no
    service, no URL, no configuration filename. That document is the only thing allowed to know
    them, and repeating one here would put it in every repo that reads this command.
 
-2b. Add one line about the knowledge seam, the same way. If `ai/docs/knowledge.md` exists,
+2b. Add one line about the knowledge seam, the same way. If `ai-factory/docs/knowledge.md` exists,
    follow it to decide whether this repo has declared a source, and report configured or
    not. If it does not exist, say this layout predates knowledge-source support and name
    `/t4:sync-sdlc`. Name nothing specific — no source, no provider, no filename; that
@@ -44,7 +44,7 @@ headless run.
 Do not repeat the raw output and then summarise it. One report.
 
 **What this command cannot tell you:** whether the plugin is enabled in a repo where it is
-not. There, this command does not exist, and its absence is the diagnosis — `docs/workflow.md`
+not. There, this command does not exist, and its absence is the diagnosis — `ai-factory/docs/workflow.md`
 carries that case, because nothing runnable can.
 
 Context: $ARGUMENTS

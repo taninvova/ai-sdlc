@@ -1,1 +1,1 @@
-../../ai/agents/reviewer.md
+../../ai-factory/agents/reviewer.md

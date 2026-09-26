@@ -1,5 +1,5 @@
 ---
-description: Record one architectural decision as an ADR in docs/adr/
+description: Record one architectural decision as an ADR in ai-factory/adr/
 argument-hint: <decision in one sentence>
 ---
-@../../../ai/tasks/adr.md
+@../../../ai-factory/tasks/adr.md

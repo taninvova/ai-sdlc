@@ -12,6 +12,6 @@ const cwd = ev.cwd || process.cwd();
 const rel = path.relative(cwd, path.resolve(cwd, target)).replace(/\\/g, "/");
 const hit = rules.find(r => rel === r || rel.startsWith(r.replace(/\/?$/, "/")) || rel.startsWith(r) || path.basename(rel).startsWith(r));
 if (hit) {
-  process.stderr.write(`Blocked by ai/docs/dont-touch.md: "${rel}" matches rule "${hit}". Choose another path or ask the developer.\n`);
+  process.stderr.write(`Blocked by ${path.basename(ai)}/docs/dont-touch.md: "${rel}" matches rule "${hit}". Choose another path or ask the developer.\n`);
   process.exit(2);
 }
