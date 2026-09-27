@@ -39,14 +39,17 @@ wait for the next commit. `ai-factory/runs/log.csv merge=union` in .gitattribute
 rows from conflicting when they merge — the file is append-only, so union is the right merge.
 
 ## log.csv — one schema, two writers
-ts,session_id,source,user,branch,task,tool,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted
+ts,session_id,source,user,branch,task,tool,agent,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted
 
 `source` is `session` (this Stop hook) or `make` (ai-factory/make/log.js, headless). Both write
-these 16 columns; each blanks what it cannot know — an interactive session has no `task`,
-a headless run has no separate turn accounting beyond `num_turns`. `accepted` is filled by
+these 17 columns; each blanks what it cannot know — an interactive session has no `task`,
+a headless run has no separate turn accounting beyond `num_turns`, and neither names an
+`agent` — both write it empty. `accepted` is filled by
 the developer at commit time (y/n/partial). `user` is $GITLAB_USER or `git config user.name`.
 
-The plugin-side scripts (session-stop.js, log-flush.js) share `scripts/_log-schema.js`. The
+The plugin-side scripts (session-stop.js, log-flush.js) share `scripts/_log-schema.js`, and the
+token accounting — the transcript sum, the per-session claim ledger and the models.yaml price
+resolution — sits in `scripts/_usage.js`, pinned by `fixtures/check-usage.sh`. The
 headless writer runs inside an adopted repo and cannot require it, so it declares the header
 and the schema guard separately. `fixtures/check-log-schema.sh` asserts the two copies have not
 drifted, that every row matches the header width, that both kinds of migration preserve old
@@ -59,7 +62,7 @@ write — for log.csv that is the flush or a headless run:
 - **The header is not the above.** The file predates this schema; its rows came from two
   writers with different column meanings. All of them move to `ai-factory/runs/log.previous.csv`
   and a clean file is started.
-- **The header matches but a row is not 16 fields.** A writer still on an older schema
+- **The header matches but a row is not 17 fields.** A writer still on an older schema
   appended into a current file — an older hook installed elsewhere, say. A header check
   cannot see this, which is how 12-field rows once sat under a 16-field header for a whole
   session. Only the offending rows move, under a dated comment naming why.
@@ -90,6 +93,7 @@ Lines beginning with "- `" — the backticked path prefix is the rule:
 ai-factory/runs/*.json
 ai-factory/runs/*.jsonl
 ai-factory/runs/log.pending.csv
+ai-factory/runs/.counted.*
 .claude/settings.local.json
 CLAUDE.local.md
 
@@ -102,5 +106,5 @@ Sessions with edits but no cmds → tests were not run; tighten the task prompt.
 Files in edits.jsonl not in the commit → what the model changed that you dropped; check why.
 
 ## Without the plugin
-Copy scripts/ (including `_common.js` and `_log-schema.js`) to ai-factory/make/hooks/ and register the
+Copy scripts/ (including `_common.js`, `_log-schema.js` and `_usage.js`) to ai-factory/make/hooks/ and register the
 same hooks in .claude/settings.json with `node ai-factory/make/hooks/<script>.js` as the command.

@@ -22,6 +22,12 @@ h2=$(sed -n 's/^const HEADER = "\(.*\)";$/\1/p' "$MAKE" | head -1)
   hook: $h1
   make: $h2"
 cols=$(awk -F, '{print NF}' <<<"$h1")
+# Pinned, not derived: a column added or dropped by accident would otherwise slide through
+# every width check below, because they all measure against whatever the header happens to say.
+[ "$cols" = 17 ] || fail "the header has $cols columns, expected 17"
+[ "$h1" = "ts,session_id,source,user,branch,task,tool,agent,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted" ] \
+  || fail "the header is not the expected 17 columns:
+  $h1"
 
 # 1. interactive writer — into the pending file, never straight into log.csv
 mkdir -p "$TMP/ai-factory/runs"; cp skills/ai-hooks/fixtures/transcript.jsonl "$TMP/"
@@ -35,6 +41,10 @@ n=$(awk -F, 'NR==2{print NF}' "$PEND")
 [ "$n" = "$cols" ] || fail "hook row has $n fields, header has $cols"
 grep -q ',session,' "$PEND" || fail "hook row is not marked source=session"
 grep -q ',claude-sonnet-4-5,' "$PEND" || fail "hook row lost the model"
+# `agent` (column 8, right after `tool`) is empty on a session row — the subagent rows carry it
+a=$(awk -F, 'NR==2{print $8}' "$PEND")
+[ -z "$a" ] || fail "session row should leave agent empty, got '$a'"
+[ "$(awk -F, 'NR==1{print $8}' "$PEND")" = agent ] || fail "column 8 of the header is not agent"
 
 # 1b. the flush: only a `git commit` moves the rows, exactly once, and stages log.csv
 ( cd "$TMP" && git init -q && git config user.email t@t && git config user.name t && printf 'ai-factory/runs/*.jsonl\nai-factory/runs/log.pending.csv\n' > .gitignore )
@@ -60,6 +70,9 @@ node "$MAKE" "$TMP/ai-factory/runs/r-check.json" check claude some-model >> "$TM
 n=$(awk -F, 'END{print NF}' "$TMP/ai-factory/runs/log.csv")
 [ "$n" = "$cols" ] || fail "headless row has $n fields, header has $cols"
 grep -q ',make,' "$TMP/ai-factory/runs/log.csv" || fail "headless row is not marked source=make"
+a=$(awk -F, 'END{print $8}' "$TMP/ai-factory/runs/log.csv")
+[ -z "$a" ] || fail "headless row should leave agent empty, got '$a'"
+grep -q ',check,claude,,some-model,' "$TMP/ai-factory/runs/log.csv" || fail "headless row lost task/tool/agent/model order"
 [ "$(wc -l < "$TMP/ai-factory/runs/log.csv")" -eq 4 ] || fail "expected header + 3 rows"
 
 # 3. a pre-schema log.csv is preserved, not mixed, when the flush reaches it
@@ -83,7 +96,7 @@ if grep -q 'shared schema guard' "$HOOK"; then fail "$HOOK carries its own copy 
 # This is what an older hook still installed elsewhere appends.
 rm -rf "$TMP/ai-factory/runs"; mkdir -p "$TMP/ai-factory/runs"
 { echo "$h1"
-  echo '2026-01-01T00:00:00Z,keep,session,me,main,,claude,m,1,1,1,0,0,0.00,0.1,'
+  echo '2026-01-01T00:00:00Z,keep,session,me,main,,claude,,m,1,1,1,0,0,0.00,0.1,'
   echo '2026-01-02T00:00:00Z,short,me,main,1,1,1,0,0,0.00,0.1,'
 } > "$TMP/ai-factory/runs/log.csv"
 stop; flush '"git commit -m x"'
@@ -99,7 +112,7 @@ done < <(tail -n +2 "$TMP/ai-factory/runs/log.csv")
 # 6. a quoted comma is one field, not two — a naive split would quarantine a valid row
 rm -rf "$TMP/ai-factory/runs"; mkdir -p "$TMP/ai-factory/runs"
 { echo "$h1"
-  echo '2026-01-01T00:00:00Z,q,session,"Doe, Jane",main,,claude,m,1,1,1,0,0,0.00,0.1,'
+  echo '2026-01-01T00:00:00Z,q,session,"Doe, Jane",main,,claude,,m,1,1,1,0,0,0.00,0.1,'
 } > "$TMP/ai-factory/runs/log.csv"
 stop; flush '"git commit -m x"'
 grep -q 'Doe, Jane' "$TMP/ai-factory/runs/log.csv" || fail "a row with a quoted comma was wrongly moved aside"

@@ -1,40 +1,22 @@
 #!/usr/bin/env node
 const { readEvent, aiDir, user, branch, fs, path } = require("./_common");
+const { claims, sumTranscript, price } = require("./_usage");
 const ev = readEvent(); const ai = aiDir(ev); if (!ai) process.exit(0);
 const cwd = ev.cwd || process.cwd();
 if (!ev.transcript_path || !fs.existsSync(ev.transcript_path)) process.exit(0);
 
-let inp = 0, out = 0, cr = 0, cw = 0, turns = 0, model = "";
-for (const line of fs.readFileSync(ev.transcript_path, "utf8").split("\n")) {
-  if (!line.trim()) continue;
-  let r; try { r = JSON.parse(line); } catch { continue; }
-  const u = r.message?.usage || r.usage; if (!u) continue;
-  turns++;
-  if (r.message?.model || r.model) model = r.message?.model || r.model;
-  inp += u.input_tokens ?? 0; out += u.output_tokens ?? 0;
-  cr += u.cache_read_input_tokens ?? 0; cw += u.cache_creation_input_tokens ?? 0;
-}
+// The session's claim ledger, shared with the subagent rows so a record copied into an agent
+// transcript is counted once across the two kinds of row. Claims are RECORDED here and not yet
+// enforced against this row: `has` answers false, so the session row is still the cumulative
+// snapshot it has always been. Turning it into the increment is the next change, and it is the
+// one line below — the ledger passed in place of this wrapper.
+const ledger = claims(ai, ev.session_id);
+const { turns, inp, out, cr, cw, model } =
+  sumTranscript(ev.transcript_path, { has: () => false, add: k => ledger.add(k) });
 if (turns === 0) process.exit(0);
 
-// Price the run with the model it actually used, so any provider costs correctly:
-// exact model id, then the longest id it starts with, then `default`. No match leaves the
-// built-in Anthropic figures in place and marks the cost "~" as an estimate.
-let price = { input: 3, output: 15, cache_read: 0.3, cache_write: 3.75 }, approx = "~";
-try {
-  const y = fs.readFileSync(path.join(ai, "models.yaml"), "utf8");
-  const table = {};
-  for (const m of y.matchAll(/^[ \t]*([A-Za-z0-9._:\/-]+):[ \t]*\{([^}]*)\}/gm)) {
-    const o = {};
-    for (const kv of m[2].split(",")) { const [k, v] = kv.split(":").map(s => s.trim()); if (k && v) o[k] = Number(v); }
-    table[m[1]] = o;
-  }
-  const prefix = Object.keys(table)
-    .filter(k => k !== "default" && model.startsWith(k))
-    .sort((a, b) => b.length - a.length)[0];
-  const chosen = table[model] || (prefix && table[prefix]) || table.default;
-  if (chosen) { price = { ...price, ...chosen }; approx = ""; }
-} catch {}
-const cost = (inp * price.input + out * price.output + cr * price.cache_read + cw * price.cache_write) / 1e6;
+const { rate, approx } = price(ai, model);
+const cost = (inp * rate.input + out * rate.output + cr * rate.cache_read + cw * rate.cache_write) / 1e6;
 const hit = (cr / (inp + cr + cw || 1)).toFixed(2);
 
 // Rows go to log.pending.csv, which is gitignored, not to the committed log.csv. A Stop fires
@@ -47,6 +29,7 @@ try {
   ensureSchema(file);
   fs.appendFileSync(file, [
     new Date().toISOString(), ev.session_id, "session", user(cwd), branch(cwd),
-    "", "claude", model, turns, inp, out, cr, cw, hit, approx + cost.toFixed(4), "",
+    // `agent` is empty on a session row: the subagent rows carry their own name.
+    "", "claude", "", model, turns, inp, out, cr, cw, hit, approx + cost.toFixed(4), "",
   ].map(csv).join(",") + "\n");
 } catch {}

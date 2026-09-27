@@ -6,7 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
 
-const HEADER = "ts,session_id,source,user,branch,task,tool,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted";
+const HEADER = "ts,session_id,source,user,branch,task,tool,agent,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted";
 
 // --- shared schema guard: byte-identical in both writers, pinned by fixtures/check-log-schema.sh ---
 const COLS = HEADER.split(",").length;
@@ -113,6 +113,6 @@ process.stdout.write([
   new Date().toISOString(), run.id, "make",
   process.env.GITLAB_USER || sh("git config user.name") || "unknown",
   sh("git rev-parse --abbrev-ref HEAD"),
-  task, tool, model || "",
+  task, tool, "", model || "",   // a headless run has no subagent, so `agent` is empty
   run.turns, inp, out, cr, cw, hit, run.cost, "",
 ].map(csv).join(",") + "\n");
