@@ -13,7 +13,9 @@ set -euo pipefail
 cd "$(dirname "$0")/../../.."   # repo root
 GUARD=skills/ai-hooks/scripts/guard-paths.js
 STOP=skills/ai-hooks/scripts/session-stop.js
+SUB=skills/ai-hooks/scripts/subagent-stop.js
 TRANSCRIPT=$PWD/skills/ai-hooks/fixtures/transcript.jsonl
+AGENT_TRANSCRIPT=$PWD/skills/ai-hooks/fixtures/agent-transcript.jsonl
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
@@ -74,4 +76,34 @@ for dir in ai-factory ai; do
   [ "$rows" -ge 1 ] || fail "$dir: log.pending.csv has a header but no row"
 done
 
-echo "detect ok — ai-factory/ preferred, ai/ still guarded and logged, neither is a silent no-op"
+# --- 6. the SubagentStop hook, across the same four cases ---
+# The agent rows are the only place the `agent` column is ever filled, so an unmigrated repo that
+# stopped writing them would lose per-agent attribution with nothing to show for it.
+subagent() {   # subagent <repo> <agent_id>
+  printf '{"session_id":"fixture-detect-sub","cwd":"%s","agent_id":"%s","agent_type":"implementer","agent_transcript_path":"%s","hook_event_name":"SubagentStop"}' \
+    "$1" "$2" "$AGENT_TRANSCRIPT" | node "$PWD/$SUB" >"$TMP/o" 2>"$TMP/e" \
+    || fail "SubagentStop hook exited non-zero in $1: $(cat "$TMP/e")"
+  [ -s "$TMP/o" ] && fail "SubagentStop hook wrote to stdout: $(cat "$TMP/o")"
+  [ -s "$TMP/e" ] && fail "SubagentStop hook wrote to stderr: $(cat "$TMP/e")"
+  return 0
+}
+for dir in ai-factory ai; do
+  R=$TMP/sub-$dir; mkdir -p "$R/$dir"
+  subagent "$R" "agent-$dir"
+  PEND=$R/$dir/runs/log.pending.csv
+  [ -f "$PEND" ] || fail "$dir: no agent row written to $dir/runs/log.pending.csv"
+  grep -q ',agent,' "$PEND" || fail "$dir: the row is not marked source=agent"
+  [ "$(awk -F, 'NR==2{print $8}' "$PEND")" = implementer ] \
+    || fail "$dir: the row lost the agent name: $(awk -F, 'NR==2{print $8}' "$PEND")"
+done
+# both: the row goes under ai-factory/ only, the same preference the guard shows
+R=$TMP/sub-both; mkdir -p "$R/ai-factory" "$R/ai"
+subagent "$R" agent-both
+[ -f "$R/ai-factory/runs/log.pending.csv" ] || fail "both: no row under ai-factory/"
+if [ -e "$R/ai/runs" ]; then fail "both: the old directory was written as well"; fi
+# neither: no row, no directory, no output
+R=$TMP/sub-neither; mkdir -p "$R"
+subagent "$R" agent-none
+[ -z "$(ls -A "$R")" ] || fail "no layout: the SubagentStop hook created $(ls -A "$R")"
+
+echo "detect ok — ai-factory/ preferred, ai/ still guarded and logged for both Stop and SubagentStop, neither is a silent no-op"

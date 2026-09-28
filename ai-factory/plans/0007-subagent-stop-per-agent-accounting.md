@@ -129,7 +129,7 @@ scripts require only `fs`, `path`, `child_process` and their siblings, so AC20 h
   *Tests:* `bash skills/ai-hooks/fixtures/check-log-schema.sh`; `bash skills/ai-hooks/fixtures/check-detect.sh`
   (its two-Stop assertion still passes precisely because `transcript.jsonl` has no `uuid`).
 
-- [ ] **Step 4 — `subagent-stop.js`, and the event that calls it.**
+- [x] **Step 4 — `subagent-stop.js`, and the event that calls it.**
   New script: `aiDir(ev)` guard first (exit 0, silent, no file, outside a layout repo); exit 0 if
   `agent_transcript_path` is missing, unreadable, unparseable or yields no `usage`; exit 0 if
   `a:<agent_id>` is already claimed; otherwise claim the `agent_id`, sum **that transcript only**

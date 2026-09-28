@@ -4,7 +4,9 @@
 A Claude Code plugin loaded from `.claude-plugin/plugin.json`. Nothing runs as a service.
 Three surfaces reach a developer: plugin commands (`commands/*.md` → `/t4:*`), skills
 (`skills/*/SKILL.md`, model-invoked), and the `reviewer` agent (`agents/reviewer.md`).
-Hooks in `hooks/hooks.json` fire on SessionStart, PreToolUse, PostToolUse and Stop.
+Hooks in `hooks/hooks.json` fire on SessionStart, PreToolUse, PostToolUse, Stop and
+SubagentStop — the last writing one run-log row per concluded subagent, from that agent's own
+transcript.
 
 ## Module map
 - `commands/` — the three plugin slash commands

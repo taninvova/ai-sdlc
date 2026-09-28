@@ -1,0 +1,1 @@
+{ "session_id": "fixture-0001", "cwd": ".", "transcript_path": "skills/ai-hooks/fixtures/transcript.jsonl", "agent_id": "fixture-agent-0001", "agent_type": "implementer", "agent_transcript_path": "skills/ai-hooks/fixtures/agent-transcript.jsonl", "hook_event_name": "SubagentStop", "stop_hook_active": false }
