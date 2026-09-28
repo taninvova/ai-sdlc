@@ -1,0 +1,3 @@
+ts,session_id,source,user,branch,task,tool,agent,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted
+2026-09-27T10:00:00Z,s1,session,tanin,main,run,claude,implementer,claude-opus-5,12,1500,320,7556610,319774,0.96,,y
+2026-09-27T10:01:00Z,s2,make,tanin,feature/a-very-long-branch-name,check,codex,,gpt-5,3,900,120,5000,400,0.78,,

@@ -55,6 +55,7 @@ BEFORE=$(sums)
 SCRATCH=$(mktemp -d); trap 'rm -rf "$SCRATCH"' EXIT
 TMPOUT=$SCRATCH/out.json; TMPERR=$SCRATCH/err.txt; TMPOUT2=$SCRATCH/out2.json
 TMPTSV=$SCRATCH/out.tsv; TMPTSV2=$SCRATCH/out2.tsv
+TMPTAB=$SCRATCH/out.txt; TMPTAB2=$SCRATCH/out2.txt
 
 # rd <fixture> <js> — evaluates <js> with `C` bound to the module and `L` to readLog()'s answer
 # over the fixture. Whatever it prints comes back.
@@ -362,8 +363,52 @@ eq "a filter variable is ignored rather than honoured" \
   "$(TSV=1 BRANCH=main TASK=run SINCE=2026-01-01 node "$COST" "$FX/quoted.csv" | wc -l | tr -d ' ')" \
   "$(wc -l < "$TMPTSV" | tr -d ' ')"
 
+# --- 12. the rendered table (AC7, AC8, AC9, AC12) ---------------------------------------------
+node "$COST" "$FX/two-tools.csv" > "$TMPTAB" 2> "$TMPERR" || fail "the default mode exited non-zero"
+eq "table mode: stderr is empty" "$(wc -c < "$TMPERR" | tr -d ' ')" 0
+# AC9, and over EVERY line: a 120-character footnote wraps as badly as a wide row.
+eq "table mode: no line exceeds 80 columns" \
+  "$(awk '{ if (length($0) > 80) n++ } END { print n+0 }' "$TMPTAB")" 0
+# AC8: the four groupings, each as its own table, and no other dimension's table.
+eq "table mode: the four groupings AC8 names, in order" \
+  "$(awk '$1=="task"||$1=="agent"||$1=="branch"||$1=="day" {printf "%s ", $1} END {print ""}' "$TMPTAB" | sed 's/ $//')" \
+  "task agent branch day"
+eq "table mode: no table for a dimension AC8 does not name" \
+  "$(awk '$1=="tool"||$1=="model"||$1=="user"||$1=="session" {n++} END {print n+0}' "$TMPTAB")" 0
+# AC7: the numbers are the engine's, identical to the export's — the table is a view, not a second
+# implementation. hit is the exported ratio to two decimals, the convention the writers use per row.
+eq "table mode: the agent row's numbers are the export's" \
+  "$(awk '$1=="implementer" {print $2"|"$3"|"$4"|"$5"|"$6"|"$7}' "$TMPTAB")" \
+  "$(ex two-tools.csv 'const g = D.groups.agent.find(x => x.key === "implementer"); console.log([g.rows, g.turns, g.input_tokens, g.output_tokens, g.cache_read_tokens].join("|") + "|" + g.cache_write_tokens);')"
+eq "table mode: the displayed hit is the exported ratio to two decimals" \
+  "$(awk '$1=="implementer" {print $8}' "$TMPTAB")" \
+  "$(ex two-tools.csv 'const g = D.groups.agent.find(x => x.key === "implementer"); console.log(g.hit_rate.toFixed(2));')"
+eq "table mode: the TOTAL line matches the export's totals" \
+  "$(awk '$1=="TOTAL" {print $2"|"$4}' "$TMPTAB")" \
+  "$(ex two-tools.csv 'console.log(D.totals.rows + "|" + D.totals.input_tokens);')"
+# A key longer than the label column is truncated, not wrapped: AC9 forbids the wrap, and the
+# untruncated key is always in the JSON and the TSV.
+eq "table mode: an over-long key is truncated with a marker rather than wrapping" \
+  "$(awk '/^feature\/a-very/ {print substr($1, length($1) - 2)}' "$TMPTAB")" "$(printf '\xe2\x80\xa6')"
+# AC8's footnote: this fixture's rows come from two tools, which attribute agents differently.
+eq "table mode: a multi-tool total carries a footnote naming the tools" \
+  "$(grep -c 'totals span 2 tools (claude, codex)' "$TMPTAB")" 1
+eq "table mode: a single-tool log carries no such footnote" \
+  "$(node "$COST" "$FX/empty-task.csv" | grep -c 'totals span' || true)" 0
+# AC12: the coverage line appears only when a row carries a value.
+eq "table mode: coverage shown when a row carries accepted" \
+  "$(grep -c '^accepted: 1 of 2 rows carry a value' "$TMPTAB")" 1
+eq "table mode: no coverage line at all when no row carries one" \
+  "$(node "$COST" "$FX/empty-task.csv" | grep -c '^accepted:' || true)" 0
+# Excluded records are reported, and the two kinds separately (AC14).
+eq "table mode: excluded records are reported as two distinct counts" \
+  "$(node "$COST" "$FX/wrong-width.csv" | grep -c '^excluded: 2 of the wrong width, 0 unreadable')" 1
+# Reproducible, like both export forms.
+node "$COST" "$FX/two-tools.csv" > "$TMPTAB2" 2>/dev/null
+cmp -s "$TMPTAB" "$TMPTAB2" || fail "the table is not reproducible; two runs over one log differ"
+
 # --- 8. the reader touched nothing (AC16, the half a fixture can prove) ------------------------
 [ "$(sums)" = "$BEFORE" ] || fail "the fixtures changed while being read; the reader must be read-only over the log"
-eq "no fixture was added or removed during the run" "$(ls "$FX"/*.csv | wc -l | tr -d ' ')" 11
+eq "no fixture was added or removed during the run" "$(ls "$FX"/*.csv | wc -l | tr -d ' ')" 12
 
 echo "cost reader ok — quoted commas and newlines held in one record, wrong-width and pre-0007 rows excluded and counted, an unclosed quote unreadable, an unmeasurable header inventing nothing, fields read by name with a missing column empty, header-only and missing logs answered, groups summing to their totals with unattributed spend named, hit_rate recomputed rather than averaged, the session key surviving for a fleet view, fixtures byte-identical after the run"
