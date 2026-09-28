@@ -38,7 +38,7 @@ ai-factory/designs/                   /t4:design output: where a capability live
 ai-factory/analyses/                  /t4:analyse output: requirements pack — facts, assumptions, proposals, questions apart
 ai-factory/explorations/            /t4:explore output: options + recommendation per request
 ai-factory/plans/  ai-factory/plans/done/     plans in flight / merged
-ai-factory/runs/log.csv               header only; the Stop hook and ai-factory/make/log.js append the same 16 columns
+ai-factory/runs/log.csv               header only; the Stop hook and ai-factory/make/log.js append the same 17 columns
 ai-factory/make/ai.mk                 headless runner for CI (make ai / make review)
 ai-factory/make/gate.js  log.js  sync-adapters.sh
 ai-factory/.sdlc.json                 which ai-sdlc version this repo holds + a hash per received file;

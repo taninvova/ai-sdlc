@@ -8,7 +8,7 @@ const fs = require("fs");
 const path = require("path");
 
 // Same columns as the headless writer, ai-factory/make/log.js. Change one, change both.
-const HEADER = "ts,session_id,source,user,branch,task,tool,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted";
+const HEADER = "ts,session_id,source,user,branch,task,tool,agent,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted";
 
 // --- shared schema guard: byte-identical in both writers, pinned by fixtures/check-log-schema.sh ---
 const COLS = HEADER.split(",").length;

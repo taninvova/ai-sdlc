@@ -68,3 +68,4 @@ log-flush:
 
 clean-runs:
 	@find $(RUNS) -name '*.json' -mtime +30 -delete
+	@find $(RUNS) -name '.counted.*' -mtime +30 -delete
