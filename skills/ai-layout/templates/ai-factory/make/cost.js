@@ -283,6 +283,92 @@ function exportTsv(a) {
   return lines.join("\n") + "\n";
 }
 
+// --- the rendered table -------------------------------------------------------------------------
+
+// Four stacked tables, one per grouping, each carrying all seven metrics — decided 2026-09-27.
+// The other four dimensions the engine computes (tool, model, user, session) are in the export but
+// not here: the four below are what AC8 names, and eight tables would bury them.
+const TABLE_DIMENSIONS = ["task", "agent", "branch", "day"];
+
+// Widths chosen against AC9's 80 columns and nothing else. 18 + 6 + 7 + 10 + 9 + 11 + 10 + 6 = 77,
+// leaving three columns of slack for a terminal that counts differently. A key longer than the
+// label column is truncated with a trailing "…" rather than wrapped: AC9 forbids a wrapped line,
+// and the untruncated key is always available in the JSON and TSV forms.
+const COLS = [
+  ["", 18, "left"],
+  ["rows", 5], ["turns", 6], ["input", 9], ["output", 8],
+  ["cache_r", 10], ["cache_w", 9], ["hit", 5],
+];
+const LABEL_WIDTH = COLS[0][1];
+
+const clip = s => {
+  const v = String(s ?? "");
+  return v.length <= LABEL_WIDTH ? v.padEnd(LABEL_WIDTH) : v.slice(0, LABEL_WIDTH - 1) + "…";
+};
+
+// Two decimals, the same convention the writers use for the per-row hit_rate column. This is a
+// rounding of the exported ratio, not a second calculation of it: the arithmetic happens once, in
+// the engine, and both surfaces read the same number (AC7).
+const pct = n => n.toFixed(2);
+
+const cells = m => [
+  m.rows, m.turns, m.input_tokens, m.output_tokens,
+  m.cache_read_tokens, m.cache_write_tokens, pct(m.hit_rate),
+];
+
+function tableFor(a, dim) {
+  const head = [clip(dim), ...COLS.slice(1).map(([n, w]) => String(n).padStart(w))].join(" ");
+  const lines = [head];
+  for (const m of a.groups[dim]) {
+    lines.push([clip(m.key), ...cells(m).map((v, i) => String(v).padStart(COLS[i + 1][1]))].join(" "));
+  }
+  return lines;
+}
+
+// AC9 is about every line, not only the tables: a 120-character footnote wraps just as badly as a
+// wide row. Wrapped here at the same 80 so the notes stay inside it, continuation lines indented
+// so they read as part of the note rather than as a new one.
+const WIDTH = 80;
+function wrap(text, indent = "  ") {
+  const out = [];
+  let line = "";
+  for (const word of String(text).split(" ")) {
+    const limit = out.length ? WIDTH - indent.length : WIDTH;
+    if (line && (line + " " + word).length > limit) { out.push(line); line = word; }
+    else line = line ? line + " " + word : word;
+  }
+  if (line) out.push(line);
+  return out.map((l, i) => (i ? indent + l : l));
+}
+
+// A view over the engine's structure, never a second implementation of the arithmetic (AC7).
+function renderTable(a) {
+  const out = [];
+  for (const dim of TABLE_DIMENSIONS) {
+    out.push(...tableFor(a, dim), "");
+  }
+  out.push([clip("TOTAL"), ...cells(a.totals).map((v, i) => String(v).padStart(COLS[i + 1][1]))].join(" "));
+
+  // AC12: coverage, and only when some row carries a value. A permanent "0 of N" trains a reader
+  // to skip a line; the standing fact that the column is hand-filled lives in the docs instead.
+  if (a.accepted.covered > 0) {
+    out.push(...wrap(`accepted: ${a.accepted.covered} of ${a.accepted.of} rows carry a value`));
+  }
+  // Excluded records are reported, and the two kinds separately: a wrong-width record and a torn
+  // one are different faults, and adding them would call one the other (AC14).
+  if (a.counts.wrongWidth > 0 || a.counts.unreadable > 0) {
+    out.push(...wrap(`excluded: ${a.counts.wrongWidth} of the wrong width, ${a.counts.unreadable} unreadable — none counted in any total`));
+  }
+  // The footnote AC8 asks for. It matters most above the agent table: Codex inlines the agent in
+  // the session, so one session is the task and the agent, while Claude spreads across named
+  // agents — a reader comparing the two would be comparing a part against a whole.
+  const tools = a.groups.tool.map(g => g.key).filter(k => k !== a.unattributed);
+  if (tools.length > 1) {
+    out.push(...wrap(`note: totals span ${tools.length} tools (${tools.join(", ")}); they attribute agents differently, so the agent table mixes a part with a whole`));
+  }
+  return out.join("\n") + "\n";
+}
+
 // --- entry point --------------------------------------------------------------------------------
 
 // JSON mode writes ONE document to stdout and nothing else: no progress line, no banner, no path
@@ -302,7 +388,8 @@ function main(argv, env) {
     process.stdout.write(exportTsv(a));
     return 0;
   }
-  return 0;   // The default rendered table is step 6.
+  process.stdout.write(renderTable(a));
+  return 0;
 }
 
 // Only when run, never when required: a fixture that loads this module must not print.
@@ -311,5 +398,5 @@ if (require.main === module) process.exit(main(process.argv, process.env));
 module.exports = {
   records, width, fields, row, field, readLog,
   aggregate, day, UNATTRIBUTED, DIMENSIONS, METRICS,
-  exportDoc, exportTsv, main, SCHEMA, VERSION, EXPORT_METRICS, TSV_COLUMNS,
+  exportDoc, exportTsv, renderTable, main, SCHEMA, VERSION, EXPORT_METRICS, TSV_COLUMNS, TABLE_DIMENSIONS,
 };

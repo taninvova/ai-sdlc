@@ -140,7 +140,7 @@ no process that outlives the command, and no port.
   *Proves:* AC5. *Tests:* a fixture's TSV output and JSON output compared field by field; the TSV
   piped through `column -t`; `check-cost.sh` asserting no filter variable is honoured.
 
-- [ ] **Step 6 — The rendered table.** `make cost` with no arguments prints token spend grouped by
+- [x] **Step 6 — The rendered table.** `make cost` with no arguments prints token spend grouped by
   task, by agent, by branch and by day, reading `ai-factory/runs/log.csv` and no other file, exiting 0
   (AC8) — and it renders **as a view over the structure Step 3 produces**, so every number appearing in
   both modes is identical and the arithmetic exists once (AC7). The layout is decided (2026-09-27):
