@@ -27,9 +27,9 @@
 # And finally: the fixtures are byte-identical after the whole run. The reader must not touch what
 # it reads (AC16).
 #
-# Aggregation is not asserted here. Step 2 of ai-factory/plans/0008-make-cost-report-and-export.md
-# builds the harness over Step 1's reader; the group totals, the export's field names and the
-# rendered table arrive in later steps and extend this file.
+# Steps 1-3 of ai-factory/plans/0008-make-cost-report-and-export.md: the reader, this harness and
+# the aggregation engine. The export's field names and the rendered table arrive in later steps
+# and extend this file.
 set -euo pipefail
 shopt -s nullglob
 cd "$(dirname "$0")/../../.."   # repo root
@@ -173,8 +173,95 @@ eq "missing: counts" "$(counts no-such-log.csv)" "false|0|0|0|0|0"
 eq "missing: the file read is reported back" \
   "$(rd no-such-log.csv 'process.stdout.write(require("path").basename(L.file));')" "no-such-log.csv"
 
+# --- 9. the aggregation engine (AC2, AC4, AC11, AC12) -----------------------------------------
+# ag <fixture> <js> — like rd, with `A` bound to aggregate()'s answer as well as `L`.
+ag() { node -e "const C = require('$COST'); const A = C.aggregate(C.readLog('$FX/$1')); $2"; }
+# grp <fixture> <dimension> — "key=rows/input_tokens" per group, in the engine's own order.
+grp() { ag "$1" "console.log(A.groups['$2'].map(g => g.key + '=' + g.rows + '/' + g.input_tokens).join(' '));"; }
+
+# hit_rate is RECOMPUTED from the summed tokens, never averaged over rows. hit-rate.csv exists to
+# make the difference impossible to miss: its two rows are 100/(0+100+0) = 1.00 and
+# 100/(300+100+0) = 0.25, whose mean is 0.625, while the group's true rate is the summed
+# 200/(300+200+0) = 0.40. A mean would weight a 100-token row like a 400-token one; on this repo's
+# real log the two ends differ by six orders of magnitude.
+eq "hit-rate.csv: summed tokens" \
+  "$(ag hit-rate.csv 'const t = A.totals; console.log([t.rows, t.turns, t.input_tokens, t.cache_read_tokens, t.cache_write_tokens].join("|"));')" \
+  "2|2|300|200|0"
+eq "hit-rate.csv: hit_rate recomputed from the sums, not averaged" \
+  "$(ag hit-rate.csv 'console.log(A.totals.hit_rate);')" "0.4"
+# Per GROUP as well as in the totals, which are computed by separate lines: pinning only the total
+# would let a broken group rate through, and the groups are what a reader actually looks at. Both
+# rows of this fixture are task=run, so the single group's rate must equal the total's.
+eq "hit-rate.csv: the task group's hit_rate is recomputed too, not averaged" \
+  "$(ag hit-rate.csv 'console.log(A.groups.task.map(g => g.key + "=" + g.hit_rate).join(" "));')" "run=0.4"
+eq "hit-rate.csv: every dimension's group agrees with the total for a single-group log" \
+  "$(ag hit-rate.csv 'console.log(A.dimensions.every(d => A.groups[d].length === 1 && A.groups[d][0].hit_rate === A.totals.hit_rate));')" \
+  "true"
+eq "hit-rate.csv: the mean of the per-row rates is a different number, so this assertion bites" \
+  "$(rd hit-rate.csv 'const v = L.rows.map(r => Number(C.field(r, "hit_rate"))); console.log(v.reduce((a, b) => a + b, 0) / v.length);')" \
+  "0.625"
+# AC12: coverage, never an average. One of the two rows carries `accepted`.
+eq "hit-rate.csv: accepted coverage" \
+  "$(ag hit-rate.csv 'console.log(A.accepted.covered + " of " + A.accepted.of);')" "1 of 2"
+eq "bad-ts.csv: no row carries accepted, so coverage is zero of three" \
+  "$(ag bad-ts.csv 'console.log(A.accepted.covered + " of " + A.accepted.of);')" "0 of 3"
+
+# AC11: an empty `task` or a missing `agent` goes to a NAMED bucket with its count visible, never
+# dropped and never folded into another group. empty-task.csv holds 4 rows: 2 with no task, 2 with
+# no agent, 1 with neither, and input_tokens 10+20+30+40.
+eq "empty-task.csv: task groups" "$(grp empty-task.csv task)" "(unattributed)=2/60 run=2/40"
+eq "empty-task.csv: agent groups" "$(grp empty-task.csv agent)" "(unattributed)=2/70 implementer=2/30"
+eq "empty-task.csv: nothing was dropped — the groups sum to the total" \
+  "$(ag empty-task.csv 'const s = A.groups.task.reduce((n, g) => n + g.input_tokens, 0); console.log(s === A.totals.input_tokens ? "equal" : s + " vs " + A.totals.input_tokens);')" \
+  "equal"
+eq "the unattributed bucket is a name no real value can be" \
+  "$(ag empty-task.csv 'console.log(A.unattributed);')" "(unattributed)"
+
+# `day` is derived from `ts`, which the log has no column for. A row whose ts is empty or
+# unparseable is bucketed as unattributed, never dated today — spend on a day that did not happen
+# is worse than spend with no day. bad-ts.csv: one dated row (10), one empty ts (20), one "not-a-timestamp" (30).
+eq "bad-ts.csv: day groups" "$(grp bad-ts.csv day)" "(unattributed)=2/50 2026-09-27=1/10"
+
+# AC4: the session key survives into the aggregate, so a fleet view reading two layouts' exports
+# can tell one session written to both. session-a.csv and session-b.csv share `shared-99`.
+eq "session-a.csv: sessions" "$(grp session-a.csv session)" "only-a=1/11 shared-99=1/10"
+eq "session-b.csv: sessions" "$(grp session-b.csv session)" "only-b=1/22 shared-99=1/20"
+eq "the shared session_id survives into both aggregates" \
+  "$(node -e "const C = require('$COST'); const k = f => C.aggregate(C.readLog('$FX/' + f)).groups.session.some(g => g.key === 'shared-99'); console.log(k('session-a.csv') && k('session-b.csv'));")" \
+  "true"
+
+# Every dimension the spec names is present, and `cost_usd` is not among the metrics: the decision
+# of 2026-09-27 keeps money out of both surfaces, so the engine never opens that column.
+eq "the dimensions are the eight the spec names" \
+  "$(ag hit-rate.csv 'console.log(A.dimensions.join(","));')" \
+  "task,agent,tool,model,branch,user,day,session"
+eq "no cost metric exists" \
+  "$(ag hit-rate.csv 'console.log(A.metrics.some(m => /cost/.test(m)));')" "false"
+# Code only, not prose: cost.js explains in a comment that the column is deliberately unread, and
+# that sentence is worth keeping. Full-line comments are stripped before looking.
+if grep -vE '^[[:space:]]*//' "$COST" | grep -q 'cost_usd'; then
+  fail "$COST reads cost_usd outside a comment; the reader must never open that column"
+fi
+
+# Only conforming rows reach a total, and the two excluded kinds stay separate (AC14's revised
+# wording): wrong-width.csv has one 18-field row and one 16-field pre-0007 row, neither counted.
+eq "wrong-width.csv: excluded records reach no total, and the counts stay distinct" \
+  "$(ag wrong-width.csv 'const c = A.counts; console.log([A.totals.input_tokens, c.conforming, c.wrongWidth, c.unreadable].join("|"));')" \
+  "333|2|2|0"
+eq "unreadable.csv: the torn record is counted apart from wrong-width ones" \
+  "$(ag unreadable.csv 'const c = A.counts; console.log([A.totals.input_tokens, c.wrongWidth, c.unreadable].join("|"));')" \
+  "42|0|1"
+# An empty log aggregates to zeroes rather than throwing, and a bad header carries no groups.
+eq "header-only.csv: aggregates to nothing without throwing" \
+  "$(ag header-only.csv 'console.log([A.totals.rows, A.groups.task.length, A.accepted.covered].join("|"));')" "0|0|0"
+eq "bad-header.csv: no groups invented from a header that cannot be measured" \
+  "$(ag bad-header.csv 'console.log([A.columns, A.groups.task.length, A.totals.rows].join("|"));')" "-1|0|0"
+# Determinism: the same log twice gives byte-identical group ordering.
+eq "the group order is stable across runs" \
+  "$(grp empty-task.csv task)" "$(grp empty-task.csv task)"
+
 # --- 8. the reader touched nothing (AC16, the half a fixture can prove) ------------------------
 [ "$(sums)" = "$BEFORE" ] || fail "the fixtures changed while being read; the reader must be read-only over the log"
-eq "no fixture was added or removed during the run" "$(ls "$FX"/*.csv | wc -l | tr -d ' ')" 7
+eq "no fixture was added or removed during the run" "$(ls "$FX"/*.csv | wc -l | tr -d ' ')" 11
 
-echo "cost reader ok — quoted commas and newlines held in one record, wrong-width and pre-0007 rows excluded and counted, an unclosed quote unreadable, an unmeasurable header inventing nothing, fields read by name with a missing column empty, header-only and missing logs answered, fixtures byte-identical after the run"
+echo "cost reader ok — quoted commas and newlines held in one record, wrong-width and pre-0007 rows excluded and counted, an unclosed quote unreadable, an unmeasurable header inventing nothing, fields read by name with a missing column empty, header-only and missing logs answered, groups summing to their totals with unattributed spend named, hit_rate recomputed rather than averaged, the session key surviving for a fleet view, fixtures byte-identical after the run"

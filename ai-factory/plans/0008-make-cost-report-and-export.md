@@ -106,7 +106,7 @@ no process that outlives the command, and no port.
   *Proves:* AC22 (the harness), and pins Step 1's behaviour. *Tests:* `bash
   skills/ai-layout/scripts/check-cost.sh` passes and fails loudly when a fixture total is edited.
 
-- [ ] **Step 3 — The aggregation engine.** Group the conforming records by each dimension the spec
+- [x] **Step 3 — The aggregation engine.** Group the conforming records by each dimension the spec
   names — task, agent, tool, model, branch, user, day, session — and compute per group: row count,
   `turns`, `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_write_tokens` and `hit_rate`.
   Rows with an empty `task`, or carrying no agent, go to an **explicitly named unattributed bucket**
