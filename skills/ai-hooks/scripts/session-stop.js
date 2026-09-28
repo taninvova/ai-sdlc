@@ -6,13 +6,21 @@ const cwd = ev.cwd || process.cwd();
 if (!ev.transcript_path || !fs.existsSync(ev.transcript_path)) process.exit(0);
 
 // The session's claim ledger, shared with the subagent rows so a record copied into an agent
-// transcript is counted once across the two kinds of row. Claims are RECORDED here and not yet
-// enforced against this row: `has` answers false, so the session row is still the cumulative
-// snapshot it has always been. Turning it into the increment is the next change, and it is the
-// one line below — the ledger passed in place of this wrapper.
+// transcript is counted once across the two kinds of row. Claims are both recorded and ENFORCED:
+// only records this session has not already counted are summed, so the row below is the increment
+// since this session's previous row rather than a re-sum of the whole transcript, and the rows of
+// one session_id sum to what the session actually spent. The first Stop has claimed nothing yet,
+// so its increment is the whole transcript so far and nothing is lost at the start.
+//
+// A record carrying no `uuid` cannot be claimed, so it is counted by every Stop — an over-count on
+// a transcript format that omits the key, never a silent loss (_usage.js says the same).
+//
+// Deliberately claim-before-write, not claim-after-append: two concluding subagents must not lose
+// each other's claims to a read-modify-write, so the claim lands as the sum walks the file. The
+// cost is that a swallowed append failure below leaves those records claimed with no row carrying
+// them, and later deltas will not re-report them.
 const ledger = claims(ai, ev.session_id);
-const { turns, inp, out, cr, cw, model } =
-  sumTranscript(ev.transcript_path, { has: () => false, add: k => ledger.add(k) });
+const { turns, inp, out, cr, cw, model } = sumTranscript(ev.transcript_path, ledger);
 if (turns === 0) process.exit(0);
 
 const { rate, approx } = price(ai, model);

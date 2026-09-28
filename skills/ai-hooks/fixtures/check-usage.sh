@@ -94,9 +94,11 @@ eq "no uuid, first pass"  "$(sum "$TMP/nouuid.jsonl" ", U.claims('$AI', 's4')")"
 eq "no uuid, second pass" "$(sum "$TMP/nouuid.jsonl" ", U.claims('$AI', 's4')")" "2|10|2|0|0|m-one"
 [ ! -e "$AI/runs/.counted.s4" ] || fail "a transcript with no uuid left a ledger behind; there was nothing to claim"
 
-# --- 4. the Stop hook still writes the snapshot it always has, and records its claims ----------
-# This step moves session-stop.js onto the module without changing the row: the claims are taken
-# so the agent rows can exclude them, but they are not yet enforced against the session's own sum.
+# --- 4. the Stop hook counts through the ledger, so its row is an increment --------------------
+# The claims are both taken and enforced: the first Stop has claimed nothing beforehand and so
+# carries the whole transcript, and a second Stop over an unchanged transcript finds every record
+# already claimed, sums to nothing and writes no row at all. The delta across a transcript that
+# GREW between two Stops is pinned in check-log-schema.sh, against transcript-uuid.jsonl.
 R=$TMP/stopped; mkdir -p "$R/ai-factory"
 cp "$TMP/parent.jsonl" "$R/t.jsonl"
 stop() {
@@ -110,8 +112,8 @@ stop; stop
 PEND=$R/ai-factory/runs/log.pending.csv
 cols() { awk -F, -v n="$1" 'NR==n{print $10"|"$11"|"$12"|"$13"|"$14}' "$PEND"; }
 eq "the first row is the whole transcript" "$(cols 2)" "3|600|60|6000|5"
-eq "the second row is still the whole transcript" "$(cols 3)" "3|600|60|6000|5"
+eq "a second Stop over an unchanged transcript adds no row" "$(wc -l < "$PEND" | tr -d ' ')" "2"
 [ -f "$R/ai-factory/runs/.counted.fx-usage" ] || fail "the Stop hook took no claims"
 eq "the ledger holds one line per record" "$(wc -l < "$R/ai-factory/runs/.counted.fx-usage" | tr -d ' ')" "3"
 
-echo "usage ok — price resolves exact/prefix/default/estimate, the ledger is lazy and append-only, a shared uuid is counted once, and the Stop row is unchanged"
+echo "usage ok — price resolves exact/prefix/default/estimate, the ledger is lazy and append-only, a shared uuid is counted once, and the Stop row is the increment"
