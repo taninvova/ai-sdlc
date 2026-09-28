@@ -91,10 +91,10 @@ says "$exc" '(no longer exist|does not exist|orphan)' \
 # Both transitional pieces, and they do not expire together (AC24).
 says "$adr" 'transitional' \
   "$ADR does not record /t4:migrate-layout and the hooks' fallback as transitional"
-says "$adr" '(command|migrate-layout)[^.]*1\.1\.0' \
-  "$ADR does not say that /t4:migrate-layout goes in 1.1.0"
-says "$adr" 'fallback[^.]*2\.0\.0' \
-  "$ADR does not say that the hooks' fallback is kept until 2.0.0 — dropping it sooner is itself a silent break"
+says "$adr" '(command|migrate-layout)[^.]*2\.1\.0' \
+  "$ADR does not say that /t4:migrate-layout goes in 2.1.0"
+says "$adr" 'fallback[^.]*3\.0\.0' \
+  "$ADR does not say that the hooks' fallback is kept until 3.0.0 — dropping it sooner is itself a silent break"
 
 # --- 2. CHANGELOG, top entry only (AC21, AC24) ------------------------------------------------
 top=$(awk '/^## /{n++} n==1' CHANGELOG.md)
@@ -121,10 +121,10 @@ says "$top" 'hooks[^.]*(accept|keep)[^.]*(guard|log)' \
   "CHANGELOG.md's $ver entry does not say the hooks keep working in the meantime — with the dont-touch guard and the run log they carry"
 says "$top" 'grep[^.]*(CI|pipeline|tooling)' \
   "CHANGELOG.md's $ver entry does not tell the developer to grep their own CI, pipeline and tooling config — paths the plugin cannot see and does not touch"
-says "$top" '(command|migrate-layout)[^.]*1\.1\.0' \
-  "CHANGELOG.md's $ver entry does not carry the deprecation notice for /t4:migrate-layout, removed in 1.1.0"
-says "$top" 'fallback[^.]*2\.0\.0' \
-  "CHANGELOG.md's $ver entry does not carry the deprecation notice for the hooks' fallback, kept until 2.0.0"
+says "$top" '(command|migrate-layout)[^.]*2\.1\.0' \
+  "CHANGELOG.md's $ver entry does not carry the deprecation notice for /t4:migrate-layout, removed in 2.1.0"
+says "$top" 'fallback[^.]*3\.0\.0' \
+  "CHANGELOG.md's $ver entry does not carry the deprecation notice for the hooks' fallback, kept until 3.0.0"
 
 # --- 3. /t4:sync-sdlc stops a repo that has not migrated (AC17) -------------------------------
 SYNC=commands/sync-sdlc.md

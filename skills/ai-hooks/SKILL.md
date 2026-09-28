@@ -16,17 +16,22 @@ The plugin registers these hooks globally (hooks/hooks.json). Every script:
 | Event | Script | Writes |
 |---|---|---|
 | SessionStart | session-start.js | ai-factory/runs/sessions.jsonl: session_id, ts, user, branch, plan_in_flight |
+| UserPromptSubmit | log-task.js | ai-factory/runs/.task.&lt;session_id&gt;: the bare name of the `/t4:` command the prompt carried (`spec`, not `/t4:spec`), for the rows written later; nothing at all when it carried none |
 | PreToolUse Edit/Write | guard-paths.js | nothing; exit 2 + stderr reason when the target matches ai-factory/docs/dont-touch.md |
 | PreToolUse Bash | log-flush.js | on `git commit` only: moves the rows in ai-factory/runs/log.pending.csv into ai-factory/runs/log.csv and stages it |
 | PostToolUse Edit/Write | log-edit.js | ai-factory/runs/edits.jsonl: session_id, ts, file |
 | PostToolUse Bash | log-cmd.js | ai-factory/runs/cmds.jsonl when the command ran a test, lint or e2e command (vitest, jest, biome, playwright, pnpm/npm test|lint|e2e|check) |
-| Stop | session-stop.js | one line to ai-factory/runs/log.pending.csv with tokens, cache hit rate, cost |
+| Stop | session-stop.js | one line to ai-factory/runs/log.pending.csv, `source=session`: tokens, cache hit rate, cost — the increment since this session's previous row |
+| SubagentStop | subagent-stop.js | one line to ai-factory/runs/log.pending.csv, `source=agent`: one row per concluded subagent, summed from that agent's own transcript and carrying its name in the `agent` column |
 
-The row counts the session's own transcript. Tokens spent inside a subagent — the reviewer,
-tester, architect, analyst, or the explorer, specifier, planner and implementer that the four
-loop steps delegate to — are not in the main transcript and so not in the row: a session that
-delegated a step under-counts by that step's cost. The hook does not read subagent transcripts
-today; recovering them is a separate change.
+Tokens spent inside a subagent used to be missing from the log entirely. They are not any more.
+A session that delegates gets a row per agent as well as a row per turn — the reviewer, tester,
+architect, analyst, and the explorer, specifier, planner and implementer that the four loop steps
+delegate to each conclude with their own `source=agent` row, named in the `agent` column and
+carrying the `task` the session was running. So the cost of a delegated step is in the log, and it
+can be grouped by agent, by task, by session or by model rather than only totalled. The parent
+transcript is never opened for an agent row: everything comes from the event payload, the agent's
+own transcript and the cwd.
 
 ## Why the session row is buffered
 A Stop fires after every turn. Written straight into the tracked log.csv, the file was dirty for
@@ -41,11 +46,16 @@ rows from conflicting when they merge — the file is append-only, so union is t
 ## log.csv — one schema, two writers
 ts,session_id,source,user,branch,task,tool,agent,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted
 
-`source` is `session` (this Stop hook) or `make` (ai-factory/make/log.js, headless). Both write
-these 17 columns; each blanks what it cannot know — an interactive session has no `task`,
-a headless run has no separate turn accounting beyond `num_turns`, and neither names an
-`agent` — both write it empty. `accepted` is filled by
-the developer at commit time (y/n/partial). `user` is $GITLAB_USER or `git config user.name`.
+`source` says which event wrote the row: `session` (the Stop hook, one per turn), `agent` (the
+SubagentStop hook, one per concluded subagent) or `make` (ai-factory/make/log.js, headless). All
+three write these 17 columns; each blanks what it cannot know — a headless run has no separate turn
+accounting beyond `num_turns`, and only an `agent` row names an `agent`, the other two write it
+empty. `task` is the bare name of the last `/t4:` command the session submitted, and it is the
+*session's* task on an agent row too, so a specifier spawned under `/t4:run` is `run,specifier`
+rather than a fixed agent-to-task map; a prompt carrying two `/t4:` commands is attributed to the
+first match, and a prompt carrying none leaves the last task standing rather than clearing it.
+`accepted` is filled by the developer at commit time (y/n/partial). `user` is $GITLAB_USER or
+`git config user.name`.
 
 The plugin-side scripts (session-stop.js, log-flush.js) share `scripts/_log-schema.js`, and the
 token accounting — the transcript sum, the per-session claim ledger and the models.yaml price
@@ -70,6 +80,31 @@ write — for log.csv that is the flush or a headless run:
 Rows are never reinterpreted into the new columns: width alone cannot say which writer
 produced a row, and guessing is what caused the original mixed-schema bug. Field counting
 is quote-aware, so a value containing a comma or a newline is one field, not several.
+
+## Every row is an increment, and a usage record is counted once
+A row is the delta since that session's previous row, not a re-sum of the transcript, so the rows
+of one `session_id` **add up** to what the session spent instead of each restating a running total.
+The bookkeeping is one file per session beside the run log, `ai-factory/runs/.counted.<session_id>`
+(gitignored, append-only), holding `u:<message uuid>` for a usage record already counted and
+`a:<agent id>` for a subagent already reported.
+
+- **The `uuid` rule.** A usage record belongs to one agent and is counted once however many
+  transcripts carry a copy of it. It has to be: context inheritance re-logs a prefix of the
+  parent's records into each forked child, so a per-transcript sum counts those tokens once per
+  transcript that carries them. A record with **no `uuid`** cannot be claimed and is therefore
+  counted every time — an over-count on a transcript format that omits the key, never a silent
+  loss of the tokens.
+- **One row per agent.** A resumed subagent fires SubagentStop again and the `a:` claim makes the
+  second event a no-op. The id is claimed *before* the transcript is summed, so two subagents
+  concluding at once cannot lose each other's claims to a read-modify-write. The cost of that
+  order: a first event whose agent transcript is missing or unparseable still burns the id, writes
+  no row, and a later well-formed event for the same agent writes none either.
+- Claims are durable before the row is, for the same reason, so a swallowed append failure leaves
+  records claimed with no row carrying them, and later increments do not re-report them.
+
+Rows written before 2.0.0 are cumulative rather than increments, and they are not reinterpreted:
+the 17-column header moves every one of them to `ai-factory/runs/log.previous.csv` — the first
+bullet above — which is where rows written under the old semantics belong.
 
 ## Pricing
 session-stop.js prices a run with the model the transcript says actually ran, so any

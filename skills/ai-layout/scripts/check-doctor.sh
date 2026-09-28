@@ -48,7 +48,7 @@ grep -q 'adopt-sdlc' <<<"$out" || fail "the layout finding carries no remedy (AC
 
 # 1b. the pre-1.0.0 layout, and the half-migrated middle ------------------------------------
 # Three states, three remedies. The point of separating them is that a repo which merely has not
-# migrated is still working — the hooks accept the old name until 2.0.0 — while a half-migrated one
+# migrated is still working — the hooks accept the old name until 3.0.0 — while a half-migrated one
 # is ambiguous and needs a decision before anything else.
 mkdir -p "$TMP/unmigrated/ai/tasks" && : > "$TMP/unmigrated/ai/tasks/spec.md"  # path-scan-ok
 out=$(run "$TMP/unmigrated"); st=$?
@@ -57,13 +57,15 @@ grep -q '^\[finding\] layout .*pre-1.0.0 layout' <<<"$out" || fail "an unmigrate
 $out"
 grep -q 'migrate-layout' <<<"$out" || fail "the unmigrated finding carries no remedy:
 $out"
-# 2.0.0, not 1.1.0: the fallback outlives the migration command, because removing it is itself
+# 3.0.0, not 2.1.0: the fallback outlives the migration command, because removing it is itself
 # a silent break. An assertion naming the old version would pass a doctor promising the wrong one.
+# Rescheduled 2026-09-27 with the 2.0.0 release: this release IS 2.0.0 and keeps the fallback, so
+# the command moved to 2.1.0 and the fallback to 3.0.0. Only the numbers moved.
 # The pre-1.0.0 name is assembled rather than spelled, so this line needs no scan pragma and
 # check-paths.sh keeps its authority over the file.
 OLD_DIR=ai
-grep -qE "accept $OLD_DIR/ until 2\.0\.0" <<<"$out" \
-  || fail "the unmigrated finding does not say the hooks still work until 2.0.0, which is the difference between a diagnosis and an alarm:
+grep -qE "accept $OLD_DIR/ until 3\.0\.0" <<<"$out" \
+  || fail "the unmigrated finding does not say the hooks still work until 3.0.0, which is the difference between a diagnosis and an alarm:
 $out"
 grep -q 'no ai-factory/ directory' <<<"$out" && fail "an unmigrated repo was told it never adopted the layout:
 $out"

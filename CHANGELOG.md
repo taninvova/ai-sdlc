@@ -1,5 +1,73 @@
 # Changelog
 
+## 2.0.0 — 2026-09-27
+
+**Breaking for every adopted repo. Your existing `ai-factory/runs/log.csv` rows move to
+`log.previous.csv` on the next write.**
+
+The run log gained a seventeenth column, `agent`, and the header therefore changed. The guard that
+has always protected this file does what it is for: on the first write after you take this update —
+a flush from a session, or a headless `make log` run — every row under the old header moves to
+`ai-factory/runs/log.previous.csv` under a dated comment saying why, and a clean `log.csv` is
+started. Nothing is deleted and nothing is reinterpreted.
+
+### What that means for a log you have been keeping
+
+Your history is intact, in a second file, and it does not append to the new one. If you read
+`log.csv` from a script, a dashboard or a spreadsheet, it now has 17 columns and, from the next
+write on, no rows older than this release — read `log.previous.csv` alongside it for anything
+before. Those old rows are also **cumulative**: each was a re-sum of the session's transcript so
+far, so adding them up double-counts. The new rows are increments and do add up. That difference is
+the reason the two files stay apart instead of being merged.
+
+`make log-flush` refuses while `log.pending.csv` and `log.csv` carry different headers — exactly the
+state right after this upgrade. Let a session flush first, so the hook migrates the file, and then
+`make log-flush` works as before. Restart your sessions after updating the plugin: hooks load from
+the installed copy, so an older one keeps writing 16-field rows, and the guard quarantines them.
+
+### New — where the money went
+
+- **One row per concluded subagent**, on `SubagentStop`, summed from that agent's own transcript.
+  `source=agent`, the agent's name in the new `agent` column. Tokens spent inside the reviewer, the
+  tester, or the explorer / specifier / planner / implementer that `/t4:explore`, `/t4:spec`,
+  `/t4:plan` and `/t4:run` delegate to are no longer missing from the log.
+- **`task`**, filled on `UserPromptSubmit` from the `/t4:` command you typed — the session's task,
+  carried onto its agents' rows too, so a specifier under `/t4:run` is `run,specifier`.
+- **Rows are increments**, not running totals: the rows of one session add up to what it spent.
+- **A usage record is counted once**, keyed on its message uuid, however many transcripts carry a
+  copy of it — context inheritance re-logs a prefix of the parent's records into every forked child,
+  and summing per transcript counted those tokens once per copy. A record whose transcript format
+  omits the key is counted every time instead: an over-count, never a silent loss.
+- `source` is now `session`, `agent` or `make`. Group by any of the four new dimensions.
+
+### Still on the pre-1.0.0 layout?
+
+**Run `/t4:migrate-layout` once, in each repo** — this release does not change that, and does not
+remove the safety net either. The hooks still accept the old directory name as well as the new one,
+so an unmigrated repo keeps its dont-touch guard and its run log, and the two new events behave
+exactly as they do in a migrated repo. The prompts are not so forgiving: they name `ai-factory/`
+only. **Grep your own CI, pipeline config and tooling** for the old directory name — the plugin
+cannot see those paths and does not touch them. `/t4:doctor` says which state a repo is in.
+
+### Deprecated
+
+- `/t4:migrate-layout` — **removed in 2.1.0** (was 1.1.0, which this release skips past). A
+  one-shot migration; its absence is a missing command, which is loud, and the script can still be
+  run from an older checkout.
+- The hooks' fallback to the old directory name — **kept until 3.0.0** (was 2.0.0, which is this
+  release, and it keeps the fallback). Removing it disarms the dont-touch guard and stops the run
+  log in any repo that never migrated, and does so silently. That is not a change to make in a
+  release doing something else. See `ai-factory/adr/0008`.
+
+### Also
+
+- New hook scripts `subagent-stop.js` and `log-task.js`; `SubagentStop` and `UserPromptSubmit`
+  registered in `hooks/hooks.json`. Both no-op outside a repo with the layout, and neither prints.
+- `_usage.js` — the transcript sum, the per-session claim ledger and the price resolution, shared by
+  the session and agent rows and pinned by `fixtures/check-usage.sh`.
+- `ai-factory/runs/.counted.*` and `.task.*` — two gitignored state files beside the log. Add both
+  lines to your `.gitignore`; `/t4:sync-sdlc` and `make clean-runs` know about them.
+
 ## 1.0.0 — 2026-09-25
 
 **Breaking for every adopted repo. Run `/t4:migrate-layout` once, in each repo.**

@@ -15,7 +15,7 @@ removed by the adopt command — a leaked `{{…}}` in a real repo is a bug.
 Node, no dependencies, CommonJS. Never write to stdout; diagnostics go to stderr. Exit 0
 unless deliberately blocking (exit 2 with a reason on stderr). Guard every filesystem read
 with try/catch and no-op when the layout directory is absent — `aiDir()` decides that, and
-until 2.0.0 it accepts the pre-1.0.0 name too, so no script may hard-code either. <!-- path-scan-ok --> Cover behaviour with a fixture under
+until 3.0.0 it accepts the pre-1.0.0 name too, so no script may hard-code either. <!-- path-scan-ok --> Cover behaviour with a fixture under
 `skills/ai-hooks/fixtures/`.
 
 ## Shell

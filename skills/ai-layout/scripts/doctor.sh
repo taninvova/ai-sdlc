@@ -34,12 +34,12 @@ cd "$REPO" || { say unknown repo "cannot enter $REPO"; done_; }
 # and the command must be runnable anywhere.
 # 1.0.0 renamed ai/ to ai-factory/. Three states are worth telling apart, because the remedy  # path-scan-ok
 # differs and the hooks behave differently in each: never adopted, adopted but not yet migrated,
-# and half migrated. The hooks prefer ai-factory/ and fall back to ai/ until 2.0.0, so saying which  # path-scan-ok
+# and half migrated. The hooks prefer ai-factory/ and fall back to ai/ until 3.0.0, so saying which  # path-scan-ok
 # directory they are actually reading is the difference between "my log stopped" and a diagnosis.
 if [ -d ai-factory ] && [ -d ai ]; then
   say finding layout "both ai/ and ai-factory/ exist — this repo is half migrated. The hooks are using ai-factory/; the prompts name it too. Decide which is current, remove the other, then run /t4:migrate-layout"  # path-scan-ok
 elif [ ! -d ai-factory ] && [ -d ai ]; then
-  say finding layout "ai/ but no ai-factory/ — this repo is on the pre-1.0.0 layout. The hooks still work (they accept ai/ until 2.0.0), but every prompt names ai-factory/, so the tasks will look in the wrong place. Run /t4:migrate-layout"  # path-scan-ok
+  say finding layout "ai/ but no ai-factory/ — this repo is on the pre-1.0.0 layout. The hooks still work (they accept ai/ until 3.0.0), but every prompt names ai-factory/, so the tasks will look in the wrong place. Run /t4:migrate-layout"  # path-scan-ok
   done_
 elif [ ! -d ai-factory ]; then
   say finding layout "no ai-factory/ directory — this repo has not adopted the layout. Run /t4:adopt-sdlc"
