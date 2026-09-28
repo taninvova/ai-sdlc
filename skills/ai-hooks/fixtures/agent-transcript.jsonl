@@ -1,0 +1,4 @@
+{"type":"assistant","uuid":"ag-0001","message":{"model":"claude-sonnet-4-5","usage":{"input_tokens":1000,"output_tokens":200,"cache_read_input_tokens":4000,"cache_creation_input_tokens":100}}}
+{"type":"user","uuid":"ag-0002","message":{"role":"user","content":"a record with no usage on it"}}
+{"type":"assistant","uuid":"ag-0003","message":{"model":"claude-sonnet-4-5","usage":{"input_tokens":600,"output_tokens":120,"cache_read_input_tokens":5000,"cache_creation_input_tokens":0}}}
+{"type":"assistant","uuid":"ag-0004","message":{"model":"claude-sonnet-4-5","usage":{"input_tokens":300,"output_tokens":80,"cache_read_input_tokens":6000,"cache_creation_input_tokens":50}}}

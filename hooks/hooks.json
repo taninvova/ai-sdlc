@@ -1,5 +1,5 @@
 {
-  "description": "ai-sdlc logging and guard hooks. All scripts no-op unless the cwd contains an ai-factory/ directory, or — for a repo that has not yet run /t4:migrate-layout — an ai/ directory; that fallback goes in 2.0.0. None print to stdout.",
+  "description": "ai-sdlc logging and guard hooks, on SessionStart (a run-log note), PreToolUse (the dont-touch guard, and the pending-log flush on a commit), PostToolUse (the edit and command logs), Stop (one run-log row per turn, the increment since the session's previous row) and SubagentStop (one row per concluded subagent, summed from that agent's own transcript and carrying its name in the agent column). All scripts no-op unless the cwd contains an ai-factory/ directory, or — for a repo that has not yet run /t4:migrate-layout — an ai/ directory; that fallback goes in 2.0.0. None print to stdout.",
   "hooks": {
     "SessionStart": [
       { "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/ai-hooks/scripts/session-start.js\"" } ] }
@@ -18,6 +18,9 @@
     ],
     "Stop": [
       { "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/ai-hooks/scripts/session-stop.js\"" } ] }
+    ],
+    "SubagentStop": [
+      { "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/ai-hooks/scripts/subagent-stop.js\"" } ] }
     ]
   }
 }
