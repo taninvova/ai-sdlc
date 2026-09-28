@@ -213,6 +213,11 @@ collector exists.
   explicitly, naming the file it read and the row count it found, and exits 0 — an empty table with
   no explanation reads as a broken feature. This is the case at the workspace root today, whose own
   log has zero rows and which inherits this target through its `ai.mk` include.
+  And Given a log whose **header itself** cannot be measured, Then the message distinguishes that from
+  an empty log rather than reporting "no rows". Established while building: an unclosed quote in the
+  header swallows the whole file into one record, so row count alone reads as zero either way — the
+  message must key off the header being unmeasurable, not off the row count. A corrupt log reported as
+  "no runs yet" is the one outcome here that loses data silently.
 - **AC11** Given rows whose `task` is empty, or which carry no agent, When the report and the export
   are produced, Then those rows appear under an explicitly named bucket for unattributed spend, with
   their row count visible. They are neither dropped nor folded silently into another group's total.
@@ -230,7 +235,12 @@ collector exists.
 
 - **AC14** Given rows whose field count is not the header's, When either mode runs, Then those rows
   are excluded from every total and their count is reported in the output. They are not
-  reinterpreted into the columns that do exist, and the log is not rewritten to remove them.
+  reinterpreted into the columns that do exist, and the log is not rewritten to remove them. There are
+  **two kinds of excluded record and both are counted separately**: one whose width is measurable but
+  wrong, and one whose width cannot be measured at all because a quote never closes — the second is
+  what `width()` reports as `-1`, and the spec's own words are that such a record "is not a row that
+  can be measured at all". Reporting them as one number would tell a developer a malformed log has
+  wrong-width rows when it has torn ones.
 - **AC15** Given rows written before spec 0007's collection change — cumulative snapshots of a
   session — When either mode runs, Then those rows are never added together as if they were per-run
   figures, and any that are reachable are excluded from every total with the output stating that
@@ -282,10 +292,16 @@ collector exists.
   must be the same single-layout target, not a walker.
 - **AC22** Given the release, When the arithmetic is checked, Then a check script runs the
   aggregation over fixture `log.csv` files whose totals are known by construction — including a log
-  with quoted fields (AC13), one with a wrong-width row (AC14), one with pre-0007 rows (AC15), one
-  with empty and `~`-prefixed costs (AC3), one with empty `task` (AC11) and a header-only one
-  (AC10) — and fails if any total departs from the expected value. The engine is therefore provable
-  before a single real agent row exists.
+  with quoted fields, one carrying a quoted newline (AC13), one with a wrong-width row (AC14), one
+  with pre-0007 rows (AC15), one with an **unclosed quote** (the unreadable category of AC14), one
+  whose **header is itself unmeasurable**, one whose **header is reordered and carries no `agent`
+  column** — which is what proves fields are read by name rather than by position — one with empty
+  `task` (AC11), a header-only one and a missing one (AC10) — and fails if any total or count departs
+  from the expected value. Expected values are literals derived from the fixtures by hand, never from
+  the reader: a check that asks the code under test for the answer asserts nothing. **No cost fixture
+  is required** — the decision of 2026-09-27 means `cost_usd` is never read, so its empty and
+  `~`-prefixed states have nothing to assert; that clause is struck from this criterion along with
+  AC3. The engine is therefore provable before a single real agent row exists.
 
 ## Out of scope
 - **The HTML report (R2) — that is v2.** One self-contained `ai-factory/runs/report.html`, inline

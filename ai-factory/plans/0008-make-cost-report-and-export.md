@@ -95,7 +95,7 @@ no process that outlives the command, and no port.
   *Proves:* AC13, AC14, AC15, AC17. *Tests:* `node --check` on the file; fixtures for a quoted
   comma, a wrong-width row and a pre-0007 row piped through the reader, asserting counts.
 
-- [ ] **Step 2 — The fixture corpus and the check harness.** Create
+- [x] **Step 2 — The fixture corpus and the check harness.** Create
   `skills/ai-hooks/fixtures/cost/` with one `log.csv` per case the spec enumerates, each with totals
   known by construction: quoted fields (AC13), a wrong-width row (AC14), pre-0007 rows (AC15), empty
   `task` (AC11), header-only (AC10). No cost fixture is needed — `cost_usd` is never read (decision of
