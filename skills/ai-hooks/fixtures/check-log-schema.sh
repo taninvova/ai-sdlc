@@ -170,4 +170,27 @@ summed=$(awk -F, 'NR>1{for(i=10;i<=14;i++) s[i]+=$i} END{print s[10], s[11], s[1
 stopd
 [ "$(wc -l < "$PEND")" -eq 3 ] || fail "a Stop with nothing new to count wrote a row"
 
-echo "log schema ok — $cols columns, both writers agree, per-row width enforced, migration preserves old rows, flush moves rows once on commit, session rows are increments"
+# 9. the `task` column on a session row (AC10, AC11): filled from `.task.<session_id>`, empty
+# without one. The column session-stop.js wrote empty for every interactive session until now, so
+# a regression here is invisible — the row is still valid and still the right width.
+rm -rf "$TMP/ai-factory/runs"; mkdir -p "$TMP/ai-factory/runs"
+stop
+t=$(awk -F, 'NR==2{print $6}' "$PEND")
+[ -z "$t" ] || fail "with no task file the task column must stay empty, got '$t'"
+[ "$(awk -F, 'NR==1{print $6}' "$PEND")" = task ] || fail "column 6 of the header is not task"
+
+rm -rf "$TMP/ai-factory/runs"; mkdir -p "$TMP/ai-factory/runs"
+printf 'plan\n' > "$TMP/ai-factory/runs/.task.fx"
+stop
+t=$(awk -F, 'NR==2{print $6}' "$PEND")
+[ "$t" = plan ] || fail "the session row should carry the task file's name (plan), got '$t'"
+n=$(awk -F, 'NR==2{print NF}' "$PEND")
+[ "$n" = "$cols" ] || fail "the row carrying a task has $n fields, header has $cols"
+# Keyed by session_id: a file belonging to another session must not fill this one's column.
+rm -rf "$TMP/ai-factory/runs"; mkdir -p "$TMP/ai-factory/runs"
+printf 'spec\n' > "$TMP/ai-factory/runs/.task.someone-else"
+stop
+t=$(awk -F, 'NR==2{print $6}' "$PEND")
+[ -z "$t" ] || fail "another session's task file filled this session's task column with '$t'"
+
+echo "log schema ok — $cols columns, both writers agree, per-row width enforced, migration preserves old rows, flush moves rows once on commit, session rows are increments and carry the session's task"

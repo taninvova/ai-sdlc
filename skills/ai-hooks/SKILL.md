@@ -94,6 +94,7 @@ ai-factory/runs/*.json
 ai-factory/runs/*.jsonl
 ai-factory/runs/log.pending.csv
 ai-factory/runs/.counted.*
+ai-factory/runs/.task.*
 .claude/settings.local.json
 CLAUDE.local.md
 

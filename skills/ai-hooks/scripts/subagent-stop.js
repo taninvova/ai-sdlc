@@ -9,7 +9,7 @@
 // The parent `transcript_path` is never opened. Every field comes from the payload, from
 // `agent_transcript_path`, or from `cwd` — so an unreadable or absent parent transcript costs this
 // row nothing, and the event adds exactly one transcript read to the turn.
-const { readEvent, aiDir, user, branch, fs, path } = require("./_common");
+const { readEvent, aiDir, user, branch, task, fs, path } = require("./_common");
 const { claims, sumTranscript, price } = require("./_usage");
 const ev = readEvent(); const ai = aiDir(ev); if (!ai) process.exit(0);
 const cwd = ev.cwd || process.cwd();
@@ -45,8 +45,10 @@ try {
   ensureSchema(file);
   fs.appendFileSync(file, [
     new Date().toISOString(), ev.session_id, "agent", user(cwd), branch(cwd),
-    // `task` stays empty until the task file exists; `agent` is the payload's agent_type verbatim,
-    // and `tool` still carries `claude` alone, unsplit and unqualified.
-    "", "claude", ev.agent_type || "", model, turns, inp, out, cr, cw, hit, approx + cost.toFixed(4), "",
+    // `task` is the session's, not the agent's: attribution follows the `/t4:` command the session
+    // is running, so a specifier spawned under /t4:run is `run,specifier` and never a static
+    // agent→task map. Empty when the session has run no command. `agent` is the payload's
+    // agent_type verbatim, and `tool` still carries `claude` alone, unsplit and unqualified.
+    task(ai, ev.session_id), "claude", ev.agent_type || "", model, turns, inp, out, cr, cw, hit, approx + cost.toFixed(4), "",
   ].map(csv).join(",") + "\n");
 } catch {}

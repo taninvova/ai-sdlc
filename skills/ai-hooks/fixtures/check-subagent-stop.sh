@@ -200,4 +200,22 @@ summed=$(awk -F, 'NR>1{for (i = 10; i <= 14; i++) s[i] += $i} END{print s[10], s
 eq "the two rows sum to the union of the two transcripts" "$summed" "$(union "$PARENT" "$CHILD")"
 eq "a shared uuid is claimed once" "$(grep -c '^u:ag-0003$' "$R/ai-factory/runs/.counted.s7")" "1"
 
-echo "subagent-stop ok — one row per concluded agent from its own transcript, priced and estimated, the parent transcript is never read, a resumed agent is counted once, four cases write nothing silently, and an inherited prefix is counted once"
+# --- 8. the task is the session's, the agent name is the agent's (AC12) ------------------------
+# The crossing the exploration measured: a `specifier` spawned under /t4:run. The row must say
+# `run,specifier` — the task from the session's task file, never from a static agent→task map, and
+# never the other way round.
+R=$(repo tasked)
+printf 'run\n' > "$R/ai-factory/runs/.task.s8"
+run "$(payload "cwd=$R" "agent_transcript_path=$PARENT" session_id=s8 agent_id=a8 agent_type=specifier)"
+eq "task is the session's task, from its task file" "$(f "$R" 2 6)" "run"
+eq "and the agent is still its own name"            "$(f "$R" 2 8)" "specifier"
+eq "the row is as wide as the header" \
+  "$(awk -F, 'NR==2{print NF}' "$R/ai-factory/runs/log.pending.csv")" \
+  "$(awk -F, 'NR==1{print NF}' "$R/ai-factory/runs/log.pending.csv")"
+# The file is read, not inferred from: another session's task file leaves this row's column empty.
+R=$(repo other-session)
+printf 'plan\n' > "$R/ai-factory/runs/.task.someone-else"
+run "$(payload "cwd=$R" "agent_transcript_path=$PARENT" session_id=s9 agent_id=a9 agent_type=specifier)"
+eq "a task file for another session does not fill this row" "$(f "$R" 2 6)" ""
+
+echo "subagent-stop ok — one row per concluded agent from its own transcript, priced and estimated, the parent transcript is never read, a resumed agent is counted once, four cases write nothing silently, an inherited prefix is counted once, and the task comes from the session while the name comes from the agent"

@@ -149,7 +149,7 @@ scripts require only `fs`, `path`, `child_process` and their siblings, so AC20 h
   *Tests:* `bash skills/ai-hooks/fixtures/check-subagent-stop.sh`; `bash skills/ai-hooks/fixtures/check-detect.sh`;
   `node -e 'JSON.parse(require("fs").readFileSync("hooks/hooks.json","utf8"))'`.
 
-- [ ] **Step 5 — the task file, and the column it fills.**
+- [x] **Step 5 — the task file, and the column it fills.**
   New `log-task.js`: `aiDir(ev)` guard; match `/t4:([a-z][a-z0-9-]*)` in `ev.prompt`; on a match
   write the bare name to `.task.<session_id>`; **write nothing to stdout or stderr, ever** — a print
   from `UserPromptSubmit` enters the model's context and breaks the cached prefix. No match: do

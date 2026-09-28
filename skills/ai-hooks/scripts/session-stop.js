@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const { readEvent, aiDir, user, branch, fs, path } = require("./_common");
+const { readEvent, aiDir, user, branch, task, fs, path } = require("./_common");
 const { claims, sumTranscript, price } = require("./_usage");
 const ev = readEvent(); const ai = aiDir(ev); if (!ai) process.exit(0);
 const cwd = ev.cwd || process.cwd();
@@ -37,7 +37,9 @@ try {
   ensureSchema(file);
   fs.appendFileSync(file, [
     new Date().toISOString(), ev.session_id, "session", user(cwd), branch(cwd),
-    // `agent` is empty on a session row: the subagent rows carry their own name.
-    "", "claude", "", model, turns, inp, out, cr, cw, hit, approx + cost.toFixed(4), "",
+    // `task` is the `/t4:` command this session last ran, from the file log-task.js writes, and
+    // empty when it ran none. `agent` is empty on a session row: the subagent rows carry their own
+    // name.
+    task(ai, ev.session_id), "claude", "", model, turns, inp, out, cr, cw, hit, approx + cost.toFixed(4), "",
   ].map(csv).join(",") + "\n");
 } catch {}
