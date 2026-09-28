@@ -8,7 +8,7 @@ THIS repo. It is the only thing that does — ai-sdlc never reaches into a repo 
 (ADR 0002), so every adopted repo runs this itself, once, when it takes the update.
 
 Until it is run, the hooks still work: they accept the old directory name as well as the new one
-until 2.0.0, so a repo that has updated the plugin but not yet migrated keeps its dont-touch guard
+until 3.0.0, so a repo that has updated the plugin but not yet migrated keeps its dont-touch guard
 and its run log. Nothing is silently disarmed. Prompts are not so forgiving — they name the new
 paths only, so `/t4:spec` and friends will look in `ai-factory/` before this has run.
 

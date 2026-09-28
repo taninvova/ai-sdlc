@@ -170,7 +170,7 @@ scripts require only `fs`, `path`, `child_process` and their siblings, so AC20 h
   session row carries the same `task` (AC10, AC11) and that with no file the column is empty;
   `bash skills/ai-layout/scripts/check-entrypoints.sh`.
 
-- [ ] **Step 6 — the docs, the breaking statement, the version.**
+- [x] **Step 6 — the docs, the breaking statement, the version.**
   `skills/ai-hooks/SKILL.md`: two rows in the event table, the 17-column list, the `source` values
   (`session` · `agent` · `make`), the `uuid` de-duplication rule including the no-`uuid` fallback,
   the delta semantics, and — deleting the paragraph at lines 25–29 — what the agent rows now carry

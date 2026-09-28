@@ -36,12 +36,19 @@ different ways:
    and a prompt pointed at a missing directory fails in front of the person who can fix it.
 2. **`/t4:migrate-layout`.** The move an adopted repo makes, once, when it takes the update.
 
-**The command goes in 1.1.0. The fallback waits for 2.0.0.** Dropping the command is harmless: a
+**The command goes in 2.1.0. The fallback waits for 3.0.0.** Dropping the command is harmless: a
 repo that still needs it can run the script from an older checkout, and its absence is a missing
 slash command, which is loud. Dropping the fallback disarms the dont-touch guard and stops the run
 log in any repo that never migrated, with no error — the exact failure this ADR added the fallback
 to prevent. Doing that in a minor release would be the silent break we refused at the start, so it
 waits for a major, where a reader expects to check what was removed.
+
+*Rescheduled 2026-09-27.* The pair was originally 1.1.0 and 2.0.0. 2.0.0 then shipped for an
+unrelated reason — the run log gained a seventeenth column, which is breaking for every adopted
+repo — and it keeps the fallback, because the repos that need it are exactly the ones that have not
+migrated. That made both original numbers unreachable: 1.1.0 will never exist, and the 2.0.0 that
+does exist removed nothing. Only the numbers moved. The shape of the decision is unchanged: the
+command goes in a minor, the fallback in the next major after it.
 
 ## The exception this decision makes, and its bounds
 `/t4:sync-sdlc` holds that taking an upstream change is a separate, reviewable edit, and ADR 0002

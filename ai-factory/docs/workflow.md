@@ -143,7 +143,7 @@ order it prints — the moves first, the path rewrite second. Git pairs a rename
 one commit a file whose path lines are most of its content loses its history; two commits make that
 independent of how big the file is.
 
-Until you run it the hooks still work: they accept the old directory name until 2.0.0, so the
+Until you run it the hooks still work: they accept the old directory name until 3.0.0, so the
 dont-touch guard and the run log keep going. The prompts do not — they name `ai-factory/` only, so
 `/t4:spec` and the rest will look in a directory that is not there yet. `/t4:doctor` says which of
 the three states a repo is in, and `/t4:sync-sdlc` stops and points here rather than syncing.
@@ -293,10 +293,23 @@ Silently, into `ai-factory/runs/` — nothing prints to your terminal:
   `git commit`, so the tracked file changes only inside the commit that produced the work and
   never blocks a `git checkout`. Committing from a terminal instead? `make log-flush`. Fill the
   `accepted` column (y/n/partial) at commit time; it is the only honest measure of whether
-  this is working. The row counts the session's own transcript: tokens spent inside a
-  subagent — including the explorer, specifier, planner and implementer that `/t4:explore`,
-  `/t4:spec`, `/t4:plan` and `/t4:run` delegate to — are not in it, so a session that
-  delegated a step under-counts by that step's cost.
+  this is working. Each row is the **increment** since that session's previous row, so the rows of
+  one session add up to what it spent rather than each restating a running total.
+- Tokens spent inside a subagent are in the log too, as their own rows. Every agent that
+  concludes — the reviewer and tester, and the explorer, specifier, planner and implementer that
+  `/t4:explore`, `/t4:spec`, `/t4:plan` and `/t4:run` delegate to — adds a row summed from its own
+  transcript. The `source` column says which kind you are looking at: `session` for a turn, `agent`
+  for a concluded subagent, `make` for a headless CI run. An `agent` row names the agent in the
+  `agent` column and carries the `/t4:` command the session was running in `task`, so you can ask
+  where the money went by agent, by task, by branch or by model — not just how much the repo spent.
+  A record is counted once however many transcripts carry a copy of it, keyed on its message uuid;
+  a record whose transcript format omits that key is counted every time instead, which over-counts
+  rather than losing the tokens quietly.
+- Because the header changed in 2.0.0 (17 columns — `agent` is new), the first write after you take
+  that update moves your existing rows to `log.previous.csv` and starts a clean file. Those rows
+  were cumulative, not increments, and nothing reinterprets them. `make log-flush` refuses while
+  `log.pending.csv` and `log.csv` have different headers, which is exactly the state right after the
+  upgrade — let a session flush first, so the hook migrates the file, then flush by hand as usual.
 - `sessions.jsonl`, `edits.jsonl`, `cmds.jsonl` — what ran, what was edited, which test and
   lint commands were used.
 - The guard blocks any edit to a path in `ai-factory/docs/dont-touch.md` and says which rule matched.
