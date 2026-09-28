@@ -127,4 +127,47 @@ node "$MAKE" "$TMP/ai-factory/runs/r-check.json" check claude some-model >> "$TM
 grep -q ',short,' "$TMP/ai-factory/runs/log.previous.csv" || fail "headless writer did not move the short row aside"
 if grep -q ',short,' "$TMP/ai-factory/runs/log.csv"; then fail "headless writer left the short row in log.csv"; fi
 
-echo "log schema ok — $cols columns, both writers agree, per-row width enforced, migration preserves old rows, flush moves rows once on commit"
+# 8. deltas at write (AC14): a row carries the increment since that session's previous row.
+# The claim ledger `.counted.<session_id>` is what remembers which usage records are already
+# accounted for, so this needs a transcript whose records carry `uuid` — transcript.jsonl has none
+# on purpose, and keeps the un-deduplicated path covered.
+rm -rf "$TMP/ai-factory/runs"; mkdir -p "$TMP/ai-factory/runs"
+cp skills/ai-hooks/fixtures/transcript-uuid.jsonl "$TMP/uuid.jsonl"
+stopd() { printf '{"session_id":"dl","cwd":"%s","transcript_path":"%s/uuid.jsonl","hook_event_name":"Stop"}' "$TMP" "$TMP" | node "$HOOK"; }
+# Independent of the hook: sums the transcript here, so the assertion measures the writer rather
+# than agreeing with it. Prints "turns inp out cr cw".
+total() { node -e '
+  const fs = require("fs"); const t = [0,0,0,0,0];
+  for (const l of fs.readFileSync(process.argv[1], "utf8").split("\n")) {
+    if (!l.trim()) continue; const u = JSON.parse(l).message?.usage; if (!u) continue;
+    t[0]++; t[1] += u.input_tokens; t[2] += u.output_tokens;
+    t[3] += u.cache_read_input_tokens; t[4] += u.cache_creation_input_tokens;
+  }
+  process.stdout.write(t.join(" "));' "$1"; }
+
+stopd
+first=$(awk -F, 'NR==2{print $10, $11, $12, $13, $14}' "$PEND")
+# AC14's last clause: the first row of a session claims nothing beforehand, so its increment is
+# the whole transcript so far.
+[ "$first" = "$(total "$TMP/uuid.jsonl")" ] \
+  || fail "the first row of a session should carry the whole transcript, got '$first' for '$(total "$TMP/uuid.jsonl")'"
+[ -f "$TMP/ai-factory/runs/.counted.dl" ] || fail "no claim ledger written for session dl"
+
+cat >> "$TMP/uuid.jsonl" <<'EOF'
+{"type":"assistant","uuid":"u-0004","message":{"model":"claude-sonnet-4-5","usage":{"input_tokens":700,"output_tokens":90,"cache_read_input_tokens":7000,"cache_creation_input_tokens":50}}}
+{"type":"assistant","uuid":"u-0005","message":{"model":"claude-sonnet-4-5","usage":{"input_tokens":300,"output_tokens":60,"cache_read_input_tokens":8000,"cache_creation_input_tokens":0}}}
+EOF
+stopd
+[ "$(wc -l < "$PEND")" -eq 3 ] || fail "expected header + 2 session rows, got $(wc -l < "$PEND")"
+second=$(awk -F, 'NR==3{print $10, $11, $12, $13, $14}' "$PEND")
+# Only the two appended records, not a re-sum: turns, input, output, cache_read, cache_write.
+[ "$second" = "2 1000 150 15000 50" ] \
+  || fail "the second row should carry only the new records (2 1000 150 15000 50), got '$second'"
+summed=$(awk -F, 'NR>1{for(i=10;i<=14;i++) s[i]+=$i} END{print s[10], s[11], s[12], s[13], s[14]}' "$PEND")
+[ "$summed" = "$(total "$TMP/uuid.jsonl")" ] \
+  || fail "the rows of one session must sum to the transcript total: rows '$summed', transcript '$(total "$TMP/uuid.jsonl")'"
+# And a Stop that adds nothing adds no row: every record is already claimed.
+stopd
+[ "$(wc -l < "$PEND")" -eq 3 ] || fail "a Stop with nothing new to count wrote a row"
+
+echo "log schema ok — $cols columns, both writers agree, per-row width enforced, migration preserves old rows, flush moves rows once on commit, session rows are increments"

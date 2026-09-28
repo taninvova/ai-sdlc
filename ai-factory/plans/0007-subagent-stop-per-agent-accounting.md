@@ -118,7 +118,7 @@ scripts require only `fs`, `path`, `child_process` and their siblings, so AC20 h
   `bash skills/ai-layout/scripts/check-entrypoints.sh` (the three copies of the new glob agree);
   `bash skills/ai-hooks/fixtures/check-usage.sh`.
 
-- [ ] **Step 3 — deltas at write.**
+- [x] **Step 3 — deltas at write.**
   `session-stop.js` now counts only records whose `uuid` is unclaimed, so the row it appends is the
   increment since that session's previous row; the first row of a session claims nothing yet and so
   carries the whole transcript. Add `transcript-uuid.jsonl` and a case in `check-log-schema.sh`: run
