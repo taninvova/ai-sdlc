@@ -102,4 +102,104 @@ function readLog(file) {
   return out;
 }
 
-module.exports = { records, width, fields, row, field, readLog };
+// --- aggregation ------------------------------------------------------------------------------
+
+// The bucket for a row that cannot be attributed on some dimension. A literal, not an empty
+// string: "" as a group key is indistinguishable from a branch or task legitimately named "",
+// and AC11 requires unattributed spend to be named rather than folded into another group.
+const UNATTRIBUTED = "(unattributed)";
+
+// The dimensions the spec names, each reading the column of the same name — except `session`,
+// which reads `session_id`, and `day`, which the log has no column for and which is derived.
+const DIMENSIONS = ["task", "agent", "tool", "model", "branch", "user", "day", "session"];
+
+// `cost_usd` is never read, by the decision of 2026-09-27: this feature reports tokens and turns,
+// and a fleet view that wants money prices the token counts itself.
+const METRICS = ["turns", "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens"];
+
+// A field that should hold a number and does not contributes nothing, rather than poisoning a
+// whole group's total with NaN.
+const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+
+// The date part of an ISO `ts`. A row whose `ts` is missing or is not a date cannot be placed on
+// a day and is bucketed as unattributed, never dated today: spend recorded on a day that did not
+// happen is worse than spend with no day.
+function day(ts) {
+  const s = String(ts ?? "");
+  return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : UNATTRIBUTED;
+}
+
+function keyOf(r, dim) {
+  if (dim === "day") return day(field(r, "ts"));
+  const v = String(field(r, dim === "session" ? "session_id" : dim) ?? "");
+  return v === "" ? UNATTRIBUTED : v;
+}
+
+// Recomputed from the summed tokens, NEVER averaged across rows. `hit_rate` is a ratio, and the
+// mean of per-row ratios weights a ten-token row the same as a ten-million-token one — on this
+// repo's own log those differ by six orders of magnitude. Same formula the writers use per row.
+const hitRate = m =>
+  m.cache_read_tokens / (m.input_tokens + m.cache_read_tokens + m.cache_write_tokens || 1);
+
+const blank = key => {
+  const m = { key, rows: 0 };
+  for (const k of METRICS) m[k] = 0;
+  m.hit_rate = 0;
+  return m;
+};
+
+function accumulate(m, r) {
+  m.rows++;
+  for (const k of METRICS) m[k] += num(field(r, k));
+  return m;
+}
+
+// One pass over the conforming rows, producing a group list per dimension plus the totals. Only
+// rows the reader judged conforming are counted: a wrong-width or unreadable record reaches no
+// total, and its count travels separately in `counts` so the two are never added together.
+function aggregate(log) {
+  const acc = Object.create(null);
+  for (const dim of DIMENSIONS) acc[dim] = new Map();
+  const totals = blank("(all)");
+  let covered = 0;
+
+  for (const r of log.rows) {
+    accumulate(totals, r);
+    // Coverage, not an average: AC12. How many rows carry a value at all, since the column is
+    // hand-filled and usually empty.
+    if (String(field(r, "accepted") ?? "") !== "") covered++;
+    for (const dim of DIMENSIONS) {
+      const k = keyOf(r, dim);
+      acc[dim].set(k, accumulate(acc[dim].get(k) || blank(k), r));
+    }
+  }
+
+  totals.hit_rate = hitRate(totals);
+  const groups = Object.create(null);
+  for (const dim of DIMENSIONS) {
+    const list = [...acc[dim].values()];
+    for (const m of list) m.hit_rate = hitRate(m);
+    // Sorted by key so the same log yields the same order every run. Ordering for a reader's eye
+    // belongs to whatever renders this, not here.
+    list.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+    groups[dim] = list;
+  }
+
+  return {
+    file: log.file,
+    exists: log.exists,
+    columns: log.columns,
+    counts: { ...log.counts },   // records · conforming · wrongWidth · unreadable, kept distinct
+    totals,
+    // AC12: the count and the denominator, so a caller can say "3 of 412" and never an average.
+    accepted: { covered, of: log.rows.length },
+    dimensions: DIMENSIONS.slice(),
+    metrics: METRICS.slice(),
+    unattributed: UNATTRIBUTED,
+    // AC4: `session` is a dimension like any other, so every session_id survives into whatever is
+    // exported — which is what lets a fleet view spot one session written to two layouts' logs.
+    groups,
+  };
+}
+
+module.exports = { records, width, fields, row, field, readLog, aggregate, day, UNATTRIBUTED, DIMENSIONS, METRICS };
