@@ -54,6 +54,7 @@ BEFORE=$(sums)
 # Scratch space for the export assertions, which need stdout and stderr captured separately.
 SCRATCH=$(mktemp -d); trap 'rm -rf "$SCRATCH"' EXIT
 TMPOUT=$SCRATCH/out.json; TMPERR=$SCRATCH/err.txt; TMPOUT2=$SCRATCH/out2.json
+TMPTSV=$SCRATCH/out.tsv; TMPTSV2=$SCRATCH/out2.tsv
 
 # rd <fixture> <js> — evaluates <js> with `C` bound to the module and `L` to readLog()'s answer
 # over the fixture. Whatever it prints comes back.
@@ -320,6 +321,46 @@ eq "the session key survives into the document" \
 eq "the document's totals match the engine's" \
   "$(ex empty-task.csv 'console.log([D.totals.rows, D.totals.input_tokens, D.totals.hit_rate === 1000 / 1100].join("|"));')" \
   "4|100|true"
+
+# --- 11. the TSV form carries the same numbers, flat (AC5) ------------------------------------
+TSV=1 node "$COST" "$FX/quoted.csv" > "$TMPTSV" 2> "$TMPERR" || fail "TSV mode exited non-zero"
+eq "TSV mode: stderr is empty" "$(wc -c < "$TMPERR" | tr -d ' ')" 0
+eq "TSV mode: the header names the JSON's fields, plus the dimension a flat form needs" \
+  "$(head -1 "$TMPTSV")" \
+  "$(printf 'dimension\tkey\trows\tturns\tinput_tokens\toutput_tokens\tcache_read_tokens\tcache_write_tokens\thit_rate')"
+# One header line plus one line per group, and NOT one per group-plus-a-torn-key. quoted.csv holds
+# a task whose name contains a real newline; unescaped it would split its line in two and a
+# consumer would read two groups where there is one.
+eq "TSV mode: one line per group, with a newline in a key escaped rather than splitting a line" \
+  "$(wc -l < "$TMPTSV" | tr -d ' ')" \
+  "$(ex quoted.csv 'console.log(1 + D.dimensions.reduce((n, d) => n + D.groups[d].length, 0));')"
+eq "TSV mode: every line has as many fields as the header" \
+  "$(awk -F'\t' 'NR==1{w=NF} NF!=w{bad++} END{print bad+0}' "$TMPTSV")" 0
+# The escape is reversible: what a consumer decodes is the key the JSON carries, not an approximation.
+eq "TSV mode: an escaped key decodes back to the JSON's key" \
+  "$(node -e '
+     const C = require(process.argv[1]);
+     const a = C.aggregate(C.readLog(process.argv[2]));
+     const cell = C.exportTsv(a).split("\n").find(l => l.startsWith("task\tspec")).split("\t")[1];
+     const back = cell.replace(/\\n/g, "\n").replace(/\\t/g, "\t").replace(/\\r/g, "\r").replace(/\\\\/g, "\\");
+     console.log(back === a.groups.task.find(g => g.key.startsWith("spec")).key);
+   ' "$COST" "$FX/quoted.csv")" "true"
+# AC5's point: the same numbers as the JSON, not a second implementation of the arithmetic.
+eq "TSV mode: the numbers are the JSON's" \
+  "$(awk -F'\t' '$1=="agent" && $2=="implementer" {print $3"|"$5"|"$9}' "$TMPTSV")" \
+  "$(ex quoted.csv 'const g = D.groups.agent.find(x => x.key === "implementer"); console.log([g.rows, g.input_tokens, g.hit_rate].join("|"));')"
+# It has to be legible on a machine with nothing else installed.
+column -t < "$TMPTSV" > /dev/null || fail "the TSV does not pipe into column -t"
+# Reproducible, like the JSON.
+TSV=1 node "$COST" "$FX/quoted.csv" > "$TMPTSV2" 2>/dev/null
+cmp -s "$TMPTSV" "$TMPTSV2" || fail "TSV mode is not reproducible; two runs over one log differ"
+# The whole flag surface: two modes, no filters in v1 (decided 2026-09-27). With both set JSON
+# wins — one of them must, and printing two documents to one stdout would be worse than either.
+eq "with both modes set, JSON wins and only one document is written" \
+  "$(JSON=1 TSV=1 node "$COST" "$FX/quoted.csv" | head -c 1)" "{"
+eq "a filter variable is ignored rather than honoured" \
+  "$(TSV=1 BRANCH=main TASK=run SINCE=2026-01-01 node "$COST" "$FX/quoted.csv" | wc -l | tr -d ' ')" \
+  "$(wc -l < "$TMPTSV" | tr -d ' ')"
 
 # --- 8. the reader touched nothing (AC16, the half a fixture can prove) ------------------------
 [ "$(sums)" = "$BEFORE" ] || fail "the fixtures changed while being read; the reader must be read-only over the log"

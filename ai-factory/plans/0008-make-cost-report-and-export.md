@@ -133,7 +133,7 @@ no process that outlives the command, and no port.
   'JSON.parse(...)'` yields one document with nothing before or after it; `check-cost.sh` field-name
   assertion fails on a deliberate rename.
 
-- [ ] **Step 5 — The TSV mode.** `make cost TSV=1` serialises the same structure as one header line
+- [x] **Step 5 — The TSV mode.** `make cost TSV=1` serialises the same structure as one header line
   plus one line per group, with the same field names as the JSON, piping cleanly into `column -t`
   (AC5). `TSV=1` beside `JSON=1` is the whole flag surface, and **v1 takes no filter of any kind**
   (decided 2026-09-27) — do not add a date, branch or task selector, however easy it looks.
