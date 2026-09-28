@@ -253,11 +253,44 @@ function exportDoc(a) {
   };
 }
 
+// --- the TSV form: the same numbers, flat -------------------------------------------------------
+
+// One header line plus one line per group, carrying the JSON's field names so a consumer reading
+// either sees the same words. Flattening needs one column the JSON does not have per group —
+// `dimension`, saying which grouping a line belongs to — because the JSON nests that in its keys.
+const TSV_COLUMNS = ["dimension", "key", ...EXPORT_METRICS];
+
+// A group key can hold a tab or a newline: `task` does, in the fixtures and in real logs, because
+// the writers quote any field containing one. Unescaped, a newline in a key would tear one line in
+// two and a consumer would read the halves as two groups. Escaped the way a TSV consumer expects,
+// so the one-line-per-group promise actually holds.
+const tsvCell = v =>
+  String(v ?? "").replace(/\\/g, "\\\\").replace(/\t/g, "\\t").replace(/\r/g, "\\r").replace(/\n/g, "\\n");
+
+// The totals are deliberately absent: AC5 says one header line plus one line per group, and the
+// totals are not a group. Nothing is lost — every dimension's groups partition the same conforming
+// rows, so a consumer sums any one of them; `hit_rate` is then recomputed from the summed token
+// columns, never averaged over the lines, for the reason the engine recomputes it.
+function exportTsv(a) {
+  const lines = [TSV_COLUMNS.join("\t")];
+  for (const dim of a.dimensions) {
+    for (const m of a.groups[dim]) {
+      // Escaped once, by the map — escaping the key here as well would turn one newline into
+      // a literal backslash-backslash-n and hand the consumer a key that is not the task's name.
+      lines.push([dim, m.key, ...EXPORT_METRICS.map(k => m[k])].map(tsvCell).join("\t"));
+    }
+  }
+  return lines.join("\n") + "\n";
+}
+
 // --- entry point --------------------------------------------------------------------------------
 
 // JSON mode writes ONE document to stdout and nothing else: no progress line, no banner, no path
 // echo (AC1). Anything diagnostic belongs on stderr. The TSV mode and the rendered table are the
 // next two steps of ai-factory/plans/0008-make-cost-report-and-export.md and land here.
+// `JSON=1` and `TSV=1` are the whole flag surface, and v1 takes no filter of any kind — decided
+// 2026-09-27. With both set, JSON wins: one of them has to, and silently printing two documents to
+// one stdout would be worse than either choice. Asserted, so it cannot change unnoticed.
 function main(argv, env) {
   const file = argv[2] || "ai-factory/runs/log.csv";
   const a = aggregate(readLog(file));
@@ -265,7 +298,11 @@ function main(argv, env) {
     process.stdout.write(JSON.stringify(exportDoc(a), null, 2) + "\n");
     return 0;
   }
-  return 0;   // TSV=1 is step 5; the default rendered table is step 6.
+  if (env.TSV) {
+    process.stdout.write(exportTsv(a));
+    return 0;
+  }
+  return 0;   // The default rendered table is step 6.
 }
 
 // Only when run, never when required: a fixture that loads this module must not print.
@@ -274,5 +311,5 @@ if (require.main === module) process.exit(main(process.argv, process.env));
 module.exports = {
   records, width, fields, row, field, readLog,
   aggregate, day, UNATTRIBUTED, DIMENSIONS, METRICS,
-  exportDoc, main, SCHEMA, VERSION, EXPORT_METRICS,
+  exportDoc, exportTsv, main, SCHEMA, VERSION, EXPORT_METRICS, TSV_COLUMNS,
 };
