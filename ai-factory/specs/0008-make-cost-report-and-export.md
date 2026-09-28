@@ -7,10 +7,13 @@ the same numbers as a versioned, machine-readable JSON/TSV export for whoever is
 fleet (**R3**). One aggregation, two surfaces, so "spend per task" is defined once. **Spend is
 counted in tokens and turns, never in money** — decided 2026-09-27, see below.
 
-**Depends on `ai-factory/specs/0007-subagent-stop-per-agent-accounting.md`, and ships after it.** That
-spec does not exist yet — the numbering runs 0001–0006 then 0008 — and **decided 2026-09-27: it is
-written as its own spec and ships first**, rather than being folded in here. What it must decide is
-already on record below (the 17th `agent` column, delta rows, the rotation into `log.previous.csv`).
+**Depends on `ai-factory/specs/0007-subagent-stop-per-agent-accounting.md`, and ships after it.**
+**Status 2026-09-27: 0007 is written, merged and six of its seven steps are built** — the 17-column
+header with `agent` at position 8, the rotation into `log.previous.csv`, deltas at write,
+`subagent-stop.js`, the task column, and the docs and 2.0.0 release. Only its live run is outstanding.
+When this spec was first drafted 0007 appeared absent because it lived on an unmerged branch; the
+decision of 2026-09-27 that it ships as its own spec first turned out to describe work already under
+way. What it decides is on record below (the `agent` column, delta rows, the rotation).
 This is not sequencing taste. Measured in `ai-factory/explorations/0001-token-consumption-by-task-and-agent.md`:
 every row in `ai-factory/runs/log.csv` is a **cumulative snapshot of its session**, so the 19 rows
 of one session sum to ~$1,240 for ~$159 of work; `task` is **blank on every interactive row**; and
