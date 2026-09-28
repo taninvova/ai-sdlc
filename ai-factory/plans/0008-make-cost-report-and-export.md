@@ -34,14 +34,21 @@ The one question still open, **7**, is not this spec's to answer: it asks what a
 should do with a session that moved, and that belongs to the fleet spec. Nothing here waits on it.
 
 **The one sequencing constraint that remains.** This feature ships after
-`ai-factory/specs/0007-subagent-stop-per-agent-accounting.md`, which **does not exist yet** — the
-numbering runs 0001–0006 then 0008 — and the decision of 2026-09-27 is that **0007 is written as its
-own spec and ships first**, not folded in here. What it will do is on record in spec 0008 (a 17th
-`agent` column, rows written as deltas, the old cumulative rows rotated into `log.previous.csv`), so
-this engine and its fixtures can be built now against that known shape. What cannot happen is
-`make cost` being released to adopted repos before 0007's rotation lands: against today's 16-column
-header every row is a cumulative snapshot and conforming, so the engine would sum them and produce the
-~8× total the spec exists to avoid. See Risk R1.
+`ai-factory/specs/0007-subagent-stop-per-agent-accounting.md`. **Status as of 2026-09-27: 0007 exists
+and is merged to `main`** — it was written and partly built on the branch `ai/0007-steps-1-2`, which is
+why this plan was first drafted saying the spec was absent; the numbering gap was an unmerged branch,
+not a missing decision. Six of its seven steps are done: the 17-column header with `agent` at
+**position 8** (not appended last — index by name, never by position), the rotation of pre-existing
+rows into `log.previous.csv`, deltas at write, `subagent-stop.js`, the task column, and the docs and
+2.0.0 release. **Step 7, the live run, is outstanding.**
+
+So building here is unblocked and Risk R1's condition is substantially met: the rotation and the deltas
+have both landed, in this repo too — `log.previous.csv` was created at 11:13 on 2026-09-27 when the
+header changed. What still waits on 0007 step 7 is **releasing**: that run is what confirms the harness
+actually sends `agent_transcript_path` and `agent_type` on `SubagentStop` and delivers `ev.prompt` to
+`UserPromptSubmit`. Until it does, the `agent` and `task` dimensions this report groups by may be empty
+in practice for every adopted repo, which would make a shipped `make cost` technically correct and
+practically useless.
 
 ## Files to create / modify
 
@@ -73,7 +80,7 @@ no process that outlives the command, and no port.
 
 ## Steps
 
-- [ ] **Step 1 — The reader, and the guard it must not fork.** Create
+- [x] **Step 1 — The reader, and the guard it must not fork.** Create
   `skills/ai-layout/templates/ai-factory/make/cost.js` with the record-aware read: the
   `records()`/`width()` pair copied **byte-identically** from the shared guard block in
   `skills/ai-hooks/scripts/_log-schema.js`, between the same
@@ -201,9 +208,14 @@ no process that outlives the command, and no port.
 
 ## Risks and how each is checked
 
-- **R1 — Shipping before 0007 turns the engine into the bug it exists to prevent.** Today's header is
-  16 columns and every row in it is a cumulative snapshot that is *conforming*, so nothing excludes
-  it and `make cost` would sum snapshots. The spec's ~$1,240-for-$159 measurement is exactly this.
+- **R1 — Shipping before 0007 turns the engine into the bug it exists to prevent.** Against a
+  *pre*-0007 header of 16 columns, every row is a cumulative snapshot that is *conforming to that
+  header*, so nothing excludes it and `make cost` would sum snapshots — the spec's ~$1,240-for-$159
+  measurement is exactly this. **Largely retired as of 2026-09-27:** 0007's rotation and deltas have
+  landed, so a repo taking 2.0.0 quarantines its cumulative rows into `log.previous.csv`, which the
+  reader never opens. What remains of the risk is a repo that takes `make cost` *without* 2.0.0's
+  header change, which the release gate below prevents, and the fact that nothing in the reader can
+  detect a cumulative row on its own — as Step 1 confirmed, and as the spec forbids it from trying.
   *Checked by:* the release gate — the `cost` target does not ship in a release that does not already
   carry 0007's rotation; and `check-cost.sh` asserting that a 16-field row under a 17-column header is
   excluded and counted, which is the post-rotation shape of the same row.

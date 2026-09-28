@@ -12,6 +12,7 @@ HOOK=skills/ai-hooks/scripts/session-stop.js
 SCHEMA=skills/ai-hooks/scripts/_log-schema.js
 FLUSH=skills/ai-hooks/scripts/log-flush.js
 MAKE=skills/ai-layout/templates/ai-factory/make/log.js
+COST=skills/ai-layout/templates/ai-factory/make/cost.js
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
@@ -85,12 +86,26 @@ stop; flush '"git commit -m x"'
 grep -q ',old,' "$TMP/ai-factory/runs/log.previous.csv" || fail "old rows were not preserved in log.previous.csv"
 if grep -q ',old,' "$TMP/ai-factory/runs/log.csv"; then fail "old rows leaked into the new file"; fi
 
-# 4. the guard itself is duplicated, so the two copies must not drift
+# 4. the guard itself is duplicated, so the copies must not drift
 guard() { awk '/--- shared schema guard/,/--- end shared schema guard ---/' "$1"; }
 [ -n "$(guard "$SCHEMA")" ] || fail "no shared schema guard found in $SCHEMA"
 diff <(guard "$SCHEMA") <(guard "$MAKE") >/dev/null || fail "the shared schema guard has drifted between the writers:
 $(diff <(guard "$SCHEMA") <(guard "$MAKE") | head -20)"
 if grep -q 'shared schema guard' "$HOOK"; then fail "$HOOK carries its own copy of the guard; it must require $SCHEMA"; fi
+
+# 4b. a third copy: the reader, templates/ai-factory/make/cost.js, runs in an adopted repo and
+# cannot require $SCHEMA either. It needs only the record-reading half of the guard — it never
+# rewrites the log — so what is pinned is the records()/width() pair, byte for byte. Two copies
+# held together and a third left loose is how a reader starts tearing rows the writers keep whole.
+pair() { awk '/^\/\/ Two ways the file goes wrong/ || /--- end shared schema guard ---/{p=0} /^\/\/ Records, not lines/{p=1} p' "$1"; }
+[ -n "$(guard "$COST")" ] || fail "no shared schema guard markers found in $COST"
+[ -n "$(pair "$SCHEMA")" ] || fail "could not read the records()/width() pair from $SCHEMA"
+[ -n "$(pair "$COST")" ] || fail "could not read the records()/width() pair from $COST"
+diff <(pair "$SCHEMA") <(pair "$COST") >/dev/null || fail "the records()/width() pair has drifted between $SCHEMA and the reader:
+$(diff <(pair "$SCHEMA") <(pair "$COST") | head -20)"
+diff <(pair "$SCHEMA") <(pair "$MAKE") >/dev/null || fail "the records()/width() pair has drifted between $SCHEMA and $MAKE:
+$(diff <(pair "$SCHEMA") <(pair "$MAKE") | head -20)"
+if grep -q 'fs.writeFileSync\|fs.appendFileSync\|fs.rmSync\|fs.unlinkSync' "$COST"; then fail "$COST writes to the filesystem; the reader is read-only over the log"; fi
 
 # 5. a short row under a header that MATCHES is the case a header check cannot see.
 # This is what an older hook still installed elsewhere appends.
@@ -193,4 +208,4 @@ stop
 t=$(awk -F, 'NR==2{print $6}' "$PEND")
 [ -z "$t" ] || fail "another session's task file filled this session's task column with '$t'"
 
-echo "log schema ok — $cols columns, both writers agree, per-row width enforced, migration preserves old rows, flush moves rows once on commit, session rows are increments and carry the session's task"
+echo "log schema ok — $cols columns, both writers agree, the reader's copy of records()/width() matches, per-row width enforced, migration preserves old rows, flush moves rows once on commit, session rows are increments and carry the session's task"
