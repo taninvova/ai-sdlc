@@ -14,6 +14,7 @@ cd "$(dirname "$0")/../../.."   # repo root
 GUARD=skills/ai-hooks/scripts/guard-paths.js
 STOP=skills/ai-hooks/scripts/session-stop.js
 SUB=skills/ai-hooks/scripts/subagent-stop.js
+TASK=skills/ai-hooks/scripts/log-task.js
 TRANSCRIPT=$PWD/skills/ai-hooks/fixtures/transcript.jsonl
 AGENT_TRANSCRIPT=$PWD/skills/ai-hooks/fixtures/agent-transcript.jsonl
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
@@ -106,4 +107,42 @@ R=$TMP/sub-neither; mkdir -p "$R"
 subagent "$R" agent-none
 [ -z "$(ls -A "$R")" ] || fail "no layout: the SubagentStop hook created $(ls -A "$R")"
 
-echo "detect ok — ai-factory/ preferred, ai/ still guarded and logged for both Stop and SubagentStop, neither is a silent no-op"
+# --- 7. the UserPromptSubmit hook, across the same four cases ----------------------------------
+# The task file is what fills the `task` column on every later row, so an unmigrated repo that
+# stopped writing it would log rows nobody can group by task.
+#
+# Silence is asserted on stderr as well as stdout, and this is the one script where that is not
+# belt-and-braces: output from UserPromptSubmit reaches the model, so a single byte printed here
+# lands inside the cached prefix and invalidates it for the rest of the session.
+prompt() {   # prompt <repo> <prompt text>
+  printf '{"session_id":"fixture-detect-task","cwd":"%s","prompt":"%s","hook_event_name":"UserPromptSubmit"}' "$1" "$2" \
+    | node "$PWD/$TASK" >"$TMP/o" 2>"$TMP/e" \
+    || fail "UserPromptSubmit hook exited non-zero in $1: $(cat "$TMP/e")"
+  [ -s "$TMP/o" ] && fail "UserPromptSubmit hook wrote to stdout: $(cat "$TMP/o")"
+  [ -s "$TMP/e" ] && fail "UserPromptSubmit hook wrote to stderr: $(cat "$TMP/e")"
+  return 0
+}
+for dir in ai-factory ai; do
+  R=$TMP/task-$dir; mkdir -p "$R/$dir"
+  prompt "$R" "/t4:run step 5 of the plan"
+  T=$R/$dir/runs/.task.fixture-detect-task
+  [ -f "$T" ] || fail "$dir: no task file written to $dir/runs/.task.<session_id>"
+  [ "$(cat "$T")" = run ] || fail "$dir: the task file should hold the bare name, got '$(cat "$T")'"
+done
+# both: the task file goes under ai-factory/ only, the same preference the guard shows
+R=$TMP/task-both; mkdir -p "$R/ai-factory" "$R/ai"
+prompt "$R" "/t4:spec the thing"
+[ -f "$R/ai-factory/runs/.task.fixture-detect-task" ] || fail "both: no task file under ai-factory/"
+if [ -e "$R/ai/runs" ]; then fail "both: the old directory was written as well"; fi
+# neither: no file, no directory, no output
+R=$TMP/task-neither; mkdir -p "$R"
+prompt "$R" "/t4:plan it"
+[ -z "$(ls -A "$R")" ] || fail "no layout: the UserPromptSubmit hook created $(ls -A "$R")"
+# and a prompt naming no command leaves the last task standing rather than clearing it
+R=$TMP/task-keep; mkdir -p "$R/ai-factory"
+prompt "$R" "/t4:plan the feature"
+prompt "$R" "now just a plain question"
+[ "$(cat "$R/ai-factory/runs/.task.fixture-detect-task")" = plan ] \
+  || fail "a prompt with no /t4: command changed the task file"
+
+echo "detect ok — ai-factory/ preferred, ai/ still guarded and logged for Stop, SubagentStop and UserPromptSubmit, neither is a silent no-op"

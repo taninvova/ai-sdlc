@@ -27,4 +27,15 @@ function appendJsonl(file, obj) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.appendFileSync(file, JSON.stringify(obj) + "\n");
 }
-module.exports = { readEvent, aiDir, sh, user, branch, appendJsonl, fs, path };
+// The task this session is running, as log-task.js last saw it: one line, keyed by session_id,
+// beside the run log. No file means the session has typed no `/t4:` command, and the column stays
+// empty — a task is never inferred from the branch name, the agent type or the prompt text, because
+// a wrong attribution is worse than a missing one. First line only, so a file somehow holding more
+// cannot widen a row.
+function task(ai, sessionId) {
+  try {
+    const file = path.join(ai, "runs", ".task." + (sessionId || "unknown"));
+    return fs.readFileSync(file, "utf8").split("\n")[0].trim();
+  } catch { return ""; }
+}
+module.exports = { readEvent, aiDir, sh, user, branch, task, appendJsonl, fs, path };
