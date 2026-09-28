@@ -202,4 +202,77 @@ function aggregate(log) {
   };
 }
 
-module.exports = { records, width, fields, row, field, readLog, aggregate, day, UNATTRIBUTED, DIMENSIONS, METRICS };
+// --- the export: a contract, not a convenience ------------------------------------------------
+
+// These names are published. A collector in another repo parses them, and this repo has no fixture
+// that can reach it, so a rename here breaks something invisible from here. check-cost.sh asserts
+// the exact set below and fails on any departure — a rename, a removal, or an addition.
+//
+// The version is a plain integer. Adding a field does NOT change it, because a consumer reading
+// version 1 keeps working when a field it never reads appears; renaming a field, removing one, or
+// changing what an existing one means DOES. Consumers must therefore ignore fields they do not
+// recognise. The check failing on an addition and the version not moving for one are deliberately
+// different rules: the check guards against accidental drift, the version communicates breakage.
+const SCHEMA = "ai-sdlc-cost";
+const VERSION = 1;
+
+// What a consumer may read per group. `rows` and `hit_rate` join the summed columns; there is no
+// cost field, and adding one would be a new metric rather than a renamed one.
+const EXPORT_METRICS = ["rows", ...METRICS, "hit_rate"];
+
+const metricsOf = m => {
+  const o = Object.create(null);
+  for (const k of EXPORT_METRICS) o[k] = m[k];
+  return o;
+};
+
+// No generated-at timestamp, deliberately: `ai-factory/docs/coding-standards.md` requires generated
+// output to be reproducible — running twice in a row changes nothing — and a clock in the document
+// would make every run differ and every diff noisy.
+function exportDoc(a) {
+  const groups = Object.create(null);
+  for (const dim of a.dimensions) {
+    groups[dim] = a.groups[dim].map(m => Object.assign({ key: m.key }, metricsOf(m)));
+  }
+  return {
+    schema: SCHEMA,
+    version: VERSION,
+    log: a.file,
+    // Distinct, never summed together: a wrong-width record and a torn one are different faults.
+    counts: { ...a.counts },
+    // Coverage and its denominator, never an average (AC12).
+    accepted: { ...a.accepted },
+    // Named here so a consumer can recognise the bucket without hard-coding the string.
+    unattributed: a.unattributed,
+    dimensions: a.dimensions,
+    metrics: EXPORT_METRICS.slice(),
+    totals: metricsOf(a.totals),
+    // `agent` and `tool` are two independent dimensions carrying their columns verbatim, so no
+    // consumer ever splits a value to recover one (the decision of 2026-09-26).
+    groups,
+  };
+}
+
+// --- entry point --------------------------------------------------------------------------------
+
+// JSON mode writes ONE document to stdout and nothing else: no progress line, no banner, no path
+// echo (AC1). Anything diagnostic belongs on stderr. The TSV mode and the rendered table are the
+// next two steps of ai-factory/plans/0008-make-cost-report-and-export.md and land here.
+function main(argv, env) {
+  const file = argv[2] || "ai-factory/runs/log.csv";
+  const a = aggregate(readLog(file));
+  if (env.JSON) {
+    process.stdout.write(JSON.stringify(exportDoc(a), null, 2) + "\n");
+    return 0;
+  }
+  return 0;   // TSV=1 is step 5; the default rendered table is step 6.
+}
+
+// Only when run, never when required: a fixture that loads this module must not print.
+if (require.main === module) process.exit(main(process.argv, process.env));
+
+module.exports = {
+  records, width, fields, row, field, readLog,
+  aggregate, day, UNATTRIBUTED, DIMENSIONS, METRICS,
+  exportDoc, main, SCHEMA, VERSION, EXPORT_METRICS,
+};

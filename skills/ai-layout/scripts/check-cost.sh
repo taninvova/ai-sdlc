@@ -51,6 +51,10 @@ HEADER=$(sed -n 's/^const HEADER = "\(.*\)";$/\1/p' "$SCHEMA" | head -1)
 sums() { shasum "$FX"/*.csv | shasum | cut -d' ' -f1; }
 BEFORE=$(sums)
 
+# Scratch space for the export assertions, which need stdout and stderr captured separately.
+SCRATCH=$(mktemp -d); trap 'rm -rf "$SCRATCH"' EXIT
+TMPOUT=$SCRATCH/out.json; TMPERR=$SCRATCH/err.txt; TMPOUT2=$SCRATCH/out2.json
+
 # rd <fixture> <js> — evaluates <js> with `C` bound to the module and `L` to readLog()'s answer
 # over the fixture. Whatever it prints comes back.
 rd() { node -e "const C = require('$COST'); const L = C.readLog('$FX/$1'); $2"; }
@@ -259,6 +263,63 @@ eq "bad-header.csv: no groups invented from a header that cannot be measured" \
 # Determinism: the same log twice gives byte-identical group ordering.
 eq "the group order is stable across runs" \
   "$(grp empty-task.csv task)" "$(grp empty-task.csv task)"
+
+# --- 10. the export is a contract (AC1, AC2, AC6) ---------------------------------------------
+# ex <fixture> <js> — `D` is the parsed document that JSON mode wrote to stdout, so these
+# assertions go through the real entry point rather than calling exportDoc() directly.
+ex() { JSON=1 node "$COST" "$FX/$1" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const D=JSON.parse(s); $2});"; }
+
+# AC1: one document and nothing else. Not "it parses" — that would pass with a banner on the line
+# before, since JSON.parse of a leading banner throws but a trailing one might not. The whole of
+# stdout is parsed, and stderr is required to be empty too.
+JSON=1 node "$COST" "$FX/empty-task.csv" > "$TMPOUT" 2> "$TMPERR" || fail "JSON mode exited non-zero"
+eq "JSON mode: stderr is empty" "$(wc -c < "$TMPERR" | tr -d ' ')" 0
+eq "JSON mode: stdout is exactly one JSON document" \
+  "$(node -e 'const fs=require("fs");const s=fs.readFileSync(process.argv[1],"utf8");JSON.parse(s);console.log("one");' "$TMPOUT")" \
+  "one"
+eq "JSON mode: nothing precedes the document" "$(head -c 1 "$TMPOUT")" "{"
+# Reproducible, as coding-standards.md requires of generated output: two runs, byte for byte.
+JSON=1 node "$COST" "$FX/empty-task.csv" > "$TMPOUT2" 2>/dev/null
+cmp -s "$TMPOUT" "$TMPOUT2" || fail "JSON mode is not reproducible; two runs over one log differ"
+
+# AC6's pin. Every field name in the document, gathered recursively, as one sorted list. This fails
+# on a rename, a removal AND an addition — an addition does not move the version (a consumer
+# reading version 1 keeps working when a field it ignores appears), but it must not slip in
+# unnoticed, so the expected set below has to be edited deliberately.
+NAMES=$(ex empty-task.csv '
+  const seen = new Set();
+  (function walk(v) {
+    if (Array.isArray(v)) return v.forEach(walk);
+    if (v && typeof v === "object") for (const k of Object.keys(v)) { seen.add(k); walk(v[k]); }
+  })(D);
+  console.log([...seen].sort().join(","));')
+eq "the export's field names, exactly" "$NAMES" \
+  "accepted,agent,branch,cache_read_tokens,cache_write_tokens,conforming,counts,covered,day,dimensions,groups,hit_rate,input_tokens,key,log,metrics,model,of,output_tokens,records,rows,schema,session,task,tool,totals,turns,unattributed,unreadable,user,version,wrongWidth"
+
+eq "the schema is named" "$(ex empty-task.csv 'console.log(D.schema);')" "ai-sdlc-cost"
+eq "the version is the integer 1" "$(ex empty-task.csv 'console.log(D.version + "|" + (typeof D.version));')" "1|number"
+# AC2: agent and tool are two independent dimensions, and no value is ever a composite. If the
+# agent were folded into tool, a consumer would have to split "claude/implementer" to recover it.
+eq "agent and tool are separate dimensions" \
+  "$(ex empty-task.csv 'console.log(D.dimensions.includes("agent") && D.dimensions.includes("tool"));')" "true"
+eq "no group key is a composite of tool and agent" \
+  "$(ex empty-task.csv 'console.log(D.dimensions.every(d => D.groups[d].every(g => !/[\/|]/.test(g.key))));')" "true"
+eq "every dimension the document names carries a group list" \
+  "$(ex empty-task.csv 'console.log(D.dimensions.every(d => Array.isArray(D.groups[d])));')" "true"
+eq "every group carries every published metric" \
+  "$(ex empty-task.csv 'console.log(D.dimensions.every(d => D.groups[d].every(g => D.metrics.every(m => typeof g[m] === "number"))));')" "true"
+eq "no cost field is published" \
+  "$(ex empty-task.csv 'console.log(D.metrics.some(m => /cost/.test(m)) || Object.keys(D.totals).some(k => /cost/.test(k)));')" "false"
+# AC4 through the real export: the session key reaches a consumer.
+eq "the session key survives into the document" \
+  "$(ex session-a.csv 'console.log(D.groups.session.map(g => g.key).join(" "));')" "only-a shared-99"
+# The numbers in the document are the engine's, not a second implementation (AC7's export half).
+# empty-task.csv by hand: 4 rows, input 10+20+30+40 = 100, cache_read 100+200+300+400 = 1000,
+# cache_write 0 — so the rate is 1000/1100. Written as the fraction rather than as a copied
+# float, so the expectation stays legible and is derived from the fixture, not from the code.
+eq "the document's totals match the engine's" \
+  "$(ex empty-task.csv 'console.log([D.totals.rows, D.totals.input_tokens, D.totals.hit_rate === 1000 / 1100].join("|"));')" \
+  "4|100|true"
 
 # --- 8. the reader touched nothing (AC16, the half a fixture can prove) ------------------------
 [ "$(sums)" = "$BEFORE" ] || fail "the fixtures changed while being read; the reader must be read-only over the log"

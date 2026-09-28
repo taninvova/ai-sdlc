@@ -119,7 +119,7 @@ no process that outlives the command, and no port.
   asserting each group's totals against the fixtures; a two-layout fixture pair sharing a
   `session_id`, asserting the key survives in both.
 
-- [ ] **Step 4 — The JSON export envelope.** `make cost JSON=1` writes **one JSON document to stdout
+- [x] **Step 4 — The JSON export envelope.** `make cost JSON=1` writes **one JSON document to stdout
   and nothing else** — no progress line, no banner, no path echo — and exits 0 (AC1). The document
   carries a schema-version field, and names every dimension and metric in documented, stable field
   names, with **agent and tool as two independent fields** carrying their columns verbatim so no
