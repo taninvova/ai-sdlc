@@ -1,0 +1,5 @@
+ts,session_id,source,user,branch,task,tool,agent,model,turns,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,hit_rate,cost_usd,accepted
+2026-09-27T11:00:00Z,s2,hook,tanin,main,run,claude,implementer,claude-sonnet-4-5,1,111,11,1100,0,0.90,,
+2026-09-27T11:01:00Z,s2,hook,tanin,main,run,claude,implementer,claude-sonnet-4-5,1,999,99,9900,0,0.90,0.12,yes,extra-column
+2026-09-27T09:00:00Z,s0,hook,tanin,main,,claude,claude-sonnet-4-5,9,9000,900,90000,500,0.90,,
+2026-09-27T11:02:00Z,s2,hook,tanin,main,run,claude,implementer,claude-sonnet-4-5,1,222,22,2200,0,0.90,,
