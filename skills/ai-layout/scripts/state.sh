@@ -10,8 +10,10 @@
 #               Accepted for symmetry with doctor.sh's signature; nothing under it is read.
 #   flag        --done lists what is finished INSTEAD of what is outstanding. --next names the
 #               one artefact to pick up — the most recently modified, by git commit date — as a
-#               single row of the default listing plus one line saying why it was chosen. Any
-#               other flag prints one line saying its rule is not settled yet and exits 0.
+#               single row of the default listing plus one line saying why it was chosen. The
+#               two do not compose: --done --next, in either order, is refused in one line.
+#               A flag that is neither is named back in one line with the flags that exist.
+#               Both answers exit 0 and print no rows — a refused result is an answer.
 #
 # Output: a tab-separated table — a header row, then one row per listed thing:
 #
@@ -34,17 +36,28 @@ shopt -s nullglob
 # --- arguments ---------------------------------------------------------------------------
 # Positional in doctor.sh's order, with flags accepted anywhere so `state.sh --done` from a
 # terminal behaves the same as the prompt's `state.sh . "$CLAUDE_PLUGIN_ROOT" --done`.
-REPO=""; PLUGIN=""; EXTRA=""
+#
+# Each argument is classified as it is read rather than by matching the joined string, so
+# `--done --next` and `--next --done` reach the same answer: order carries no meaning here.
+REPO=""; PLUGIN=""; EXTRA=""; HAS_DONE=0; HAS_NEXT=0; UNKNOWN=""
 for arg in "$@"; do
   case "$arg" in
-    -*) EXTRA="${EXTRA:+$EXTRA }$arg" ;;
+    -*)
+      EXTRA="${EXTRA:+$EXTRA }$arg"
+      case "$arg" in
+        --done) HAS_DONE=1 ;;
+        --next) HAS_NEXT=1 ;;
+        *)      UNKNOWN="${UNKNOWN:+$UNKNOWN }$arg" ;;
+      esac ;;
     *)
       if   [ -z "$REPO" ];   then REPO=$arg
       elif [ -z "$PLUGIN" ]; then PLUGIN=$arg
       else EXTRA="${EXTRA:+$EXTRA }$arg"
+           UNKNOWN="${UNKNOWN:+$UNKNOWN }$arg"
       fi ;;
   esac
 done
+: "$EXTRA"  # kept for readers of a trace; the classification above is what decides
 REPO=${REPO:-.}
 PLUGIN=${PLUGIN:-${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../../.." && pwd)}}
 : "$PLUGIN"  # read by nothing here; see the signature note above (AC14, AC15)
@@ -52,18 +65,34 @@ PLUGIN=${PLUGIN:-${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../../.." && pwd)}}
 # MODE is the listing the flags ask for. --done replaces the default listing with the finished
 # items rather than widening it to everything-with-a-state (plan 0010, Ambiguity C, answered
 # 2026-09-29). --next narrows it to one row — the most recently modified artefact, by git commit
-# date (Ambiguity A, answered 2026-09-29). Whether the two flags compose is still spec 0010's
-# open question 4, and an argument whose rule is not settled is answered in one line rather than
-# guessed at — a refused answer is still an answer, so exit 0.
+# date (Ambiguity A, answered 2026-09-29). The two do NOT compose (Ambiguity D, answered
+# 2026-09-29): asked for together they are refused rather than silently reduced to one of them.
+#
+# Both refusals print ONE line and exit 0, and neither prints a row. A refused result is an
+# answer, not a crash — the same treatment an unknown flag gets, and the reason /t4:state can be
+# run before anyone knows what the repo holds.
+#
+# They are two messages, not one, because they are two situations. `--done --next` is a pair of
+# flags that both exist and cannot be asked together; an unrecognised token is a flag that does
+# not exist at all. Telling the first developer their flag is unknown would be false, and telling
+# the second that --done and --next do not combine would diagnose a mistake they did not make.
+# The fix differs too — drop one flag, as against correct a misspelt one — so the line that names
+# the problem names the right one.
 MODE=default
-case "$EXTRA" in
-  "")      MODE=default ;;
-  --done)  MODE=done ;;
-  --next)  MODE=next ;;
-  *)
-    echo "the rule for '$EXTRA' is not decided yet — spec 0010 leaves open what --next selects and whether the flags combine, so /t4:state answers only the default listing and --done for now"
-    exit 0 ;;
-esac
+if [ -n "$UNKNOWN" ]; then
+  # An unrecognised token: say what it is, and what this command does take. The rules for --done
+  # and --next are settled and implemented, so this line no longer claims anything is undecided.
+  echo "'$UNKNOWN' is not a flag /t4:state takes — it takes --done, which lists what is finished instead of what is outstanding, or --next, which names the single item to pick up next; with no flag at all it lists everything outstanding. Nothing was listed."
+  exit 0
+elif [ "$HAS_DONE" = 1 ] && [ "$HAS_NEXT" = 1 ]; then
+  # Both flags, in either order. Neither wins: the combination is refused outright.
+  echo "--done and --next do not combine — asking for both at once is not a meaningful question, so ask one at a time: --done lists what is finished instead of what is outstanding, and --next names the single item to pick up next. Nothing was listed."
+  exit 0
+elif [ "$HAS_DONE" = 1 ]; then
+  MODE=done
+elif [ "$HAS_NEXT" = 1 ]; then
+  MODE=next
+fi
 
 [ -d "$REPO" ] || { echo "nothing to list — no such directory: $REPO"; exit 0; }
 # Everything below is read relative to the repo root and nothing resolves above it, so a run in
