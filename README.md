@@ -43,7 +43,7 @@ Registered plugin-wide; no-op in repos without `ai-factory/`; never print to std
 /plugin marketplace add git@gitlab.nsix.io:ai/sdlc.git
 /plugin install t4@sdlc
 ```
-Local: `claude --plugin-dir ~/code/nsix/ai/ai-sdlc`
+Local: `claude --plugin-dir ~/code/nsix/ai/sdlc`
 
 ## The loop each repo follows
 Full walkthrough with a worked example: [ai-factory/docs/workflow.md](ai-factory/docs/workflow.md).

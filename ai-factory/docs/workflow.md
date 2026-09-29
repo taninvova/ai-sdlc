@@ -16,7 +16,7 @@ needing steering in chat, the prompt is missing a line; fix the prompt, don't re
 /plugin install t4@sdlc
 ```
 
-Working on the plugin itself: `claude --plugin-dir ~/code/nsix/ai/ai-sdlc`.  <!-- path-scan-ok -->
+Working on the plugin itself: `claude --plugin-dir ~/code/nsix/ai/sdlc`.  <!-- path-scan-ok -->
 
 You now have two commands in **every** repo — `/t4:adopt-sdlc` and `/t4:sync-sdlc` — plus
 hooks that stay silent in repos without an `ai-factory/` directory. `/t4:explore` is a project
