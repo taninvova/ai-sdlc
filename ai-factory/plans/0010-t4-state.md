@@ -280,7 +280,7 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
   instruction); `bash skills/ai-layout/scripts/check-release-docs.sh` exiting 0. *ACs:* 16, in
   part — the docs half. The adapter and manifest half is Ambiguity G and is not met.
 
-- [ ] **Step 5 — `--done` lists only what is finished.** Ambiguity C, answered 2026-09-29: `--done`
+- [x] **Step 5 — `--done` lists only what is finished.** Ambiguity C, answered 2026-09-29: `--done`
   **replaces** the default listing rather than widening it. Extend check-state.sh first with the
   fixture the answer fixes — a repo holding one item whose every step is `[x]` and one with a step
   still `[ ]` — asserting that `--done` emits exactly the complete item's row and no row for the

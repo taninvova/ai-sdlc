@@ -8,12 +8,17 @@
 #   repo-root   defaults to the current directory
 #   plugin-root defaults to $CLAUDE_PLUGIN_ROOT, else the plugin this script lives in.
 #               Accepted for symmetry with doctor.sh's signature; nothing under it is read.
-#   flag        --done / --next are not decided yet (spec 0010's open questions); any flag
-#               prints one line saying so and exits 0.
+#   flag        --done lists what is finished INSTEAD of what is outstanding. --next is not
+#               decided yet (spec 0010's open question 1); it, and any other flag, prints one
+#               line saying so and exits 0.
 #
 # Output: a tab-separated table — a header row, then one row per listed thing:
 #
 #   kind  number  state  path  step  detail
+#
+# One row builder, one sort and one header serve both listings: every artefact becomes a row
+# carrying its state, and the flag chooses which states are printed. The two listings are
+# therefore the same rows filtered two ways and cannot drift apart (plan 0010, Step 5).
 #
 # WHICH of those become table columns, in what order, and whether the table is sectioned by
 # kind, is plan 0010's Ambiguity B and belongs to commands/state.md, not here. This script's
@@ -43,10 +48,19 @@ REPO=${REPO:-.}
 PLUGIN=${PLUGIN:-${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../../.." && pwd)}}
 : "$PLUGIN"  # read by nothing here; see the signature note above (AC14, AC15)
 
-if [ -n "$EXTRA" ]; then
-  echo "the rule for '$EXTRA' is not decided yet — spec 0010 leaves open what --next selects, whether --done replaces or widens the listing, and whether the two combine, so /t4:state answers only the default listing for now"
-  exit 0
-fi
+# MODE is the listing the flags ask for. --done replaces the default listing with the finished
+# items rather than widening it to everything-with-a-state (plan 0010, Ambiguity C, answered
+# 2026-09-29). Everything else is still provisional: what --next selects, and whether the two
+# flags compose, are spec 0010's open questions, and an argument whose rule is not settled is
+# answered in one line rather than guessed at — a refused answer is still an answer, so exit 0.
+MODE=default
+case "$EXTRA" in
+  "")      MODE=default ;;
+  --done)  MODE=done ;;
+  *)
+    echo "the rule for '$EXTRA' is not decided yet — spec 0010 leaves open what --next selects and whether the flags combine, so /t4:state answers only the default listing and --done for now"
+    exit 0 ;;
+esac
 
 [ -d "$REPO" ] || { echo "nothing to list — no such directory: $REPO"; exit 0; }
 # Everything below is read relative to the repo root and nothing resolves above it, so a run in
@@ -222,7 +236,11 @@ while IFS= read -r plan; do
 $open_rows
 EOF_STEPS
       ;;
-    *) : ;;   # complete: AC4 — not struck through, not greyed, absent
+    complete)
+      # One row for the plan, not one per ticked step: --done lists the finished ITEM. The
+      # default listing drops it at the filter below, where AC4 is enforced in one place for
+      # every kind of row rather than by never building it.
+      add "$plan" 0 plan "$pnum" complete "-" "$(title_of "$plan")" ;;
   esac
 done <<EOF_PLANS
 $plan_list
@@ -262,17 +280,31 @@ while IFS= read -r spec; do
     add "$spec" 0 spec "$snum" unknown "-" "its plan could not be read or interpreted"
   elif [ "$any_open" -eq 1 ]; then
     add "$spec" 0 spec "$snum" part-done "-" "$(title_of "$spec")"
+  else
+    # Every paired plan is complete, so the spec is: a row --done prints and the default
+    # listing filters out (AC4, AC5).
+    add "$spec" 0 spec "$snum" complete "-" "$(title_of "$spec")"
   fi
-  # every paired plan complete: the spec is complete and is not listed (AC4)
 done <<EOF_SPECS
 $spec_list
 EOF_SPECS
 
 # --- 3. the answer ------------------------------------------------------------------------
+# Every artefact above became a row carrying its state, whatever that state is. The flag picks
+# which states are printed, and nothing else differs: same builder, same sort, same header, same
+# fields. The default listing shows what is not complete — AC4's "not struck through, not greyed,
+# not shown with a done marker" is this one comparison — and --done shows what is, which is the
+# mirror image over any tree (AC5). `unknown` is neither, so it appears in the default listing and
+# never under --done: an artefact that could not be read or interpreted is never complete (AC12).
+SELECTED=$(printf '%s' "$ROWS" | grep -v '^$' | LC_ALL=C sort \
+  | awk -F'\t' -v mode="$MODE" '{ done_row = ($5 == "complete"); if ((mode == "done") == done_row) print }')
+
 # An empty result is an answer, not an error and not silence: one line, exit 0 (AC11).
-if [ -z "$ROWS" ]; then
+if [ -z "$SELECTED" ]; then
   if [ ! -d ai-factory/specs ] && [ ! -d ai-factory/plans ]; then
     echo "nothing to list — this repo has no ai-factory/specs or ai-factory/plans directory"
+  elif [ "$MODE" = done ]; then
+    echo "nothing finished yet — no spec or plan in this repo has every step complete"
   else
     echo "nothing outstanding — every spec and plan in this repo is complete"
   fi
@@ -280,5 +312,5 @@ if [ -z "$ROWS" ]; then
 fi
 
 printf 'kind\tnumber\tstate\tpath\tstep\tdetail\n'
-printf '%s' "$ROWS" | grep -v '^$' | LC_ALL=C sort | cut -f3-
+printf '%s\n' "$SELECTED" | cut -f3-
 exit 0

@@ -449,6 +449,239 @@ rather than prove anything about it (AC16, the docs half)."
 find out which commands exist cannot be found by the developer it is for (AC16, the docs half)."
 done
 
-echo "state ok — 9 sections: empty answer, the default listing with [~] and done/, determinism, \
+# --- 10. `--done` replaces the default listing, and widens nothing (AC5, AC7) -----------------
+# Ambiguity C, answered 2026-09-29: --done REPLACES the default listing. It lists the items whose
+# every step is complete, in the same shape, and it does not widen the listing to everything with
+# a state shown per row. So the two listings over one fixture are mirror images: every artefact
+# reaches exactly one of them, and nothing reaches both.
+#
+# Still NOT asserted, because Ambiguity B is still open: which fields are columns, in what order,
+# or what the header says. What IS asserted is that --done's header line is byte-identical to the
+# default's and that both carry the same number of fields per row — a statement about SAMENESS,
+# which holds whatever the answer to B turns out to be, and which is exactly what "no column the
+# default listing does not already carry" means.
+#
+# The unreadable-shaped plan is in this fixture on purpose. Under a widening --done it would
+# appear with its `unknown` state beside the complete ones; under the answer given it must not
+# appear at all, because unknown is not complete and AC12 forbids ever calling it that.
+
+# rows <output> — how many rows a listing has, the header line dropped.
+rows() { tail -n +2 <<<"$1" | grep -c .; }
+# widths <output> — the distinct field counts in a listing, counted with the separator the header
+# itself uses. Deliberately blind to WHICH columns exist (Ambiguity B) and sharp about how many.
+widths() { awk -F'\t' 'NF{print NF}' <<<"$1" | LC_ALL=C sort -u; }
+
+DONEFIX=$TMP/done-filter
+mkdir -p "$DONEFIX/ai-factory/specs" "$DONEFIX/ai-factory/plans"
+DONE_PLAN=ai-factory/plans/0060-shipped.md
+DONE_SPEC=ai-factory/specs/0060-shipped.md
+OPEN_PLAN=ai-factory/plans/0061-still-going.md
+OPEN_SPEC=ai-factory/specs/0061-still-going.md
+MURK_PLAN=ai-factory/plans/0062-no-rule-covers-these.md
+
+printf '# 0060 — shipped\n'     > "$DONEFIX/$DONE_SPEC"
+printf '# 0061 — still going\n' > "$DONEFIX/$OPEN_SPEC"
+
+# Two ticked steps, so a --done that emitted one row per COMPLETED step rather than one row per
+# complete item is caught by the row count below.
+{ printf '# Plan 0060 — shipped\n\n'
+  printf '**Spec:** `%s`\n\n## Steps\n\n' "$DONE_SPEC"
+  printf -- '- [x] **Step 1 — the lock gates hung.** Proved by a fixture.\n'
+  printf -- '- [x] **Step 2 — the basin flooded.** Proved by a fixture.\n'
+} > "$DONEFIX/$DONE_PLAN"
+
+{ printf '# Plan 0061 — still going\n\n'
+  printf '**Spec:** `%s`\n\n## Steps\n\n' "$OPEN_SPEC"
+  printf -- '- [x] **Step 1 — the towpath cleared.** Proved by a fixture.\n'
+  printf -- '- [ ] **Step 2 — the aqueduct surveyed.** Proved by a fixture.\n'
+} > "$DONEFIX/$OPEN_PLAN"
+
+{ printf '# Plan 0062 — no rule covers these\n\n'
+  printf '## Steps\n\n'
+  printf -- '- [?] **Step 1 — the marker nothing defines.** Proved by a fixture.\n'
+} > "$DONEFIX/$MURK_PLAN"
+
+out_def=$(run "$DONEFIX");        st=$?
+[ "$st" = 0 ] || fail "state exited $st over the --done fixture's default listing:
+$out_def"
+out_done=$(run "$DONEFIX" --done); st=$?
+[ "$st" = 0 ] || fail "state exited $st on --done; it always exits 0 (AC5, AC11):
+$out_done"
+
+# AC7 — the same table shape. The header line byte for byte, and the same field count per row.
+[ "$(head -1 <<<"$out_done")" = "$(head -1 <<<"$out_def")" ] \
+  || fail "--done's header line is not byte-identical to the default listing's; --done shows the
+same columns in the same order, whatever those columns turn out to be (AC5, AC7):
+--done:  $(head -1 <<<"$out_done")
+default: $(head -1 <<<"$out_def")"
+[ "$(widths "$out_done")" = "$(widths "$out_def")" ] \
+  || fail "--done's rows do not carry the same number of fields as the default listing's, so it has
+widened or narrowed the table rather than filtering it (AC5, AC7):
+--done:  $(widths "$out_done")
+default: $(widths "$out_def")"
+
+# AC5 — the complete items, and only those. The two listings are mirror images over one fixture.
+for p in "$DONE_PLAN" "$DONE_SPEC"; do
+  [ "$(hits "$out_done" "$p")" = 1 ] \
+    || fail "--done did not list a complete item exactly once, got $(hits "$out_done" "$p") (AC5): $p
+$out_done"
+  [ "$(hits "$out_def" "$p")" = 0 ] \
+    || fail "a complete item appeared in the DEFAULT listing, so this fixture cannot prove --done is
+its mirror image (AC4): $p
+$out_def"
+done
+for p in "$OPEN_PLAN" "$OPEN_SPEC"; do
+  [ "$(hits "$out_done" "$p")" = 0 ] \
+    || fail "--done listed an item that is not finished; it replaces the default listing rather than
+widening it to everything with a state (plan 0010, Ambiguity C): $p
+$out_done"
+  [ "$(hits "$out_def" "$p")" = 1 ] \
+    || fail "an outstanding item was not in the default listing, so this fixture proves nothing about
+the mirror image (AC2): $p
+$out_def"
+done
+[ "$(hits "$out_done" "$MURK_PLAN")" = 0 ] \
+  || fail "--done listed an artefact whose steps match no rule. An artefact that cannot be
+interpreted has a state, but that state is not complete, and it is never reported as one (AC12):
+$out_done"
+[ "$(hits "$out_def" "$MURK_PLAN")" = 1 ] \
+  || fail "the unanswerable plan was not in the default listing, so the assertion above proves
+nothing about --done (AC12):
+$out_def"
+
+# It widens nothing: one row per complete item, and no item that has no state.
+[ "$(rows "$out_done")" = 2 ] \
+  || fail "--done emitted $(rows "$out_done") rows over a fixture holding exactly two complete items
+— one complete plan and the spec it finishes. One row per complete item, not one per completed step
+and not one per artefact in the repo (AC5):
+$out_done"
+[ "$(rows "$out_def")" = 3 ] \
+  || fail "the default listing emitted $(rows "$out_def") rows where three were expected — the one
+incomplete step, its spec, and the unanswerable plan. The mirror-image assertions above rest on it:
+$out_def"
+no_absolute "$out_done" "$DONEFIX"
+
+# --- 11. checkboxes still beat the directory, under the filter too (AC10) ---------------------
+# The settled rule is that nothing is inferred from a plan's location. It has to hold in --done as
+# well, or the filter would quietly reintroduce the inference the default listing refuses to make:
+# a complete plan that was never filed would go missing from --done, and an unfinished one sitting
+# in done/ would be reported as finished — the precise error AC10 exists to forbid.
+PLACE=$TMP/placement
+mkdir -p "$PLACE/ai-factory/plans/done"
+LOOSE_DONE=ai-factory/plans/0070-complete-but-never-filed.md
+FILED_OPEN=ai-factory/plans/done/0071-filed-but-unfinished.md
+
+{ printf '# Plan 0070 — complete but never filed\n\n## Steps\n\n'
+  printf -- '- [x] **Step 1 — the weir rebuilt.** Proved by a fixture.\n'
+} > "$PLACE/$LOOSE_DONE"
+{ printf '# Plan 0071 — filed but unfinished\n\n## Steps\n\n'
+  printf -- '- [x] **Step 1 — the sluice cast.** Proved by a fixture.\n'
+  printf -- '- [~] **Step 2 — the sluice hung.** Partly proved; one criterion outstanding.\n'
+} > "$PLACE/$FILED_OPEN"
+
+out_done=$(run "$PLACE" --done); st=$?
+[ "$st" = 0 ] || fail "state exited $st on --done over the placement fixture:
+$out_done"
+out_def=$(run "$PLACE"); st=$?
+[ "$st" = 0 ] || fail "state exited $st over the placement fixture's default listing:
+$out_def"
+
+[ "$(hits "$out_done" "$LOOSE_DONE")" = 1 ] \
+  || fail "--done did not list a plan whose every step is [x] because it sits in ai-factory/plans/
+rather than done/. A plan's checkboxes decide its state; its directory decides nothing (AC10):
+$out_done"
+[ "$(hits "$out_done" "$FILED_OPEN")" = 0 ] \
+  || fail "--done listed a plan filed under done/ whose last step is still [~]. Filing a plan does
+not finish it — the checkboxes do (AC10):
+$out_done"
+[ "$(hits "$out_def" "$FILED_OPEN")" = 1 ] \
+  || fail "the default listing dropped the filed-but-unfinished plan, so the assertion above proves
+nothing (AC10):
+$out_def"
+[ "$(hits "$out_def" "$LOOSE_DONE")" = 0 ] \
+  || fail "the default listing carried a plan whose every step is [x] (AC4):
+$out_def"
+
+# --- 12. --done over a repo with nothing complete is an answer, not silence (AC11) ------------
+# An empty result is a valid answer under the filter for the same reason it is without one.
+NONE=$TMP/none-complete
+mkdir -p "$NONE/ai-factory/plans"
+NONE_PLAN=ai-factory/plans/0080-nothing-here-is-finished.md
+{ printf '# Plan 0080 — nothing here is finished\n\n## Steps\n\n'
+  printf -- '- [ ] **Step 1 — the tunnel bored.** Proved by a fixture.\n'
+} > "$NONE/$NONE_PLAN"
+
+out=$(run "$NONE" --done); st=$?
+[ "$st" = 0 ] || fail "--done exited $st over a repo with nothing complete; an empty result is an
+answer, not an error (AC11):
+$out"
+[ "$(lines "$out")" = 1 ] \
+  || fail "--done over a repo with nothing complete should answer in one line, got $(lines "$out") (AC11):
+$out"
+[ "$(hits "$out" "$NONE_PLAN")" = 0 ] \
+  || fail "--done's empty answer named an artefact that is not complete (AC5, AC11):
+$out"
+[ "$(head -1 <<<"$out")" = "$(head -1 <<<"$(run "$NONE")")" ] \
+  && fail "--done answered a repo with nothing complete with the listing's header row rather than a
+line saying so. An empty table is not an answer (AC11):
+$out"
+
+# A repo with no layout at all answers identically with or without the filter: there is nothing to
+# list either way, and the one-line answer to that question does not depend on the flag.
+if ! diff <(run "$TMP/bare") <(run "$TMP/bare" --done) >/dev/null; then
+  fail "--done and the default listing gave different answers for a repo with no layout at all; the
+empty answer is the same one line either way (AC11):
+$(diff <(run "$TMP/bare") <(run "$TMP/bare" --done))"
+fi
+
+# --- 13. the prompt hands the developer's argument to the script (AC14) -----------------------
+# Found during Step 3 and added to Step 5's scope: nothing in the plan ever forwarded the
+# developer's argument. The prompt fixes the invocation as `state.sh . "${CLAUDE_PLUGIN_ROOT}"`,
+# so without this the script could grow --done, --next and their refusal while `/t4:state --done`
+# typed by a developer still rendered the default listing — half-wired, with every check green,
+# because no assertion covered the seam between the two halves.
+#
+# Two assertions, and they pull against each other on purpose.
+#
+# One — the step that runs the script must say that the developer's argument goes with it. Without
+# that sentence the flag is accepted by the script and never reaches it.
+#
+# Two — `$ARGUMENTS` must remain LAST in the file, and appear once. Step 3 put it at the end so
+# everything above it is a stable cached prefix. The obvious way to wire the hand-off — interpolate
+# `$ARGUMENTS` into the invocation line — trades this gap for a silent caching regression: every
+# token after it varies per invocation. The instruction refers to the trailing line instead, which
+# is why assertion one looks for the reference rather than for the variable.
+inv_line=$(grep -nF -- "$STATE" "$ROOT/$PROMPT" | head -1 | cut -d: -f1)
+[ -n "$inv_line" ] || fail "$PROMPT does not name $STATE, so there is no invocation to hand an
+argument to (AC14)."
+from=$(( inv_line > 3 ? inv_line - 3 : 1 ))
+window=$(sed -n "${from},$(( inv_line + 8 ))p" "$ROOT/$PROMPT")
+
+grep -qi -- 'argument' <<<"$window" \
+  || fail "$PROMPT runs $STATE without ever mentioning the developer's argument beside it, so
+\`/t4:state --done\` would render the default listing however well the script handles the flag. The
+prompt is the only place that seam can be wired (AC14):
+$window"
+grep -qF -- 'Context' <<<"$window" \
+  || fail "$PROMPT mentions an argument beside the invocation but does not point at the \`Context:\`
+line that carries it, so nothing says WHERE the value the script is handed comes from (AC14):
+$window"
+
+n_args=$(grep -cF -- '$ARGUMENTS' "$ROOT/$PROMPT")
+[ "$n_args" = 1 ] \
+  || fail "\$ARGUMENTS occurs $n_args times in $PROMPT; it belongs exactly once, on the last line.
+Every token after it varies per invocation, so a second occurrence higher up shortens the stable
+cached prefix to whatever precedes it — which is the caching regression Step 3 placed it last to
+avoid, traded for the hand-off rather than added to it (plan 0010, Step 5)."
+last_line=$(grep -n . "$ROOT/$PROMPT" | tail -1 | cut -d: -f1)
+args_line=$(grep -nF -- '$ARGUMENTS' "$ROOT/$PROMPT" | tail -1 | cut -d: -f1)
+[ "$args_line" = "$last_line" ] \
+  || fail "\$ARGUMENTS is on line $args_line of $PROMPT and the file's last line of substance is
+$last_line. It must be last: everything above it is the cached prefix, and hoisting it up into the
+invocation is not how this hand-off is wired (plan 0010, Step 5)."
+
+echo "state ok — 13 sections: empty answer, the default listing with [~] and done/, determinism, \
 the read-only snapshots, unknown-with-a-reason, the three **Spec:** link forms, sibling isolation, \
-the prompt's two invariants, the command named in README.md and the workflow doc"
+the prompt's two invariants, the command named in README.md and the workflow doc, --done as the \
+default listing's mirror image, checkboxes over directory under the filter, --done's empty answer, \
+and the prompt's hand-off with \$ARGUMENTS still last"
