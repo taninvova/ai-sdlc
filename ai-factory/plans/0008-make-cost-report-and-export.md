@@ -164,7 +164,7 @@ no process that outlives the command, and no port.
   *Proves:* AC10, AC19. *Tests:* the header-only fixture in both modes; a real
   `/t4:adopt-sdlc` scratch repo with `make cost` run in it, recorded as the before/after run.
 
-- [ ] **Step 8 — The target, the symlink, the manifest.** Add the `cost` target to
+- [x] **Step 8 — The target, the symlink, the manifest.** Add the `cost` target to
   `skills/ai-layout/templates/ai-factory/make/ai.mk` and list it in `.PHONY`, invoking
   `node ai-factory/make/cost.js` with `$(RUNS)`. The target must read **one layout's log and nothing
   else** — no directory outside the repo listed, walked or enumerated, because the workspace root
