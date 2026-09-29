@@ -371,10 +371,22 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
   covering both directions: a non-breaking patch entry on top now passes, each of the six statements
   removed individually still fails by name, and a compliant top entry over a gutted 2.0.0 entry still
   fails. That last one is what proves the six are no longer reading the top entry at all.
-  **Remaining open question on this step: the version number.** `2.1.0` is spoken for — commit
-  `3fd5dfd` records it as belonging to the `/t4:migrate-layout` removal, and `check-release-docs.sh`
-  still asserts that the 2.0.0 entry carries the deprecation notice naming `2.1.0`. So this step
-  names no version yet and must not invent one; ask before writing the entry.
+  **The version, answered 2026-09-29: `/t4:state` ships as 2.2.0 — and 2.1.0 must ship first.**
+  `2.1.0` is not free: ADR 0008 records as a decision that *"the command goes in 2.1.0, the fallback
+  waits for 3.0.0"*, the 2.0.0 CHANGELOG entry carries the same promise, and `check-release-docs.sh`
+  asserts both. Re-pointing the removal to a later version was considered and rejected: it would
+  mean amending a recorded architectural decision to suit a version number, cascading through ADR
+  0008, the 2.0.0 entry, two assertions in the release check and its `d5` self-test fixture — five
+  edits to avoid using the number the project already committed to.
+  **So this step gains a hard prerequisite: the `/t4:migrate-layout` removal ships as 2.1.0 before
+  `/t4:state` ships as 2.2.0. Status: not started.** The ordering is not a preference — once the
+  manifests read 2.2.0, a later 2.1.0 is unreleasable, and the ADR's promise would be stranded. That
+  removal is bounded by the ADR: drop the command, keep the hooks' fallback until 3.0.0. It is its
+  own chore or spec and must not be folded into this step.
+  If the grace period turns out to be too short — 2.0.0 shipped 2026-09-27, so the migration path
+  would be withdrawn days into it — the honest route is a **superseding ADR** saying the command
+  survives longer and why, after which `/t4:state` takes 2.1.0 cleanly. What this plan rules out is
+  renumbering around a published schedule without saying so.
   Then, in one commit: a `CHANGELOG.md` entry naming the new command, the script behind it, the
   read-only guarantee and the blast radius (no template file moved, so no adopted repo's manifest
   changes and `/t4:sync-sdlc` reports no drift from it), and that same version in
