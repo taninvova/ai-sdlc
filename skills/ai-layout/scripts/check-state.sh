@@ -387,5 +387,37 @@ aggregate is produced (AC15):
 $out"
 no_absolute "$out" "$TMP/sibling-a"
 
-echo "state ok — 7 sections: empty answer, the default listing with [~] and done/, determinism, \
-the read-only snapshots, unknown-with-a-reason, the three **Spec:** link forms, sibling isolation"
+# --- 8. the prompt's own invariants (AC14, and the change-nothing instruction) ----------------
+# commands/state.md is the other half of the feature: the script decides what is outstanding, the
+# prompt presents it. Two things about that file are assertable without settling Ambiguity B, and
+# both are pinned here rather than left to a reading.
+#
+# One — the prompt must name the script it drives. A prompt that lost the invocation would still
+# read like a working command, and would answer out of the session's own reading of the layout,
+# which is exactly what AC14 forbids and what AC13's determinism rests on.
+#
+# Two — the prompt must say, in words, that it changes nothing. AC8 and AC9 are proved of the
+# SCRIPT in section 4, but nothing in a script stops a session that has just been handed a list of
+# outstanding steps from starting one. Only the prompt can say not to.
+#
+# Deliberately NOT asserted here: the table's columns, their order, the header's wording, or
+# whether the table is sectioned by kind. That is plan 0010's Ambiguity B, still open, and pinning
+# it by fixture would settle in passing a question meant to be answered in writing.
+PROMPT=commands/state.md
+[ -f "$ROOT/$PROMPT" ] || fail "$PROMPT does not exist.
+It is written by Step 3 of plan 0010 — the prompt that renders state.sh's rows (AC1, AC14)."
+
+grep -qF -- "$STATE" "$ROOT/$PROMPT" \
+  || fail "$PROMPT does not name $STATE. The prompt presents the script's rows and must not decide
+for itself which items are outstanding, so that one invocation is the whole seam (AC14):
+$(cat "$ROOT/$PROMPT")"
+
+sed 's/\*//g' "$ROOT/$PROMPT" | grep -qi -- 'change nothing' \
+  || fail "$PROMPT carries no explicit change-nothing instruction. /t4:state lists work and never
+does any — no file edited, no checkbox ticked, no plan moved between plans/ and done/, no step
+started — and the prompt is the only place that can say so to the session reading it (AC8, AC9):
+$(cat "$ROOT/$PROMPT")"
+
+echo "state ok — 8 sections: empty answer, the default listing with [~] and done/, determinism, \
+the read-only snapshots, unknown-with-a-reason, the three **Spec:** link forms, sibling isolation, \
+the prompt's two invariants"
