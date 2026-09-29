@@ -1,0 +1,355 @@
+# Plan 0010 — `/t4:state`: list the repo's outstanding specs and plans
+
+**Goal:** Add one read-only plugin command, `/t4:state`, backed by a deterministic script under
+`skills/ai-layout/scripts/`, that prints a table of this repo's outstanding specs and plans with each
+outstanding plan's incomplete steps.
+
+**Spec:** `ai-factory/specs/0010-t4-state.md` — written as a repo-root-relative path in backticks, not
+as a relative markdown link, so it stays correct both here and after this plan is filed to
+`ai-factory/plans/done/`, where a `../`-relative link resolves one level shallower. Plan 0009 learned
+that the hard way.
+
+## Before anything else: read this, then decide how far to run
+
+Two things about this spec have to be said before any step is read.
+
+**1. The spec's "What is there today" section is stale, and one of its inferences is false.** It was
+written on 2026-09-27 and the queue has moved since. Verified against the tree on 2026-09-28:
+
+| The spec says | What is true now |
+|---|---|
+| specs 0008 and 0009 are "both untracked on `main`" | both are tracked and committed — `git ls-files ai-factory/specs/` lists all ten |
+| "Spec numbers run 0001–0006 then 0008–0010; **0007 is absent**" | `ai-factory/specs/0007-subagent-stop-per-agent-accounting.md` exists. The gap it reasons from does not exist |
+| "Two specs have no plan" (0008, 0009) | both now have plans, and both are filed in `ai-factory/plans/done/` |
+| "`ai-factory/plans/` is empty but for `done/`. Six plans — 0001–0006 — sit in `done/`" | `done/` holds nine — 0001–0009. `ai-factory/plans/` holds no plan file at all |
+| "not one `- [ ]` remains anywhere in the repo" | two remain: plan 0007 Step 7 (recorded not run) and plan 0009 Step 2 (blocked, and withdrawn under one answer) |
+
+The only claim in that section this plan relies on is the one that is still true and was checked
+again: `- [~]` occurs exactly twice, in `ai-factory/plans/done/0003-tracker-setup.md` Step 2 and
+`ai-factory/plans/done/0004-knowledge-seam.md` Step 5, each above a `**Result — … proved; …
+outstanding.**` block. **No step below asserts anything about the live contents of
+`ai-factory/specs/` or `ai-factory/plans/`.** Every assertion runs against fixtures under
+`mktemp -d`. The queue was moving *while this plan was being written* — two plans were filed to
+`done/` between one directory listing and the next — so a fixture built from the real tree would
+flake, and a plan that encoded today's listing as the feature's expected output would be wrong
+before anyone ran it. The feature is specified by **rules**; the rules are what get pinned.
+
+**2. Four of the spec's own open questions, plus four more this plan found, stand between Steps 1–4
+and a finished feature.** Steps 1–4 deliver `/t4:state` with no argument — AC1, AC2, AC3, AC4, AC7
+through AC15. **AC5 (`--done`) and AC6 (`--next`) cannot be built from this spec**, because the rule
+each needs is exactly what the spec leaves open. Steps 5, 6 and 7 are written out but marked
+BLOCKED, each naming the question that unblocks it. Do not run a blocked step; answering by
+picking encodes the guess, which is what open questions exist to prevent.
+
+### The ambiguities, as questions to answer
+
+Four are the spec's own. Four are new, and three of the four are things the spec's stale snapshot
+concealed.
+
+- **A (spec OQ1) — what rule does `--next` select by?** The lowest-numbered outstanding plan's first
+  incomplete step, the lowest-numbered spec with no plan, the most recently modified artefact, or
+  simply the first row of the default listing? AC6 fixes only that the result is a subset and that
+  the command says why. Blocks Step 6.
+- **B (spec OQ2) — which columns, in which order, and is the table sectioned by kind?** AC3 fixes
+  that a row must carry the artefact path and, for a plan step, the step identifier and its
+  one-line description; AC7 fixes header-plus-rows with the same columns throughout. Undecided:
+  whether `number`, `kind`, `state` and `the command to run next` are columns, their order, and
+  whether a spec row and a plan-step row share one column set. Step 2 emits the AC3-required fields
+  and a state field; the presentation is the prompt's, and Step 3 renders whatever the answer fixes.
+- **C (spec OQ3) — does `--done` replace the default listing or widen it to everything with a state
+  per row?** AC5 is satisfied by both. Blocks Step 5.
+- **D (spec OQ4) — do the filters compose?** Is `/t4:state --done --next` meaningful, an error, or
+  silently one of them? Blocks Step 7, and affects Steps 5 and 6.
+- **E — what makes a *spec* complete?** AC2 lists "every spec … that is not yet complete"; nothing
+  in the spec defines a complete spec. Step 2 implements a rule **derived**, not chosen, from two
+  lines the spec does fix — AC4's "'Not started yet' and 'part done' are what the default listing
+  shows", and *Data touched*'s instruction to read "the `**Goal:**` and `**Spec:**` lines each plan
+  opens with". The derivation: pair a spec to a plan by the plan's `**Spec:**` line, falling back to
+  the leading four-digit number; a spec with no plan is *not started*; a spec whose paired plan has
+  some steps incomplete is *part done*; a spec whose paired plan has every step complete is
+  *complete* and is not listed. **Please confirm this derivation** — it is the one rule in Step 2
+  that is reasoned rather than quoted.
+- **F — which release carries this, given that the CHANGELOG's top entry is asserted to be a
+  breaking one?** `skills/ai-layout/scripts/check-release-docs.sh` reads *the top entry only* and
+  requires it to say breaking, to tell adopted repos to run `/t4:migrate-layout`, to say the hooks
+  keep working, to tell the developer to grep their own CI, and to carry both deprecation notices
+  (the command in 2.1.0, the fallback in 3.0.0). This was tested: a scratch copy of the repo with a
+  2.1.0 feature entry for `/t4:state` and the three manifests bumped fails with
+  `FAIL: CHANGELOG.md's 2.1.0 entry does not mark the change breaking`. A read-only reporting
+  command is not breaking and must not claim to be. Three ways out, none derivable from this spec:
+  ship inside the next genuinely breaking release (2.1.0, already scheduled to remove
+  `/t4:migrate-layout`); amend `check-release-docs.sh` so the six assertions bind to the 2.0.0 entry
+  by version rather than to whatever is on top; or write a patch entry that repeats the boilerplate.
+  Blocks Step 8, and AC16 is unsatisfied until it is answered.
+- **G — is AC16's adapter-and-manifest clause achievable for a plugin command at all?** AC16 requires
+  that "the generated `.claude/`, `.cursor/` and `.codex/` adapters include it" and that
+  "`ai-factory/.sdlc.json` lists it". Verified: `ai-factory/make/sync-adapters.sh` generates adapters
+  from `ai-factory/tasks/*.md`, `ai-factory/skills/` and `ai-factory/agents/` only — it never reads
+  `commands/`, which is why `.claude/commands/t4/` holds twelve task commands and no `doctor`, why
+  `.codex/skills/` holds twelve `t4-<task>` skills and no plugin command, and why
+  `ai-factory/docs/workflow.md` §8's Codex table has a row for "the twelve `/t4:*` tasks" and none
+  for the plugin commands. `.cursor/rules/ai.mdc` is a single static file that names no command at
+  all. And `manifest.js` hashes only files under `skills/ai-layout/templates/`, so a file at
+  `commands/state.md` is invisible to `ai-factory/.sdlc.json` by construction — proved in a scratch
+  copy: with `commands/state.md` and `skills/ai-layout/scripts/state.sh` added,
+  `check-manifest.sh` passes unchanged and reports no drift. Satisfying that clause therefore means
+  either changing `sync-adapters.sh`/`manifest.js` — a template change, breaking for every adopted
+  repo, which this spec nowhere authorises — or shipping `/t4:state` as a project task, which the
+  spec's *Out of scope* forbids. **This plan changes neither, and leaves that clause of AC16
+  unmet.** The rest of AC16 — `commands/`, the workflow tables, the CHANGELOG and the version — is
+  Steps 4 and 8.
+- **H — is a step deliberately withdrawn, blocked or not run distinguishable from one not yet
+  started?** Today it is not: plan 0009 Step 2 is `- [ ] **Step 2 — BLOCKED. Do not run until Open
+  question 2 is answered…**` and is withdrawn outright under one of the two answers, and plan 0007
+  Step 7 is recorded as not run rather than done. Both are plain `- [ ]`, so under any rule the ACs
+  fix they are reported as outstanding for as long as they exist. The spec catalogued `- [~]` but
+  could not have catalogued these — neither existed when it was written. Step 2 reports them as
+  outstanding, which is the conservative reading AC12's "never reported as complete" points at.
+  Should there be a notation for withdrawn, and should `/t4:state` honour it?
+- **I — is `ai-factory/specs/0000-scaffold.md` listed?** It ships in the templates, so every adopted
+  repo receives it, it has no plan and never will, and under the Ambiguity-E rule it is reported *not
+  started* — the first row of `/t4:state` in every adopted repo, for ever. Step 2 lists it, because no
+  AC exempts it and AC2's "nothing else is listed" is about `ai-factory/tasks/`, not about this. Is
+  that wanted, or is the scaffold spec exempt?
+
+### What is settled, and not a guess
+
+Two rules the spec does fix, recorded here because both were misread once already:
+
+- **`- [~]` is incomplete, and a plan's *checkboxes* beat its *directory*.** AC10: "A plan whose every
+  step is `- [x]` except one `- [~]` is outstanding, not done." Both `- [~]` steps sit in plans filed
+  under `ai-factory/plans/done/`, and the spec says so in the same breath. So AC10 is only
+  satisfiable if filing a plan to `done/` does not make it complete. Nothing is inferred from a
+  plan's location. (The corollary — whether `done/` shows up as a state, a column or a `--done`
+  filter — is Ambiguities B and C.)
+- **Never assume the numbers are dense.** The spec's own reasoning about a 0007 gap was false, and
+  `done/` now holds 0001–0009 while `ai-factory/plans/` holds none. Glob and sort; never iterate a
+  counter.
+
+## Files to create / modify
+
+| Path | Why |
+|---|---|
+| `skills/ai-layout/scripts/state.sh` | **new.** The deterministic scan, the completeness decision and the row data, invoked as `doctor.sh` is (AC14). Takes `[repo-root] [plugin-root]`, always exits 0, reads nothing outside the repo root it is given (AC15) |
+| `skills/ai-layout/scripts/check-state.sh` | **new.** The only test this repo has: fixture repos under `mktemp -d` pinning every rule, `- [~]` included. Named `check-*.sh` so the definition of done's blanket loop picks it up |
+| `commands/state.md` | **new.** The prompt, shaped like `commands/doctor.md`: front-matter `description:` and `allowed-tools: Bash, Read`, an explicit change-nothing instruction, one step running the script with `"${CLAUDE_PLUGIN_ROOT}"`, and how to render the rows |
+| `README.md` | the Commands list is the plugin's own inventory, and DoD item 7 requires it to match what ships |
+| `ai-factory/docs/workflow.md` | §5's *Plugin-level — available in any repo* table is the one actual command table; §10 *When something is wrong* is where a returning developer looks |
+| `CHANGELOG.md` · `.claude-plugin/plugin.json` · `.claude-plugin/marketplace.json` · `.codex-plugin/plugin.json` | AC16's record-the-change half. All three manifests, because `check-versions.sh` requires every manifest carrying a version to carry the same one — it reports "3 manifests all at 2.0.0" today. **Step 8, blocked on Ambiguity F** |
+
+Deliberately **not** touched, each for a checked reason:
+
+- `skills/ai-layout/templates/` — nothing. `/t4:state` is a plugin command, not a task (spec *Out of
+  scope*), so no template file is added, no adopted repo's manifest moves, and this release is not a
+  template change. Verified: with both new files present in a scratch copy, `check-manifest.sh`
+  passes and reports no drift.
+- `ai-factory/make/sync-adapters.sh` and `skills/ai-layout/scripts/manifest.js` — see Ambiguity G.
+- `skills/ai-layout/SKILL.md` — the spec's *Data touched* calls it "the inventory", but it was read:
+  its tree enumerates the `ai-factory/` layout an adopted repo receives, and names no plugin command
+  anywhere. A `/t4:state` line there would describe a file that is not in the payload. No change.
+- `ai-factory/plans/done/0003-tracker-setup.md` and `0004-knowledge-seam.md` — the two `- [~]`
+  records stay byte-identical (spec *Out of scope*). Guarded in *Verification*.
+- `ai-factory/tasks/`, `ai-factory/agents/`, `ai-factory/make/`, `.claude/`, `.cursor/`, `.codex/`,
+  `ai-factory/runs/` — all on `ai-factory/docs/dont-touch.md`. The first three are symlinks into the
+  templates; the guard-paths hook exits 2 on any of them. No step needs one.
+
+## Server vs client components
+
+**Does not apply.** This is a plugin/CLI source repo — markdown prompts, bash and dependency-free
+Node, with no build step and, per `ai-factory/docs/architecture.md`, nothing that runs as a service.
+There is no server component, no client component, no rendering boundary and no request path. The
+one surface added is a developer entry point, `/t4:state`, whose whole output is terminal text.
+
+## Steps
+
+- [ ] **Step 1 — Write `skills/ai-layout/scripts/check-state.sh`, red.** Fixture repos under
+  `mktemp -d`, in the shape `check-doctor.sh` uses (`fail()`, `run()`, `trap 'rm -rf "$TMP"' EXIT`),
+  asserting against `skills/ai-layout/scripts/state.sh`: a repo with no `ai-factory/` at all →
+  exit 0 and one line (AC11); a spec with no plan → listed, by repository-relative path (AC2, AC3);
+  a plan with three steps, two `[x]` and one `[ ]` → the plan listed once with the one incomplete
+  step's identifier *and* its one-line description, and neither ticked step shown (AC2, AC3, AC4);
+  a plan whose every step is `[x]` except one `[~]`, placed **inside a `done/` subdirectory** →
+  outstanding (AC10, and the settled checkbox-beats-directory rule); a plan with every step `[x]` →
+  absent from the default listing (AC4); an unreadable file (`chmod 000`) and a plan whose step
+  lines match no rule → each reported `unknown` with a reason while every other artefact is still
+  listed, and neither reported complete (AC12); the three `**Spec:**` link forms that exist in this
+  repo — a backticked repo-relative path, a markdown link into `../../specs/`, and the pre-1.0.0
+  bare form — all pairing to the same spec (Ambiguity E's derivation); two sibling fixture repos,
+  running in one, asserting the other's artefact path appears nowhere in the output (AC15); two
+  consecutive runs over one fixture, `diff`ed, identical (AC13); a filesystem snapshot
+  (`find … | sort | shasum`) and a content snapshot (`find … -exec shasum {} + | sort | shasum`)
+  equal before and after a run (AC8, AC9); `ai-factory/tasks/*.md` present in a fixture and absent
+  from the output (AC2). No assertion may read the real `ai-factory/specs/` or `ai-factory/plans/`.
+  *Proved by:* `bash skills/ai-layout/scripts/check-state.sh` exiting **non-zero** with a message
+  naming the missing `state.sh` — red for the right reason — and `bash -n
+  skills/ai-layout/scripts/check-state.sh` exiting 0. *ACs:* 2, 3, 4, 8, 9, 10, 11, 12, 13, 15.
+
+- [ ] **Step 2 — Write `skills/ai-layout/scripts/state.sh` until Step 1's check is green.** Bash,
+  `set -uo pipefail` and `shopt -s nullglob` — deliberately not `set -e`, for the reason
+  `doctor.sh` gives: one unanswerable artefact must not stop the others. Signature
+  `state.sh [repo-root] [plugin-root]`, defaults as `doctor.sh`'s, `cd` into the repo root and read
+  only relative paths from there (AC15). Glob-and-sort, never a counter. Emit a header row and one
+  field-separated row per listed thing, carrying what AC3 fixes — the repository-relative artefact
+  path, and for a plan step its identifier and its one-line description — plus a state field so
+  AC4's "not started yet" and "part done" are distinguishable; **which of those fields become
+  table columns, in what order, is Ambiguity B and belongs to the prompt, not here.** Sort rows by
+  a total order that depends on nothing but the bytes on disk — path, then step number — so two
+  runs agree (AC13). Treat `- [~]` and `- [ ]` as incomplete and `- [x]` as complete; infer nothing
+  from a plan's directory. Pair spec to plan by the plan's `**Spec:**` line and fall back to the
+  leading number (Ambiguity E). Guard every read; report what cannot be read or parsed as `unknown`
+  with the reason, never as complete (AC12). One line and exit 0 when nothing matches (AC11).
+  Create nothing, write nothing, tick nothing (AC8, AC9). An argument the spec has not settled —
+  `--done`, `--next`, or any combination — prints one line saying the rule is not decided yet and
+  names the spec's open question, and exits 0; that is provisional and Steps 5–7 replace it.
+  *Proved by:* `bash skills/ai-layout/scripts/check-state.sh` exiting 0; `bash -n
+  skills/ai-layout/scripts/state.sh`; `diff <(bash skills/ai-layout/scripts/state.sh .) <(bash
+  skills/ai-layout/scripts/state.sh .)` empty. *ACs:* 2, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15.
+
+- [ ] **Step 3 — Write `commands/state.md`.** Front matter `description:` written for the slash
+  menu and `allowed-tools: Bash, Read`; an opening change-nothing instruction in the shape
+  `commands/doctor.md` uses; one numbered step running
+  `bash "${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/scripts/state.sh" . "${CLAUDE_PLUGIN_ROOT}"`; an
+  instruction to present the script's rows as a table with a header row and the same columns in the
+  same order for every row, and not to re-infer which items are outstanding (AC7, AC14); an
+  instruction to pass the script's one-line empty answer through as-is (AC11) and its `unknown`
+  rows through with their reasons (AC12); `$ARGUMENTS` last, so the cached prefix is stable.
+  Mind two scans that will read this file the moment it exists, both confirmed by adding a
+  candidate `commands/state.md` to a scratch copy and running them: `check-adapters.sh` includes
+  `commands/*.md` in its banned-term sweep, so the prompt may not contain `jira`, `atlassian`,
+  `connector`, `base_url`, a URL, `.yaml`, `knowledge_base.md` or a standalone `MCP`; and
+  `check-paths.sh` scans `commands/` as instruction, so no pre-1.0.0 path — the layout is
+  `ai-factory/`. Add to Step 1's check-state.sh two invariants of the prompt itself: that it names
+  `skills/ai-layout/scripts/state.sh` and that it contains an explicit change-nothing instruction.
+  The table's final column set stays open until Ambiguity B is answered; render what the script
+  emits. *Proved by:* `bash skills/ai-layout/scripts/check-adapters.sh` exiting 0; `bash
+  skills/ai-layout/scripts/check-paths.sh` exiting 0; `bash
+  skills/ai-layout/scripts/check-state.sh` exiting 0 with the two new prompt invariants; and — the
+  standard `ai-factory/docs/coding-standards.md` sets for a prompt, which is a run and not an
+  assertion — one recorded `/t4:state` transcript in this repo, linked in the MR. *ACs:* 1, 7, 11,
+  12, 14.
+
+- [ ] **Step 4 — Name the command where a developer will find it.** One bullet in `README.md`'s
+  Commands list, beside `/t4:doctor` and in its register. One row in `ai-factory/docs/workflow.md`
+  §5's *Plugin-level — available in any repo* table — Command · Use it when · Writes, with *Writes*
+  reading "nothing — terminal output only". One line in §10 *When something is wrong*, or in §4's
+  rules, pointing a developer returning to a repo at `/t4:state` before `/t4:run`. Note while
+  editing, and do not silently fix: that §5 plugin-level table lists three commands and already
+  omits `/t4:doctor` and `/t4:setup-tracker`, and that §3 is a decision tree and §11 a loop
+  sequence — neither is a command table, so the spec's "§3, §5 and §11 each enumerate the commands"
+  holds for §5 only. Widening the table to the commands it is missing is a separate chore.
+  Extend Step 1's check-state.sh with one assertion: `README.md` and
+  `ai-factory/docs/workflow.md` each name `/t4:state`. *Proved by:* `bash
+  skills/ai-layout/scripts/check-state.sh` exiting 0 with that assertion; `bash
+  skills/ai-layout/scripts/check-paths.sh` exiting 0 (`ai-factory/docs/` is scanned as
+  instruction); `bash skills/ai-layout/scripts/check-release-docs.sh` exiting 0. *ACs:* 16, in
+  part — the docs half. The adapter and manifest half is Ambiguity G and is not met.
+
+- [ ] **Step 5 — BLOCKED on Ambiguity C. Do not run until the developer answers in writing whether
+  `--done` replaces the default listing or widens it.** Both answers satisfy AC5, and they produce
+  different scripts. *Answer "replaces":* `--done` lists only items whose every step is complete,
+  same columns, same order, same shape. *Answer "widens":* the listing becomes every item with the
+  state per row, and the state field Step 2 already emits carries it. Either way, extend
+  check-state.sh first with the fixture the answer fixes — a repo with one complete and one
+  incomplete item, asserting exactly which rows `--done` produces and that the header and column
+  order match the default listing's byte for byte — then make it pass. *Proved by:* `bash
+  skills/ai-layout/scripts/check-state.sh` exiting 0. *ACs:* 5, 7.
+
+- [ ] **Step 6 — BLOCKED on Ambiguity A. Do not run until the developer names the rule `--next`
+  selects by.** AC6 fixes only that the output is a strict subset of the default listing and that
+  one line says which item was selected and why. Whichever rule is chosen, it must be a function of
+  the bytes on disk, so that AC13 keeps holding for `--next` too; "most recently modified" would
+  make the answer depend on mtimes, which a fresh clone does not preserve — worth weighing when
+  answering. Extend check-state.sh first with a fixture whose selection is known by construction,
+  asserting the row is one the default listing also produces, that it is exactly one, and that a
+  reason line accompanies it. *Proved by:* `bash skills/ai-layout/scripts/check-state.sh` exiting 0.
+  *ACs:* 6, 13.
+
+- [ ] **Step 7 — BLOCKED on Ambiguity D, and on Steps 5 and 6. Do not run until the developer says
+  whether the filters compose.** `--done --next` is meaningful, an error, or silently one of them;
+  no AC decides. Implement the answer and pin it with a fixture, including the unknown-flag case,
+  which must still exit 0 (AC11 in spirit — an empty or refused result is an answer, not a crash).
+  *Proved by:* `bash skills/ai-layout/scripts/check-state.sh` exiting 0. *ACs:* 11.
+
+- [ ] **Step 8 — BLOCKED on Ambiguity F. Do not run until the developer says which release carries
+  this.** Then, in one commit: a `CHANGELOG.md` entry naming the new command, the script behind it,
+  the read-only guarantee and the blast radius (no template file moved, so no adopted repo's
+  manifest changes and `/t4:sync-sdlc` reports no drift from it), and the same version in
+  `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` and `.codex-plugin/plugin.json`.
+  Whichever answer, run `check-release-docs.sh` before writing the entry down — a naive 2.1.0
+  feature entry fails it, and that failure is what Ambiguity F is about. *Proved by:* `bash
+  skills/ai-layout/scripts/check-versions.sh` exiting 0 and reporting all three manifests at the
+  new version; `bash skills/ai-layout/scripts/check-release-docs.sh` exiting 0. *ACs:* 16, the
+  record half.
+
+## Risks and how each is checked
+
+| Risk | How it is checked |
+|---|---|
+| **A fixture drifts because the real queue moves.** Two plans were filed to `done/` while this plan was being written. Any assertion over the live tree would flake within the hour | Step 1 forbids it: every assertion builds its own repo under `mktemp -d`. `grep -n 'ai-factory/specs\|ai-factory/plans' skills/ai-layout/scripts/check-state.sh` should show only paths constructed inside `$TMP` |
+| **A named command is not runnable.** Plan 0008 shipped four such defects and plan 0009 a fifth | Every command in *Verification* below was executed against this tree before being written down, and the two that need a `state.sh` were executed against a stub. The one exception is stated there by name |
+| **The version bump fails the release check** | `bash skills/ai-layout/scripts/check-release-docs.sh` — already reproduced in a scratch copy, with the exact failure message, which is why Step 8 is blocked rather than optimistic |
+| **A prompt trips a scan the moment it lands** | `check-adapters.sh` (banned terms over `commands/*.md`) and `check-paths.sh` (pre-1.0.0 paths in `commands/`). Both were run in a scratch copy with a candidate `commands/state.md` and `skills/ai-layout/scripts/state.sh` present; both passed, as did `check-manifest.sh`, `check-entrypoints.sh`, `check-doctor.sh` and `check-release-docs.sh` |
+| **The two `- [~]` records get edited while the rules about them are being pinned** | `git diff --exit-code -- ai-factory/plans/done/0003-tracker-setup.md ai-factory/plans/done/0004-knowledge-seam.md`, and their hashes: `1da2b5cf…` and `0b5a5a57…` from `shasum` |
+| **`/t4:run` does not get the fresh context this plan assumes.** `ai-factory/agents/` symlinks four of the eight canonical agents — `analyst`, `architect`, `reviewer`, `tester` — and `.claude/agents/` is generated from it, so `explorer`, `implementer`, `planner` and `specifier` are not spawnable in *this* repo and `/t4:run` will be carried out by the session itself. The templates do ship all eight, so adopted repos are unaffected | `ls ai-factory/agents/` and `ls .claude/agents/` against `ls agents/`. Mitigation inside the steps: each one names its files and its proving command, so a session running it needs no memory of this conversation. `ai-factory/agents/` is dont-touch and symlinked — adding the missing four is a separate chore against `ai-factory/docs/dont-touch.md`'s target, not part of this plan |
+| **A bare `make` target in a step would not run.** There is no `Makefile` at this repo's root — `find . -name Makefile` returns only `skills/ai-layout/templates/Makefile`, the one adopted repos receive | No step and no verification line names `make`. Where a make target is ever needed here, the form that resolves is `make -f ai-factory/make/ai.mk <target>` |
+| **The default listing is noisy in every adopted repo** because `ai-factory/specs/0000-scaffold.md` ships in the templates with no plan | Ambiguity I. Step 2 lists it; a fixture pins that behaviour, so changing the answer later changes one fixture and one rule |
+| **A withdrawn or blocked step is reported outstanding for ever** | Ambiguity H. Behaviour is deliberate and pinned by fixture, so the answer, when it comes, has one place to land |
+| **Piping a check to `tail` reports `tail`'s status** — `ai-factory/AGENTS.md` and DoD 1b both warn | Every command below is run directly. No pipe |
+
+## Verification
+
+Run from the repo root. Every command was executed against this tree on 2026-09-28 before being
+written here, unless the line says otherwise.
+
+```bash
+# 1. the new test, and the new script's syntax
+bash skills/ai-layout/scripts/check-state.sh          # exit 0 — the new check (Step 1 writes it)
+bash -n skills/ai-layout/scripts/state.sh
+bash -n skills/ai-layout/scripts/check-state.sh
+
+# 2. determinism, read-only, and the empty answer (AC8, AC9, AC11, AC13)
+diff <(bash skills/ai-layout/scripts/state.sh .) <(bash skills/ai-layout/scripts/state.sh .)
+before=$(find . -path ./.git -prune -o -type f -print | sort | shasum)
+bash skills/ai-layout/scripts/state.sh . >/dev/null; echo "exit=$?"     # must be 0
+after=$(find . -path ./.git -prune -o -type f -print | sort | shasum)
+[ "$before" = "$after" ] && echo "no file created or removed"
+b=$(find . -path ./.git -prune -o -type f -exec shasum {} + | sort | shasum)
+bash skills/ai-layout/scripts/state.sh . >/dev/null
+a=$(find . -path ./.git -prune -o -type f -exec shasum {} + | sort | shasum)
+[ "$b" = "$a" ] && echo "no file edited"
+
+# 3. every check in the repo, run directly — never piped (DoD 1b)
+for f in skills/ai-layout/scripts/check-*.sh; do bash "$f" || echo "FAIL $f"; done
+for f in skills/ai-hooks/fixtures/check-*.sh; do bash "$f" || echo "FAIL $f"; done
+for f in skills/ai-hooks/scripts/*.js; do node --check "$f"; done
+bash -n skills/ai-layout/templates/ai-factory/make/sync-adapters.sh
+
+# 4. the two records this feature must not touch
+git diff --exit-code -- ai-factory/plans/done/0003-tracker-setup.md \
+                        ai-factory/plans/done/0004-knowledge-seam.md
+```
+
+What was actually run, so the next person does not have to trust this list:
+
+- **Executed against this tree, all green:** the nine `skills/ai-layout/scripts/check-*.sh`
+  (`check-adapters`, `check-cost`, `check-doctor`, `check-entrypoints`, `check-manifest`,
+  `check-migrate`, `check-paths`, `check-release-docs`, `check-versions`); the four
+  `skills/ai-hooks/fixtures/check-*.sh`; `node --check` over every hook script; `bash -n` on
+  `sync-adapters.sh`; the `git diff --exit-code` guard on the two `- [~]` plans.
+- **Executed against a stub `state.sh` in a scratch copy of this repo**, to prove the command forms
+  themselves run: the `diff <(…) <(…)` determinism form; both `find … shasum` snapshot forms; the
+  exit-code check; a two-sibling-repo isolation run.
+- **Executed in a scratch copy with a candidate `commands/state.md` and an empty
+  `skills/ai-layout/scripts/state.sh` present:** `check-adapters.sh`, `check-paths.sh`,
+  `check-manifest.sh`, `check-release-docs.sh`, `check-entrypoints.sh`, `check-doctor.sh` — all
+  passed, which is the evidence behind Ambiguity G and behind Step 3's scan warnings.
+- **Executed in a scratch copy with a 2.1.0 feature CHANGELOG entry and all three manifests
+  bumped:** `check-versions.sh` passed, `check-release-docs.sh` failed with
+  `FAIL: CHANGELOG.md's 2.1.0 entry does not mark the change breaking` — the evidence behind
+  Ambiguity F.
+- **Not executed, and why:** `bash ai-factory/make/sync-adapters.sh`. It writes `.claude/`,
+  `.cursor/` and `.codex/`, and the working tree carried another session's in-flight changes while
+  this plan was written; running it would have mixed them. Its syntax was checked with `bash -n`,
+  and `check-adapters.sh` — which runs the generator itself and asserts it is idempotent — passed.
+  Run it on a clean tree before the MR, as DoD item 1 requires. `bash
+  skills/ai-layout/scripts/check-state.sh` could not be executed either: Step 1 creates it.
