@@ -7,6 +7,7 @@ The operating-model half of AI-native delivery, as a Claude Code plugin. Standal
 ## Commands
 - `/t4:adopt-sdlc` — add the `ai-factory/` layout to an existing repo (any stack)
 - `/t4:doctor` — report what is wrong with this repo's setup and the command that fixes each thing. Read-only; run it first
+- `/t4:state` — list the specs and plans still outstanding here, each outstanding plan shown with its incomplete steps. Read-only; it lists the work and never starts any
 - `/t4:setup-tracker` — point this repo at a tracker so `/t4:spec ABC-12` works, and prove it by resolving a key. Optional; skip it and nothing changes
 - `/t4:sync-sdlc` — regenerate `.claude/` and `.cursor/` adapters from `ai-factory/`
 - `/t4:migrate-layout` — move a repo adopted before 1.0.0 onto `ai-factory/`. Once per repo; the hooks keep working until you run it. The command goes in 2.1.0, the fallback in 3.0.0

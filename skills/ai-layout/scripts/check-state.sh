@@ -418,6 +418,37 @@ does any — no file edited, no checkbox ticked, no plan moved between plans/ an
 started — and the prompt is the only place that can say so to the session reading it (AC8, AC9):
 $(cat "$ROOT/$PROMPT")"
 
-echo "state ok — 8 sections: empty answer, the default listing with [~] and done/, determinism, \
+# --- 9. the command is named where a developer will find it (AC16, the docs half) -------------
+# A command nobody can find is not shipped. README.md is the plugin's own inventory of what it
+# provides, and ai-factory/docs/workflow.md is the document every repo is pointed at to learn what
+# the commands are and the order to run them in. A /t4:state that appears in neither is invisible
+# to the developer it was built for, however well the script behind it works.
+#
+# These two assertions run against this repo's own files rather than a fixture — the one place in
+# this check that does, and deliberately so: the subject here IS this repo's documentation, not a
+# rule about arbitrary repos, so a fixture could only restate itself. Nor can it flake the way an
+# assertion over ai-factory/specs/ or ai-factory/plans/ would: those move whenever the queue
+# moves, while these two files move only when someone edits them.
+#
+# Deliberately NOT asserted: where in either file the mention sits, what it says, or that §5's
+# plugin-level table is complete. That table already omits /t4:doctor and /t4:setup-tracker;
+# widening it is a separate chore (plan 0010, Step 4), and asserting its contents here would
+# quietly make that chore this check's business.
+#
+# Also NOT asserted, because it is NOT met: the rest of AC16 — the generated .claude/, .cursor/
+# and .codex/ adapters, and ai-factory/.sdlc.json. sync-adapters.sh builds the adapters from
+# ai-factory/tasks/, the skills and the agents and never reads commands/, and manifest.js hashes
+# only files under skills/ai-layout/templates/, so a plugin command is invisible to both by
+# construction (plan 0010, Ambiguity G). An assertion here would fail for a reason Step 4 cannot
+# fix; a silent one would claim a coverage this feature does not have.
+for doc in README.md ai-factory/docs/workflow.md; do
+  [ -f "$ROOT/$doc" ] || fail "$doc does not exist, so the assertion below would pass over nothing
+rather than prove anything about it (AC16, the docs half)."
+  grep -qF -- '/t4:state' "$ROOT/$doc" \
+    || fail "$doc does not name /t4:state. A command missing from the file a developer reads to
+find out which commands exist cannot be found by the developer it is for (AC16, the docs half)."
+done
+
+echo "state ok — 9 sections: empty answer, the default listing with [~] and done/, determinism, \
 the read-only snapshots, unknown-with-a-reason, the three **Spec:** link forms, sibling isolation, \
-the prompt's two invariants"
+the prompt's two invariants, the command named in README.md and the workflow doc"

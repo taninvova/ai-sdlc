@@ -264,7 +264,7 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
   assertion — one recorded `/t4:state` transcript in this repo, linked in the MR. *ACs:* 1, 7, 11,
   12, 14.
 
-- [ ] **Step 4 — Name the command where a developer will find it.** One bullet in `README.md`'s
+- [x] **Step 4 — Name the command where a developer will find it.** One bullet in `README.md`'s
   Commands list, beside `/t4:doctor` and in its register. One row in `ai-factory/docs/workflow.md`
   §5's *Plugin-level — available in any repo* table — Command · Use it when · Writes, with *Writes*
   reading "nothing — terminal output only". One line in §10 *When something is wrong*, or in §4's
