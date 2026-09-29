@@ -1,5 +1,40 @@
 # Changelog
 
+## 2.1.0 — 2026-09-29
+
+`/t4:migrate-layout` is removed, on the schedule 1.0.0 set and 2.0.0 revised. Nothing else about
+the rename changes: the hooks' fallback to the pre-1.0.0 directory name stays until 3.0.0, so a
+repo that never migrated keeps its dont-touch guard and its run log exactly as it had them.
+
+### Still on the pre-1.0.0 layout?
+
+Run the migration from an older checkout, which is what made removing it a minor release rather
+than a major one. Check ai-sdlc out at 2.0.0 or earlier, point your tool at that copy
+(`claude --plugin-dir <that checkout>`), and run `/t4:migrate-layout` there; it is unchanged, and
+the two-commit order it prints still applies. Nothing is disarmed while you wait — an unmigrated
+repo's hooks go on reading the old directory name until 3.0.0, and a slash command that is not
+installed fails in front of the person who can fix it.
+
+`/t4:doctor`, `/t4:sync-sdlc` and `manifest.js check` still detect an unmigrated repo and stop
+rather than guess. Each now names the checkout the command lives in, instead of a command this
+release no longer ships.
+
+### Removed
+
+- `/t4:migrate-layout` (`commands/migrate-layout.md`).
+- `skills/ai-layout/scripts/migrate-layout.sh` and `rewrite-paths.js` — the move and the path
+  rewriter. They go with the command: nothing here reaches them without it, and ADR 0008 already
+  names an older checkout as where a repo that still needs them gets them.
+- `skills/ai-layout/scripts/check-migrate.sh` — the check that pinned those two against synthetic
+  pre-1.0.0 repos. Its subject left the repo, so it did too: **thirteen** check scripts now, nine
+  under `skills/ai-layout/scripts/` and four under `skills/ai-hooks/fixtures/`.
+
+### Still deprecated
+
+- The hooks' fallback to the old directory name — **kept until 3.0.0**, unchanged by this release.
+  Removing it disarms the dont-touch guard and stops the run log in any repo that never migrated,
+  and does so silently. See `ai-factory/adr/0008`.
+
 ## 2.0.0 — 2026-09-27
 
 **Breaking for every adopted repo. Your existing `ai-factory/runs/log.csv` rows move to

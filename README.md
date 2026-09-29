@@ -10,7 +10,8 @@ The operating-model half of AI-native delivery, as a Claude Code plugin. Standal
 - `/t4:state` — list the specs and plans still outstanding here, each outstanding plan shown with its incomplete steps. Read-only; it lists the work and never starts any
 - `/t4:setup-tracker` — point this repo at a tracker so `/t4:spec ABC-12` works, and prove it by resolving a key. Optional; skip it and nothing changes
 - `/t4:sync-sdlc` — regenerate `.claude/` and `.cursor/` adapters from `ai-factory/`
-- `/t4:migrate-layout` — move a repo adopted before 1.0.0 onto `ai-factory/`. Once per repo; the hooks keep working until you run it. The command goes in 2.1.0, the fallback in 3.0.0
+
+`/t4:migrate-layout`, which moved a repo adopted before 1.0.0 onto `ai-factory/`, was **removed in 2.1.0**. A repo that never ran it runs it from an ai-sdlc checkout at 2.0.0 or earlier; its hooks keep working until then, because the fallback to the old directory name stays until 3.0.0.
 
 Works with Claude Code and Codex: `ai-factory/make/sync-adapters.sh` generates `.claude/`, `.cursor/` and `.codex/` from one source. See [ai-factory/docs/workflow.md](ai-factory/docs/workflow.md#8-using-it-from-codex) for what differs under Codex.
 

@@ -138,15 +138,16 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
 | `/t4:adopt-sdlc` | adding the layout to an existing repo | the whole `ai-factory/` layout + `ai-factory/.sdlc.json` |
 | `/t4:state` | coming back to a repo and asking what is left, before picking a step up | nothing — terminal output only |
 | `/t4:sync-sdlc` | after pulling a new plugin version, or when `/t4:*` are missing | regenerates `.claude/`, `.cursor/`; reports drift |
-| `/t4:migrate-layout` | this repo adopted ai-sdlc before 1.0.0 and still has the old layout | moves the layout, rewrites the paths its own files name; commits nothing |
 
 #### Taking the 1.0.0 rename
 
 1.0.0 renamed the layout: `ai/` became `ai-factory/`, and `specs/` and `docs/adr/` moved inside it.  <!-- path-scan-ok -->
-Run `/t4:migrate-layout` once, in the repo, then commit what it leaves in **two** commits, in the
-order it prints — the moves first, the path rewrite second. Git pairs a rename by similarity, so in
-one commit a file whose path lines are most of its content loses its history; two commits make that
-independent of how big the file is.
+`/t4:migrate-layout` made that move, and **2.1.0 removed it** — a one-shot migration, kept for as
+long as it was a command anyone here still needed. A repo that has not run it still can: check out
+ai-sdlc at 2.0.0 or earlier, point your tool at that copy, and run the command from there.
+Then commit what it leaves in **two** commits, in the order it prints — the moves first, the path
+rewrite second. Git pairs a rename by similarity, so in one commit a file whose path lines are most
+of its content loses its history; two commits make that independent of how big the file is.
 
 Until you run it the hooks still work: they accept the old directory name until 3.0.0, so the
 dont-touch guard and the run log keep going. The prompts do not — they name `ai-factory/` only, so

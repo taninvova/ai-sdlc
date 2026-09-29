@@ -89,7 +89,7 @@ function cmdWrite(repoRoot, pluginRoot, args) {
   // developer who ran the baseline command this file used to print.
   if (!fs.existsSync(path.join(repoRoot, "ai-factory"))) {
     if (fs.existsSync(path.join(repoRoot, "ai")))
-      die("this repo is on the pre-1.0.0 layout — ai/, not ai-factory/. Run /t4:migrate-layout first; /t4:adopt-sdlc would add a second layout beside it.");  // path-scan-ok
+      die("this repo is on the pre-1.0.0 layout — ai/, not ai-factory/. Run /t4:migrate-layout first, from an ai-sdlc checkout at 2.0.0 or earlier since 2.1.0 removed it; /t4:adopt-sdlc would add a second layout beside it.");  // path-scan-ok
     die("no ai-factory/ directory — run /t4:adopt-sdlc first");
   }
   const prev = readManifest(repoRoot);
@@ -117,7 +117,8 @@ function cmdCheck(repoRoot, pluginRoot) {
     console.log(`  ai-sdlc here is ${now}, which expects ai-factory/. Drift cannot be compared across the`);
     console.log(`  rename: every tracked path changed prefix, so the usual report would be one line per file.`);
     console.log(`  Move this repo first, in a commit of its own:  /t4:migrate-layout`);
-    console.log(`  Until then the hooks keep working — they accept the old directory name until 2.0.0.`);
+    console.log(`  2.1.0 removed that command — run it from an ai-sdlc checkout at 2.0.0 or earlier.`);
+    console.log(`  Until then the hooks keep working — they accept the old directory name until 3.0.0.`);
     return 0;
   }
 
