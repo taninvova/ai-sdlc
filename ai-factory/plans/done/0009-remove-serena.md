@@ -5,7 +5,7 @@ removal changed nothing tracked — because the deletion itself has already happ
 further thing the spec reaches is either blocked on an unanswered open question or lives outside any
 path `/t4:run` may write.
 
-**Spec:** [`ai-factory/specs/0009-remove-serena.md`](../specs/0009-remove-serena.md)
+**Spec:** [`ai-factory/specs/0009-remove-serena.md`](../../specs/0009-remove-serena.md)
 
 ## Before anything else: read this, then decide whether to run it at all
 
@@ -198,6 +198,16 @@ kept only so its absence is visibly deliberate rather than forgotten.
   An implementer that reaches this step with no written answer **stops and reports**. It does not pick
   the tidier-looking option, and it does not read the answer out of the surviving comment — that
   comment explains why the rule exists, not whether it should be removed.
+
+  **Result — Step 2 is withdrawn; not run, and no file changed.** Recorded 2026-09-28. The developer
+  answered spec 0009's Open question 2 in writing: **keep the rule.** That is the first branch above,
+  and by its own text Step 2 is then **withdrawn**, no file changes, and Step 1 is the whole plan. The
+  box stays unticked because there was never anything to run on this answer — not because work is
+  outstanding. `.gitignore` is untouched: 24 lines, the three-line comment at 21–23 and `.serena/` at
+  line 24, exactly as Step 1's assertion #8 recorded it. **Open question 2 is answered and closed by
+  this block** — Step 1's result block above records it as open, which it was on the day Step 1 ran;
+  this is the later answer and supersedes it on that one question only. **Spec Open questions 1, 3
+  and 5 remain open** and question 4 stays moot: the withdrawal resolves question 2 and nothing else.
 
 ## What cannot be planned here, and why
 
