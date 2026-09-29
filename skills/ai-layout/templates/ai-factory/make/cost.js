@@ -238,6 +238,9 @@ function exportDoc(a) {
     schema: SCHEMA,
     version: VERSION,
     log: a.file,
+    // ok | empty | missing | unreadableHeader. A consumer must not infer a damaged log from a
+    // zero row count: a header that cannot be parsed counts zero rows just as an empty log does.
+    status: status(a),
     // Distinct, never summed together: a wrong-width record and a torn one are different faults.
     counts: { ...a.counts },
     // Coverage and its denominator, never an average (AC12).
@@ -329,20 +332,57 @@ function tableFor(a, dim) {
 // wide row. Wrapped here at the same 80 so the notes stay inside it, continuation lines indented
 // so they read as part of the note rather than as a new one.
 const WIDTH = 80;
-function wrap(text, indent = "  ") {
+// `indentAll` matters: when every line carries the indent, the budget for every line is WIDTH minus
+// the indent — including the first. Counting the first line against the full width and then adding
+// two spaces to it is how a "wrapped at 80" line ends up 82 columns wide.
+function wrap(text, indent = "  ", indentAll = false) {
   const out = [];
   let line = "";
   for (const word of String(text).split(" ")) {
-    const limit = out.length ? WIDTH - indent.length : WIDTH;
+    const limit = out.length || indentAll ? WIDTH - indent.length : WIDTH;
     if (line && (line + " " + word).length > limit) { out.push(line); line = word; }
     else line = line ? line + " " + word : word;
   }
   if (line) out.push(line);
-  return out.map((l, i) => (i ? indent + l : l));
+  return out.map((l, i) => (i || indentAll ? indent + l : l));
+}
+
+// Four states, and the last three are why AC10 exists: an empty table with no explanation reads as
+// a broken feature. `unreadableHeader` is separate from `empty` because it is NOT detectable from
+// the row count — an unclosed quote in the header swallows the whole file into one record, so both
+// states count zero rows. A corrupt log reported as "nothing recorded yet" would lose data
+// silently, so the state is decided by the header, not by the count.
+function status(a) {
+  if (!a.exists) return "missing";
+  if (a.columns === -1) return "unreadableHeader";
+  if (a.counts.conforming === 0) return "empty";
+  return "ok";
+}
+
+// Names the file read and the row count found, as AC10 requires.
+//
+// The path goes on a line of its own, and it is the one line that may exceed the 80 columns AC9
+// asks for: a path longer than the terminal cannot be wrapped without breaking it, and a broken
+// path is one a developer cannot paste or click. Everything else wraps.
+function emptyMessage(a) {
+  const c = a.counts;
+  const body = {
+    missing:
+      "no log here yet — nothing has been recorded, so there are 0 rows to report. A run writes one; until then this is the expected answer and not a failure.",
+    unreadableHeader:
+      `cannot read this log's header — its first record does not parse as one, so no row beneath it can be read and 0 rows were counted. This is a damaged log, not an empty one: look for an unclosed quote on the first line.`,
+    empty:
+      `holds no countable row — ${c.records} record(s) read, of which ${c.wrongWidth} were the wrong width and ${c.unreadable} unreadable, leaving 0 counted.`,
+  }[status(a)];
+  return [a.file, ...wrap(body, "  ", true)];
 }
 
 // A view over the engine's structure, never a second implementation of the arithmetic (AC7).
 function renderTable(a) {
+  // Nothing to tabulate: say which file was read and what was found, and stop. Four empty tables
+  // would be worse than a sentence.
+  if (status(a) !== "ok") return emptyMessage(a).join("\n") + "\n";
+
   const out = [];
   for (const dim of TABLE_DIMENSIONS) {
     out.push(...tableFor(a, dim), "");
@@ -398,5 +438,5 @@ if (require.main === module) process.exit(main(process.argv, process.env));
 module.exports = {
   records, width, fields, row, field, readLog,
   aggregate, day, UNATTRIBUTED, DIMENSIONS, METRICS,
-  exportDoc, exportTsv, renderTable, main, SCHEMA, VERSION, EXPORT_METRICS, TSV_COLUMNS, TABLE_DIMENSIONS,
+  exportDoc, exportTsv, renderTable, status, emptyMessage, main, SCHEMA, VERSION, EXPORT_METRICS, TSV_COLUMNS, TABLE_DIMENSIONS,
 };
