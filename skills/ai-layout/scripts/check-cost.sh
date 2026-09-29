@@ -483,6 +483,37 @@ grep -q 'holds no countable row' "$FRESH/out2.txt" \
 eq "the fresh layout still holds only the log we wrote" \
   "$(ls "$FRESH/ai-factory/runs" | tr '\n' ' ')" "log.csv "
 
+# --- 14. the make target (AC18, AC21) ----------------------------------------------------------
+MK=$PWD/skills/ai-layout/templates/ai-factory/make/ai.mk
+recipe() { awk '/^cost:/{f=1;next} /^[^\t]/{f=0} f' "$MK"; }
+grep -qE '^cost:' "$MK" || fail "$MK declares no cost target"
+grep -qE '^\.PHONY:.*\bcost\b' "$MK" || fail "cost is missing from .PHONY, so a file named cost would shadow it"
+eq "the cost recipe is one line" "$(recipe | grep -c .)" 1
+# `@` is not tidiness: an echoed recipe line puts make's own output on stdout ahead of the JSON
+# document, and `make cost JSON=1` promises one document and nothing else (AC1).
+eq "the cost recipe is silent, so make does not echo it onto stdout" \
+  "$(recipe | grep -c '^\t@')" 1
+# Read-only (AC16): the target must not create, delete or truncate anything. This assertion exists
+# because a stray cleanup line did land in this recipe once while it was being written.
+eq "the cost recipe neither deletes, creates nor redirects" \
+  "$(recipe | grep -cE 'rm |[-]delete|mkdir|>|tee ' || true)" 0
+# AC21: one layout's log and nothing else — no walk upward, no sibling repo. The workspace root
+# includes this same ai.mk and inherits the target, which is what makes this matter.
+eq "the cost recipe reads this layout's log and passes no other path" \
+  "$(recipe | tr -s ' ' | sed 's/^\t//')" \
+  '@node ai-factory/make/cost.js $(RUNS)/log.csv'
+if grep -nE '\.\./|\$\(HOME\)|/Users/|~/' <(recipe) >/dev/null; then
+  fail "the cost recipe names a path outside the repo"
+fi
+if grep -vE '^[[:space:]]*//' "$COST" | grep -qE '\.\./\.\./|\$HOME|/Users/|homedir\(\)|os\.homedir'; then
+  fail "$COST reaches outside the repo it runs in (AC21)"
+fi
+# Both mode variables must be exported, or `make cost JSON=1` would set a make variable the script
+# never sees and would silently print the table instead of the document.
+for v in JSON TSV; do
+  grep -qE "^export $v\$" "$MK" || fail "ai.mk does not export $v, so make cost $v=1 would not reach the script"
+done
+
 # --- 8. the reader touched nothing (AC16, the half a fixture can prove) ------------------------
 [ "$(sums)" = "$BEFORE" ] || fail "the fixtures changed while being read; the reader must be read-only over the log"
 eq "no fixture was added or removed during the run" "$(ls "$FX"/*.csv | wc -l | tr -d ' ')" 12
