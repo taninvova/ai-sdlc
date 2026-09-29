@@ -66,6 +66,13 @@ drifted, that every row matches the header width, that both kinds of migration p
 rows, and that the flush moves rows exactly once and only on a commit. Run it after touching
 any of the three.
 
+The reader on the other side of that schema,
+`skills/ai-layout/templates/ai-factory/make/cost.js`, carries a **third** copy of the same
+`records()`/`width()` pair, because a template copied into an adopted repo cannot require anything
+from the plugin. `fixtures/check-log-schema.sh` pins all three against each other, and
+`skills/ai-layout/scripts/check-cost.sh` holds the reader itself against the fixture logs in
+`fixtures/cost/`, whose totals are known by construction. Run both after touching the schema.
+
 Two things can be wrong with a log.csv (or a pending file), and both are repaired on the next
 write — for log.csv that is the flush or a headless run:
 
@@ -130,6 +137,7 @@ ai-factory/runs/*.jsonl
 ai-factory/runs/log.pending.csv
 ai-factory/runs/.counted.*
 ai-factory/runs/.task.*
+ai-factory/runs/report.html
 .claude/settings.local.json
 CLAUDE.local.md
 
