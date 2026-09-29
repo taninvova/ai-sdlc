@@ -57,6 +57,10 @@ TMPOUT=$SCRATCH/out.json; TMPERR=$SCRATCH/err.txt; TMPOUT2=$SCRATCH/out2.json
 TMPTSV=$SCRATCH/out.tsv; TMPTSV2=$SCRATCH/out2.tsv
 TMPTAB=$SCRATCH/out.txt; TMPTAB2=$SCRATCH/out2.txt
 
+# maxlen <file> — the longest line in CHARACTERS. awk length() counts bytes here and the em-dash in
+# several messages is three of them, which would report a compliant line as too wide.
+maxlen() { node -e 'const fs=require("fs");const l=fs.readFileSync(process.argv[1],"utf8").split("\n").filter(x=>x!=="");console.log(l.length?Math.max(...l.map(x=>[...x].length)):0);' "$1"; }
+
 # rd <fixture> <js> — evaluates <js> with `C` bound to the module and `L` to readLog()'s answer
 # over the fixture. Whatever it prints comes back.
 rd() { node -e "const C = require('$COST'); const L = C.readLog('$FX/$1'); $2"; }
@@ -295,8 +299,11 @@ NAMES=$(ex empty-task.csv '
     if (v && typeof v === "object") for (const k of Object.keys(v)) { seen.add(k); walk(v[k]); }
   })(D);
   console.log([...seen].sort().join(","));')
+# `status` was added in step 7, deliberately: the version stays 1 because a consumer reading
+# version 1 keeps working without it, but this list had to be edited by hand for the check to pass
+# again — which is the whole point of failing on an addition.
 eq "the export's field names, exactly" "$NAMES" \
-  "accepted,agent,branch,cache_read_tokens,cache_write_tokens,conforming,counts,covered,day,dimensions,groups,hit_rate,input_tokens,key,log,metrics,model,of,output_tokens,records,rows,schema,session,task,tool,totals,turns,unattributed,unreadable,user,version,wrongWidth"
+  "accepted,agent,branch,cache_read_tokens,cache_write_tokens,conforming,counts,covered,day,dimensions,groups,hit_rate,input_tokens,key,log,metrics,model,of,output_tokens,records,rows,schema,session,status,task,tool,totals,turns,unattributed,unreadable,user,version,wrongWidth"
 
 eq "the schema is named" "$(ex empty-task.csv 'console.log(D.schema);')" "ai-sdlc-cost"
 eq "the version is the integer 1" "$(ex empty-task.csv 'console.log(D.version + "|" + (typeof D.version));')" "1|number"
@@ -367,8 +374,8 @@ eq "a filter variable is ignored rather than honoured" \
 node "$COST" "$FX/two-tools.csv" > "$TMPTAB" 2> "$TMPERR" || fail "the default mode exited non-zero"
 eq "table mode: stderr is empty" "$(wc -c < "$TMPERR" | tr -d ' ')" 0
 # AC9, and over EVERY line: a 120-character footnote wraps as badly as a wide row.
-eq "table mode: no line exceeds 80 columns" \
-  "$(awk '{ if (length($0) > 80) n++ } END { print n+0 }' "$TMPTAB")" 0
+eq "table mode: the widest line is within 80 characters" \
+  "$(maxlen "$TMPTAB" | awk '{ print ($1 <= 80) ? "within" : "over (" $1 ")" }')" "within"
 # AC8: the four groupings, each as its own table, and no other dimension's table.
 eq "table mode: the four groupings AC8 names, in order" \
   "$(awk '$1=="task"||$1=="agent"||$1=="branch"||$1=="day" {printf "%s ", $1} END {print ""}' "$TMPTAB" | sed 's/ $//')" \
@@ -406,6 +413,75 @@ eq "table mode: excluded records are reported as two distinct counts" \
 # Reproducible, like both export forms.
 node "$COST" "$FX/two-tools.csv" > "$TMPTAB2" 2>/dev/null
 cmp -s "$TMPTAB" "$TMPTAB2" || fail "the table is not reproducible; two runs over one log differ"
+
+# --- 13. the empty and missing cases (AC10, AC19) ----------------------------------------------
+# Three not-ok states, and the point of the third is that it is NOT detectable from the row count:
+# an unclosed quote in the header swallows the whole file into one record, so a damaged log and an
+# empty one both count zero rows. Reporting a damaged log as "nothing recorded yet" would lose data
+# silently, so the state is decided by the header.
+eq "status: a missing log"            "$(ex no-such-log.csv 'console.log(D.status);')" "missing"
+eq "status: a header-only log"        "$(ex header-only.csv 'console.log(D.status);')" "empty"
+eq "status: an unreadable header"     "$(ex bad-header.csv  'console.log(D.status);')" "unreadableHeader"
+eq "status: a log with countable rows" "$(ex two-tools.csv  'console.log(D.status);')" "ok"
+# A log whose only rows are excluded by AC14/AC15 counts as empty, not ok: nothing is countable.
+eq "status: every row excluded means empty, not ok" \
+  "$(node -e "const C=require('$COST');const fs=require('fs');const t=require('os').tmpdir()+'/only-bad.csv';fs.writeFileSync(t,fs.readFileSync('$FX/wrong-width.csv','utf8').split('\n').filter((l,i)=>i===0||l.split(',').length!==17).join('\n'));const a=C.aggregate(C.readLog(t));console.log(C.status(a));fs.unlinkSync(t);")" \
+  "empty"
+
+for case in no-such-log.csv header-only.csv bad-header.csv; do
+  node "$COST" "$FX/$case" > "$TMPTAB" 2> "$TMPERR" || fail "table mode exited non-zero on $case"
+  eq "$case: table mode exits 0 with empty stderr" "$(wc -c < "$TMPERR" | tr -d ' ')" 0
+  # AC10: it names the file it read and the row count it found, rather than printing an empty table.
+  grep -q "$case" "$TMPTAB" || fail "$case: the message does not name the file it read: $(cat "$TMPTAB")"
+  # Each state phrases the count its own way — "0 rows to report", "0 record(s) read ... 0
+  # counted", "0 rows were counted" — so the assertion is that a zero count is stated, not that
+  # one particular sentence is.
+  grep -qE "0 (rows?|record)" "$TMPTAB" || fail "$case: the message does not give the row count: $(cat "$TMPTAB")"
+  eq "$case: no table header is printed at all" \
+    "$(awk '$1=="task"||$1=="agent"||$1=="branch"||$1=="day"||$1=="TOTAL" {n++} END {print n+0}' "$TMPTAB")" 0
+  # The path line is exempt, and only it: a path longer than the terminal cannot be wrapped
+  # without breaking it, and a broken path is one nobody can paste or click.
+  tail -n +2 "$TMPTAB" > "$SCRATCH/body.txt"
+  eq "$case: every line but the path is within 80 characters" \
+    "$(maxlen "$SCRATCH/body.txt" | awk '{ print ($1 <= 80) ? "within" : "over (" $1 ")" }')" "within"
+  eq "$case: the first line is the path, alone" "$(head -1 "$TMPTAB")" "$FX/$case"
+done
+# The distinction AC10 now requires, in words a developer will act on differently.
+# Joined into one line before matching: the message is wrapped at 80, so any phrase long enough to
+# be worth asserting on is likely to straddle a line break.
+flat() { node "$COST" "$1" | tr "\n" " " | tr -s " "; }
+eq "a damaged log is called damaged, not empty" \
+  "$(flat "$FX/bad-header.csv" | grep -c "damaged log, not an empty one")" 1
+eq "an empty log is not called damaged" \
+  "$(flat "$FX/header-only.csv" | grep -c "damaged" || true)" 0
+# JSON keeps AC1: one document, no message banner — the state travels as a field.
+eq "JSON mode on a missing log is still exactly one document" \
+  "$(JSON=1 node "$COST" "$FX/no-such-log.csv" | head -c 1)" "{"
+# TSV on an empty log is a header and no rows: parseable, rather than a sentence a consumer chokes on.
+eq "TSV mode on an empty log is the header alone" \
+  "$(TSV=1 node "$COST" "$FX/header-only.csv" | wc -l | tr -d ' ')" 1
+
+# AC19: usable from the moment the layout lands. A freshly adopted repo has an ai-factory/ layout
+# and no log yet, so this builds that state and runs the real entry point in it. The /t4:adopt-sdlc
+# command itself needs the plugin installed, which is the same blocker as plan 0007 step 7; what is
+# proved here is the state a fresh adopt leaves behind, not the ceremony of adopting.
+FRESH=$SCRATCH/fresh
+mkdir -p "$FRESH/ai-factory/runs"
+( cd "$FRESH" && node "$COST" ai-factory/runs/log.csv > out.txt 2> err.txt ) || fail "a freshly adopted repo made the target fail"
+eq "a fresh layout with no log: exits 0, stderr empty" "$(wc -c < "$FRESH/err.txt" | tr -d ' ')" 0
+# The path is the first line and the explanation follows it, so both halves are asserted.
+eq "a fresh layout names the log it looked for" "$(head -1 "$FRESH/out.txt")" "ai-factory/runs/log.csv"
+grep -q "no log here yet" "$FRESH/out.txt" \
+  || fail "a fresh layout did not explain the absent log: $(cat "$FRESH/out.txt")"
+# And the moment the header exists but no row does — what the first ensureSchema leaves behind.
+printf '%s\n' "$HEADER" > "$FRESH/ai-factory/runs/log.csv"
+( cd "$FRESH" && node "$COST" ai-factory/runs/log.csv > out2.txt 2>&1 ) || fail "a header-only log made the target fail"
+grep -q 'holds no countable row' "$FRESH/out2.txt" \
+  || fail "a header-only log in a fresh layout was not explained: $(cat "$FRESH/out2.txt")"
+# Read-only even here: the target must not create the log it failed to find.
+[ ! -e "$FRESH/ai-factory/runs/log.pending.csv" ] || fail "the target created a pending log"
+eq "the fresh layout still holds only the log we wrote" \
+  "$(ls "$FRESH/ai-factory/runs" | tr '\n' ' ')" "log.csv "
 
 # --- 8. the reader touched nothing (AC16, the half a fixture can prove) ------------------------
 [ "$(sums)" = "$BEFORE" ] || fail "the fixtures changed while being read; the reader must be read-only over the log"

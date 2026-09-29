@@ -156,7 +156,7 @@ no process that outlives the command, and no port.
   names both tools; a fixture with no `accepted` value asserting no coverage line, and one with a value
   asserting it appears.
 
-- [ ] **Step 7 — The empty and missing cases.** A `log.csv` that is missing, header-only, or holds no
+- [x] **Step 7 — The empty and missing cases.** A `log.csv` that is missing, header-only, or holds no
   row after AC14 and AC15's exclusions makes both modes **say so explicitly, naming the file read and
   the row count found, and exit 0** (AC10) — an empty table with no explanation reads as a broken
   feature, and this is the workspace root's state today. Prove the same behaviour in a scratch repo
