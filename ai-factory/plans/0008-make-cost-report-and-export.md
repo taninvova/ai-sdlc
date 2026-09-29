@@ -200,7 +200,7 @@ no process that outlives the command, and no port.
   `bash skills/ai-layout/scripts/check-versions.sh`; a freshly adopted scratch repo's `.gitignore`
   carrying the `report.html` line.
 
-- [ ] **Step 10 — Read-only, proved.** Assert that running either mode creates, modifies, moves or
+- [x] **Step 10 — Read-only, proved.** Assert that running either mode creates, modifies, moves or
   deletes nothing under `ai-factory/runs/` (AC16), so the target can never cost a developer a row.
   Add the assertion to `check-cost.sh`: snapshot the directory, run both modes, compare.
   *Proves:* AC16. *Tests:* `check-cost.sh`'s new case; `git status --porcelain ai-factory/runs/`

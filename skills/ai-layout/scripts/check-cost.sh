@@ -24,8 +24,11 @@
 #   empty-task    rows with an empty `task`, an empty `agent`, or both (AC11's inputs)
 #   header-only   a log holding nothing but its header (AC10)
 #   missing       no file at all (AC10) — readLog answers, it does not throw
-# And finally: the fixtures are byte-identical after the whole run. The reader must not touch what
-# it reads (AC16).
+# AC16 is proved twice, from two directions. Section 15 snapshots a whole `ai-factory/runs/`
+# directory — every name, size, mtime, inode and checksum in it — runs every mode over it and
+# requires the snapshot back unchanged, so a created, modified, moved or deleted file is caught
+# wherever it lands. And finally, section 8: the fixtures are byte-identical after the whole run.
+# The reader must not touch what it reads.
 #
 # Steps 1-3 of ai-factory/plans/0008-make-cost-report-and-export.md: the reader, this harness and
 # the aggregation engine. The export's field names and the rendered table arrive in later steps
@@ -514,8 +517,145 @@ for v in JSON TSV; do
   grep -qE "^export $v\$" "$MK" || fail "ai.mk does not export $v, so make cost $v=1 would not reach the script"
 done
 
+# --- 15. read-only over ai-factory/runs/, proved by snapshot (AC16) ---------------------------
+# Section 8 proves the fixture BYTES survive. This proves the DIRECTORY does, which is what AC16
+# actually says: nothing under `ai-factory/runs/` created, modified, moved or deleted. A target
+# that rewrote log.csv in place through a temp file, moved it aside, dropped a scratch file beside
+# it, or deleted the log.previous.csv quarantine would cost a developer rows while leaving every
+# fixture's checksum intact.
+#
+# The subject is a fake layout in scratch space, not this repo's own ai-factory/runs/: the hooks
+# append a row there whenever a session ends, so a live log can change under the check for reasons
+# that are not the reader's fault, and a flaky assertion about data loss is worse than none. The
+# copy carries what a real runs/ carries — a log with rows, the log.previous.csv quarantine AC15
+# forbids reading, a saved run artefact, and a nested directory.
+RO=$SCRATCH/read-only
+mkdir -p "$RO/ai-factory/runs/nested"
+cp "$FX/two-tools.csv"   "$RO/ai-factory/runs/log.csv"
+cp "$FX/wrong-width.csv" "$RO/ai-factory/runs/log.previous.csv"
+cp "$FX/quoted.csv"      "$RO/ai-factory/runs/nested/keep.csv"
+printf '{"result":"saved run"}\n' > "$RO/ai-factory/runs/20260927-120000-claude-run.json"
+
+# snap <dir> — <dir> itself and every entry under it, as path|kind|size|mtime|inode|sha256.
+#   the inode catches a MOVE: a file rewritten through a temp file and renamed over the original
+#     keeps its name, its size and even its bytes, and gets a new inode
+#   the directory's own mtime catches a file CREATED AND THEN DELETED again, which no listing of
+#     the surviving entries could see
+#   atime is deliberately NOT captured: reading the log is what the target is for, and on a
+#     relatime mount reading it is allowed to move atime
+snap() { node -e '
+  const fs = require("fs"), path = require("path"), crypto = require("crypto");
+  const root = process.argv[1];
+  const line = (rel, p) => {
+    const s = fs.lstatSync(p);
+    const kind = s.isSymbolicLink() ? "l" : s.isDirectory() ? "d" : "f";
+    const sum = s.isFile() ? crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex") : "";
+    return [rel, kind, s.size, s.mtimeMs, s.ino, sum].join("|");
+  };
+  const out = [line(".", root)];
+  (function walk(d) {
+    for (const name of fs.readdirSync(d).sort()) {
+      const p = path.join(d, name);
+      out.push(line(path.relative(root, p), p));
+      if (fs.lstatSync(p).isDirectory()) walk(p);
+    }
+  })(root);
+  process.stdout.write(out.join("\n"));' "$1"; }
+# differs <dir> <snapshot> — "differs" or "same", so the canaries below read as assertions.
+differs() { [ "$(snap "$1")" = "$2" ] && echo same || echo differs; }
+
+# The canaries. Without them the assertion could pass vacuously — a snap() that printed nothing,
+# or one blind to a verb AC16 names, would report "untouched" for a directory that had been
+# rifled. Each verb is performed on a throwaway copy and the snapshot is required to notice.
+CAN=$SCRATCH/canary
+for verb in created modified moved deleted transient; do
+  rm -rf "$CAN"; mkdir -p "$CAN"; cp -R "$RO/ai-factory/runs" "$CAN/runs"
+  BASE=$(snap "$CAN/runs")
+  case $verb in
+    created)   printf 'x\n' > "$CAN/runs/report.html" ;;
+    modified)  printf 'x\n' >> "$CAN/runs/log.csv" ;;
+    # Same name, same size, same bytes, same mtime — only the inode moves. This is the case a
+    # checksum-only snapshot misses, and it is exactly how a careless writer "updates" a file.
+    moved)     node -e 'const fs=require("fs");const p=process.argv[1];const s=fs.statSync(p);
+                 fs.writeFileSync(p+".tmp", fs.readFileSync(p)); fs.renameSync(p+".tmp", p);
+                 fs.utimesSync(p, s.atime, s.mtime);' "$CAN/runs/log.csv" ;;
+    deleted)   rm "$CAN/runs/log.previous.csv" ;;
+    # Created and deleted again: every surviving entry is identical, so only the directory's own
+    # mtime is left to tell the tale.
+    transient) : > "$CAN/runs/scratch.tmp"; rm "$CAN/runs/scratch.tmp" ;;
+  esac
+  eq "the read-only snapshot notices a file $verb" "$(differs "$CAN/runs" "$BASE")" "differs"
+done
+# And the moved case must be caught by the inode, not merely alongside it: on the moved file's own
+# row the name, the kind, the size and the checksum are all identical, and the inode is not. So a
+# writer that rewrote the log through a temp file and put back everything a `diff` could see would
+# still be caught. Two fields are left out of the equal-halves comparison on purpose: the
+# directory's row changes as well, because a rename writes the directory, and the file's mtime
+# cannot be restored exactly — utimes takes milliseconds and APFS keeps nanoseconds — so the
+# restore below lands near the original rather than on it. Neither is the signal being pinned here.
+rm -rf "$CAN"; mkdir -p "$CAN"; cp -R "$RO/ai-factory/runs" "$CAN/runs"
+BASE=$(snap "$CAN/runs")
+node -e 'const fs=require("fs");const p=process.argv[1];const s=fs.statSync(p);
+  fs.writeFileSync(p+".tmp", fs.readFileSync(p)); fs.renameSync(p+".tmp", p);
+  fs.utimesSync(p, s.atime, s.mtime);' "$CAN/runs/log.csv"
+MOVED=$(snap "$CAN/runs")
+# held <snapshot> — log.csv's name, kind, size and checksum. ino <snapshot> — its inode alone.
+held() { printf '%s\n' "$1" | awk -F'|' -v OFS='|' '$1=="log.csv" { print $1, $2, $3, $6 }'; }
+ino()  { printf '%s\n' "$1" | awk -F'|' '$1=="log.csv" { print $5 }'; }
+[ -n "$(held "$BASE")" ] || fail "the snapshot has no row for log.csv, so this pair asserts nothing"
+eq "the moved file kept its name, size and bytes" "$(held "$MOVED")" "$(held "$BASE")"
+eq "the moved file's inode is what gave it away" \
+  "$([ "$(ino "$MOVED")" = "$(ino "$BASE")" ] && echo same || echo differs)" "differs"
+rm -rf "$CAN"
+
+RO_SNAP=$(snap "$RO")
+
+# Now the real thing. The snapshot is of the whole fake layout, not of runs/ alone: runs/ is what
+# AC16 names, and a scratch file dropped one directory above it is the same bug with a better
+# hiding place. Every mode the target exposes is run over the same layout: the rendered table, the
+# JSON document, the TSV, and both mode variables set at once. Each is run twice — once from inside
+# the layout with the relative `$(RUNS)/log.csv` the make recipe passes, once from outside with an
+# absolute path — because the cwd is what decides where a stray write would land, and the make
+# target and a developer calling the script by hand do not share one.
+# run_mode <mode> <log> — the target in one of its four forms. Spelled out per case rather than
+# built from a string so every expansion here stays quoted.
+run_mode() {
+  case $1 in
+    table) node          "$COST" "$2" ;;
+    json)  JSON=1        node "$COST" "$2" ;;
+    tsv)   TSV=1         node "$COST" "$2" ;;
+    both)  JSON=1 TSV=1  node "$COST" "$2" ;;
+    *)     fail "run_mode: unknown mode '$1'" ;;
+  esac
+}
+for mode in table json tsv both; do
+  ( cd "$RO" && run_mode "$mode" ai-factory/runs/log.csv > /dev/null 2>&1 ) \
+    || fail "$mode mode exited non-zero over the read-only layout"
+  run_mode "$mode" "$RO/ai-factory/runs/log.csv" > /dev/null 2>&1 \
+    || fail "$mode mode exited non-zero over the read-only layout by absolute path"
+  # The log that is not there: a missing log must not be created by the run that went looking for
+  # it, in any mode. Writing the header is `ensureSchema`'s job, and this target is not the writer.
+  ( cd "$RO" && run_mode "$mode" ai-factory/runs/absent.csv > /dev/null 2>&1 ) \
+    || fail "$mode mode exited non-zero over an absent log"
+done
+
+RO_AFTER=$(snap "$RO")
+if [ "$RO_AFTER" != "$RO_SNAP" ]; then
+  fail "running the cost target changed the layout it read — AC16 says nothing under
+ai-factory/runs/ is created, modified, moved or deleted (< before, > after):
+$(diff <(printf '%s\n' "$RO_SNAP") <(printf '%s\n' "$RO_AFTER") || true)"
+fi
+# Named plainly as well, so a passing run says what it proved rather than only failing loudly.
+eq "nothing under ai-factory/runs/ was created, modified, moved or deleted" \
+  "$(differs "$RO" "$RO_SNAP")" "same"
+# Belt and braces on the one verb a snapshot of a directory cannot see: a file written OUTSIDE the
+# layout entirely. The scratch root holds the layout and nothing else, so anything else here now
+# was put there by a run.
+eq "the run wrote nothing beside the layout either" \
+  "$(ls "$RO" | tr '\n' ' ')" "ai-factory "
+
 # --- 8. the reader touched nothing (AC16, the half a fixture can prove) ------------------------
 [ "$(sums)" = "$BEFORE" ] || fail "the fixtures changed while being read; the reader must be read-only over the log"
 eq "no fixture was added or removed during the run" "$(ls "$FX"/*.csv | wc -l | tr -d ' ')" 12
 
-echo "cost reader ok — quoted commas and newlines held in one record, wrong-width and pre-0007 rows excluded and counted, an unclosed quote unreadable, an unmeasurable header inventing nothing, fields read by name with a missing column empty, header-only and missing logs answered, groups summing to their totals with unattributed spend named, hit_rate recomputed rather than averaged, the session key surviving for a fleet view, fixtures byte-identical after the run"
+echo "cost reader ok — quoted commas and newlines held in one record, wrong-width and pre-0007 rows excluded and counted, an unclosed quote unreadable, an unmeasurable header inventing nothing, fields read by name with a missing column empty, header-only and missing logs answered, groups summing to their totals with unattributed spend named, hit_rate recomputed rather than averaged, the session key surviving for a fleet view, every mode leaving ai-factory/runs/ untouched down to inode and directory mtime, fixtures byte-identical after the run"
