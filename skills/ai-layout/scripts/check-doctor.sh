@@ -57,6 +57,13 @@ grep -q '^\[finding\] layout .*pre-1.0.0 layout' <<<"$out" || fail "an unmigrate
 $out"
 grep -q 'migrate-layout' <<<"$out" || fail "the unmigrated finding carries no remedy:
 $out"
+# 2.1.0 removed the command, so naming it alone is now a remedy the reader cannot carry out: the
+# slash command is not installed and its absence says nothing about where it went. ADR 0008's
+# reason for removing it in a minor at all was that the script remains reachable from an older
+# checkout, so the finding has to say that, or the removal is the silent break the ADR refused.
+grep -qE 'checkout at 2\.0\.0 or earlier' <<<"$out" \
+  || fail "the unmigrated finding names /t4:migrate-layout but not where to get it — 2.1.0 removed the command:
+$out"
 # 3.0.0, not 2.1.0: the fallback outlives the migration command, because removing it is itself
 # a silent break. An assertion naming the old version would pass a doctor promising the wrong one.
 # Rescheduled 2026-09-27 with the 2.0.0 release: this release IS 2.0.0 and keeps the fallback, so
@@ -76,6 +83,10 @@ out=$(run "$TMP/halfway"); st=$?
 grep -q '^\[finding\] layout .*half migrated' <<<"$out" || fail "a repo with both directories was not reported as half migrated:
 $out"
 grep -q 'hooks are using ai-factory/' <<<"$out" || fail "the half-migrated finding does not say which directory the hooks read:
+$out"
+# It names the same removed command, so it owes the same answer to "where do I get it".
+grep -qE 'checkout at 2\.0\.0 or earlier' <<<"$out" \
+  || fail "the half-migrated finding names /t4:migrate-layout but not where to get it — 2.1.0 removed the command:
 $out"
 
 # A migrated repo says nothing about migrating at all.

@@ -45,21 +45,20 @@ $hits"
 # ADRs are records by definition, which is why ai-factory/adr/ is absent here: ADR 0008 decides
 # the rename, so it necessarily names ai/, and no task reads an ADR as an instruction anyway.
 #
-# Eight files are excluded outright, because in each the old name IS the subject rather than a
-# stale reference, in three groups:
+# Four files are excluded outright, because in each the old name IS the subject rather than a
+# stale reference, in two groups:
 #   the transitional fallback — the detection that accepts both names, the hook manifest that
 #     documents it, and the fixture proving an unmigrated repo keeps its guard;
-#   the migration off the old name — its command, its script, the rewriter, and the check whose
-#     fixtures are built out of pre-1.0.0 repos;
 #   this file, whose header explains the old paths and whose self-proof is made of them.
-# A per-line pragma would be noise on nearly every line of all eight, and hooks.json is JSON and
+# A per-line pragma would be noise on nearly every line of all four, and hooks.json is JSON and
 # cannot carry one.
 #
-# Six go with the migration in 1.1.0 and the fallback trio in 2.0.0. What is left then is this
-# script, and the cost of excluding it: its own paths are not self-checked. It has none that a
-# task follows, and the set-size assertion below catches the mistake that would matter — a glob
-# that silently stops matching.
-EXCLUDED='^(hooks/hooks\.json|skills/ai-hooks/scripts/_common\.js|skills/ai-hooks/fixtures/check-detect\.sh|skills/ai-layout/scripts/check-paths\.sh|commands/migrate-layout\.md|skills/ai-layout/scripts/migrate-layout\.sh|skills/ai-layout/scripts/rewrite-paths\.js|skills/ai-layout/scripts/check-migrate\.sh)$'
+# There were eight until 2.1.0, which removed /t4:migrate-layout along with its script, the
+# rewriter and the check whose fixtures were built out of pre-1.0.0 repos. The fallback trio goes
+# in 3.0.0. What is left then is this script, and the cost of excluding it: its own paths are not
+# self-checked. It has none that a task follows, and the set-size assertion below catches the
+# mistake that would matter — a glob that silently stops matching.
+EXCLUDED='^(hooks/hooks\.json|skills/ai-hooks/scripts/_common\.js|skills/ai-hooks/fixtures/check-detect\.sh|skills/ai-layout/scripts/check-paths\.sh)$'
 FILES=()
 while IFS= read -r f; do
   [[ $f =~ $EXCLUDED ]] && continue

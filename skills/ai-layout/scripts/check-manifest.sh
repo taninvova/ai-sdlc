@@ -109,6 +109,15 @@ grep -q 'pre-1.0.0 layout' <<<"$out" || fail "an unmigrated repo was not told it
 $out"
 grep -q 'migrate-layout' <<<"$out" || fail "an unmigrated repo was not pointed at the migration:
 $out"
+# 2.1.0 removed the command. Pointing at a slash command that is not installed is a dead end, and
+# the only reason ADR 0008 allowed the removal in a minor is that an older checkout still has it.
+grep -qE 'checkout at 2\.0\.0 or earlier' <<<"$out" \
+  || fail "an unmigrated repo was pointed at /t4:migrate-layout without being told where to get it — 2.1.0 removed the command:
+$out"
+# ...and the fallback's own version, which outlives the command by a major.
+grep -qE 'old directory name until 3\.0\.0' <<<"$out" \
+  || fail "the unmigrated report does not say the hooks accept the old name until 3.0.0:
+$out"
 grep -q 'adopted before manifests existed' <<<"$out" && fail "an unmigrated repo with a 0.27.1 manifest was told it predates manifests:
 $out"
 grep -qE 'removed upstream|new upstream' <<<"$out" && fail "an unmigrated repo got a per-file drift report across the rename:
@@ -119,6 +128,9 @@ $out"
 # developer reaches by running the baseline command this file used to print.
 out=$(node "$M" write "$OLD" . 2>&1 || true)
 grep -q 'migrate-layout' <<<"$out" || fail "manifest write does not point an unmigrated repo at the migration:
+$out"
+grep -qE 'checkout at 2\.0\.0 or earlier' <<<"$out" \
+  || fail "manifest write points at /t4:migrate-layout without saying where to get it — 2.1.0 removed the command:
 $out"
 grep -q 'adopt-sdlc first' <<<"$out" && fail "manifest write still sends an unmigrated repo to /t4:adopt-sdlc, which would add a second layout:
 $out"

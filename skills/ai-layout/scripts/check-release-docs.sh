@@ -205,13 +205,16 @@ cites=$(grep -rn "ai-factory/adr/[0-9]" skills/ai-layout/templates/ 2>/dev/null 
 $cites"
 
 # --- 5. nothing invokes the migration (AC13) ---------------------------------------------------
-# Recommending /t4:migrate-layout is what doctor.sh, sync-sdlc.md and the release notes are for.
+# Recommending /t4:migrate-layout is what doctor.sh, sync-sdlc.md and the release notes are for —
+# now with the checkout it has to be run from, because 2.1.0 removed the command and its script.
 # Invoking migrate-layout.sh is the thing that must never happen on its own: it moves directories.
-# The two are told apart by which name is used — the command, or the script.
+# The two are told apart by which name is used — the command, or the script. Until 2.1.0 the
+# script's own command was exempt here; it is gone, so the exemption is too and no prompt, hook or
+# template may name the script at all. A name that resolves to nothing is the milder reading; the
+# one this guards is a copy of the script reintroduced somewhere a session can reach it.
 callers=$(grep -rln "migrate-layout\.sh" \
-  commands/ hooks/ ai-factory/tasks/ skills/ai-layout/templates/ agents/ 2>/dev/null \
-  | grep -v "^commands/migrate-layout\.md$" || true)
-[ -z "$callers" ] || fail "something other than its own command names migrate-layout.sh — a prompt or hook that can invoke it is a directory move nobody asked for:
+  commands/ hooks/ ai-factory/tasks/ skills/ai-layout/templates/ agents/ 2>/dev/null || true)
+[ -z "$callers" ] || fail "a prompt, hook or template names migrate-layout.sh, which 2.1.0 removed — either a dead reference or a directory move nobody asked for:
 $callers"
 
 # --- 6. section 2's two bindings, proved in both directions -----------------------------------
@@ -282,13 +285,22 @@ $out"
   ok "an ordinary patch entry on top of the real 2.0.0 entry" "$a"
 
   # (b) The lookup's own failure mode: no 2.0.0 entry at all. This repo's CHANGELOG with that one
-  # entry cut out, leaving 1.0.0 on top — an entry that names the migration and the hooks' fallback
-  # too, with the removal versions 2.0.0 superseded. A binding that had quietly stopped resolving
-  # would sail through this; it has to say the record is missing.
+  # entry cut out — the entry that names the migration and the hooks' fallback, with removal
+  # versions later releases have superseded. A binding that had quietly stopped resolving would
+  # sail through this; it has to say the record is missing.
+  #
+  # Whichever entry the cut leaves on top is the version this fixture's manifests must ship. That
+  # was 1.0.0 while 2.0.0 was the newest release, and hard-coding it meant the first release to
+  # land ABOVE the record — 2.1.0, which removed /t4:migrate-layout — made this case fail on the
+  # version-drift assertion instead of the missing-record one it exists to prove. Derived, it
+  # follows the file. Everything else about the case is unchanged.
   b=$(repo no-record)
   awk -v v="$RENAME_ENTRY" '/^## /{ cut = ($0 == "## " v || index($0, "## " v " ") == 1) } !cut' \
     "$ROOT/CHANGELOG.md" > "$b/CHANGELOG.md"
-  setver "$b" 1.0.0
+  btop=$(awk '/^## /{ sub(/^## +/, ""); sub(/ .*/, ""); print; exit }' "$b/CHANGELOG.md")
+  [ -n "$btop" ] \
+    || fail "self-test: the no-record fixture has no versioned entry left to set its manifests to"
+  setver "$b" "$btop"
   no "a CHANGELOG with the $RENAME_ENTRY entry removed" "$b" \
     "CHANGELOG.md has no \"## $RENAME_ENTRY\" entry"
 
@@ -310,6 +322,10 @@ $out"
   # record <root> <statement to omit, or 0 for none> — the purpose-made CHANGELOG, written to
   # <root>. Fourteen lines with all six present, so every variant clears the ten-line floor and a
   # failure is never the floor's.
+  #
+  # The fixture's manifests are set to the one entry it writes. They used to be left at whatever
+  # this repo's real .claude-plugin/ carried, which agreed only while that was $RENAME_ENTRY: from
+  # 2.1.0 on, every case below failed on version drift rather than on the statement it removed.
   record() {
     local d=$1 omit=$2 i v
     { printf '# Changelog\n\n## %s — 2026-09-27\n' "$RENAME_ENTRY"
@@ -319,6 +335,7 @@ $out"
         v=S$i; printf '\n%s\n' "${!v}"
       done
     } > "$d/CHANGELOG.md"
+    setver "$d" "$RENAME_ENTRY"
   }
   base=$(repo record-intact); record "$base" 0
   ok "the purpose-made record with all six statements" "$base"
@@ -355,4 +372,4 @@ $out"
   SELFTEST_NOTE=" (and the CHANGELOG bindings proved over 11 scratch fixtures)"
 fi
 
-echo "release docs ok — ${ADR#ai-factory/adr/} records the decision, the bounded exception and both removal versions; CHANGELOG's top entry $ver is the version the manifests ship, and its $RENAME_ENTRY entry still carries breaking, the migration, the fallback and the CI warning wherever it now sits; /t4:sync-sdlc stops an unmigrated repo before it syncs or reports drift; no template cites an ADR by path; nothing but its own command names the migration script${SELFTEST_NOTE:-}"
+echo "release docs ok — ${ADR#ai-factory/adr/} records the decision, the bounded exception and both removal versions; CHANGELOG's top entry $ver is the version the manifests ship, and its $RENAME_ENTRY entry still carries breaking, the migration, the fallback and the CI warning wherever it now sits; /t4:sync-sdlc stops an unmigrated repo before it syncs or reports drift; no template cites an ADR by path; no prompt, hook or template names the migration script 2.1.0 removed${SELFTEST_NOTE:-}"
