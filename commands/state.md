@@ -13,6 +13,17 @@ reports, it does not interview, and it must behave the same in a headless run.
    It does the scan, decides what is outstanding and prints the rows. It always exits 0; a
    non-zero exit means the script itself failed, which is itself worth reporting.
 
+1b. **Hand the developer's argument to that command.** Whatever the developer typed after
+   `/t4:state` is the `Context:` line at the very end of this prompt. Append it verbatim, after
+   the second path, and run the command with it — so `/t4:state --done` runs that same command
+   with `--done` on the end, and `/t4:state` with nothing typed runs it exactly as written above.
+   Pass the argument through unchanged: do not interpret it, do not translate it into a
+   different flag, do not silently drop one you do not recognise, and do not answer it yourself.
+   The script decides what every argument means, including the ones whose rule is not settled
+   yet — it answers those in one line, and that line is the answer, not an error to route
+   around. An argument accepted here and never passed on is the worst outcome of all: the
+   command would look like it had honoured the flag while listing something else entirely.
+
 2. The script decides; you present. Do not re-read `ai-factory/specs/` or `ai-factory/plans/` to
    check its answer, do not open a plan to count its checkboxes, and do not add an item it left
    out or drop one it listed. It reads the files on disk, so its answer is the same twice running
@@ -45,7 +56,9 @@ reports, it does not interview, and it must behave the same in a headless run.
    spoils the table, and never guess at what its steps would have said.
 
 7. After the table, at most two lines of your own, and only where they change what the developer
-   does next: how many items are outstanding, and whether anything came back `unknown`. An
+   does next: how many items the table lists — outstanding ones by default, finished ones under
+   `--done`, never a count of something it did not list — and whether anything came back
+   `unknown`. An
    `unknown` is not a pass — say what it would take to answer it. Add nothing else: no estimate,
    no priority order, no assignee, and no offer to start a step.
 
