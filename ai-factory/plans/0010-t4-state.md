@@ -241,7 +241,7 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
   skills/ai-layout/scripts/state.sh`; `diff <(bash skills/ai-layout/scripts/state.sh .) <(bash
   skills/ai-layout/scripts/state.sh .)` empty. *ACs:* 2, 3, 4, 8, 9, 10, 11, 12, 13, 14, 15.
 
-- [ ] **Step 3 — Write `commands/state.md`.** Front matter `description:` written for the slash
+- [x] **Step 3 — Write `commands/state.md`.** Front matter `description:` written for the slash
   menu and `allowed-tools: Bash, Read`; an opening change-nothing instruction in the shape
   `commands/doctor.md` uses; one numbered step running
   `bash "${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/scripts/state.sh" . "${CLAUDE_PLUGIN_ROOT}"`; an
