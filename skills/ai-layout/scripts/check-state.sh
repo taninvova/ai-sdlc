@@ -930,9 +930,193 @@ the empty answer is the same one line either way (AC11):
 $(diff <(run "$TMP/bare") <(run "$TMP/bare" --next))"
 fi
 
-echo "state ok — 14 sections: empty answer, the default listing with [~] and done/, determinism, \
+# --- 15. `--done --next` is refused, and an unknown flag is still answered (AC11) -------------
+# Plan 0010's Ambiguity D, answered 2026-09-29: the filters do not compose. Three arguments are
+# pinned here — `--done --next`, `--next --done` and a flag that is neither — and all three share
+# the same three claims: exit 0, exactly ONE line of output, and NOT ONE TABLE ROW. A refused
+# result is an answer, not a crash, and not a quiet fall-back to whichever flag was easier.
+#
+# The fixture holds one plan with every step ticked and one with a step still open, so all three
+# real listings — default, --done and --next — produce a table over it. That is what makes "no
+# rows" and "not silently one of them" provable: an implementation that dropped a flag would
+# answer with one of those three tables, and every assertion below would catch it.
+#
+# First, though, the simplest claim of all, and the one that needs the EMPTIEST fixture rather
+# than the fullest. Over a repo with no layout at all every real listing is the same one line, so
+# exit-0-and-one-line-and-no-rows is satisfied by a silent fall-back to the default listing just
+# as well as by a refusal. Only comparing the two separates them, and that separation is the whole
+# of Ambiguity D.
+bare_default=$(run "$TMP/bare")
+refused_over_bare() {
+  local out st
+  out=$(run "$TMP/bare" "$1" "$2"); st=$?
+  [ "$st" = 0 ] \
+    || fail "$1 $2 exited $st over a repo with no layout at all; a refusal exits 0 (AC11):
+$out"
+  [ "$(lines "$out")" = 1 ] \
+    || fail "$1 $2 answered in $(lines "$out") lines over a repo with no layout at all:
+$out"
+  [ "$out" != "$bare_default" ] \
+    || fail "$1 $2 answered a repo with no layout at all with the DEFAULT listing's one-line empty
+answer. The combination was not refused, it was silently dropped — and over an empty repo that is
+invisible to every count-the-lines assertion, which is why this fixture exists (plan 0010,
+Ambiguity D):
+$out"
+}
+refused_over_bare --done --next
+refused_over_bare --next --done
+
+REFUSE=$TMP/refuse
+mkdir -p "$REFUSE/ai-factory/specs" "$REFUSE/ai-factory/plans"
+REF_OPEN=ai-factory/plans/0097-the-weir-still-open.md
+REF_DONE=ai-factory/plans/0098-every-step-ticked.md
+REF_SPEC=ai-factory/specs/0097-the-weir-still-open.md
+printf '# 0097 — the weir still open\n' > "$REFUSE/$REF_SPEC"
+{ printf '# Plan 0097 — the weir still open\n\n'
+  printf '**Spec:** `%s`\n\n## Steps\n\n' "$REF_SPEC"
+  printf -- '- [ ] **Step 1 — the weir gate hung.** Proved by a fixture.\n'
+} > "$REFUSE/$REF_OPEN"
+{ printf '# Plan 0098 — every step ticked\n\n## Steps\n\n'
+  printf -- '- [x] **Step 1 — the sluice shut.** Proved by a fixture.\n'
+} > "$REFUSE/$REF_DONE"
+
+ref_default=$(run "$REFUSE")
+ref_done=$(run "$REFUSE" --done)
+ref_next=$(run "$REFUSE" --next)
+for ref_probe in "$ref_default" "$ref_done" "$ref_next"; do
+  [ "$(lines "$ref_probe")" -gt 1 ] \
+    || fail "the refusal fixture does not produce a table under one of the three real listings, so
+\"exactly one line\" and \"no rows\" below would pass whatever state.sh did with the refused
+arguments:
+$ref_probe"
+done
+
+TABCH=$'\t'
+RO_REF=$(fs_snap "$REFUSE/ai-factory"); RO_REF_C=$(content_snap "$REFUSE/ai-factory")
+
+# refused <label> <arg…> — the three claims every refused argument owes, in one place so the
+# combination and the unknown flag are held to exactly the same standard. The answer comes back
+# in $REFUSED_OUT rather than on stdout, deliberately: `fail` exits, and a function called inside
+# a command substitution runs in a SUBSHELL, where that exit would end the substitution and let
+# the check sail on past a failed assertion with an empty variable.
+REFUSED_OUT=""
+refused() {
+  local label=$1; shift
+  local out st artefact other
+  out=$(run "$REFUSE" "$@"); st=$?
+  [ "$st" = 0 ] \
+    || fail "$label exited $st. A refused result is an answer, not a crash: it exits 0, the same
+way an empty listing does (AC11, plan 0010, Ambiguity D):
+$out"
+  [ "$(lines "$out")" = 1 ] \
+    || fail "$label answered in $(lines "$out") lines where exactly one was owed (AC11):
+$out"
+  grep -qF -- "$TABCH" <<<"$out" \
+    && fail "$label printed a tab-separated line — a table row, or the header above one. A refused
+argument prints no rows at all:
+$out"
+  for artefact in "$REF_OPEN" "$REF_DONE" "$REF_SPEC"; do
+    [ "$(hits "$out" "$artefact")" = 0 ] \
+      || fail "$label named $artefact. It listed something, which means the argument was not
+refused but quietly reduced to a listing:
+$out"
+  done
+  for other in "$ref_default" "$ref_done" "$ref_next"; do
+    [ "$out" != "$other" ] \
+      || fail "$label answered with one of the three real listings verbatim. It must not silently
+fall back to one of the flags it was given, or to the default (plan 0010, Ambiguity D):
+$out"
+  done
+  # Determinism and read-only hold on the refused paths too, for the same reason they hold on
+  # the others: this command reports, and reporting nothing is still only reporting.
+  [ "$out" = "$(run "$REFUSE" "$@")" ] \
+    || fail "$label answered differently on a second run over the same unchanged fixture (AC13)."
+  [ "$(fs_snap "$REFUSE/ai-factory")" = "$RO_REF" ] \
+    || fail "$label created or removed a file under the repo it was pointed at (AC8)"
+  [ "$(content_snap "$REFUSE/ai-factory")" = "$RO_REF_C" ] \
+    || fail "$label edited a file under the repo it was pointed at (AC9)"
+  REFUSED_OUT=$out
+}
+
+refused '--done --next' --done --next; refuse_dn=$REFUSED_OUT
+refused '--next --done' --next --done; refuse_nd=$REFUSED_OUT
+
+# In EITHER order. Order carries no meaning, so the two answers are the same bytes.
+[ "$refuse_dn" = "$refuse_nd" ] \
+  || fail "\`--done --next\` and \`--next --done\` gave different answers. The combination is
+refused whichever order it arrives in, so the line is the same one (plan 0010, Step 7):
+--done --next: $refuse_dn
+--next --done: $refuse_nd"
+
+# The line has to be usable: it says the combination is not meaningful, and it says what each
+# flag does ON ITS OWN, so the developer knows which of the two to keep.
+grep -qiE 'do(es)? not combine|not meaningful|cannot be (asked|used) together' <<<"$refuse_dn" \
+  || fail "the refusal does not say that the combination is not meaningful; it only names the
+flags, which reads like a parse error rather than an answer (plan 0010, Step 7):
+$refuse_dn"
+for flag in '--done' '--next'; do
+  grep -qF -- "$flag" <<<"$refuse_dn" \
+    || fail "the refusal does not name $flag, so it cannot be saying what that flag does on its
+own (plan 0010, Step 7):
+$refuse_dn"
+done
+grep -qi -- 'finished' <<<"$refuse_dn" \
+  || fail "the refusal names both flags but never says what --done does on its own — it lists what
+is finished. A developer who has to go and look it up has not been answered (plan 0010, Step 7):
+$refuse_dn"
+grep -qi -- 'pick up' <<<"$refuse_dn" \
+  || fail "the refusal names both flags but never says what --next does on its own — it names the
+single item to pick up. A developer who has to go and look it up has not been answered (plan 0010,
+Step 7):
+$refuse_dn"
+
+# The unknown flag. Step 2 provisioned this case and Step 7 rewrites its wording: after Steps 5
+# and 6 both --done and --next are decided and implemented, so a line claiming the rules are
+# undecided is simply false. It says what the flag IS instead.
+UNK='--jam-tomorrow'
+refused "$UNK" "$UNK"; refuse_unk=$REFUSED_OUT
+grep -qF -- "$UNK" <<<"$refuse_unk" \
+  || fail "the unknown-flag answer does not name the flag back, so the developer cannot see which
+of the things they typed was not understood:
+$refuse_unk"
+for flag in '--done' '--next'; do
+  grep -qF -- "$flag" <<<"$refuse_unk" \
+    || fail "the unknown-flag answer does not name $flag. Saying what the flag is not is only half
+an answer; it must say what this command does take (plan 0010, Step 7):
+$refuse_unk"
+done
+grep -qiE 'undecided|not (yet )?(decided|settled)|leaves open|open question' <<<"$refuse_unk" \
+  && fail "the unknown-flag answer still says the rule is undecided. After Steps 5 and 6 that is
+false — --done and --next are both decided and implemented — and Step 7 owns the rewrite: the line
+says what the flag IS, not that the rules are open:
+$refuse_unk"
+
+# Two situations, two messages, and that is deliberate (plan 0010, Step 7). `--done --next` is a
+# pair of flags that both exist and cannot be asked together; an unrecognised token is a flag that
+# does not exist at all. One message would have to tell the first developer their flag is unknown,
+# which is false, or tell the second that --done and --next do not combine, which diagnoses a
+# mistake they did not make. The fixes differ too — drop one flag, as against correct a misspelt
+# one — so the line names the right problem.
+#
+# The assertion that carries that decision is the FIRST one: a shared template with the offending
+# argument substituted in would not be byte-identical, so identity alone would not catch it. What
+# catches it is that the unknown-flag answer must not diagnose a mistake the developer did not
+# make.
+grep -qiE 'do(es)? not combine|not meaningful|cannot be (asked|used) together' <<<"$refuse_unk" \
+  && fail "the unknown-flag answer says the two flags do not combine. The developer asked for
+neither of them — they typed one token this command does not know — so that line diagnoses a
+mistake they did not make. The two situations get two messages (plan 0010, Step 7):
+$refuse_unk"
+[ "$refuse_dn" != "$refuse_unk" ] \
+  || fail "the refusal of \`--done --next\` and the answer to an unrecognised flag are the same
+line. They are two different situations — two flags that exist and do not compose, against a token
+that is not a flag at all — and one line cannot diagnose both without being wrong about one:
+$refuse_dn"
+
+echo "state ok — 15 sections: empty answer, the default listing with [~] and done/, determinism, \
 the read-only snapshots, unknown-with-a-reason, the three **Spec:** link forms, sibling isolation, \
 the prompt's two invariants, the command named in README.md and the workflow doc, --done as the \
 default listing's mirror image, checkboxes over directory under the filter, --done's empty answer, \
-the prompt's hand-off with \$ARGUMENTS still last, and --next by commit date with its untracked, \
-non-repository and same-instant cases"
+the prompt's hand-off with \$ARGUMENTS still last, --next by commit date with its untracked, \
+non-repository and same-instant cases, and the refusal of --done --next in either order beside the \
+unknown flag's own answer"

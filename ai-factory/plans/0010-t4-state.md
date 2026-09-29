@@ -341,7 +341,7 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
   `-c user.email=… -c user.name=…`, so no assertion depends on the developer's own git config.
   *Proved by:* `bash skills/ai-layout/scripts/check-state.sh` exiting 0. *ACs:* 6, 13, 15.
 
-- [ ] **Step 7 — `--done --next` refuses, and an unknown flag still answers.** Ambiguity D, answered
+- [x] **Step 7 — `--done --next` refuses, and an unknown flag still answers.** Ambiguity D, answered
   2026-09-29: the filters do not compose. `--done --next`, in either order, prints one line saying
   the combination is not meaningful and what each flag does on its own — `--done` lists what is
   finished, `--next` names the one item to pick up — and exits **0**. It does not silently fall back
