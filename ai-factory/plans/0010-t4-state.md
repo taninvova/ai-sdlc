@@ -220,7 +220,7 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
   naming the missing `state.sh` — red for the right reason — and `bash -n
   skills/ai-layout/scripts/check-state.sh` exiting 0. *ACs:* 2, 3, 4, 8, 9, 10, 11, 12, 13, 15.
 
-- [ ] **Step 2 — Write `skills/ai-layout/scripts/state.sh` until Step 1's check is green.** Bash,
+- [x] **Step 2 — Write `skills/ai-layout/scripts/state.sh` until Step 1's check is green.** Bash,
   `set -uo pipefail` and `shopt -s nullglob` — deliberately not `set -e`, for the reason
   `doctor.sh` gives: one unanswerable artefact must not stop the others. Signature
   `state.sh [repo-root] [plugin-root]`, defaults as `doctor.sh`'s, `cd` into the repo root and read
