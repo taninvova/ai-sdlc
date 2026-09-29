@@ -293,8 +293,21 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
   exits 0 (AC11). Pin that it widens nothing — no column the default listing does not already
   carry, and no item that has no state. Then make it pass in `state.sh` by filtering the rows Step 2
   already builds on the state field Step 2 already emits, reusing one row builder for both listings
-  so they cannot drift apart. *Proved by:* `bash skills/ai-layout/scripts/check-state.sh` exiting 0.
-  *ACs:* 5, 7, 10, 11.
+  so they cannot drift apart.
+  **Added to this step's scope 2026-09-29 — the prompt-to-script hand-off, found during Step 3.**
+  Nothing in the plan ever forwarded the developer's argument to `state.sh`: Step 3 fixes the
+  invocation as `state.sh . "${CLAUDE_PLUGIN_ROOT}"` and places `$ARGUMENTS` last as trailing
+  context, and Steps 6 and 7 name only `state.sh` and `check-state.sh`. So without this, the script
+  would grow `--done`, `--next` and their refusal while `/t4:state --done` typed by a developer
+  still rendered the default listing — half-wired, with every check green, because no assertion
+  covered the hand-off. This step therefore also reopens `commands/state.md` to forward the
+  argument through to the script, and adds one invariant to check-state.sh asserting that it does.
+  **`$ARGUMENTS` must stay last in the file**: Step 3 put it there deliberately so the cached
+  prefix is stable, and the two are compatible — the invocation line takes the value, the trailing
+  `Context:` keeps the cache boundary. A fix that hoists `$ARGUMENTS` up into the invocation trades
+  this gap for a silent caching regression and is not the fix.
+  *Proved by:* `bash skills/ai-layout/scripts/check-state.sh` exiting 0.
+  *ACs:* 5, 7, 10, 11, and AC14's hand-off.
 
 - [ ] **Step 6 — `--next` names the most recently modified artefact, by git commit date.**
   Ambiguity A, answered 2026-09-29. The key for each row of the default listing is
