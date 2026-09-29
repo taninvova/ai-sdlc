@@ -353,7 +353,7 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
   for each: exit 0, exactly one line of output, and not one table row. *Proved by:* `bash
   skills/ai-layout/scripts/check-state.sh` exiting 0. *ACs:* 11.
 
-- [ ] **Step 8 — Record the release as an ordinary feature entry.** Ambiguity F, answered
+- [x] **Step 8 — Record the release as an ordinary feature entry.** Ambiguity F, answered
   2026-09-29: `/t4:state` ships as an ordinary, non-breaking feature entry, and the release check is
   fixed rather than the CHANGELOG distorted to satisfy it.
   **Prerequisite — a separate change that landed before this step, deliberately not folded into it.
@@ -379,7 +379,9 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
   0008, the 2.0.0 entry, two assertions in the release check and its `d5` self-test fixture — five
   edits to avoid using the number the project already committed to.
   **So this step gains a hard prerequisite: the `/t4:migrate-layout` removal ships as 2.1.0 before
-  `/t4:state` ships as 2.2.0. Status: not started.** The ordering is not a preference — once the
+  `/t4:state` ships as 2.2.0. Status: DONE, 2026-09-29, commit `bcfe36b`** — all three manifests
+  read 2.1.0 and the CHANGELOG's top entry is `## 2.1.0 — 2026-09-29`, so ADR 0008's promise and
+  the 2.0.0 entry's were both kept verbatim and neither record needed amending. The ordering is not a preference — once the
   manifests read 2.2.0, a later 2.1.0 is unreleasable, and the ADR's promise would be stranded. That
   removal is bounded by the ADR: drop the command, keep the hooks' fallback until 3.0.0. It is its
   own chore or spec and must not be folded into this step.
@@ -395,6 +397,35 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
   skills/ai-layout/scripts/check-versions.sh` exiting 0 and reporting all three manifests at the
   new version; `bash skills/ai-layout/scripts/check-release-docs.sh` exiting 0 — which it will not
   do until the prerequisite above has landed. *ACs:* 16, the record half.
+
+  **Result — 2026-09-29. Shipped as 2.2.0. AC16 is half met, and ticking this box finishes the
+  plan's steps without closing five questions.** The `## 2.2.0 — 2026-09-29` entry names
+  `/t4:state` and its three modes, `skills/ai-layout/scripts/state.sh`, the read-only guarantee and
+  the blast radius, and `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` and
+  `.codex-plugin/plugin.json` all read 2.2.0. `check-release-docs.sh` passes with a non-breaking
+  entry on top — the rebuild of commit `b9410ad` works, and 2.2.0 is the second non-breaking
+  release to land on it. All thirteen checks pass, each run directly and none piped.
+  The blast-radius sentence in the entry was **verified, not carried over from this plan**: the
+  feature's whole diff, `git diff --name-only b9410ad^..e7cfd21`, names no path under
+  `skills/ai-layout/templates/`; a manifest generated over the templates names neither
+  `commands/state.md` nor `skills/ai-layout/scripts/state.sh`; `check-manifest.sh` passes with both
+  present; and a scratch repo synced at 2.1.0, checked against this 2.2.0 plugin, reports
+  `up to date — every tracked file matches`. The one difference it does report is the version line
+  in its own manifest header, which every release moves — so the entry says that rather than
+  claiming nothing changes at all.
+  **AC16's adapter-and-manifest half is not met and is not reachable** (Ambiguity G):
+  `sync-adapters.sh` generates from `ai-factory/tasks/`, `ai-factory/skills/` and
+  `ai-factory/agents/` and never reads `commands/`; `manifest.js` hashes only the templates. Every
+  plugin command is invisible to both — `.claude/commands/t4/` holds the twelve task commands and
+  no `/t4:doctor`, `/t4:adopt-sdlc`, `/t4:sync-sdlc` or `/t4:setup-tracker` either. Nothing in the
+  CHANGELOG implies `/t4:state` is registered in the adapters or listed in `ai-factory/.sdlc.json`;
+  the entry says outright that it is not.
+  **Ambiguities B, E, G, H and I remain open** — the column set, the spec-to-plan pairing
+  derivation (still reasoned, still unconfirmed by the developer), AC16's adapter half, whether a
+  withdrawn, blocked or not-run step is distinguishable from an unstarted one, and
+  `0000-scaffold.md`. All five are written into the 2.2.0 entry's closing section, so a reader of
+  the release notes meets them without having to find this plan. Each has a fixture in
+  `check-state.sh`, so answering one changes one rule and one fixture.
 
 ## Risks and how each is checked
 

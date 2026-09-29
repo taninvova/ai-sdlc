@@ -1,5 +1,91 @@
 # Changelog
 
+## 2.2.0 — 2026-09-29
+
+`/t4:state` lists what is still outstanding in a repo — every spec and plan that is not finished,
+each outstanding plan shown with its own incomplete steps — and changes nothing while doing it.
+It is what to run when you come back to a repo and need to know where the loop was left, before
+`/t4:run` picks anything up. Nothing else in this release changes, and nothing an adopted repo
+holds is touched by it.
+
+### New — `/t4:state`
+
+- **`/t4:state`** (`commands/state.md`) lists every outstanding spec and plan by
+  repository-relative path, and under each outstanding plan its incomplete steps, each with the
+  step identifier and its one-line description. A finished item is not listed. Where a plan file
+  sits decides nothing — its checkboxes do: a plan filed under `ai-factory/plans/done/` with one
+  step still open is outstanding, and `- [~]` counts as incomplete exactly as `- [ ]` does.
+- **`/t4:state --done`** replaces that listing with its mirror image: only the items whose every
+  step is complete, with the same columns in the same order and the same shape.
+- **`/t4:state --next`** names the single item to pick up — the most recently modified artefact,
+  measured by its **git commit date** (`git log -1 --format=%ct`) and not by filesystem mtime, so
+  two people sitting on the same commit get the same answer out of the same tree. An mtime does not
+  survive a clone; a commit date is identical in every clone. An uncommitted or untracked artefact
+  sorts newest, ties break on the artefact's number then its path then its step, and one reason
+  line says which rule chose the winner.
+- **`--done --next`, in either order, refuses**: one line saying the two do not combine and what
+  each does on its own, no table rows, and **exit 0**. A flag the command does not take is named
+  back the same way, with the two it does. A refused result is an answer, not a crash.
+- **`skills/ai-layout/scripts/state.sh`** carries the whole decision — the scan, the completeness
+  rule and the rows. The prompt renders what the script emits and re-infers nothing, so the same
+  tree answers the same way twice running and in a headless run. The script always exits 0, reads
+  nothing outside the repo root it is handed, and reports an artefact it cannot read or cannot
+  parse as `unknown` with the reason, never as complete.
+
+### Read-only, and checked rather than promised
+
+Neither the command nor the script creates, edits, moves or deletes anything. It never ticks a
+checkbox, never moves a plan between `ai-factory/plans/` and `done/`, and never starts a step —
+`--next` names the item to pick up and does not pick it up. `skills/ai-layout/scripts/check-state.sh`
+pins that with a filesystem snapshot and a content snapshot taken either side of a run, and pins
+that two consecutive runs over one tree are byte-identical.
+
+`--next` is the one part that calls `git`, and in a directory that is not itself a repository `git`
+walks **up** to an ancestor one. Every `git log` is therefore gated on the repo root being the git
+toplevel, so a run can never answer out of a repository it was never given. Where that gate fails
+no artefact has a commit date, the tiebreak alone decides, and the reason line says that no commit
+dates were available.
+
+`check-state.sh` is already counted in 2.1.0's thirteen check scripts — it landed before that
+release went out. This release adds none and removes none.
+
+### Blast radius: nothing moves in an adopted repo
+
+**No template file moved.** `/t4:state` is a plugin command, not a project task, so nothing under
+`skills/ai-layout/templates/` changed: no adopted repo's `ai-factory/.sdlc.json` gains, loses or
+rehashes an entry, and `/t4:sync-sdlc` reports no drift from this release. Verified rather than
+assumed — the feature's whole diff touches `commands/`, `skills/ai-layout/scripts/`, `README.md`
+and `ai-factory/docs/workflow.md`, and no template path at all; a manifest generated over the
+templates names neither `commands/state.md` nor `skills/ai-layout/scripts/state.sh`, because
+`manifest.js` hashes only `skills/ai-layout/templates/`; and `check-manifest.sh` passes with both
+files present. The one thing a synced repo does see change is the version in its manifest header,
+as it does on every release.
+
+### What this ships, and what it does not
+
+- **The documented half of the feature's acceptance criterion is done.** The command ships in
+  `commands/`, `README.md` and `ai-factory/docs/workflow.md` name it, and this entry and the three
+  manifests record the change.
+- **The adapter and manifest half is not done, and is not reachable without a breaking change.**
+  `ai-factory/make/sync-adapters.sh` generates the `.claude/`, `.cursor/` and `.codex/` adapters
+  from `ai-factory/tasks/`, `ai-factory/skills/` and `ai-factory/agents/` — it never reads
+  `commands/` — and `manifest.js` hashes only the templates. A plugin command is structurally
+  invisible to both, and every plugin command already shipped is equally invisible: `.claude/commands/t4/`
+  holds the twelve task commands and no `/t4:doctor`, `/t4:adopt-sdlc`, `/t4:sync-sdlc` or
+  `/t4:setup-tracker` either. Making one visible means changing the generator or the manifest
+  format, which is a template change and breaking for every adopted repo. **So do not read this
+  entry as saying `/t4:state` is registered in the adapters or listed in `ai-factory/.sdlc.json`.
+  It is not, any more than `/t4:doctor` is.**
+- **Five questions about `/t4:state` are still open, and shipping it closes none of them.** Which
+  of the six emitted fields become table columns, in what order, and whether a spec row and a
+  plan-step row share one column set. How a spec is paired to its plan — the rule in use is derived
+  from the spec rather than confirmed by anyone. The adapter-and-manifest clause above. Whether a
+  step that is blocked, withdrawn or recorded not-run should be distinguishable from one simply not
+  started — today all four read as outstanding, which is the conservative answer, not a decided one.
+  And whether `ai-factory/specs/0000-scaffold.md`, which ships in the templates with no plan and
+  never will have one, should head the listing in every adopted repo for ever — today it does. Each
+  has a fixture in `check-state.sh`, so answering one changes one rule and one fixture.
+
 ## 2.1.0 — 2026-09-29
 
 `/t4:migrate-layout` is removed, on the schedule 1.0.0 set and 2.0.0 revised. Nothing else about
