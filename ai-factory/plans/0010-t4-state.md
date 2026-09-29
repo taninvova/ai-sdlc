@@ -34,22 +34,34 @@ outstanding.**` block. **No step below asserts anything about the live contents 
 flake, and a plan that encoded today's listing as the feature's expected output would be wrong
 before anyone ran it. The feature is specified by **rules**; the rules are what get pinned.
 
-**2. Four of the spec's own open questions, plus four more this plan found, stand between Steps 1–4
-and a finished feature.** Steps 1–4 deliver `/t4:state` with no argument — AC1, AC2, AC3, AC4, AC7
-through AC15. **AC5 (`--done`) and AC6 (`--next`) cannot be built from this spec**, because the rule
-each needs is exactly what the spec leaves open. Steps 5, 6 and 7 are written out but marked
-BLOCKED, each naming the question that unblocks it. Do not run a blocked step; answering by
-picking encodes the guess, which is what open questions exist to prevent.
+**2. Nine open questions stood between Steps 1–4 and a finished feature. Four were answered in
+writing on 2026-09-29; five are still open.** Steps 1–4 deliver `/t4:state` with no argument — AC1,
+AC2, AC3, AC4, AC7 through AC15. AC5 (`--done`) and AC6 (`--next`) could not be built from the spec
+alone, because the rule each needs is exactly what the spec leaves open — so the developer answered
+**A, C, D and F** on 2026-09-29. Steps 5, 6, 7 and 8 are no longer blocked: each now carries the
+answer as a concrete rule, and every one of the four is runnable. **B, E, G, H and I are still
+open**; none of them blocks a step, and each is marked below. Nothing was settled by picking: an
+answer that is not recorded below with its date is still an open question, and answering by picking
+encodes the guess, which is what open questions exist to prevent.
 
 ### The ambiguities, as questions to answer
 
-Four are the spec's own. Four are new, and three of the four are things the spec's stale snapshot
-concealed.
+Four are the spec's own. Five are new, and three of the five are things the spec's stale snapshot
+concealed. **Answered**, with a date, marks a question the developer settled in writing; anything
+without that mark is still open.
 
 - **A (spec OQ1) — what rule does `--next` select by?** The lowest-numbered outstanding plan's first
   incomplete step, the lowest-numbered spec with no plan, the most recently modified artefact, or
   simply the first row of the default listing? AC6 fixes only that the result is a subset and that
-  the command says why. Blocks Step 6.
+  the command says why. **Answered 2026-09-29: the most recently modified artefact — measured by
+  its git commit date, `git log -1 --format=%ct -- <path>`, and not by filesystem mtime.** The
+  reason is cross-clone agreement, not AC13: an mtime does not survive a clone, so two people
+  sitting on the same commit would get different answers out of the same tree, while a commit date
+  is identical in every clone. AC13 as worded — the same tree, run twice, nothing changed in
+  between — is satisfied by *either* measure, so this is not an AC13 fix and must not be written up
+  as one. An artefact with no commit date, because it is uncommitted or untracked, sorts as
+  **newest**. Ties break on the artefact's leading four-digit number, lowest first, then on path,
+  then on step number, so the ordering is total. Step 6 carries the rule.
 - **B (spec OQ2) — which columns, in which order, and is the table sectioned by kind?** AC3 fixes
   that a row must carry the artefact path and, for a plan step, the step identifier and its
   one-line description; AC7 fixes header-plus-rows with the same columns throughout. Undecided:
@@ -57,9 +69,16 @@ concealed.
   whether a spec row and a plan-step row share one column set. Step 2 emits the AC3-required fields
   and a state field; the presentation is the prompt's, and Step 3 renders whatever the answer fixes.
 - **C (spec OQ3) — does `--done` replace the default listing or widen it to everything with a state
-  per row?** AC5 is satisfied by both. Blocks Step 5.
+  per row?** AC5 is satisfied by both. **Answered 2026-09-29: it replaces.** `--done` lists only
+  the items whose every step is complete, with the same columns, the same order and the same shape
+  as the default listing. It does not widen the listing to everything-with-a-state. Step 5 carries
+  the rule.
 - **D (spec OQ4) — do the filters compose?** Is `/t4:state --done --next` meaningful, an error, or
-  silently one of them? Blocks Step 7, and affects Steps 5 and 6.
+  silently one of them? **Answered 2026-09-29: `--done --next` refuses.** It prints one line saying
+  the combination is not meaningful and what each flag does on its own, then exits **0**. Exit 0 is
+  deliberate: it is how this plan already treats an unknown flag, because a refused result is an
+  answer, not a crash. Step 7 carries the rule; Steps 5 and 6 are unaffected, each flag alone
+  keeping the behaviour its own answer fixes.
 - **E — what makes a *spec* complete?** AC2 lists "every spec … that is not yet complete"; nothing
   in the spec defines a complete spec. Step 2 implements a rule **derived**, not chosen, from two
   lines the spec does fix — AC4's "'Not started yet' and 'part done' are what the default listing
@@ -80,7 +99,19 @@ concealed.
   ship inside the next genuinely breaking release (2.1.0, already scheduled to remove
   `/t4:migrate-layout`); amend `check-release-docs.sh` so the six assertions bind to the 2.0.0 entry
   by version rather than to whatever is on top; or write a patch entry that repeats the boilerplate.
-  Blocks Step 8, and AC16 is unsatisfied until it is answered.
+  **Answered 2026-09-29: ship `/t4:state` as an ordinary, non-breaking feature entry, and fix the
+  check rather than distort the CHANGELOG to satisfy it.** The mechanism, verified in the script:
+  line 100 takes `top=$(awk '/^## /{n++} n==1' CHANGELOG.md)` — the top entry, unconditionally,
+  whatever it is — and lines 116–124 then demand that entry mark the change breaking, name the
+  migration command, and carry the rest. So the *first non-breaking release to land on top* fails,
+  whatever it contains; `/t4:state` is merely the first to hit it. The fix is to bind those
+  assertions to entries **marked breaking** rather than to whatever sits on top. Two constraints
+  ride on that answer, and Step 8 records both rather than burying them: the check-script fix is a
+  **separate change that lands before Step 8** — its own chore or spec, status *not started* — and
+  **the version number is still unresolved**. `2.1.0` is spoken for: commit `3fd5dfd` records it as
+  belonging to the `/t4:migrate-layout` removal, and `check-release-docs.sh` line 124 asserts the
+  top entry mentions `2.1.0`. Step 8 therefore names no version yet and invents none; that is the
+  one question still open on it, and AC16's record half stays unsatisfied until the number is named.
 - **G — is AC16's adapter-and-manifest clause achievable for a plugin command at all?** AC16 requires
   that "the generated `.claude/`, `.cursor/` and `.codex/` adapters include it" and that
   "`ai-factory/.sdlc.json` lists it". Verified: `ai-factory/make/sync-adapters.sh` generates adapters
@@ -135,7 +166,7 @@ Two rules the spec does fix, recorded here because both were misread once alread
 | `commands/state.md` | **new.** The prompt, shaped like `commands/doctor.md`: front-matter `description:` and `allowed-tools: Bash, Read`, an explicit change-nothing instruction, one step running the script with `"${CLAUDE_PLUGIN_ROOT}"`, and how to render the rows |
 | `README.md` | the Commands list is the plugin's own inventory, and DoD item 7 requires it to match what ships |
 | `ai-factory/docs/workflow.md` | §5's *Plugin-level — available in any repo* table is the one actual command table; §10 *When something is wrong* is where a returning developer looks |
-| `CHANGELOG.md` · `.claude-plugin/plugin.json` · `.claude-plugin/marketplace.json` · `.codex-plugin/plugin.json` | AC16's record-the-change half. All three manifests, because `check-versions.sh` requires every manifest carrying a version to carry the same one — it reports "3 manifests all at 2.0.0" today. **Step 8, blocked on Ambiguity F** |
+| `CHANGELOG.md` · `.claude-plugin/plugin.json` · `.claude-plugin/marketplace.json` · `.codex-plugin/plugin.json` | AC16's record-the-change half. All three manifests, because `check-versions.sh` requires every manifest carrying a version to carry the same one — it reports "3 manifests all at 2.0.0" today. **Step 8.** Ambiguity F is answered — an ordinary feature entry — but the version number is still open, and the `check-release-docs.sh` fix Step 8 depends on is a separate change that lands first |
 
 Deliberately **not** touched, each for a checked reason:
 
@@ -244,42 +275,90 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
   instruction); `bash skills/ai-layout/scripts/check-release-docs.sh` exiting 0. *ACs:* 16, in
   part — the docs half. The adapter and manifest half is Ambiguity G and is not met.
 
-- [ ] **Step 5 — BLOCKED on Ambiguity C. Do not run until the developer answers in writing whether
-  `--done` replaces the default listing or widens it.** Both answers satisfy AC5, and they produce
-  different scripts. *Answer "replaces":* `--done` lists only items whose every step is complete,
-  same columns, same order, same shape. *Answer "widens":* the listing becomes every item with the
-  state per row, and the state field Step 2 already emits carries it. Either way, extend
-  check-state.sh first with the fixture the answer fixes — a repo with one complete and one
-  incomplete item, asserting exactly which rows `--done` produces and that the header and column
-  order match the default listing's byte for byte — then make it pass. *Proved by:* `bash
-  skills/ai-layout/scripts/check-state.sh` exiting 0. *ACs:* 5, 7.
+- [ ] **Step 5 — `--done` lists only what is finished.** Ambiguity C, answered 2026-09-29: `--done`
+  **replaces** the default listing rather than widening it. Extend check-state.sh first with the
+  fixture the answer fixes — a repo holding one item whose every step is `[x]` and one with a step
+  still `[ ]` — asserting that `--done` emits exactly the complete item's row and no row for the
+  incomplete one, the mirror image of what the default listing produces over the same fixture, and
+  that the header line and the column order are byte-identical to the default listing's. Add the
+  two placement fixtures, so the settled checkbox-beats-directory rule holds under the filter too:
+  a complete plan sitting in `ai-factory/plans/` rather than `done/` is still listed by `--done`,
+  and an incomplete one sitting in `done/` is still not (AC10). Add the empty case: `--done` over a
+  repo with nothing complete prints the same one-line empty answer the default listing gives, and
+  exits 0 (AC11). Pin that it widens nothing — no column the default listing does not already
+  carry, and no item that has no state. Then make it pass in `state.sh` by filtering the rows Step 2
+  already builds on the state field Step 2 already emits, reusing one row builder for both listings
+  so they cannot drift apart. *Proved by:* `bash skills/ai-layout/scripts/check-state.sh` exiting 0.
+  *ACs:* 5, 7, 10, 11.
 
-- [ ] **Step 6 — BLOCKED on Ambiguity A. Do not run until the developer names the rule `--next`
-  selects by.** AC6 fixes only that the output is a strict subset of the default listing and that
-  one line says which item was selected and why. Whichever rule is chosen, it must be a function of
-  the bytes on disk, so that AC13 keeps holding for `--next` too; "most recently modified" would
-  make the answer depend on mtimes, which a fresh clone does not preserve — worth weighing when
-  answering. Extend check-state.sh first with a fixture whose selection is known by construction,
-  asserting the row is one the default listing also produces, that it is exactly one, and that a
-  reason line accompanies it. *Proved by:* `bash skills/ai-layout/scripts/check-state.sh` exiting 0.
-  *ACs:* 6, 13.
+- [ ] **Step 6 — `--next` names the most recently modified artefact, by git commit date.**
+  Ambiguity A, answered 2026-09-29. The key for each row of the default listing is
+  `git log -1 --format=%ct -- <path>`, run with the repo root as the working directory: the commit
+  date, in seconds, of the artefact's last commit. An artefact the command answers with an empty
+  string — uncommitted or untracked — sorts as **newest**. Highest key wins; ties break on the
+  artefact's leading four-digit number, lowest first, then on path, then on step number, so the
+  order is total and exactly one row can win. Emit that one row, byte-identical to the row the
+  default listing produces for the same artefact (AC6's subset), plus one reason line naming the
+  artefact and the rule that chose it — newest commit date, or uncommitted, or which tiebreak
+  decided. **Why commit date and not mtime:** an mtime does not survive a clone, so two developers
+  on the same commit would get different answers from the same tree, while a commit date is
+  identical in every clone. AC13 — the same tree, run twice, nothing changed in between — holds
+  under either measure, so this is cross-clone agreement, not an AC13 fix, and the reason line and
+  the commit message should say it that way. **Two guards the rule needs.** *One:* `git` may be
+  absent, or the repo root handed to `state.sh` may not be a git repository at all, in which case
+  `git` walks **up** to an ancestor repository — verified on 2026-09-29: `git rev-parse
+  --show-toplevel` run from `skills/` in this repo answers with this repo's root, and a plain
+  directory nested under any repo answers with that repo. Reading an ancestor's history would break
+  AC15, so gate every `git log` on `[ "$(git rev-parse --show-toplevel 2>/dev/null)" = "$(pwd -P)" ]`
+  — `pwd -P`, because `mktemp -d` hands back a symlinked path on macOS while `--show-toplevel`
+  answers with the physical one. *Two:* when that gate fails, no artefact has a commit date, every
+  key is empty, and the tiebreak alone decides: still one row, still deterministic, still exit 0,
+  and the reason line says that no commit dates were available. Extend check-state.sh first with
+  fixtures whose selection is known by construction: `git init -q` a fixture repo under `mktemp -d`,
+  commit two artefacts in two commits with `GIT_AUTHOR_DATE` and `GIT_COMMITTER_DATE` pinned to
+  fixed instants, and assert `--next` picks the later one; leave a third artefact untracked and
+  assert it displaces both; commit two artefacts at the same pinned instant and assert the lower
+  number wins; and give one fixture no `.git` at all, asserting `--next` still answers, still exits
+  0, and names no artefact from outside the fixture (AC15). Every fixture git invocation carries
+  `-c user.email=… -c user.name=…`, so no assertion depends on the developer's own git config.
+  *Proved by:* `bash skills/ai-layout/scripts/check-state.sh` exiting 0. *ACs:* 6, 13, 15.
 
-- [ ] **Step 7 — BLOCKED on Ambiguity D, and on Steps 5 and 6. Do not run until the developer says
-  whether the filters compose.** `--done --next` is meaningful, an error, or silently one of them;
-  no AC decides. Implement the answer and pin it with a fixture, including the unknown-flag case,
-  which must still exit 0 (AC11 in spirit — an empty or refused result is an answer, not a crash).
-  *Proved by:* `bash skills/ai-layout/scripts/check-state.sh` exiting 0. *ACs:* 11.
+- [ ] **Step 7 — `--done --next` refuses, and an unknown flag still answers.** Ambiguity D, answered
+  2026-09-29: the filters do not compose. `--done --next`, in either order, prints one line saying
+  the combination is not meaningful and what each flag does on its own — `--done` lists what is
+  finished, `--next` names the one item to pick up — and exits **0**. It does not silently fall back
+  to one of them and it prints no rows: a refused result is an answer, not a crash, which is the
+  same treatment this plan already gives an unknown flag (AC11 in spirit). Keep the unknown-flag
+  fixture Step 2 provisioned for — an argument that is neither `--done` nor `--next` prints one line
+  and exits 0 — with its message updated, since after Steps 5 and 6 it can no longer say the rule is
+  undecided. Pin all three cases, `--done --next`, `--next --done` and the unknown flag, asserting
+  for each: exit 0, exactly one line of output, and not one table row. *Proved by:* `bash
+  skills/ai-layout/scripts/check-state.sh` exiting 0. *ACs:* 11.
 
-- [ ] **Step 8 — BLOCKED on Ambiguity F. Do not run until the developer says which release carries
-  this.** Then, in one commit: a `CHANGELOG.md` entry naming the new command, the script behind it,
-  the read-only guarantee and the blast radius (no template file moved, so no adopted repo's
-  manifest changes and `/t4:sync-sdlc` reports no drift from it), and the same version in
+- [ ] **Step 8 — Record the release as an ordinary feature entry.** Ambiguity F, answered
+  2026-09-29: `/t4:state` ships as an ordinary, non-breaking feature entry, and the release check is
+  fixed rather than the CHANGELOG distorted to satisfy it.
+  **Prerequisite — a separate change that lands before this step, and must not be folded into it.
+  Status: not started.** `skills/ai-layout/scripts/check-release-docs.sh` line 100 takes
+  `top=$(awk '/^## /{n++} n==1' CHANGELOG.md)` — the top entry, unconditionally — and lines 116–124
+  then require that entry to mark the change breaking, to tell an adopted repo to run
+  `/t4:migrate-layout`, to say the hooks keep working, to tell the developer to grep their own CI,
+  and to carry both deprecation notices. Any non-breaking release landing on top fails it;
+  `/t4:state` is only the first to hit it. The fix binds those six assertions to entries **marked
+  breaking** rather than to whatever sits on top, and ships with its own test, as its own chore or
+  spec. Until it lands, this step cannot go green.
+  **Remaining open question on this step: the version number.** `2.1.0` is spoken for — commit
+  `3fd5dfd` records it as belonging to the `/t4:migrate-layout` removal, and `check-release-docs.sh`
+  line 124 asserts the top entry mentions `2.1.0`. So this step names no version yet and must not
+  invent one; ask before writing the entry.
+  Then, in one commit: a `CHANGELOG.md` entry naming the new command, the script behind it, the
+  read-only guarantee and the blast radius (no template file moved, so no adopted repo's manifest
+  changes and `/t4:sync-sdlc` reports no drift from it), and that same version in
   `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` and `.codex-plugin/plugin.json`.
-  Whichever answer, run `check-release-docs.sh` before writing the entry down — a naive 2.1.0
-  feature entry fails it, and that failure is what Ambiguity F is about. *Proved by:* `bash
+  Run `check-release-docs.sh` both before writing the entry and after. *Proved by:* `bash
   skills/ai-layout/scripts/check-versions.sh` exiting 0 and reporting all three manifests at the
-  new version; `bash skills/ai-layout/scripts/check-release-docs.sh` exiting 0. *ACs:* 16, the
-  record half.
+  new version; `bash skills/ai-layout/scripts/check-release-docs.sh` exiting 0 — which it will not
+  do until the prerequisite above has landed. *ACs:* 16, the record half.
 
 ## Risks and how each is checked
 
@@ -287,7 +366,8 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
 |---|---|
 | **A fixture drifts because the real queue moves.** Two plans were filed to `done/` while this plan was being written. Any assertion over the live tree would flake within the hour | Step 1 forbids it: every assertion builds its own repo under `mktemp -d`. `grep -n 'ai-factory/specs\|ai-factory/plans' skills/ai-layout/scripts/check-state.sh` should show only paths constructed inside `$TMP` |
 | **A named command is not runnable.** Plan 0008 shipped four such defects and plan 0009 a fifth | Every command in *Verification* below was executed against this tree before being written down, and the two that need a `state.sh` were executed against a stub. The one exception is stated there by name |
-| **The version bump fails the release check** | `bash skills/ai-layout/scripts/check-release-docs.sh` — already reproduced in a scratch copy, with the exact failure message, which is why Step 8 is blocked rather than optimistic |
+| **The version bump fails the release check** | `bash skills/ai-layout/scripts/check-release-docs.sh` — already reproduced in a scratch copy, with the exact failure message. Ambiguity F's answer (2026-09-29) is to fix the check, not the entry: the fix binds its six assertions to entries marked breaking and lands as a separate change **before** Step 8, status not started. Step 8 still has no version number either, so run the check before writing the entry and again after |
+| **`--next` reads a repository the run was never given.** Step 6's rule calls `git`, and in a directory that is not itself a repository `git` walks up to an ancestor one — proved: `git rev-parse --show-toplevel` from `skills/` here answers with this repo's root. Answering `--next` from an ancestor's history would break AC15 | Step 6 gates every `git log` on `[ "$(git rev-parse --show-toplevel 2>/dev/null)" = "$(pwd -P)" ]`, and check-state.sh carries a fixture with no `.git` at all, asserting `--next` still answers, still exits 0 and names nothing from outside the fixture |
 | **A prompt trips a scan the moment it lands** | `check-adapters.sh` (banned terms over `commands/*.md`) and `check-paths.sh` (pre-1.0.0 paths in `commands/`). Both were run in a scratch copy with a candidate `commands/state.md` and `skills/ai-layout/scripts/state.sh` present; both passed, as did `check-manifest.sh`, `check-entrypoints.sh`, `check-doctor.sh` and `check-release-docs.sh` |
 | **The two `- [~]` records get edited while the rules about them are being pinned** | `git diff --exit-code -- ai-factory/plans/done/0003-tracker-setup.md ai-factory/plans/done/0004-knowledge-seam.md`, and their hashes: `1da2b5cf…` and `0b5a5a57…` from `shasum` |
 | **`/t4:run` does not get the fresh context this plan assumes.** `ai-factory/agents/` symlinks four of the eight canonical agents — `analyst`, `architect`, `reviewer`, `tester` — and `.claude/agents/` is generated from it, so `explorer`, `implementer`, `planner` and `specifier` are not spawnable in *this* repo and `/t4:run` will be carried out by the session itself. The templates do ship all eight, so adopted repos are unaffected | `ls ai-factory/agents/` and `ls .claude/agents/` against `ls agents/`. Mitigation inside the steps: each one names its files and its proving command, so a session running it needs no memory of this conversation. `ai-factory/agents/` is dont-touch and symlinked — adding the missing four is a separate chore against `ai-factory/docs/dont-touch.md`'s target, not part of this plan |
@@ -347,6 +427,14 @@ What was actually run, so the next person does not have to trust this list:
   bumped:** `check-versions.sh` passed, `check-release-docs.sh` failed with
   `FAIL: CHANGELOG.md's 2.1.0 entry does not mark the change breaking` — the evidence behind
   Ambiguity F.
+- **Executed on 2026-09-29, when Ambiguities A, C, D and F were answered and Steps 5–8 rewritten:**
+  `git log -1 --format=%ct -- <path>` against this tree over a tracked file (answers with a
+  timestamp) and over a path that does not exist (answers empty, exit 0); inside a fixture repo
+  under `mktemp -d`, `git init -q` plus two commits with `GIT_AUTHOR_DATE` and `GIT_COMMITTER_DATE`
+  pinned, proving a fixture's `--next` selection can be fixed by construction; `git rev-parse
+  --show-toplevel` equal to `pwd -P` inside that fixture and *unequal* from `skills/` in this repo,
+  which is the ancestor walk-up Step 6 gates against; and all thirteen `check-*.sh`, green before
+  the edit and green after it.
 - **Not executed, and why:** `bash ai-factory/make/sync-adapters.sh`. It writes `.claude/`,
   `.cursor/` and `.codex/`, and the working tree carried another session's in-flight changes while
   this plan was written; running it would have mixed them. Its syntax was checked with `bash -n`,
