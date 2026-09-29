@@ -105,12 +105,17 @@ without that mark is still open.
   whatever it is — and lines 116–124 then demand that entry mark the change breaking, name the
   migration command, and carry the rest. So the *first non-breaking release to land on top* fails,
   whatever it contains; `/t4:state` is merely the first to hit it. The fix is to bind those
-  assertions to entries **marked breaking** rather than to whatever sits on top. Two constraints
-  ride on that answer, and Step 8 records both rather than burying them: the check-script fix is a
-  **separate change that lands before Step 8** — its own chore or spec, status *not started* — and
+  assertions to the **2.0.0 entry, located by version wherever it sits in the file**, and to leave on
+  the top entry only what is true of every release — that a versioned entry exists and that its
+  version equals `.claude-plugin/plugin.json`'s. **Not** to entries *marked breaking*: this script
+  pins the 1.0.0/2.0.0 rename record, and five of its six statements are specific to that one
+  migration, so a future unrelated breaking release — 3.0.0 dropping the hooks' fallback, say —
+  would be forced to recite 2.0.0's migration instructions. That wrong reading was recorded here on
+  2026-09-29 and corrected the same day; the check's own fixtures (b) and (e) now fail against it.
+  One constraint still rides on this answer, and Step 8 records it rather than burying it:
   **the version number is still unresolved**. `2.1.0` is spoken for: commit `3fd5dfd` records it as
-  belonging to the `/t4:migrate-layout` removal, and `check-release-docs.sh` line 124 asserts the
-  top entry mentions `2.1.0`. Step 8 therefore names no version yet and invents none; that is the
+  belonging to the `/t4:migrate-layout` removal, and `check-release-docs.sh` asserts that the 2.0.0
+  entry carries the deprecation notice naming `2.1.0`. Step 8 therefore names no version yet and invents none; that is the
   one question still open on it, and AC16's record half stays unsatisfied until the number is named.
 - **G — is AC16's adapter-and-manifest clause achievable for a plugin command at all?** AC16 requires
   that "the generated `.claude/`, `.cursor/` and `.codex/` adapters include it" and that
@@ -193,7 +198,7 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
 
 ## Steps
 
-- [ ] **Step 1 — Write `skills/ai-layout/scripts/check-state.sh`, red.** Fixture repos under
+- [x] **Step 1 — Write `skills/ai-layout/scripts/check-state.sh`, red.** Fixture repos under
   `mktemp -d`, in the shape `check-doctor.sh` uses (`fail()`, `run()`, `trap 'rm -rf "$TMP"' EXIT`),
   asserting against `skills/ai-layout/scripts/state.sh`: a repo with no `ai-factory/` at all →
   exit 0 and one line (AC11); a spec with no plan → listed, by repository-relative path (AC2, AC3);
@@ -338,19 +343,25 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
 - [ ] **Step 8 — Record the release as an ordinary feature entry.** Ambiguity F, answered
   2026-09-29: `/t4:state` ships as an ordinary, non-breaking feature entry, and the release check is
   fixed rather than the CHANGELOG distorted to satisfy it.
-  **Prerequisite — a separate change that lands before this step, and must not be folded into it.
-  Status: not started.** `skills/ai-layout/scripts/check-release-docs.sh` line 100 takes
-  `top=$(awk '/^## /{n++} n==1' CHANGELOG.md)` — the top entry, unconditionally — and lines 116–124
-  then require that entry to mark the change breaking, to tell an adopted repo to run
-  `/t4:migrate-layout`, to say the hooks keep working, to tell the developer to grep their own CI,
-  and to carry both deprecation notices. Any non-breaking release landing on top fails it;
-  `/t4:state` is only the first to hit it. The fix binds those six assertions to entries **marked
-  breaking** rather than to whatever sits on top, and ships with its own test, as its own chore or
-  spec. Until it lands, this step cannot go green.
+  **Prerequisite — a separate change that landed before this step, deliberately not folded into it.
+  Status: DONE, 2026-09-29.** `check-release-docs.sh` used to read the CHANGELOG's top entry
+  unconditionally and then require *that* entry to mark the change breaking, to tell an adopted repo
+  to run `/t4:migrate-layout`, to say the hooks keep working, to tell the developer to grep their own
+  CI, and to carry both deprecation notices — so any non-breaking release landing on top failed it,
+  and `/t4:state` was only the first to hit it. The fix introduces `RENAME_ENTRY=2.0.0` and an
+  `entry()` that locates that record **by version, wherever it sits in the file**, matching the
+  heading as a literal prefix so `## 2.0.0-rc1` cannot be mistaken for it. The six assertions and the
+  ten-line floor moved to that record; the top entry keeps only what is true of every release — that
+  a versioned entry exists and that its version equals `.claude-plugin/plugin.json`'s. An absent
+  `## 2.0.0` entry fails first and by name, which is how a rebind-by-version otherwise stops checking
+  anything. It ships with eleven fixtures in a self-tested section guarded by `RELEASE_DOCS_SELFTEST`,
+  covering both directions: a non-breaking patch entry on top now passes, each of the six statements
+  removed individually still fails by name, and a compliant top entry over a gutted 2.0.0 entry still
+  fails. That last one is what proves the six are no longer reading the top entry at all.
   **Remaining open question on this step: the version number.** `2.1.0` is spoken for — commit
   `3fd5dfd` records it as belonging to the `/t4:migrate-layout` removal, and `check-release-docs.sh`
-  line 124 asserts the top entry mentions `2.1.0`. So this step names no version yet and must not
-  invent one; ask before writing the entry.
+  still asserts that the 2.0.0 entry carries the deprecation notice naming `2.1.0`. So this step
+  names no version yet and must not invent one; ask before writing the entry.
   Then, in one commit: a `CHANGELOG.md` entry naming the new command, the script behind it, the
   read-only guarantee and the blast radius (no template file moved, so no adopted repo's manifest
   changes and `/t4:sync-sdlc` reports no drift from it), and that same version in
@@ -366,7 +377,7 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
 |---|---|
 | **A fixture drifts because the real queue moves.** Two plans were filed to `done/` while this plan was being written. Any assertion over the live tree would flake within the hour | Step 1 forbids it: every assertion builds its own repo under `mktemp -d`. `grep -n 'ai-factory/specs\|ai-factory/plans' skills/ai-layout/scripts/check-state.sh` should show only paths constructed inside `$TMP` |
 | **A named command is not runnable.** Plan 0008 shipped four such defects and plan 0009 a fifth | Every command in *Verification* below was executed against this tree before being written down, and the two that need a `state.sh` were executed against a stub. The one exception is stated there by name |
-| **The version bump fails the release check** | `bash skills/ai-layout/scripts/check-release-docs.sh` — already reproduced in a scratch copy, with the exact failure message. Ambiguity F's answer (2026-09-29) is to fix the check, not the entry: the fix binds its six assertions to entries marked breaking and lands as a separate change **before** Step 8, status not started. Step 8 still has no version number either, so run the check before writing the entry and again after |
+| **The version bump fails the release check** | `bash skills/ai-layout/scripts/check-release-docs.sh` — already reproduced in a scratch copy, with the exact failure message. Ambiguity F's answer (2026-09-29) is to fix the check, not the entry: the fix binds its six assertions to the 2.0.0 entry located **by version**, not to entries merely marked breaking — five of the six are specific to that one migration — and it landed as a separate change before Step 8, **status DONE, 2026-09-29**, with eleven fixtures proving both directions. Step 8 still has no version number, so run the check before writing the entry and again after |
 | **`--next` reads a repository the run was never given.** Step 6's rule calls `git`, and in a directory that is not itself a repository `git` walks up to an ancestor one — proved: `git rev-parse --show-toplevel` from `skills/` here answers with this repo's root. Answering `--next` from an ancestor's history would break AC15 | Step 6 gates every `git log` on `[ "$(git rev-parse --show-toplevel 2>/dev/null)" = "$(pwd -P)" ]`, and check-state.sh carries a fixture with no `.git` at all, asserting `--next` still answers, still exits 0 and names nothing from outside the fixture |
 | **A prompt trips a scan the moment it lands** | `check-adapters.sh` (banned terms over `commands/*.md`) and `check-paths.sh` (pre-1.0.0 paths in `commands/`). Both were run in a scratch copy with a candidate `commands/state.md` and `skills/ai-layout/scripts/state.sh` present; both passed, as did `check-manifest.sh`, `check-entrypoints.sh`, `check-doctor.sh` and `check-release-docs.sh` |
 | **The two `- [~]` records get edited while the rules about them are being pinned** | `git diff --exit-code -- ai-factory/plans/done/0003-tracker-setup.md ai-factory/plans/done/0004-knowledge-seam.md`, and their hashes: `1da2b5cf…` and `0b5a5a57…` from `shasum` |
