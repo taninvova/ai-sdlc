@@ -21,11 +21,17 @@ MODEL_ARG  = $(if $(strip $(MODEL)),--model "$(MODEL)",)
 RUN        = $(CMD) -p $(MODEL_ARG) --output-format json < $$PF > $$OUT
 endif
 
-.PHONY: ai review ai-sync log-flush clean-runs
+.PHONY: ai review ai-sync log-flush clean-runs cost
 
 # INPUT reaches the recipe as an environment variable, never interpolated into the shell
 # line — `make review` passes a whole diff through it, quotes and all.
 export INPUT
+
+# `make cost JSON=1` and `make cost TSV=1` select the machine-readable forms. Exported rather than
+# interpolated into the recipe so the value cannot be re-expanded by the shell, the same reason
+# INPUT is exported above. Unset, they reach the script as empty strings, which it reads as "no".
+export JSON
+export TSV
 
 ai:
 	@mkdir -p $(RUNS)
@@ -70,3 +76,12 @@ clean-runs:
 	@find $(RUNS) -name '*.json' -mtime +30 -delete
 	@find $(RUNS) -name '.counted.*' -mtime +30 -delete
 	@find $(RUNS) -name '.task.*' -mtime +30 -delete
+
+# Where the runs went: token spend by task, agent, branch and day, from THIS layout's log and no
+# other file. The workspace root includes this same ai.mk and so inherits the target — which is why
+# it must never walk upward or enumerate a sibling repo; the root reports on the root's own log.
+# `@` matters beyond tidiness: an echoed recipe line would put make's own output on stdout ahead of
+# the JSON document, and `make cost JSON=1` promises one document and nothing else.
+# Read-only, so no mkdir: a missing log is a state the script explains, not one this target creates.
+cost:
+	@node ai-factory/make/cost.js $(RUNS)/log.csv
