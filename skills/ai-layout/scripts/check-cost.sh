@@ -30,9 +30,11 @@
 # wherever it lands. And finally, section 8: the fixtures are byte-identical after the whole run.
 # The reader must not touch what it reads.
 #
-# Steps 1-3 of ai-factory/plans/0008-make-cost-report-and-export.md: the reader, this harness and
-# the aggregation engine. The export's field names and the rendered table arrive in later steps
-# and extend this file.
+# Steps 1-8 and 10 of ai-factory/plans/done/0008-make-cost-report-and-export.md: the reader, this
+# harness and the aggregation engine (sections 1-9), the export's field names (10), the TSV form
+# (11), the rendered table (12), the empty and missing cases (13), the make target (14) and the
+# read-only snapshot (15). Only step 9 — docs, the contract statement and the release — is proved
+# outside this file.
 set -euo pipefail
 shopt -s nullglob
 cd "$(dirname "$0")/../../.."   # repo root

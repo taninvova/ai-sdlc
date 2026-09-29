@@ -5,7 +5,7 @@
 machine-readable export, with the arithmetic provable against fixtures before a single real agent row
 exists.
 
-**Spec:** [`ai-factory/specs/0008-make-cost-report-and-export.md`](../specs/0008-make-cost-report-and-export.md)
+**Spec:** [`ai-factory/specs/0008-make-cost-report-and-export.md`](../../specs/0008-make-cost-report-and-export.md)
 
 ## Before anything else: the decisions this plan rests on
 
@@ -166,7 +166,10 @@ no process that outlives the command, and no port.
 
 - [x] **Step 8 — The target, the symlink, the manifest.** Add the `cost` target to
   `skills/ai-layout/templates/ai-factory/make/ai.mk` and list it in `.PHONY`, invoking
-  `node ai-factory/make/cost.js` with `$(RUNS)`. The target must read **one layout's log and nothing
+  `node ai-factory/make/cost.js` with `$(RUNS)/log.csv` — the log **file**, not the `$(RUNS)`
+  directory, and the whole recipe is the one silent line
+  `@node ai-factory/make/cost.js $(RUNS)/log.csv`, which `check-cost.sh` §14 pins as that exact
+  string. The target must read **one layout's log and nothing
   else** — no directory outside the repo listed, walked or enumerated, because the workspace root
   inherits this same `ai.mk` through its include (AC21). Then the per-file symlink
   `ai-factory/make/cost.js → ../../skills/ai-layout/templates/ai-factory/make/cost.js`, matching the
@@ -175,10 +178,16 @@ no process that outlives the command, and no port.
   no script in the repo creates these symlinks — the four present were made by hand. So this one is
   the developer's `ln -s`, not the implementer's, and `/t4:run` should stop and say so rather than
   attempt it.
-  *Proves:* AC18, AC21. *Tests:* `node skills/ai-layout/scripts/manifest.js check <repo> <plugin>`
-  reports a freshly adopted repo up to date with the new file tracked in `ai-factory/.sdlc.json`;
-  `bash skills/ai-layout/scripts/check-manifest.sh`; a grep over `cost.js` and the target for any
-  path leaving the repo.
+  *Proves:* AC18, AC21. *Tests:* in a freshly adopted scratch repo,
+  `node skills/ai-layout/scripts/manifest.js write <repo> <plugin>` **first**, then
+  `node skills/ai-layout/scripts/manifest.js check <repo> <plugin>` reports it up to date with the
+  new file tracked in `ai-factory/.sdlc.json` — `check` on its own has no baseline to compare
+  against and prints `layout: no ai-factory/.sdlc.json — this repo was adopted before manifests
+  existed.` instead, so the `write` is part of the test, not an optional prelude;
+  `bash skills/ai-layout/scripts/check-manifest.sh`. **No new test for the path-escape grep:** the
+  grep over `cost.js` and the target for any path leaving the repo was already authored by an
+  earlier step, as `check-cost.sh` §14 ("the make target (AC18, AC21)"), so this step writes no
+  test of its own — it verifies, it does not author.
 
 - [x] **Step 9 — Docs, the contract statement, and the release.** `skills/ai-layout/SKILL.md`'s
   inventory gains the file; `ai-factory/docs/workflow.md` gains a section saying `make cost` exists,
@@ -204,7 +213,9 @@ no process that outlives the command, and no port.
   deletes nothing under `ai-factory/runs/` (AC16), so the target can never cost a developer a row.
   Add the assertion to `check-cost.sh`: snapshot the directory, run both modes, compare.
   *Proves:* AC16. *Tests:* `check-cost.sh`'s new case; `git status --porcelain ai-factory/runs/`
-  empty after a real `make cost` in this repo.
+  empty after a real `make -f ai-factory/make/ai.mk cost` in this repo — spell the `-f` out, because
+  this repo carries no root `Makefile` (only `skills/ai-layout/templates/Makefile`, which adopted
+  repos receive), so plain `make cost` here is "No rule to make target".
 
 ## Risks and how each is checked
 
@@ -258,8 +269,9 @@ bash skills/ai-layout/scripts/check-manifest.sh
 bash skills/ai-layout/scripts/check-paths.sh
 bash skills/ai-layout/scripts/check-versions.sh
 bash skills/ai-layout/scripts/check-release-docs.sh
-make cost                                              # this repo's own log
-make cost JSON=1 | node -e 'JSON.parse(require("fs").readFileSync(0,"utf8"))'
+make -f ai-factory/make/ai.mk cost                     # this repo's own log; the -f is
+                                                       # required — no root Makefile here
+make -f ai-factory/make/ai.mk cost JSON=1 | node -e 'JSON.parse(require("fs").readFileSync(0,"utf8"))'
 git status --porcelain ai-factory/runs/                 # empty — AC16
 ```
 
