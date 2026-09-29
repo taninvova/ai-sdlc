@@ -199,6 +199,33 @@ scripts require only `fs`, `path`, `child_process` and their siblings, so AC20 h
   *Tests:* the run transcript itself — the coding standards say a prompt or hook change is proved by
   a run, not by an assertion.
 
+  **Result — Step 7 was not run, and is withdrawn. The box is deliberately left unticked.** Recorded
+  2026-09-28, when the developer took this plan out of the active queue and filed it to
+  `ai-factory/plans/done/` with Steps 1–6 done. Two things put the step out of reach of any agent as
+  the repo stands, and neither is a judgement that it is not worth running:
+  - **It needs a restarted session.** The hooks load from the installed plugin, not the working tree
+    (Risk R12), so the run only exercises this change after a restart — and no agent can restart the
+    session it is itself running in. That is the developer's action.
+  - **The step agents it names are not registered agent types.** The step asks for a `/t4:` command
+    that delegates to a *step agent*, but `ai-factory/agents/` symlinks only four of the eight
+    definitions under `agents/` — `analyst`, `architect`, `reviewer`, `tester` — and only those four
+    are spawnable. `explorer`, `implementer`, `planner` and `specifier` exist as definitions with no
+    registration. A faithful run today would therefore record the wrong agent names, or none.
+
+  **What this filing leaves outstanding, said plainly rather than closed:**
+  - **The before/after run the definition of done requires for a hook change is outstanding.** Steps
+    1–6 changed hooks, and no live run proves them. Everything in *Verification* passes; the
+    fixtures are not the run, and the coding standards say so in the line quoted above.
+  - **Spec 0007's open question 8 remains unanswered.** Interactive *and* background delegation was
+    never directly exercised, which is exactly the residual Q8 asked to confirm in passing. Filing
+    this plan does not answer it.
+  - **AC19 end to end, AC21 in a live repo and AC13's `git status` clause are proved by fixture
+    only**, not by the run this step specified.
+
+  Nothing here claims the feature has been seen working in a live session. The step stands as
+  written for whoever next restarts a session in this repo; it is withdrawn from the queue, not from
+  the record.
+
 ---
 
 ## Risks, and how each is checked
