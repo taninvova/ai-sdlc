@@ -8,9 +8,10 @@
 #   repo-root   defaults to the current directory
 #   plugin-root defaults to $CLAUDE_PLUGIN_ROOT, else the plugin this script lives in.
 #               Accepted for symmetry with doctor.sh's signature; nothing under it is read.
-#   flag        --done lists what is finished INSTEAD of what is outstanding. --next is not
-#               decided yet (spec 0010's open question 1); it, and any other flag, prints one
-#               line saying so and exits 0.
+#   flag        --done lists what is finished INSTEAD of what is outstanding. --next names the
+#               one artefact to pick up — the most recently modified, by git commit date — as a
+#               single row of the default listing plus one line saying why it was chosen. Any
+#               other flag prints one line saying its rule is not settled yet and exits 0.
 #
 # Output: a tab-separated table — a header row, then one row per listed thing:
 #
@@ -50,13 +51,15 @@ PLUGIN=${PLUGIN:-${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../../.." && pwd)}}
 
 # MODE is the listing the flags ask for. --done replaces the default listing with the finished
 # items rather than widening it to everything-with-a-state (plan 0010, Ambiguity C, answered
-# 2026-09-29). Everything else is still provisional: what --next selects, and whether the two
-# flags compose, are spec 0010's open questions, and an argument whose rule is not settled is
-# answered in one line rather than guessed at — a refused answer is still an answer, so exit 0.
+# 2026-09-29). --next narrows it to one row — the most recently modified artefact, by git commit
+# date (Ambiguity A, answered 2026-09-29). Whether the two flags compose is still spec 0010's
+# open question 4, and an argument whose rule is not settled is answered in one line rather than
+# guessed at — a refused answer is still an answer, so exit 0.
 MODE=default
 case "$EXTRA" in
   "")      MODE=default ;;
   --done)  MODE=done ;;
+  --next)  MODE=next ;;
   *)
     echo "the rule for '$EXTRA' is not decided yet — spec 0010 leaves open what --next selects and whether the flags combine, so /t4:state answers only the default listing and --done for now"
     exit 0 ;;
@@ -311,6 +314,109 @@ if [ -z "$SELECTED" ]; then
   exit 0
 fi
 
-printf 'kind\tnumber\tstate\tpath\tstep\tdetail\n'
+HEADER=$'kind\tnumber\tstate\tpath\tstep\tdetail'
+
+# --- 4. --next: the one artefact to pick up -----------------------------------------------
+# Plan 0010's Ambiguity A, answered 2026-09-29. The key is the artefact's last commit date,
+# `git log -1 --format=%ct -- <path>`, in seconds, read with the repo root as the working
+# directory. WHY A COMMIT DATE AND NOT AN MTIME: an mtime does not survive a clone, so two
+# developers sitting on the same commit would get different answers out of the same tree, while a
+# commit date is identical in every clone. AC13 — the same tree, run twice, nothing changed in
+# between — holds under either measure, so this is cross-clone agreement and not an AC13 fix.
+#
+# An artefact the command answers with an empty string — uncommitted, or untracked — sorts as the
+# NEWEST thing in the tree. Highest key wins; ties break on the artefact's leading four-digit
+# number lowest first, then on path, then on step number, so the order is total and exactly one
+# row can win. The row itself is byte-identical to the row the default listing produces for the
+# same artefact, which is what makes the answer a strict subset of it (AC6).
+if [ "$MODE" = next ]; then
+
+  # git_q — git with the ambient GIT_DIR and GIT_WORK_TREE removed. A run started from inside a
+  # git hook inherits both, and either would point these reads at a repository this run was never
+  # given (AC15).
+  git_q() { ( unset GIT_DIR GIT_WORK_TREE; git "$@" ); }
+
+  # THE GUARD THIS RULE NEEDS. `git` walks UP: run in a directory that is not itself a repository
+  # it answers out of the nearest ancestor that is, so `git log` under a plain directory nested in
+  # some other repo would read that repo's history and could name an artefact from outside the
+  # tree this run was handed — an AC15 break. Verified 2026-09-29: `git rev-parse --show-toplevel`
+  # from `skills/` in this plugin's own repo answers with the repo root, not with `skills/`.
+  # `pwd -P`, physical, because `mktemp -d` hands back `/var/folders/…` on macOS while
+  # `--show-toplevel` answers with `/private/var/folders/…`, and a logical comparison would report
+  # every fixture repo as somebody else's.
+  git_usable() {
+    command -v git >/dev/null 2>&1 || return 1
+    [ "$(git_q rev-parse --show-toplevel 2>/dev/null)" = "$(pwd -P)" ]
+  }
+  if git_usable; then NOCOMMITS=0; else NOCOMMITS=1; fi
+
+  # The key an artefact with no commit date gets. Uncommitted work is the newest thing in the
+  # tree, so it sorts above every real timestamp; ten digits of 9s is past the year 2286.
+  UNCOMMITTED=9999999999
+
+  # One `git log` per artefact, memoised on the previous path: SELECTED is sorted by path, so a
+  # plan's several step rows are adjacent and ask the same question once.
+  keyed=""; cache_p=""; cache_ct=""
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    p=${line%%"$TAB"*}
+    if [ "$p" = "$cache_p" ]; then
+      ct=$cache_ct
+    else
+      ct=""
+      [ "$NOCOMMITS" = 1 ] || ct=$(git_q log -1 --format=%ct -- "$p" 2>/dev/null)
+      # Empty, or anything that is not a plain number, is treated as no commit date at all.
+      case "$ct" in ''|*[!0-9]*) ct=$UNCOMMITTED ;; esac
+      cache_p=$p; cache_ct=$ct
+    fi
+    keyed="$keyed$ct$TAB$line
+"
+  done <<EOF_NEXT
+$SELECTED
+EOF_NEXT
+
+  # Fields, once the key is in front: 1 key · 2 path · 3 step number · 4 kind · 5 number ·
+  # 6 state · 7 path · 8 step · 9 detail. Highest key first, then the three tiebreaks in the
+  # order the rule fixes — number lowest first, then path, then step number.
+  ranked=$(printf '%s' "$keyed" | grep -v '^$' \
+           | LC_ALL=C sort -t"$TAB" -k1,1nr -k5,5 -k2,2 -k3,3)
+  win=$(printf '%s\n' "$ranked" | head -1)
+
+  wkey=$(printf '%s' "$win" | cut -f1)
+  wpath=$(printf '%s' "$win" | cut -f2)
+  wnum=$(printf '%s' "$win" | cut -f5)
+  wstep=$(printf '%s' "$win" | cut -f8)
+  label=$wpath
+  case "$wstep" in ''|'-') ;; *) label="$wpath $wstep" ;; esac
+
+  # Which tiebreak decided, if one did: the runner-up shares the winner's key exactly when the
+  # commit date alone did not settle it.
+  runner=$(printf '%s\n' "$ranked" | sed -n '2p')
+  tiebreak=""
+  if [ -n "$runner" ] && [ "$(printf '%s' "$runner" | cut -f1)" = "$wkey" ]; then
+    if   [ "$wnum"  != "$(printf '%s' "$runner" | cut -f5)" ]; then tiebreak="the lower number"
+    elif [ "$wpath" != "$(printf '%s' "$runner" | cut -f2)" ]; then tiebreak="the earlier path"
+    else                                                            tiebreak="the lower step number"
+    fi
+  fi
+
+  if [ "$NOCOMMITS" = 1 ]; then
+    why="no commit dates were available — this directory is not the root of a git repository, or git is not installed"
+    [ -z "$tiebreak" ] || why="$why, so $tiebreak decided"
+  elif [ "$wkey" = "$UNCOMMITTED" ]; then
+    why="it is uncommitted or untracked, which sorts newest"
+    [ -z "$tiebreak" ] || why="$why, and $tiebreak decided between those tied there"
+  else
+    why="it carries the newest commit date of anything outstanding"
+    [ -z "$tiebreak" ] || why="$why, and $tiebreak decided between those tied on it"
+  fi
+
+  printf '%s\n' "$HEADER"
+  printf '%s\n' "$win" | cut -f4-
+  printf 'next: %s — %s\n' "$label" "$why"
+  exit 0
+fi
+
+printf '%s\n' "$HEADER"
 printf '%s\n' "$SELECTED" | cut -f3-
 exit 0
