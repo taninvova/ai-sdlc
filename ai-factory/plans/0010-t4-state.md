@@ -309,7 +309,7 @@ one surface added is a developer entry point, `/t4:state`, whose whole output is
   *Proved by:* `bash skills/ai-layout/scripts/check-state.sh` exiting 0.
   *ACs:* 5, 7, 10, 11, and AC14's hand-off.
 
-- [ ] **Step 6 — `--next` names the most recently modified artefact, by git commit date.**
+- [x] **Step 6 — `--next` names the most recently modified artefact, by git commit date.**
   Ambiguity A, answered 2026-09-29. The key for each row of the default listing is
   `git log -1 --format=%ct -- <path>`, run with the repo root as the working directory: the commit
   date, in seconds, of the artefact's last commit. An artefact the command answers with an empty

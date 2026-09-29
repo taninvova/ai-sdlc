@@ -680,8 +680,259 @@ args_line=$(grep -nF -- '$ARGUMENTS' "$ROOT/$PROMPT" | tail -1 | cut -d: -f1)
 $last_line. It must be last: everything above it is the cached prefix, and hoisting it up into the
 invocation is not how this hand-off is wired (plan 0010, Step 5)."
 
-echo "state ok — 13 sections: empty answer, the default listing with [~] and done/, determinism, \
+# --- 14. `--next` names the most recently modified artefact, by git commit date (AC6, AC13, AC15)
+# Plan 0010's Ambiguity A, answered 2026-09-29. Every fixture below has its answer fixed BY
+# CONSTRUCTION: the commit dates are pinned to fixed instants, so nothing here depends on when the
+# check is run, and the artefact that must win is the one the rule picks rather than the one that
+# happens to sort first.
+#
+# Why a commit date and not an mtime: an mtime does not survive a clone, so two developers sitting
+# on the same commit would get different answers out of the same tree. AC13 — the same tree, run
+# twice, nothing changed in between — holds under either measure, so this is cross-clone
+# agreement and NOT an AC13 fix; the determinism assertion below is AC13's, and it is separate.
+#
+# Every git invocation carries -c user.email and -c user.name, so no assertion depends on the
+# developer's own git config, and -c commit.gpgsign=false so a developer who signs every commit by
+# default does not have the fixtures fail on a missing key.
+GIT_ID=(-c user.email=check-state@example.invalid -c user.name='check-state fixture'
+        -c commit.gpgsign=false)
+ginit() { git "${GIT_ID[@]}" -c init.defaultBranch=main init -q "$1" >/dev/null 2>&1; }
+gadd()  { local d=$1; shift; git -C "$d" "${GIT_ID[@]}" add -- "$@" >/dev/null 2>&1; }
+# commit_at <repo> <iso-instant> <message> — the assignments precede an EXTERNAL command on
+# purpose: prefixing a shell function instead leaks them into the rest of the run in some shells.
+commit_at() {
+  GIT_AUTHOR_DATE="$2" GIT_COMMITTER_DATE="$2" \
+    git -C "$1" "${GIT_ID[@]}" commit -q -m "$3" >/dev/null 2>&1
+}
+ct_of() { git -C "$1" "${GIT_ID[@]}" log -1 --format=%ct -- "$2" 2>/dev/null; }
+
+command -v git >/dev/null 2>&1 \
+  || fail "git is not on PATH, so every fixture below would be indistinguishable from the no-git
+case and the commit-date rule would go unproved rather than fail (plan 0010, Step 6)."
+
+EARLY=2020-01-01T00:00:00Z
+LATE=2021-06-01T00:00:00Z
+SAME=2020-03-03T03:03:03Z
+
+# 14a — two artefacts, two commits, two pinned instants: the later one wins.
+NEXTA=$TMP/next-history
+mkdir -p "$NEXTA/ai-factory/specs"
+SPEC_EARLY=ai-factory/specs/0090-committed-first.md
+SPEC_LATE=ai-factory/specs/0091-committed-later.md
+SPEC_NEVER=ai-factory/specs/0092-never-committed.md
+printf '# 0090 — committed first\n'  > "$NEXTA/$SPEC_EARLY"
+printf '# 0091 — committed later\n'  > "$NEXTA/$SPEC_LATE"
+
+ginit "$NEXTA" || fail "git init failed in $NEXTA, so no fixture below can be built."
+gadd "$NEXTA" "$SPEC_EARLY"; commit_at "$NEXTA" "$EARLY" 'the earlier artefact'
+gadd "$NEXTA" "$SPEC_LATE";  commit_at "$NEXTA" "$LATE"  'the later artefact'
+[ -n "$(ct_of "$NEXTA" "$SPEC_EARLY")" ] && [ -n "$(ct_of "$NEXTA" "$SPEC_LATE")" ] \
+  || fail "the history fixture has no commit dates — git init or commit failed, and every
+assertion in 14a would then be proving the no-git case instead of the commit-date rule."
+[ "$(ct_of "$NEXTA" "$SPEC_EARLY")" -lt "$(ct_of "$NEXTA" "$SPEC_LATE")" ] \
+  || fail "the pinned instants did not survive into the fixture's history: $SPEC_EARLY is not
+older than $SPEC_LATE, so 14a's answer is not fixed by construction."
+
+RO_NEXT=$(fs_snap "$NEXTA/ai-factory"); RO_NEXT_C=$(content_snap "$NEXTA/ai-factory")
+out_def=$(run "$NEXTA");         st=$?
+[ "$st" = 0 ] || fail "state exited $st over the --next history fixture's default listing:
+$out_def"
+out_next=$(run "$NEXTA" --next); st=$?
+[ "$st" = 0 ] || fail "--next exited $st; it always exits 0 (AC6, AC11):
+$out_next"
+
+# Exactly one row, and one line saying why — the header, the row, the reason.
+[ "$(lines "$out_next")" = 3 ] \
+  || fail "--next answered in $(lines "$out_next") lines where three were expected: the header, the
+one row it selected, and the one line stating which item it selected and why (AC6):
+$out_next"
+[ "$(head -1 <<<"$out_next")" = "$(head -1 <<<"$out_def")" ] \
+  || fail "--next's header line is not byte-identical to the default listing's, so its row is not
+being presented in the same table shape the rest of the command uses (AC6, AC7):
+--next:  $(head -1 <<<"$out_next")
+default: $(head -1 <<<"$out_def")"
+
+# AC6 — a strict subset: the row --next emits is byte-for-byte the row the default listing
+# produces for the same artefact, never one the default listing omits.
+[ "$(sed -n 2p <<<"$out_next")" = "$(row "$out_def" "$SPEC_LATE")" ] \
+  || fail "--next's row is not byte-identical to the row the default listing produces for the same
+artefact, so the output is not a strict subset of it (AC6):
+--next:  $(sed -n 2p <<<"$out_next")
+default: $(row "$out_def" "$SPEC_LATE")"
+[ "$(hits "$out_next" "$SPEC_EARLY")" = 0 ] \
+  || fail "--next picked, or named, the artefact committed at the EARLIER pinned instant. The rule
+is the most recently modified artefact by git commit date, highest key first (plan 0010,
+Ambiguity A):
+$out_next"
+grep -qF -- "$SPEC_LATE" <<<"$(sed -n 3p <<<"$out_next")" \
+  || fail "--next's reason line does not name the artefact it selected; AC6 requires the command to
+state in one line WHICH item it selected and why:
+$(sed -n 3p <<<"$out_next")"
+no_absolute "$out_next" "$NEXTA"
+
+# AC13 — the same tree, twice, byte for byte, under the filter too.
+if ! diff <(run "$NEXTA" --next) <(run "$NEXTA" --next) >/dev/null; then
+  fail "two --next runs over the same unchanged fixture disagreed (AC13):
+$(diff <(run "$NEXTA" --next) <(run "$NEXTA" --next))"
+fi
+# AC8, AC9 — reading a history is still only reading.
+[ "$(fs_snap "$NEXTA/ai-factory")" = "$RO_NEXT" ] \
+  || fail "--next created or removed a file under the repo it listed (AC8)"
+[ "$(content_snap "$NEXTA/ai-factory")" = "$RO_NEXT_C" ] \
+  || fail "--next edited a file under the repo it listed (AC9)"
+
+# 14b — an uncommitted artefact sorts newest and displaces both committed ones.
+printf '# 0092 — never committed\n' > "$NEXTA/$SPEC_NEVER"
+out_next=$(run "$NEXTA" --next); st=$?
+[ "$st" = 0 ] || fail "--next exited $st with an untracked artefact in the tree:
+$out_next"
+[ "$(lines "$out_next")" = 3 ] \
+  || fail "--next answered in $(lines "$out_next") lines with an untracked artefact present; still
+one header, one row and one reason (AC6):
+$out_next"
+[ "$(hits "$out_next" "$SPEC_NEVER")" = 2 ] \
+  || fail "--next did not select the untracked artefact. An artefact git answers about with an
+empty string — uncommitted, or untracked — sorts as the NEWEST thing in the tree and displaces
+every committed one (plan 0010, Ambiguity A). Expected it on both the row and the reason line:
+$out_next"
+[ "$(hits "$out_next" "$SPEC_LATE")" = 0 ] && [ "$(hits "$out_next" "$SPEC_EARLY")" = 0 ] \
+  || fail "--next named a committed artefact while an untracked one was present; the untracked one
+sorts newest and wins outright:
+$out_next"
+out_def=$(run "$NEXTA")
+[ "$(sed -n 2p <<<"$out_next")" = "$(row "$out_def" "$SPEC_NEVER")" ] \
+  || fail "--next's row for the untracked artefact is not byte-identical to the default listing's
+row for it (AC6):
+--next:  $(sed -n 2p <<<"$out_next")
+default: $(row "$out_def" "$SPEC_NEVER")"
+
+# 14c — a directory that is not itself a repository, nested inside one that is (AC15).
+# THIS IS THE GUARD THE RULE NEEDS. `git` walks UP: from a plain directory inside a repository it
+# answers out of that repository, so an ungated `git log` here would read an ancestor's history
+# for a tree this run was never given. The two artefacts below are committed INTO $NEXTA at
+# different pinned instants and the later one carries the HIGHER number, so the two rules give
+# different answers: gated, no artefact has a commit date and the tiebreak picks the lower number;
+# ungated, the ancestor's history picks the higher one. Remove the gate from state.sh and this
+# assertion fails — which is what makes it worth having.
+NESTED=$NEXTA/nested
+mkdir -p "$NESTED/ai-factory/specs"
+SPEC_LOW=ai-factory/specs/0093-lower-number.md
+SPEC_HIGH=ai-factory/specs/0094-higher-number-committed-later.md
+printf '# 0093 — lower number\n'                   > "$NESTED/$SPEC_LOW"
+printf '# 0094 — higher number, committed later\n' > "$NESTED/$SPEC_HIGH"
+gadd "$NEXTA" "nested/$SPEC_LOW";  commit_at "$NEXTA" "$EARLY" 'the nested lower number'
+gadd "$NEXTA" "nested/$SPEC_HIGH"; commit_at "$NEXTA" "$LATE"  'the nested higher number'
+[ -n "$(ct_of "$NEXTA" "nested/$SPEC_HIGH")" ] \
+  || fail "the nested artefacts are not in the ancestor's history, so 14c cannot tell a gated
+\`git log\` from an ungated one and would pass whether or not state.sh has the guard."
+[ ! -e "$NESTED/.git" ] \
+  || fail "the nested fixture has a .git of its own; it must have none, or it is not the case
+plan 0010's Step 6 gates against."
+
+out_next=$(run "$NESTED" --next); st=$?
+[ "$st" = 0 ] || fail "--next exited $st in a directory that is not the root of a git repository;
+it still answers, and it still exits 0 (AC11):
+$out_next"
+[ "$(lines "$out_next")" = 3 ] \
+  || fail "--next answered in $(lines "$out_next") lines in a non-repository directory; when no
+artefact has a commit date the tiebreak alone decides, and exactly one row still wins:
+$out_next"
+[ "$(hits "$out_next" "$SPEC_LOW")" = 2 ] \
+  || fail "--next did not select the lower-numbered artefact in a directory that is not a git
+repository root. Every \`git log\` must be gated on \`[ \"\$(git rev-parse --show-toplevel)\" =
+\"\$(pwd -P)\" ]\`: without it git walks up to the ancestor repository, where the HIGHER-numbered
+artefact was committed later, and --next answers out of a history this run was never given
+(AC15, plan 0010, Step 6):
+$out_next"
+[ "$(hits "$out_next" "$SPEC_HIGH")" = 0 ] \
+  || fail "--next named the artefact the ANCESTOR repository committed later. That answer can only
+have come from a history outside the tree this run was handed (AC15):
+$out_next"
+grep -qi -- 'no commit date' <<<"$(sed -n 3p <<<"$out_next")" \
+  || fail "--next's reason line does not say that no commit dates were available. When the gate
+fails, every key is empty and the tiebreak alone decides — and the line that states why must say
+so rather than claim a newest commit date it never read (AC6):
+$(sed -n 3p <<<"$out_next")"
+for outside in "$SPEC_EARLY" "$SPEC_LATE" "$SPEC_NEVER"; do
+  [ "$(hits "$out_next" "$outside")" = 0 ] \
+    || fail "a run inside the nested directory named an artefact belonging to the repository above
+it. It reads only paths inside the tree it was given (AC15): $outside
+$out_next"
+done
+no_absolute "$out_next" "$NESTED"
+if ! diff <(run "$NESTED" --next) <(run "$NESTED" --next) >/dev/null; then
+  fail "two --next runs over the unchanged non-repository fixture disagreed; with no commit dates
+at all the answer is still deterministic (AC13):
+$(diff <(run "$NESTED" --next) <(run "$NESTED" --next))"
+fi
+
+# 14d — two artefacts committed at the SAME pinned instant: the lower number wins.
+# The lower number is the SPEC and the higher is the PLAN, so path order and number order
+# disagree: `ai-factory/plans/…` sorts before `ai-factory/specs/…`, which means an implementation
+# that broke the tie on path — or simply answered with the default listing's first row — would
+# name the plan. Only the number rule names the spec.
+NEXTTIE=$TMP/next-tie
+mkdir -p "$NEXTTIE/ai-factory/specs" "$NEXTTIE/ai-factory/plans"
+TIE_SPEC=ai-factory/specs/0095-lower-number.md
+TIE_PLAN=ai-factory/plans/0096-higher-number.md
+printf '# 0095 — lower number\n' > "$NEXTTIE/$TIE_SPEC"
+{ printf '# Plan 0096 — higher number\n\n## Steps\n\n'
+  printf -- '- [ ] **Step 1 — the culvert lined.** Proved by a fixture.\n'
+} > "$NEXTTIE/$TIE_PLAN"
+
+ginit "$NEXTTIE" || fail "git init failed in $NEXTTIE."
+gadd "$NEXTTIE" "$TIE_PLAN"; commit_at "$NEXTTIE" "$SAME" 'the higher number, committed first'
+gadd "$NEXTTIE" "$TIE_SPEC"; commit_at "$NEXTTIE" "$SAME" 'the lower number, committed second'
+[ -n "$(ct_of "$NEXTTIE" "$TIE_SPEC")" ] \
+  || fail "the tie fixture has no commit dates, so it would prove the no-git case instead of the
+tiebreak."
+[ "$(ct_of "$NEXTTIE" "$TIE_SPEC")" = "$(ct_of "$NEXTTIE" "$TIE_PLAN")" ] \
+  || fail "the two artefacts in the tie fixture do not share a commit date — $(ct_of "$NEXTTIE" "$TIE_SPEC")
+against $(ct_of "$NEXTTIE" "$TIE_PLAN") — so there is no tie to break and the assertion below would
+pass on the commit date alone."
+
+out_def=$(run "$NEXTTIE")
+grep -qF -- "$TIE_PLAN" <<<"$(sed -n 2p <<<"$out_def")" \
+  || fail "the default listing's first row is not the higher-numbered plan, so 14d no longer
+distinguishes the number tiebreak from answering with the first row of the default listing:
+$out_def"
+out_next=$(run "$NEXTTIE" --next); st=$?
+[ "$st" = 0 ] || fail "--next exited $st over the tie fixture:
+$out_next"
+[ "$(lines "$out_next")" = 3 ] \
+  || fail "--next answered in $(lines "$out_next") lines over the tie fixture; one header, one row,
+one reason (AC6):
+$out_next"
+[ "$(hits "$out_next" "$TIE_SPEC")" = 2 ] \
+  || fail "--next did not select the LOWER-numbered artefact when two share a commit date. Ties
+break on the artefact's leading four-digit number, lowest first — and here the lower number sorts
+LATER by path, so nothing but the number rule can have chosen it (plan 0010, Ambiguity A):
+$out_next"
+[ "$(hits "$out_next" "$TIE_PLAN")" = 0 ] \
+  || fail "--next named the higher-numbered artefact, which is the answer a path tiebreak or a
+first-row-of-the-listing rule gives:
+$out_next"
+[ "$(sed -n 2p <<<"$out_next")" = "$(row "$out_def" "$TIE_SPEC")" ] \
+  || fail "--next's row over the tie fixture is not byte-identical to the default listing's row for
+the same artefact (AC6):
+--next:  $(sed -n 2p <<<"$out_next")
+default: $(row "$out_def" "$TIE_SPEC")"
+grep -qi -- 'number' <<<"$(sed -n 3p <<<"$out_next")" \
+  || fail "--next's reason line does not say which tiebreak decided. AC6 requires the one line to
+say WHY, and here the commit dates were equal — the number is the whole reason:
+$(sed -n 3p <<<"$out_next")"
+
+# --next over a repo with nothing outstanding is the same one-line answer the default listing
+# gives: there is no item to pick up, and that is an answer rather than an error (AC11).
+if ! diff <(run "$TMP/bare") <(run "$TMP/bare" --next) >/dev/null; then
+  fail "--next and the default listing gave different answers for a repo with no layout at all;
+the empty answer is the same one line either way (AC11):
+$(diff <(run "$TMP/bare") <(run "$TMP/bare" --next))"
+fi
+
+echo "state ok — 14 sections: empty answer, the default listing with [~] and done/, determinism, \
 the read-only snapshots, unknown-with-a-reason, the three **Spec:** link forms, sibling isolation, \
 the prompt's two invariants, the command named in README.md and the workflow doc, --done as the \
 default listing's mirror image, checkboxes over directory under the filter, --done's empty answer, \
-and the prompt's hand-off with \$ARGUMENTS still last"
+the prompt's hand-off with \$ARGUMENTS still last, and --next by commit date with its untracked, \
+non-repository and same-instant cases"
