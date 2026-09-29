@@ -40,6 +40,40 @@ the installed copy, so an older one keeps writing 16-field rows, and the guard q
   omits the key is counted every time instead: an over-count, never a silent loss.
 - `source` is now `session`, `agent` or `make`. Group by any of the four new dimensions.
 
+### New — `make cost`, which reads all of that back
+
+Shipped in this entry rather than a version of its own: it reads the schema this release introduces
+and is unusable without the rotation above, so the two are one change. The header break is what makes
+its totals trustworthy — the cumulative rows it must not sum are quarantined in `log.previous.csv`,
+which it never opens.
+
+- **`make cost`** prints token spend by **task**, **agent**, **branch** and **day**, then a total.
+  Four tables inside 80 columns; the cache hit rate per group is recomputed from the summed tokens,
+  never averaged over rows, because the mean of per-row ratios weights a ten-token row like a
+  ten-million-token one.
+- **`make cost JSON=1`** and **`make cost TSV=1`** print the same numbers as a machine-readable
+  document — one document on stdout and nothing else. Those two variables are the whole flag surface;
+  there are no filters in this version.
+- **Tokens and turns, never money.** `cost_usd` is not read at all. Summing it across layouts would be
+  summing prices set in ten separate `models.yaml` files; anything that wants a dollar figure prices
+  the token counts itself, with one price list, so its totals compare.
+- **The export is a contract.** It carries a schema version — a plain integer, starting at `1`.
+  Adding a field does not change it, so a consumer must ignore fields it does not recognise; renaming
+  a field, removing one, or changing what one means does change it, and is breaking for a collector
+  this repo cannot see.
+- **Unattributed spend is named, not folded away.** Rows with no `task` or no `agent` — every row
+  written before this release — appear under `(unattributed)` with their count visible. A row whose
+  width does not match the header, or whose quotes never close, reaches no total and is counted
+  separately: a torn record and a wrong-width one are different faults.
+- **A missing, empty or damaged log says which it is.** A header that cannot be parsed swallows the
+  file into one record, so it counts zero rows exactly as an empty log does; the message distinguishes
+  them rather than reporting a damaged log as "nothing recorded yet".
+- **Read-only.** Neither mode creates, modifies, moves or deletes anything under `ai-factory/runs/`.
+- Caveats, stated because the report would otherwise imply otherwise: **Cursor is not measured** and
+  cannot be, so where Cursor is in use this is not a complete picture of spend; `accepted` is
+  hand-filled, so its coverage line appears only once some row carries a value; and per-**agent** and
+  per-**task** figures are meaningful only for rows written by this release's collection change.
+
 ### Still on the pre-1.0.0 layout?
 
 **Run `/t4:migrate-layout` once, in each repo** — this release does not change that, and does not

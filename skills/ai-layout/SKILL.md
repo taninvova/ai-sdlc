@@ -40,7 +40,8 @@ ai-factory/explorations/            /t4:explore output: options + recommendation
 ai-factory/plans/  ai-factory/plans/done/     plans in flight / merged
 ai-factory/runs/log.csv               header only; the Stop hook and ai-factory/make/log.js append the same 17 columns
 ai-factory/make/ai.mk                 headless runner for CI (make ai / make review)
-ai-factory/make/gate.js  log.js  sync-adapters.sh
+ai-factory/make/gate.js  log.js  cost.js  sync-adapters.sh
+                                      cost.js reads log.csv for `make cost` — read-only, 17 columns by name
 ai-factory/.sdlc.json                 which ai-sdlc version this repo holds + a hash per received file;
                               written by /t4:adopt-sdlc, read by /t4:sync-sdlc, never by hand
 ai-factory/specs/              one file per feature, Given/When/Then

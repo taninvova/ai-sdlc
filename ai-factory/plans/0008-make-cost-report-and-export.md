@@ -180,7 +180,7 @@ no process that outlives the command, and no port.
   `bash skills/ai-layout/scripts/check-manifest.sh`; a grep over `cost.js` and the target for any
   path leaving the repo.
 
-- [ ] **Step 9 — Docs, the contract statement, and the release.** `skills/ai-layout/SKILL.md`'s
+- [x] **Step 9 — Docs, the contract statement, and the release.** `skills/ai-layout/SKILL.md`'s
   inventory gains the file; `ai-factory/docs/workflow.md` gains a section saying `make cost` exists,
   which dimensions are meaningful only for rows written by 0007's collection change, and what the log
   cannot see at all — per-plan-step cost, wall-clock, tool-call counts, lines changed, and Cursor

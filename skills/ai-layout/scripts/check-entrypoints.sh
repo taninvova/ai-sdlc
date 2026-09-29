@@ -43,7 +43,7 @@ done
 
 # --- the two git files every repo is told to write ---------------------------------------------
 SKILL=skills/ai-hooks/SKILL.md
-IGNORE=('ai-factory/runs/*.json' 'ai-factory/runs/*.jsonl' 'ai-factory/runs/log.pending.csv' 'ai-factory/runs/.counted.*' 'ai-factory/runs/.task.*')
+IGNORE=('ai-factory/runs/*.json' 'ai-factory/runs/*.jsonl' 'ai-factory/runs/log.pending.csv' 'ai-factory/runs/.counted.*' 'ai-factory/runs/.task.*' 'ai-factory/runs/report.html')
 ATTR='ai-factory/runs/log.csv merge=union'
 
 # The lines under the first "## " heading matching $2, up to the next one.

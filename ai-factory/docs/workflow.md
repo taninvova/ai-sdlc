@@ -323,6 +323,50 @@ restart the session — until you do, an older hook keeps writing the older row 
 happens, move the mismatched rows to `ai-factory/runs/log.previous.csv`; that is what the current
 writer does automatically.
 
+### `make cost` — where the tokens went
+
+`make cost` reads `ai-factory/runs/log.csv` and prints token spend grouped by **task**, **agent**,
+**branch** and **day**, then a total. `make cost JSON=1` and `make cost TSV=1` print the same numbers
+as a machine-readable document instead. All three are read-only over the log and write nothing.
+
+**It reports tokens and turns, never money.** Decided 2026-09-27: `cost_usd` is not read at all.
+Nine of the ten logs in this workspace sit in layouts that may run different models, the column is
+already `~`-marked or empty per row, and a rolled-up dollar figure would be summing prices set in ten
+separate `models.yaml` files. Anything that wants money prices the token counts itself, with one
+price list, so its totals are comparable by construction.
+
+What it **can** answer: which task, agent, branch or day the tokens went to; how many runs and turns
+each took; the cache hit rate per group, recomputed from the summed tokens rather than averaged over
+rows. Per-agent and per-task numbers are meaningful only for rows written by the 2.0.0 collection
+change — older rows carry no `agent` column and an empty `task`, and appear under `(unattributed)`.
+
+What the log **cannot** see, at any effort, and which `make cost` therefore never shows:
+per-plan-step cost inside `/t4:run`, wall-clock duration, tool-call counts, lines changed, and
+**anything from Cursor**, which has no local export of any kind. If Cursor is in use here, this is
+not a complete picture of spend and cannot be made into one.
+
+Two lines appear only when they mean something. The `accepted` column is hand-filled and usually
+empty, so a coverage line is printed only once some row carries a value rather than reading
+"0 of N" forever. And a total drawn from more than one `tool` carries a footnote naming them: Codex
+inlines the agent into the session, so one session is both the task and the agent, while Claude
+spreads across named agents — without the note, the by-agent table invites comparing a part with a
+whole.
+
+### The export is a contract
+
+The JSON and TSV forms are read by collectors outside this repo, which no fixture here can reach. So
+they carry a **schema version**, and it is a plain integer starting at `1`:
+
+- **Adding** a field does **not** change the version. A consumer reading version 1 keeps working when
+  a field it never reads appears, so consumers must ignore fields they do not recognise.
+- **Renaming** a field, **removing** one, or changing what an existing one means **does** change it.
+  Any of those is a breaking change for a consumer this repo cannot see.
+
+`skills/ai-layout/scripts/check-cost.sh` asserts the exact field-name set and fails on a rename, a
+removal *and* an addition. The asymmetry is deliberate: the check guards against accidental drift,
+while the version communicates breakage. An addition means editing that expected list by hand, which
+is the point.
+
 ## 10. When something is wrong
 
 **Run `/t4:doctor` first.** It reports the layout, the adapters, the version this repo records
