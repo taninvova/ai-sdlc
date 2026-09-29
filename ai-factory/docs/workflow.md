@@ -118,6 +118,10 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
 ### The rules that make it work
 
 - **One step per `/t4:run`.** It is told not to start the next one. Let it stop.
+- **Back after time away? `/t4:state` before `/t4:run`.** It lists the specs and plans still
+  outstanding, each outstanding plan with its incomplete steps, so you pick the next step up from
+  the artefacts on disk rather than from what you remember of the last session. Read-only — it
+  names the work and starts none of it.
 - **Plan first for anything touching more than ~3 files.** Small changes do not need the
   ceremony; large ones fall apart without it.
 - **Steering in chat for 20+ minutes with code changed?** Stop. Write the decision into the
@@ -132,6 +136,7 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
 | Command | Use it when | Writes |
 |---|---|---|
 | `/t4:adopt-sdlc` | adding the layout to an existing repo | the whole `ai-factory/` layout + `ai-factory/.sdlc.json` |
+| `/t4:state` | coming back to a repo and asking what is left, before picking a step up | nothing — terminal output only |
 | `/t4:sync-sdlc` | after pulling a new plugin version, or when `/t4:*` are missing | regenerates `.claude/`, `.cursor/`; reports drift |
 | `/t4:migrate-layout` | this repo adopted ai-sdlc before 1.0.0 and still has the old layout | moves the layout, rewrites the paths its own files name; commits nothing |
 
