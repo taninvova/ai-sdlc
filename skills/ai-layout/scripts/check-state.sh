@@ -1116,10 +1116,100 @@ line. They are two different situations — two flags that exist and do not comp
 that is not a flag at all — and one line cannot diagnose both without being wrong about one:
 $refuse_dn"
 
-echo "state ok — 15 sections: empty answer, the default listing with [~] and done/, determinism, \
+# --- 16. Explicit withdrawal resolves work without claiming it was executed (AC17) ---------
+WITHDRAW=$TMP/withdrawn
+mkdir -p "$WITHDRAW/ai-factory/plans/done" "$WITHDRAW/ai-factory/specs"
+W_PLAN=ai-factory/plans/done/0100-withdrawn.md
+W_SPEC=ai-factory/specs/0100-withdrawn.md
+printf '# 0100 — resolved by withdrawal\n' > "$WITHDRAW/$W_SPEC"
+cat > "$WITHDRAW/$W_PLAN" <<'PLAN'
+# Plan 0100 — resolved by withdrawal
+**Spec:** `ai-factory/specs/0100-withdrawn.md`
+- [x] **Step 1 — verify the retained rule.**
+- [ ] **Step 2 — BLOCKED pending a decision.**
+  **Result — Step 2 is withdrawn; not run, and no file changed.** The rule stays.
+PLAN
+w_before=$(content_snap "$WITHDRAW/ai-factory")
+out=$(run "$WITHDRAW")
+[ "$(hits "$out" "$W_PLAN")" = 0 ] || fail "withdrawn step still appears as pending: $out"
+[ "$(hits "$out" "$W_SPEC")" = 0 ] || fail "withdrawal-only remainder keeps its spec pending: $out"
+grep -q 'every spec and plan.*complete$' <<<"$out" \
+  && fail "empty listing claims withdrawn work was completed: $out"
+[ "$(run "$WITHDRAW" --next)" = "$out" ] || fail "--next selects withdrawn work"
+out_done=$(run "$WITHDRAW" --done)
+for p in "$W_PLAN" "$W_SPEC"; do
+  [ "$(hits "$out_done" "$p")" = 1 ] || fail "--done omitted or duplicated closed item: $out_done"
+  [ "$(row "$out_done" "$p" | cut -f3)" = closed ] \
+    || fail "withdrawal was called complete rather than closed: $out_done"
+done
+grep -q 'withdrawn' <<<"$(row "$out_done" "$W_PLAN")" \
+  || fail "closed plan has no withdrawal explanation: $out_done"
+[ "$(content_snap "$WITHDRAW/ai-factory")" = "$w_before" ] || fail "withdrawal scan edited records"
+[ "$(run "$WITHDRAW" --done)" = "$out_done" ] || fail "withdrawal scan is not deterministic"
+
+# A withdrawn [~] step is resolved too; it need not have any completed siblings.
+cat > "$WITHDRAW/$W_PLAN" <<'PLAN'
+# Plan 0100 — entirely withdrawn
+- [~] **Step 2 — the optional migration.**
+  **Result — Step 2 withdrawn.** Scope was reduced.
+PLAN
+out_done=$(run "$WITHDRAW" --done)
+[ "$(row "$out_done" "$W_PLAN" | cut -f3)" = closed ] || fail "withdrawn [~] step remains pending"
+
+# In a mixed plan only the explicitly named step is removed. Merely mentioning withdrawal,
+# quoting a result, or putting one in an example must not resolve a different step.
+cat > "$WITHDRAW/$W_PLAN" <<'PLAN'
+# Plan 0100 — mixed
+- [ ] **Step 2 — withdrawn option.**
+  **Result — Step 2 withdrawn; not run.**
+- [ ] **Step 3 — pending choice.** If Step 3 is withdrawn, keep its record.
+> **Result — Step 3 withdrawn; quoted, not a decision.**
+    **Result — Step 3 withdrawn; indented code, not a decision.**
+```markdown
+**Result — Step 3 withdrawn; example only.**
+```
+~~~~markdown
+**Result — Step 3 withdrawn; another example.**
+~~~
+**Result — Step 3 withdrawn; still inside the longer fence.**
+~~~~
+  **Result — Step 30 withdrawn; a different identifier.**
+PLAN
+out=$(run "$WITHDRAW")
+[ "$(row "$out" "$W_PLAN" | cut -f5)" = 'Step 3' ] \
+  || fail "withdrawal matched an example, prose, or the wrong step: $out"
+[ "$(hits "$out" "$W_PLAN")" = 1 ] || fail "mixed plan should have one pending step: $out"
+[ "$(row "$out" "$W_SPEC" | cut -f3)" = part-done ] || fail "mixed spec is no longer pending"
+[ "$(hits "$(run "$WITHDRAW" --done)" "$W_PLAN")" = 0 ] || fail "mixed plan reported closed"
+
+# A second outstanding plan keeps a shared spec pending even when its other plan is closed.
+printf '\n  **Result — Step 3 withdrawn; resolved.**\n' >> "$WITHDRAW/$W_PLAN"
+cat > "$WITHDRAW/ai-factory/plans/0101-additional.md" <<'PLAN'
+# Plan 0101 — additional work
+**Spec:** `ai-factory/specs/0100-withdrawn.md`
+- [ ] **Step 1 — still needed.**
+PLAN
+out=$(run "$WITHDRAW")
+[ "$(hits "$out" "$W_PLAN")" = 0 ] || fail "resolved mixed plan still pending"
+[ "$(row "$out" "$W_SPEC" | cut -f3)" = part-done ] || fail "closed plan hid another plan's work"
+printf -- '- [?] **Step 4 — malformed marker.**\n' >> "$WITHDRAW/$W_PLAN"
+out=$(run "$WITHDRAW")
+[ "$(row "$out" "$W_PLAN" | cut -f3)" = unknown ] || fail "withdrawal hid a malformed step"
+[ "$(row "$out" "$W_SPEC" | cut -f3)" = unknown ] || fail "withdrawal hid an unknown paired plan"
+
+cat > "$WITHDRAW/ai-factory/plans/0102-distinct-identifier.md" <<'PLAN'
+# Plan 0102 — a distinct identifier
+- [ ] **Step 2a — this is not Step 2.**
+  **Result — Step 2 withdrawn; a different identifier.**
+PLAN
+out=$(run "$WITHDRAW")
+[ "$(row "$out" 'ai-factory/plans/0102-distinct-identifier.md' | cut -f5)" = 'Step 2a' ] \
+  || fail "numeric sorting key was mistaken for the exact step identifier: $out"
+
+echo "state ok — 16 sections: empty answer, the default listing with [~] and done/, determinism, \
 the read-only snapshots, unknown-with-a-reason, the three **Spec:** link forms, sibling isolation, \
 the prompt's two invariants, the command named in README.md and the workflow doc, --done as the \
 default listing's mirror image, checkboxes over directory under the filter, --done's empty answer, \
 the prompt's hand-off with \$ARGUMENTS still last, --next by commit date with its untracked, \
 non-repository and same-instant cases, and the refusal of --done --next in either order beside the \
-unknown flag's own answer"
+unknown flag's own answer, and explicit withdrawals without false completion"

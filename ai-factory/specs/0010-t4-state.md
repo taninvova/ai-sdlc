@@ -119,6 +119,26 @@ the next step up without opening every file under `ai-factory/` to reconstruct i
   command tables in `ai-factory/docs/workflow.md` name it, and `CHANGELOG.md` and the plugin version
   record the change.
 
+- **AC17 — withdrawal correction (2026-09-29).** Given an unchecked or partly done numbered
+  step and an explicit `**Result — Step N withdrawn; …**`, `**Result — Step N withdrawn.**`,
+  or `**Result — Step N withdrawn**` record in that plan (optionally `is withdrawn`, as in
+  plan 0009), When the listing runs, Then that
+  step is resolved without changing its checkbox and is omitted from default and `--next`.
+  The record must be an ordinary line with at most three leading spaces, outside fenced code;
+  quoted examples, indented code, conditional prose and different step numbers do not qualify.
+  If every other step is ticked or withdrawn, `--done` lists the plan as `closed`, with a
+  withdrawal explanation, rather than claiming it is `complete`. A spec whose paired plans
+  are all complete or closed inherits `closed` if any plan is closed. Another pending or
+  unknown paired plan still takes precedence. A closed state describes the recorded work;
+  it does not prove acceptance criteria or answer remaining spec questions. Malformed steps
+  remain unknown, and the archived records remain byte-identical.
+
+AC17 refines “incomplete” in AC2–AC3 and AC10 to exclude explicitly withdrawn steps, and
+extends AC5 to closed items. It resolves the withdrawn-step case only: blocked, deferred,
+or merely not-run work without the numbered result above remains pending. A withdrawal
+record must be removed or corrected if the step is reopened; the scanner does not interpret
+later free-form prose as a status change.
+
 ## Out of scope
 
 - **Doing any of the listed work.** `/t4:state` lists; it never starts a step, never invokes
