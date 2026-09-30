@@ -1,0 +1,85 @@
+{
+  "description": "Codex lifecycle adapters for shared t4 logging and path protection. Review and trust these hooks in Codex before use.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/skills/ai-hooks/scripts/codex-hook.js\" session-start"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/skills/ai-hooks/scripts/codex-hook.js\" log-task"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/skills/ai-hooks/scripts/codex-hook.js\" guard-paths"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/skills/ai-hooks/scripts/codex-hook.js\" log-flush"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/skills/ai-hooks/scripts/codex-hook.js\" log-edit"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/skills/ai-hooks/scripts/codex-hook.js\" log-cmd"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/skills/ai-hooks/scripts/codex-hook.js\" session-stop"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/skills/ai-hooks/scripts/codex-hook.js\" subagent-stop"
+          }
+        ]
+      }
+    ]
+  }
+}

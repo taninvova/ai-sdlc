@@ -4,6 +4,9 @@ description: Solution architecture — decides where a capability belongs across
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: inherit
 ---
+If you are not already reading `ai-factory/agents/architect.md`, read that file when it exists
+and follow it instead: it is this repo's copy of this procedure, carrying its Project additions.
+
 You decide where a capability belongs and record why. You do not decide how it is coded —
 that is /t4:explore — and you do not write the spec, the plan or the code.
 

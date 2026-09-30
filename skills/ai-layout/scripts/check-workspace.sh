@@ -2,6 +2,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/../../.."
 node skills/ai-layout/scripts/materialize-agents.js --check
+# No project pointer is generated for an agent the plugin ships, so the plugin's own copy is what
+# runs — and it must hand over to the repo's copy, which is where the Project additions live.
+for agent in agents/*.md; do
+  name=$(basename "$agent" .md)
+  grep -qF "ai-factory/agents/$name.md" "$agent" \
+    || { echo "FAIL: $agent never defers to ai-factory/agents/$name.md — a repo's Project additions would be ignored" >&2; exit 1; }
+done
 node <<'NODE'
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
@@ -48,10 +55,21 @@ try {
  const claudeRepo=path.join(tmp,'docs');fs.mkdirSync(path.join(claudeRepo,'.claude/commands'),{recursive:true});
  const custom=path.join(claudeRepo,'.claude/commands/custom.md');const customText='My own instructions\n@../../ai-factory/tasks/run.md\nKeep this content.\n';fs.writeFileSync(custom,customText);
  assert.equal(sync(claudeRepo,'--adapters=claude').status,0);assert.equal(fs.readFileSync(custom,'utf8'),customText);cases++;
- for(const name of fs.readdirSync(path.join(root,'agents')))if(name.endsWith('.md')) {
-  const canonical=fs.readFileSync(path.join(root,'agents',name),'utf8').match(/^---[\s\S]*?\n---/)[0];
-  assert(fs.readFileSync(path.join(claudeRepo,'.claude/agents',name),'utf8').startsWith(canonical));
- } cases++;
+ // The plugin registers its own agents as t4:<name>; a pointer would put a second agent with the
+ // same role in the picker, so none is generated for them. An agent this project added is the
+ // opposite case — the pointer is the only thing that makes it selectable.
+ for(const name of fs.readdirSync(path.join(root,'agents')))if(name.endsWith('.md'))
+  assert(!fs.existsSync(path.join(claudeRepo,'.claude/agents',name)),`${name} duplicates the plugin's own t4:${path.basename(name,'.md')}`);
+ cases++;
+ const projectAgent=path.join(claudeRepo,'ai-factory/agents/domain-expert.md');
+ fs.writeFileSync(projectAgent,'---\nname: domain-expert\ndescription: Project agent, not shipped by the plugin\n---\nProcedure.\n');
+ assert.equal(sync(claudeRepo,'--adapters=claude').status,0);
+ const projectPointer=fs.readFileSync(path.join(claudeRepo,'.claude/agents/domain-expert.md'),'utf8');
+ assert(projectPointer.includes('name: domain-expert')&&projectPointer.includes('Read ai-factory/agents/domain-expert.md'));
+ fs.unlinkSync(projectAgent);
+ assert.equal(sync(claudeRepo,'--adapters=claude').status,0);
+ assert(!fs.existsSync(path.join(claudeRepo,'.claude/agents/domain-expert.md')),'a removed project agent must not leave its pointer behind');
+ cases++;
  const outside=path.join(tmp,'outside');fs.mkdirSync(outside);
  fs.symlinkSync(outside,path.join(repo,'.claude'));
  assert.notEqual(sync(repo,'--adapters=claude').status,0);assert.deepEqual(fs.readdirSync(outside),[]);cases++;
@@ -63,7 +81,7 @@ const rejectedManifest=spawnSync(process.execPath,[path.join(root,'skills/ai-lay
 assert.notEqual(rejectedManifest.status,0,'manifest writer must refuse a symlink');
 assert.equal(fs.readFileSync(manifestOutside,'utf8'),'manifest sentinel');cases++;
 fs.unlinkSync(manifestFile);fs.writeFileSync(manifestFile,manifestSaved);
-const sharedAdapter=path.join(claudeRepo,'.claude/agents/reviewer.md');
+const sharedAdapter=path.join(claudeRepo,'.claude/commands/t4/spec.md');
 const adapterOutside=path.join(tmp,'adapter-outside');
 const sharedBody=fs.readFileSync(sharedAdapter,'utf8')+'External sentinel must survive.\n';
 fs.writeFileSync(adapterOutside,sharedBody);fs.unlinkSync(sharedAdapter);fs.linkSync(adapterOutside,sharedAdapter);

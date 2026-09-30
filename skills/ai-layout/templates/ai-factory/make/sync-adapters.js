@@ -31,6 +31,26 @@ const selected = new Set(
 		? ["claude", "codex", "cursor"]
 		: argument.slice(11).split(","),
 );
+// Task names the t4 plugin already registers as native Claude Code commands. A project pointer
+// for one of these puts a second /t4:<name> in the menu, with a different description and no way
+// for the user to tell which one runs. The plugin command wins: it works in strict mode, where no
+// pointer exists at all. Codex plugins ship no commands, so their skills are still generated.
+const nativeClaudeCommands = new Set(["quick"]);
+// Agent names the plugin registers as `t4:<name>`, for the same reason: a pointer adds a second
+// agent with the same role and description to the picker. An agent this project added to
+// ai-factory/agents/ is not in this set and still gets its pointer, which is the only way it
+// becomes selectable. Codex plugins ship no subagents; their task skills carry the procedure
+// inline instead.
+const nativeClaudeAgents = new Set([
+	"analyst",
+	"architect",
+	"explorer",
+	"implementer",
+	"planner",
+	"reviewer",
+	"specifier",
+	"tester",
+]);
 function safe(file) {
 	const absolute = path.resolve(root, file);
 	if (!absolute.startsWith(`${root}${path.sep}`))
@@ -110,6 +130,9 @@ try {
 	if (selected.has("claude")) {
 		cleanup(".claude/commands");
 		cleanup(".claude/commands/t4");
+		// Sweeps the pointers an older sync generated for the plugin's own agents; the ones this
+		// project added are written back below. A hand-authored agent carries no marker and stays.
+		cleanup(".claude/agents");
 	}
 	if (
 		selected.has("codex") &&
@@ -136,7 +159,7 @@ try {
 		const body = fs.readFileSync(path.join(tasksDir, entry), "utf8");
 		const description = /^description: (.*)$/m.exec(body)?.[1] || name;
 		const hint = /^argument-hint: (.*)$/m.exec(body)?.[1];
-		if (selected.has("claude"))
+		if (selected.has("claude") && !nativeClaudeCommands.has(name))
 			put(
 				`.claude/commands/t4/${name}.md`,
 				`---\ndescription: ${description}\n${hint ? `argument-hint: ${hint}\n` : ""}---\n@../../../ai-factory/tasks/${name}.md\n`,
@@ -145,14 +168,18 @@ try {
 			const agent = /Delegate to the `([a-z]+)` subagent/.exec(body)?.[1];
 			put(
 				`.codex/skills/t4-${name}/SKILL.md`,
-				`---\nname: t4-${name}\ndescription: ${description}\n---\nRead \`ai-factory/tasks/${name}.md\` and use the user's request as its input.\n${agent ? `Codex plugins cannot ship subagents. Read the complete procedure in \`ai-factory/agents/${agent}.md\`. When it runs in this session, label review as a self-check rather than an independent review.\n` : ""}`,
+				`---\nname: t4-${name}\ndescription: ${description}\n---\nRead \`ai-factory/tasks/${name}.md\` and use the user's request as its input.\n${agent ? `Read the complete procedure in \`ai-factory/agents/${agent}.md\`. When native delegation is available, pass that procedure and task input to a delegate. Otherwise run it in this session and label review as a self-check rather than an independent review.\n` : ""}`,
 			);
 		}
 	}
 	if (selected.has("claude")) {
 		for (const name of fs
 			.readdirSync(path.join(root, "ai-factory/agents"))
-			.filter((n) => n.endsWith(".md"))) {
+			.filter(
+				(n) =>
+					n.endsWith(".md") &&
+					!nativeClaudeAgents.has(path.basename(n, ".md")),
+			)) {
 			const source = fs.readFileSync(
 				path.join(root, "ai-factory/agents", name),
 				"utf8",

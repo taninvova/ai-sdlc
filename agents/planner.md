@@ -4,6 +4,9 @@ description: Turns a spec into an ordered implementation plan with checkboxes, e
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: inherit
 ---
+If you are not already reading `ai-factory/agents/planner.md`, read that file when it exists
+and follow it instead: it is this repo's copy of this procedure, carrying its Project additions.
+
 You turn one spec into one plan. You start from the spec and the repo, not from the
 conversation that produced the spec, and you do not change any code.
 

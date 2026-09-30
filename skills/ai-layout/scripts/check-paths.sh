@@ -68,7 +68,7 @@ while IFS= read -r f; do
   FILES+=("$f")
 done < <(
   { ls agents/*.md commands/*.md README.md ai-factory/AGENTS.md 2>/dev/null
-    find ai-factory/docs skills -type f ! -name '.DS_Store'
+    find ai-factory/docs skills codex-skills -type f ! -name '.DS_Store'
   } | sort -u
 )
 [ "${#FILES[@]}" -gt 50 ] || fail "the scan set collapsed to ${#FILES[@]} files — a glob or a path is wrong"

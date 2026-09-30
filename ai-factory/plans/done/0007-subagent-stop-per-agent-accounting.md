@@ -187,7 +187,18 @@ scripts require only `fs`, `path`, `child_process` and their siblings, so AC20 h
   *Tests:* `bash skills/ai-layout/scripts/check-release-docs.sh`; `bash skills/ai-layout/scripts/check-versions.sh`;
   `bash skills/ai-layout/scripts/check-entrypoints.sh`; `bash skills/ai-layout/scripts/check-paths.sh`.
 
-- [ ] **Step 7 — the live run, and the residual the spec asks to confirm in passing.**
+- [x] **Step 7 — the live run, and the residual the spec asks to confirm in passing.**
+
+  **Completion — accepted by the developer on 2026-09-29.** Marked done at the
+  developer's explicit request after stopping the live validation session. The
+  session `3f337135-352c-4f6f-b988-1c9920107d6a` produced a background-agent row with
+  `source=agent`, `task=explore`, and `agent=t4:explorer`. Foreground execution was
+  unavailable in Claude Code 2.1.277: its Agent tool runs subagents in the background
+  and exposes no `run_in_background` parameter. Final accounting reconciliation
+  was not completed. This acceptance closes the remaining work; it does not claim
+  those unperformed checks passed. The original requirements and historical result
+  below are retained for context.
+
   Restart a session so the hooks load from the updated plugin, then in this repo run one `/t4:`
   command that delegates to a step agent **interactively** and one that delegates **in the
   background**, and record: the `log.pending.csv` rows with their `agent` and `task` values, that
@@ -199,7 +210,7 @@ scripts require only `fs`, `path`, `child_process` and their siblings, so AC20 h
   *Tests:* the run transcript itself — the coding standards say a prompt or hook change is proved by
   a run, not by an assertion.
 
-  **Result — Step 7 was not run, and is withdrawn. The box is deliberately left unticked.** Recorded
+  **Historical result — Step 7 was not run, and is withdrawn. The box is deliberately left unticked.** Recorded
   2026-09-28, when the developer took this plan out of the active queue and filed it to
   `ai-factory/plans/done/` with Steps 1–6 done. Two things put the step out of reach of any agent as
   the repo stands, and neither is a judgement that it is not worth running:

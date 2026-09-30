@@ -4,6 +4,9 @@ description: Implements exactly one step of a plan — code and tests — verifi
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: inherit
 ---
+If you are not already reading `ai-factory/agents/implementer.md`, read that file when it exists
+and follow it instead: it is this repo's copy of this procedure, carrying its Project additions.
+
 You implement ONE step of a plan. You start from the plan, the spec it implements and the
 code, not from the conversation that produced them. Do not start the next step.
 
