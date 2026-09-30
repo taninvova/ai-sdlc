@@ -1,30 +1,38 @@
 # Changelog
 
-**Unreleased working-tree fix:** Codex now ships native skills for all t4 workflows and
-setup commands, backed by the canonical procedures. Its explicit hook adapter handles
-`apply_patch` paths (including renames), skill task labels, and Codex rollout usage with
-response de-duplication and separate cached input. Codex costs remain unknown. Claude
-hooks retain their existing event and transcript formats. Updated project adapters use
-native delegation when available and label inline reviews as self-checks. Existing
-adopted repos take that adapter wording through an explicit sync; plugin skills and
-hooks require reinstall/restart, and changed Codex hooks require trust review. Version
-unchanged; this working-tree change does not publish a release.
+## 2.3.1 — 2026-09-29
 
-**Unreleased working-tree fix:** `/t4:quick` is listed once again. 2.3.0 added `ai-factory/tasks/quick.md`
-while the plugin already shipped `/t4:quick` as its own command, so an explicit
-`--adapters=claude` generated a second `/t4:quick` pointer and the menu offered the same command
-twice under two descriptions. Claude pointers are no longer generated for a task name the plugin
-registers natively, and the next sync removes one left behind by 2.3.0. `/t4:doctor` names a
-surviving duplicate as a duplicate — the remedy deletes a file — instead of counting it as a stale
-sync. Codex skills are still generated for every task, because Codex plugins ship no commands.
-Touches a template (`ai-factory/make/sync-adapters.js`): an adopted repo takes it by regenerating
-its adapters. Version unchanged; the release bump is a separate step.
+Compatibility fixes for Claude Code and Codex, plus accurate reporting of withdrawn work.
 
-**Unreleased working-tree fix:** `/t4:state` recognizes explicit numbered withdrawal results
-without editing archived checkboxes. Withdrawn steps are omitted from pending work and `--next`;
-`--done` distinguishes `closed` plans/specs from fully `complete` ones. Pending and unknown work
-still takes precedence. Quoted and fenced examples do not resolve steps. This changes plugin
-reporting only; adopted templates and the released version are unchanged.
+- Codex ships native skills for all t4 workflows and setup commands. Its hook adapter
+  handles `apply_patch` targets and rename destinations, task labels, and rollout usage
+  with response de-duplication and separate cached input. Codex costs remain unknown;
+  Claude hooks retain their event and transcript formats. Delegation uses native agents
+  when available and labels inline reviews as self-checks.
+- Claude adapter sync removes duplicate `/t4:quick` pointers and duplicate registrations
+  for the plugin's eight agents. Project-specific agents still receive pointers, and
+  native agents read the project's complete procedure and additions. `/t4:doctor`
+  identifies duplicate command pointers separately from missing or stale adapters.
+- `/t4:state` recognizes explicit numbered withdrawal results without editing archived
+  checkboxes. Withdrawn steps are omitted from pending work and `--next`; `--done`
+  distinguishes closed plans/specs from fully complete ones. Pending and unknown work
+  still takes precedence; quoted and fenced examples do not resolve steps.
+
+### Adoption and validation
+
+This release changes shipped agent procedures and the adapter-generation template.
+Existing adopted repos must take those template updates explicitly, preserving project
+additions, before regenerating selected adapters. Claude sync removes previously generated
+agent and command duplicates; hand-authored adapters remain protected. The workspace layout
+and 17-column log schema are unchanged.
+
+Update the installed plugin and restart the host session. Codex's bundled skills require no
+project adapters; review and trust the updated hook definitions in `/hooks` before relying
+on automatic logging or edit protection. Adapter generation remains opt-in.
+
+All 22 regression scripts passed, including existing Claude fixtures and new Codex coverage.
+Biome checks and native Codex skill/hook discovery passed. A full autonomous model-driven
+run of both hosts was not performed; see `ai-factory/docs/workflow.md` for validation limits.
 
 ## 2.3.0 — 2026-09-29
 
