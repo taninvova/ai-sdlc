@@ -1,0 +1,61 @@
+{
+  "id": "unexpected-1-baseline",
+  "variant": "baseline",
+  "scenario": "unexpected",
+  "repetition": 1,
+  "beganAt": "2026-09-30T00:30:05.174Z",
+  "elapsedMs": 65253.457625,
+  "timedOut": false,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "cliInvocations": 1,
+  "toolCalls": 15,
+  "commandCalls": 15,
+  "verificationCommandCalls": 4,
+  "usage": {
+    "input_tokens": 207165,
+    "cached_input_tokens": 181632,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 1667,
+    "reasoning_output_tokens": 369
+  },
+  "commands": [
+    "/bin/zsh -lc 'pwd && git status --short && cat ai-factory/AGENTS.md && cat ai-factory/agents/implementer.md && cat ai-factory/docs/coding-standards.md && cat ai-factory/plans/0001-total.md'",
+    "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+    "/bin/zsh -lc 'cat ai-factory/agents/implementer.md ai-factory/docs/coding-standards.md ai-factory/plans/0001-total.md'",
+    "/bin/zsh -lc 'git status --short && cat ai-factory/docs/definition-of-done.md ai-factory/docs/architecture.md ai-factory/docs/fleet.md ai-factory/docs/dont-touch.md && rg --files ai-factory/skills ai-factory/specs && rg --files -g AGENTS.md -g Makefile -g package.json'",
+    "/bin/zsh -lc 'cat ai-factory/agents/implementer.md ai-factory/docs/coding-standards.md ai-factory/plans/0001-total.md'",
+    "/bin/zsh -lc 'cat ai-factory/plans/0001-total.md'",
+    "/bin/zsh -lc 'git status --short'",
+    "/bin/zsh -lc 'cat ai-factory/docs/definition-of-done.md ai-factory/docs/architecture.md ai-factory/docs/fleet.md ai-factory/docs/dont-touch.md'",
+    "/bin/zsh -lc 'rg --files ai-factory/skills ai-factory/specs; rg --files -g AGENTS.md -g Makefile -g package.json'",
+    "/bin/zsh -lc \"rg --files -g '\"'!ai-factory/runs/**'\"' -g '\"'!node_modules/**'\"' -g '\"'!'\"\\\\.git/**'\"",
+    "/bin/zsh -lc 'cat ai-factory/specs/0001-total.md app.js test/step-one.test.js test/step-two.test.js Makefile'",
+    "/bin/zsh -lc 'cat test/unexpected.test.js && make lint typecheck test'",
+    "/bin/zsh -lc 'make lint typecheck && git status --short && git diff --stat && git diff --cached --stat'",
+    "/bin/zsh -lc 'node --test test/step-two.test.js'",
+    "/bin/zsh -lc 'node --test test/step-one.test.js'"
+  ],
+  "eventTypes": [
+    "thread.started",
+    "turn.started",
+    "item.completed",
+    "item.started",
+    "turn.completed"
+  ],
+  "quality": {
+    "assertions": {
+      "stepUnticked": true,
+      "regressionPreserved": true,
+      "failureReported": true
+    },
+    "pass": true,
+    "completed": true
+  },
+  "sourceHash": "6ea35c763929148f65be416e5f2eb45d82b077c2d611c30314319869700d5692",
+  "promptHash": "86acc263efc6bc9b184467a80b7a7d68f7d62e6eb4bc4539270f6ed4c03a7f0b",
+  "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-Jz8z4e/unexpected-1-baseline",
+  "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-30T00-26-38-593Z/unexpected-1-baseline"
+}

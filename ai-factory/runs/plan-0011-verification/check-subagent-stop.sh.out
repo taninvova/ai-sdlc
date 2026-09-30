@@ -1,0 +1,1 @@
+subagent-stop ok — one row per concluded agent from its own transcript, priced and estimated, the parent transcript is never read, a resumed agent is counted once, four cases write nothing silently, an inherited prefix is counted once, and the task comes from the session while the name comes from the agent

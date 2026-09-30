@@ -41,30 +41,18 @@ done
 [ "${#outside[@]}" = 0 ] \
   || fail "the templates place ${outside[*]} outside ai-factory/; only AGENTS.md, CLAUDE.md and Makefile may sit at an adopted repo's root"
 
-# --- the two git files every repo is told to write ---------------------------------------------
+# Workspace-local Git policy; root application/host files are not adoption outputs.
 SKILL=skills/ai-hooks/SKILL.md
-IGNORE=('ai-factory/runs/*.json' 'ai-factory/runs/*.jsonl' 'ai-factory/runs/log.pending.csv' 'ai-factory/runs/.counted.*' 'ai-factory/runs/.task.*' 'ai-factory/runs/report.html')
-ATTR='ai-factory/runs/log.csv merge=union'
-
-# The lines under the first "## " heading matching $2, up to the next one.
-section() { awk -v h="$2" '/^## /{inside = ($0 ~ h)} inside' "$1"; }
-
-gi=$(section "$SKILL" '[Gg]itignore')
-[ -n "$gi" ] || fail "$SKILL has no gitignore section — an adopting repo is told nothing to ignore"
+IGNORE=('/runs/*.json' '/runs/*.jsonl' '/runs/log.pending.csv' '/runs/.counted.*' '/runs/.task.*' '/runs/report.html' '/runs/tmp/')
 for l in "${IGNORE[@]}"; do
-  grep -qxF -- "$l" <<<"$gi" || fail "$SKILL's gitignore section does not prescribe \"$l\""
+  grep -qxF -- "$l" "$T/ai-factory/.gitignore" || fail "template workspace ignore misses $l"
+  grep -qxF -- "$l" ai-factory/.gitignore || fail "repository workspace ignore misses $l"
+  grep -qxF -- "$l" "$SKILL" || fail "hook skill does not prescribe local rule $l"
 done
-ga=$(section "$SKILL" '[Gg]itattributes')
-[ -n "$ga" ] || fail "$SKILL has no gitattributes section"
-grep -qxF -- "$ATTR" <<<"$ga" || fail "$SKILL's gitattributes section does not prescribe \"$ATTR\""
-
-# The same lines, in this repo, which runs the hooks it ships.
-for l in "${IGNORE[@]}"; do
-  grep -qxF -- "$l" .gitignore \
-    || fail ".gitignore does not carry \"$l\", which $SKILL prescribes — a file the hooks write every turn would be tracked"
+for f in "$T/ai-factory/.gitattributes" ai-factory/.gitattributes; do
+  grep -qxF 'runs/log.csv merge=union' "$f" || fail "$f lacks local append-only merge rule"
 done
-grep -qxF -- "$ATTR" .gitattributes \
-  || fail ".gitattributes does not carry \"$ATTR\", which $SKILL prescribes — two branches' log rows would conflict on merge"
+if grep -q 'pnpm' "$T/Makefile"; then fail "generic optional Makefile assumes pnpm"; fi
 
 # --- the layout an adopting repo receives, entry by entry (AC1) --------------------------------
 # The templates are a payload: a file dropped from them ships nothing to every repo that adopts
@@ -86,4 +74,4 @@ for d in tasks agents docs; do
   [ "$n" -gt 0 ] || fail "$T/$d/ holds no .md files"
 done
 
-echo "entry points ok — AGENTS.md, CLAUDE.md and Makefile are the only three template paths outside ai-factory/ and each points into it; ${#IGNORE[@]} gitignore lines and 1 gitattributes line name ai-factory/runs/, in the skill and in this repo; the templates carry all 13 named entries"
+echo "entry points ok — optional pointers preserved; workspace-local Git policy and payload entries verified"

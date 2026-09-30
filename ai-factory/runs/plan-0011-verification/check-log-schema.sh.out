@@ -1,0 +1,1 @@
+log schema ok — 17 columns, both writers agree, the reader's copy of records()/width() matches, per-row width enforced, migration preserves old rows, flush moves rows once on commit, session rows are increments and carry the session's task

@@ -1,0 +1,5 @@
+{
+  "verdict": "pass",
+  "findings": [],
+  "summary": "Inline self-check, not independent review. The documented merge-base-to-HEAD diff is empty; git diff --check passed. No findings to agree with or dispute. Staged, unstaged, and untracked changes are outside the default scope and remain unreviewed. No files or index entries were modified. Tests and Biome were not run because the scoped diff contains no changes."
+}

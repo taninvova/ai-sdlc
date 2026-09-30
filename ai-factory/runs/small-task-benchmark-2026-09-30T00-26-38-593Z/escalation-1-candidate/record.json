@@ -1,0 +1,61 @@
+{
+  "id": "escalation-1-candidate",
+  "variant": "candidate",
+  "scenario": "escalation",
+  "repetition": 1,
+  "beganAt": "2026-09-30T00:26:39.069Z",
+  "elapsedMs": 55413.32425,
+  "timedOut": false,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "cliInvocations": 1,
+  "toolCalls": 16,
+  "commandCalls": 16,
+  "verificationCommandCalls": 1,
+  "usage": {
+    "input_tokens": 235265,
+    "cached_input_tokens": 201856,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 1312,
+    "reasoning_output_tokens": 161
+  },
+  "commands": [
+    "/bin/zsh -lc \"pwd && rg --files -g 'AGENTS.md' -g '*protec*' -g '*convention*' -g '*authorize*' -g 'package.json' -g 'biome*' -g '*quick*' -g '*workflow*' -g '*dont*'\"",
+    "/bin/zsh -lc 'cat ai-factory/AGENTS.md && git status --short'",
+    "/bin/zsh -lc \"rg --files --hidden -g '\"'!.git'\"'\"",
+    "/bin/zsh -lc 'git status --short'",
+    "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+    "/bin/zsh -lc 'nl -ba ai-factory/AGENTS.md'",
+    "/bin/zsh -lc \"rg --files --hidden -g '\"'!.git'\"' | sort\"",
+    "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+    "/bin/zsh -lc \"rg --files --hidden -g '\"'!.git'\"'\"",
+    "/bin/zsh -lc \"rg -n 'authorize|admin' .\"",
+    "/bin/zsh -lc 'cat ai-factory/docs/dont-touch.md ai-factory/docs/coding-standards.md ai-factory/docs/workspace-boundary.md'",
+    "/bin/zsh -lc 'cat ai-factory/tasks/quick.md ai-factory/tasks/explore.md ai-factory/agents/explorer.md'",
+    "/bin/zsh -lc 'cat app.js test/app.test.js Makefile ai-factory/docs/definition-of-done.md'",
+    "/bin/zsh -lc 'git diff -- app.js test/app.test.js && git diff --cached --stat && git ls-files --others --exclude-standard'",
+    "/bin/zsh -lc 'make lint typecheck test'",
+    "/bin/zsh -lc 'git diff --stat && git diff --cached --stat && git status --short'"
+  ],
+  "eventTypes": [
+    "thread.started",
+    "turn.started",
+    "item.completed",
+    "item.started",
+    "turn.completed"
+  ],
+  "quality": {
+    "assertions": {
+      "productionPreserved": true,
+      "decisionReported": true
+    },
+    "pass": true,
+    "completed": true
+  },
+  "sourceHash": "669c317be805432ed220b45dde0fa3074b47a1cc675ed8ad9b2f0556eaaee7de",
+  "promptHash": "6475041efc1c1fd74232e657264d92e1b6618b1b06c7ee23e78a59e13af5d068",
+  "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-Jz8z4e/escalation-1-candidate",
+  "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-30T00-26-38-593Z/escalation-1-candidate"
+}

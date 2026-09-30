@@ -1,0 +1,66 @@
+{
+  "id": "bug-1-candidate",
+  "variant": "candidate",
+  "scenario": "bug",
+  "repetition": 1,
+  "beganAt": "2026-09-29T17:28:39.669Z",
+  "elapsedMs": 77677.556416,
+  "timedOut": false,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "cliInvocations": 1,
+  "toolCalls": 23,
+  "commandCalls": 21,
+  "verificationCommandCalls": 3,
+  "usage": {
+    "input_tokens": 278244,
+    "cached_input_tokens": 237568,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 2003,
+    "reasoning_output_tokens": 383
+  },
+  "commands": [
+    "/bin/zsh -lc \"pwd && rg --files -g 'AGENTS.md' -g '*spec*' -g '*test*' -g 'package.json' -g '*lock*' -g '*biome*' -g 'coding-standards.md'\"",
+    "/bin/zsh -lc 'git status --short && cat ai-factory/AGENTS.md && cat ai-factory/docs/coding-standards.md'",
+    "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+    "/bin/zsh -lc 'cat ai-factory/docs/coding-standards.md'",
+    "/bin/zsh -lc 'git status --short; rg --files'",
+    "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+    "/bin/zsh -lc 'cat ai-factory/docs/dont-touch.md ai-factory/docs/workspace-boundary.md'",
+    "/bin/zsh -lc 'git status --porcelain=v1'",
+    "/bin/zsh -lc \"sed -n '20,80p' ai-factory/AGENTS.md\"",
+    "/bin/zsh -lc 'cat ai-factory/docs/coding-standards.md'",
+    "/bin/zsh -lc 'rg --files'",
+    "/bin/zsh -lc 'cat ai-factory/specs/0000-scaffold.md'",
+    "/bin/zsh -lc 'cat ai-factory/docs/definition-of-done.md ai-factory/tasks/fix.md'",
+    "/bin/zsh -lc 'cat app.js test/app.test.js Makefile'",
+    "/bin/zsh -lc 'cat AGENTS.md README.md'",
+    "/bin/zsh -lc 'node --test test/app.test.js'",
+    "/bin/zsh -lc \"command -v biome || true; git diff -- app.js test/app.test.js; sed -n '1,20p' ai-factory/specs/0000-scaffold.md\"",
+    "/bin/zsh -lc 'make lint typecheck test'",
+    "/bin/zsh -lc \"node -e 'const fs = require(\\\"node:fs\\\"); fs.mkdirSync(\\\"ai-factory/runs\\\", { recursive: true }); fs.appendFileSync(\\\"ai-factory/runs/log.csv\\\", \\\"2026-09-29,fix,sum-empty-array,red: node --test test/app.test.js (1 passed; 1 failed: TypeError),green: make lint typecheck test (2 passed),biome unavailable,behavior spec incomplete; README correct,self-review passed\\\\n\\\");'\"",
+    "/bin/zsh -lc 'tail -n 1 ai-factory/runs/log.csv'",
+    "/bin/zsh -lc 'git diff --check && git diff -- app.js test/app.test.js && git status --short'"
+  ],
+  "eventTypes": [
+    "thread.started",
+    "turn.started",
+    "item.completed",
+    "item.started",
+    "turn.completed"
+  ],
+  "quality": {
+    "assertions": {
+      "behavior": true,
+      "testsPass": true,
+      "regressionFailsWithoutFix": true
+    },
+    "pass": true
+  },
+  "sourceHash": "1708dc6863ce66f6d2a2dbf02bbff9417d85441ba1ba3b241b4ecbf450a878c9",
+  "promptHash": "0a7bac561ecc4b9fc4cfcddd13ad847b39274e5587cdab9bb8b787332bec0344",
+  "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-sqJUlG/bug-1-candidate",
+  "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-29T17-25-02-260Z/bug-1-candidate"
+}

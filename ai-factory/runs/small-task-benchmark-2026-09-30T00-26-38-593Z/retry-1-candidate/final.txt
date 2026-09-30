@@ -1,0 +1,5 @@
+Corrected `applciation` to `application` in README.md.
+
+Self-review confirmed only the requested spelling change; `git diff --check` passed. Makefile and checker remain unchanged.
+
+`make docs` failed: “Verification service unavailable: fixed infrastructure failure.” Required verification remains blocked; the correction is preserved.

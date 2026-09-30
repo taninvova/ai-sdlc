@@ -1,0 +1,702 @@
+[
+  {
+    "id": "escalation-1-candidate",
+    "variant": "candidate",
+    "scenario": "escalation",
+    "repetition": 1,
+    "beganAt": "2026-09-30T00:26:39.069Z",
+    "elapsedMs": 55413.32425,
+    "timedOut": false,
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "cliInvocations": 1,
+    "toolCalls": 16,
+    "commandCalls": 16,
+    "verificationCommandCalls": 1,
+    "usage": {
+      "input_tokens": 235265,
+      "cached_input_tokens": 201856,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1312,
+      "reasoning_output_tokens": 161
+    },
+    "commands": [
+      "/bin/zsh -lc \"pwd && rg --files -g 'AGENTS.md' -g '*protec*' -g '*convention*' -g '*authorize*' -g 'package.json' -g 'biome*' -g '*quick*' -g '*workflow*' -g '*dont*'\"",
+      "/bin/zsh -lc 'cat ai-factory/AGENTS.md && git status --short'",
+      "/bin/zsh -lc \"rg --files --hidden -g '\"'!.git'\"'\"",
+      "/bin/zsh -lc 'git status --short'",
+      "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+      "/bin/zsh -lc 'nl -ba ai-factory/AGENTS.md'",
+      "/bin/zsh -lc \"rg --files --hidden -g '\"'!.git'\"' | sort\"",
+      "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+      "/bin/zsh -lc \"rg --files --hidden -g '\"'!.git'\"'\"",
+      "/bin/zsh -lc \"rg -n 'authorize|admin' .\"",
+      "/bin/zsh -lc 'cat ai-factory/docs/dont-touch.md ai-factory/docs/coding-standards.md ai-factory/docs/workspace-boundary.md'",
+      "/bin/zsh -lc 'cat ai-factory/tasks/quick.md ai-factory/tasks/explore.md ai-factory/agents/explorer.md'",
+      "/bin/zsh -lc 'cat app.js test/app.test.js Makefile ai-factory/docs/definition-of-done.md'",
+      "/bin/zsh -lc 'git diff -- app.js test/app.test.js && git diff --cached --stat && git ls-files --others --exclude-standard'",
+      "/bin/zsh -lc 'make lint typecheck test'",
+      "/bin/zsh -lc 'git diff --stat && git diff --cached --stat && git status --short'"
+    ],
+    "eventTypes": [
+      "thread.started",
+      "turn.started",
+      "item.completed",
+      "item.started",
+      "turn.completed"
+    ],
+    "quality": {
+      "assertions": {
+        "productionPreserved": true,
+        "decisionReported": true
+      },
+      "pass": true,
+      "completed": true
+    },
+    "sourceHash": "669c317be805432ed220b45dde0fa3074b47a1cc675ed8ad9b2f0556eaaee7de",
+    "promptHash": "6475041efc1c1fd74232e657264d92e1b6618b1b06c7ee23e78a59e13af5d068",
+    "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-Jz8z4e/escalation-1-candidate",
+    "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-30T00-26-38-593Z/escalation-1-candidate"
+  },
+  {
+    "id": "escalation-1-baseline",
+    "variant": "baseline",
+    "scenario": "escalation",
+    "repetition": 1,
+    "beganAt": "2026-09-30T00:26:38.976Z",
+    "elapsedMs": 80691.828792,
+    "timedOut": false,
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "cliInvocations": 1,
+    "toolCalls": 19,
+    "commandCalls": 16,
+    "verificationCommandCalls": 1,
+    "usage": {
+      "input_tokens": 377022,
+      "cached_input_tokens": 331520,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 2644,
+      "reasoning_output_tokens": 415
+    },
+    "commands": [
+      "/bin/zsh -lc \"pwd; rg --files -g 'AGENTS.md' -g '*specifier*' -g '*architecture*' -g '*tracker*' -g '*authorize*' -g '*explor*' -g '*analy*' ai-factory . 2>/dev/null\"",
+      "/bin/zsh -lc 'cat ai-factory/AGENTS.md ai-factory/agents/specifier.md ai-factory/docs/architecture.md'",
+      "/bin/zsh -lc 'cat ai-factory/agents/specifier.md'",
+      "/bin/zsh -lc 'cat ai-factory/docs/coding-standards.md ai-factory/docs/definition-of-done.md ai-factory/docs/fleet.md ai-factory/docs/dont-touch.md'",
+      "/bin/zsh -lc 'git status --short; rg --files ai-factory; cat Makefile'",
+      "/bin/zsh -lc 'cat ai-factory/agents/specifier.md'",
+      "/bin/zsh -lc 'cat ai-factory/docs/coding-standards.md ai-factory/docs/definition-of-done.md ai-factory/docs/fleet.md ai-factory/docs/dont-touch.md'",
+      "/bin/zsh -lc 'git status --short; rg --files ai-factory; cat Makefile'",
+      "/bin/zsh -lc 'cat ai-factory/docs/fleet.md ai-factory/docs/dont-touch.md ai-factory/docs/definition-of-done.md'",
+      "/bin/zsh -lc 'cat app.js test/*.test.js ai-factory/specs/0000-scaffold.md'",
+      "/bin/zsh -lc \"cat ai-factory/AGENTS.md; rg --files -g 'AGENTS.md' -g '*specifier*' -g '*escalat*' -g '*SKILL.md' .\"",
+      "/bin/zsh -lc \"sed -n '20,80p' ai-factory/AGENTS.md\"",
+      "/bin/zsh -lc 'cat ai-factory/docs/architecture.md; git status --porcelain=v1'",
+      "/bin/zsh -lc 'git diff --check; git status --short; cat ai-factory/specs/0001-anonymous-admin-authorization.md'",
+      "/bin/zsh -lc 'make docs'",
+      "/bin/zsh -lc \"git status --short; git diff --name-only; git diff --cached --name-only; rg -n '\"'^##|''^###|''^- Q'\"' ai-factory/specs/0001-anonymous-admin-authorization.md\""
+    ],
+    "eventTypes": [
+      "thread.started",
+      "turn.started",
+      "item.completed",
+      "item.started",
+      "turn.completed"
+    ],
+    "quality": {
+      "assertions": {
+        "productionPreserved": true,
+        "decisionReported": true
+      },
+      "pass": true,
+      "completed": true
+    },
+    "sourceHash": "6ea35c763929148f65be416e5f2eb45d82b077c2d611c30314319869700d5692",
+    "promptHash": "2a2180861310335b63a52c36631da1ece2fad26e127a49f9d9ef7ec7ecc74f06",
+    "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-Jz8z4e/escalation-1-baseline",
+    "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-30T00-26-38-593Z/escalation-1-baseline"
+  },
+  {
+    "id": "dirty-1-candidate",
+    "variant": "candidate",
+    "scenario": "dirty",
+    "repetition": 1,
+    "beganAt": "2026-09-30T00:27:59.782Z",
+    "elapsedMs": 74409.213875,
+    "timedOut": false,
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "cliInvocations": 1,
+    "toolCalls": 21,
+    "commandCalls": 19,
+    "verificationCommandCalls": 2,
+    "usage": {
+      "input_tokens": 302668,
+      "cached_input_tokens": 266368,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 2182,
+      "reasoning_output_tokens": 340
+    },
+    "commands": [
+      "/bin/zsh -lc \"pwd; rg --files -g 'AGENTS.md' -g '*displayLabel*' -g '*convention*' -g '*protect*' -g 'package.json' -g '*biome*' -g 'Makefile' -g '*lock*' -g '\"'!node_modules'\"'\"",
+      "/bin/zsh -lc 'git status --short; cat ai-factory/AGENTS.md'",
+      "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+      "/bin/zsh -lc 'git status --short'",
+      "/bin/zsh -lc \"rg --files --hidden -g '\"'!.git'\"' -g '\"'!node_modules'\"'\"",
+      "/bin/zsh -lc \"sed -n '23,80p' ai-factory/AGENTS.md\"",
+      "/bin/zsh -lc \"sed -n '1,22p' ai-factory/AGENTS.md\"",
+      "/bin/zsh -lc \"rg --files --hidden -g '\"'!.git'\"' -g '\"'!node_modules'\"'\"",
+      "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+      "/bin/zsh -lc 'cat ai-factory/docs/dont-touch.md ai-factory/docs/coding-standards.md ai-factory/docs/workspace-boundary.md Makefile'",
+      "/bin/zsh -lc \"rg --files --hidden -g '\"'!.git'\"' -g '\"'!node_modules'\"'\"",
+      "/bin/zsh -lc 'git diff; git diff --cached; cat untracked-note.txt'",
+      "/bin/zsh -lc \"sed -n '23,45p' ai-factory/AGENTS.md\"",
+      "/bin/zsh -lc 'cat app.js test/app.test.js ai-factory/docs/definition-of-done.md'",
+      "/bin/zsh -lc 'cat AGENTS.md; command -v biome; git ls-files --stage README.md user-notes.txt; shasum -a 256 README.md user-notes.txt untracked-note.txt'",
+      "/bin/zsh -lc 'node --test test/app.test.js'",
+      "/bin/zsh -lc 'make lint typecheck test'",
+      "/bin/zsh -lc 'shasum -a 256 README.md user-notes.txt untracked-note.txt; git ls-files --stage README.md user-notes.txt; cat untracked-note.txt; command -v biome; test -x node_modules/.bin/biome'",
+      "/bin/zsh -lc 'git diff --check; git diff -- app.js test/app.test.js README.md; git diff --cached; git status --short'"
+    ],
+    "eventTypes": [
+      "thread.started",
+      "turn.started",
+      "item.completed",
+      "item.started",
+      "turn.completed"
+    ],
+    "quality": {
+      "assertions": {
+        "behavior": true,
+        "testsPass": true,
+        "regressionFailsWithoutFix": true,
+        "stagedPreserved": true,
+        "unstagedPreserved": true,
+        "untrackedPreserved": true
+      },
+      "pass": true,
+      "completed": true
+    },
+    "sourceHash": "669c317be805432ed220b45dde0fa3074b47a1cc675ed8ad9b2f0556eaaee7de",
+    "promptHash": "e0ad27ac5a67a81ec84e2525050af9ab144d607f5b18a540dc14fda146162d65",
+    "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-Jz8z4e/dirty-1-candidate",
+    "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-30T00-26-38-593Z/dirty-1-candidate"
+  },
+  {
+    "id": "dirty-1-baseline",
+    "variant": "baseline",
+    "scenario": "dirty",
+    "repetition": 1,
+    "beganAt": "2026-09-30T00:27:34.600Z",
+    "elapsedMs": 150028.950208,
+    "timedOut": true,
+    "exit": {
+      "code": null,
+      "signal": "SIGTERM"
+    },
+    "cliInvocations": 1,
+    "toolCalls": 93,
+    "commandCalls": 88,
+    "verificationCommandCalls": 2,
+    "usage": {},
+    "commands": [
+      "/bin/zsh -lc \"pwd; git status --short; rg --files -g 'AGENTS.md' -g '*displayLabel*' -g 'package.json' -g '*lock*' -g 'biome*' -g '*test*' ai-factory .\"",
+      "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+      "/bin/zsh -lc \"ls -la; rg -n '\"'^'\"' ai-factory/AGENTS.md ai-factory/agents/specifier.md ai-factory/agents/planner.md ai-factory/agents/tester.md ai-factory/agents/implementer.md ai-factory/agents/reviewer.md ai-factory/docs/architecture.md ai-factory/docs/coding-standards.md\"",
+      "/bin/zsh -lc 'head -20 ai-factory/AGENTS.md'",
+      "/bin/zsh -lc \"sed -n '1,9p' ai-factory/AGENTS.md\"",
+      "/bin/zsh -lc \"python3 -c 'import pathlib,json; print(json.dumps(pathlib.Path(\\\"ai-factory/AGENTS.md\\\").read_text()))'\"",
+      "/bin/zsh -lc \"python3 -c 'import pathlib; print(pathlib.Path(\\\"ai-factory/AGENTS.md\\\").read_text().encode().hex())'\"",
+      "/bin/zsh -lc 'head -c 200 ai-factory/AGENTS.md'",
+      "/bin/zsh -lc 'wc -c ai-factory/AGENTS.md ai-factory/agents/*.md ai-factory/docs/architecture.md ai-factory/docs/coding-standards.md; rg --files ai-factory; ls -a'",
+      "/bin/zsh -lc 'wc -c ai-factory/AGENTS.md ai-factory/agents/*.md ai-factory/docs/architecture.md ai-factory/docs/coding-standards.md'",
+      "/bin/zsh -lc 'rg --files ai-factory'",
+      "/bin/zsh -lc 'ls -a'",
+      "/bin/zsh -lc 'wc -c ai-factory/AGENTS.md'",
+      "/bin/zsh -lc 'wc -c ai-factory/agents/specifier.md'",
+      "/bin/zsh -lc 'wc -c ai-factory/agents/planner.md'",
+      "/bin/zsh -lc 'wc -c ai-factory/agents/tester.md'",
+      "/bin/zsh -lc 'wc -c ai-factory/agents/implementer.md'",
+      "/bin/zsh -lc 'wc -c ai-factory/agents/reviewer.md'",
+      "/bin/zsh -lc 'wc -c ai-factory/docs/architecture.md'",
+      "/bin/zsh -lc 'wc -c ai-factory/docs/coding-standards.md'",
+      "/bin/zsh -lc 'dd if=ai-factory/AGENTS.md bs=1 skip=250 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/AGENTS.md bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/AGENTS.md bs=1 skip=750 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/AGENTS.md bs=1 skip=500 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/AGENTS.md bs=1 skip=1000 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/AGENTS.md bs=1 skip=2000 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/AGENTS.md bs=1 skip=1250 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/agents/specifier.md bs=1 skip=500 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/agents/specifier.md bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/docs/architecture.md bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/docs/coding-standards.md bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/AGENTS.md bs=1 skip=1750 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/agents/tester.md bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/AGENTS.md bs=1 skip=1500 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/agents/implementer.md bs=1 skip=500 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/docs/coding-standards.md bs=1 skip=1250 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/agents/specifier.md bs=1 skip=250 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/docs/coding-standards.md bs=1 skip=250 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/docs/coding-standards.md bs=1 skip=500 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/docs/coding-standards.md bs=1 skip=750 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/docs/coding-standards.md bs=1 skip=1000 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/agents/planner.md bs=1 skip=250 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/agents/reviewer.md bs=1 skip=250 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/agents/reviewer.md bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/agents/tester.md bs=1 skip=250 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/agents/implementer.md bs=1 skip=250 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/agents/specifier.md bs=1 skip=750 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/agents/implementer.md bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/agents/planner.md bs=1 skip=500 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/agents/planner.md bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/agents/tester.md bs=1 skip=500 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'wc -c < ai-factory/docs/definition-of-done.md'",
+      "/bin/zsh -lc 'wc -c < Makefile'",
+      "/bin/zsh -lc 'wc -c < ai-factory/docs/fleet.md'",
+      "/bin/zsh -lc 'wc -c < ai-factory/docs/dont-touch.md'",
+      "/bin/zsh -lc 'dd if=ai-factory/docs/definition-of-done.md bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/docs/definition-of-done.md bs=1 skip=500 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/docs/dont-touch.md bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=Makefile bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/docs/definition-of-done.md bs=1 skip=250 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/docs/fleet.md bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'find ai-factory -maxdepth 2 -type d'",
+      "/bin/zsh -lc 'git diff --numstat; git diff --cached --numstat'",
+      "/bin/zsh -lc 'shasum README.md user-notes.txt untracked-note.txt; git diff --cached | shasum'",
+      "/bin/zsh -lc 'wc -c < ai-factory/docs/definition-of-done.md'",
+      "/bin/zsh -lc 'dd if=ai-factory/docs/definition-of-done.md bs=1 skip=250 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/docs/definition-of-done.md bs=1 skip=500 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/docs/definition-of-done.md bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'ls -la ai-factory/specs ai-factory/adr'",
+      "/bin/zsh -lc 'rg --files ai-factory/docs'",
+      "/bin/zsh -lc 'git ls-files app.js test Makefile; command -v biome'",
+      "/bin/zsh -lc 'wc -c < ai-factory/specs/0000-scaffold.md'",
+      "/bin/zsh -lc 'dd if=ai-factory/specs/0000-scaffold.md bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/specs/0000-scaffold.md bs=1 skip=500 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/specs/0000-scaffold.md bs=1 skip=250 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'git status --porcelain=v1 -uall'",
+      "/bin/zsh -lc 'wc -c < test/app.test.js'",
+      "/bin/zsh -lc 'dd if=test/app.test.js bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'wc -c < ai-factory/specs/0001-display-label-whitespace.md'",
+      "/bin/zsh -lc 'dd if=ai-factory/specs/0001-display-label-whitespace.md bs=1 skip=0 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/specs/0001-display-label-whitespace.md bs=1 skip=750 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/specs/0001-display-label-whitespace.md bs=1 skip=1000 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/specs/0001-display-label-whitespace.md bs=1 skip=250 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/specs/0001-display-label-whitespace.md bs=1 skip=500 count=250 2>/dev/null'",
+      "/bin/zsh -lc 'dd if=ai-factory/specs/0001-display-label-whitespace.md bs=1 skip=1250 count=250 2>/dev/null'",
+      "/bin/zsh -lc \"rg -n 'function |exports' app.js\"",
+      "/bin/zsh -lc 'make lint typecheck test'",
+      "/bin/zsh -lc 'node --test test/display-label.test.js > ai-factory/test-red-output.txt 2>&1; result=$?; wc -c < ai-factory/test-red-output.txt; exit \"$result\"'"
+    ],
+    "eventTypes": [
+      "thread.started",
+      "turn.started",
+      "item.completed",
+      "item.started"
+    ],
+    "quality": {
+      "assertions": {
+        "behavior": false,
+        "testsPass": false,
+        "regressionFailsWithoutFix": true,
+        "stagedPreserved": true,
+        "unstagedPreserved": true,
+        "untrackedPreserved": true
+      },
+      "pass": false,
+      "completed": false
+    },
+    "sourceHash": "6ea35c763929148f65be416e5f2eb45d82b077c2d611c30314319869700d5692",
+    "promptHash": "cda727310e95aab3bfaa8c778f548138310cd09f18777435d75b4a7eb20d096e",
+    "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-Jz8z4e/dirty-1-baseline",
+    "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-30T00-26-38-593Z/dirty-1-baseline"
+  },
+  {
+    "id": "retry-1-baseline",
+    "variant": "baseline",
+    "scenario": "retry",
+    "repetition": 1,
+    "beganAt": "2026-09-30T00:29:14.564Z",
+    "elapsedMs": 50488.489583,
+    "timedOut": false,
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "cliInvocations": 1,
+    "toolCalls": 11,
+    "commandCalls": 10,
+    "verificationCommandCalls": 1,
+    "usage": {
+      "input_tokens": 200437,
+      "cached_input_tokens": 176896,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1320,
+      "reasoning_output_tokens": 279
+    },
+    "commands": [
+      "/bin/zsh -lc \"pwd && rg --files -g 'AGENTS.md' -g 'README.md' -g 'Makefile' -g 'package.json' -g 'biome.json*' -g '*lock*' -g 'ai-factory/**'\"",
+      "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+      "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+      "/bin/zsh -lc 'cat ai-factory/docs/dont-touch.md ai-factory/docs/coding-standards.md ai-factory/docs/definition-of-done.md ai-factory/docs/architecture.md ai-factory/docs/fleet.md'",
+      "/bin/zsh -lc 'rg --files ai-factory && cat README.md Makefile'",
+      "/bin/zsh -lc 'git status --short && git diff -- README.md && git diff --cached -- README.md'",
+      "/bin/zsh -lc \"cat ai-factory/tasks/check.md ai-factory/agents/reviewer.md ai-factory/specs/0000-scaffold.md ai-factory/docs/architecture.md ai-factory/docs/fleet.md && rg --files -g 'AGENTS.md' -g 'package.json' -g 'biome.json*' -g 'check-docs.js' -g 'app.js'\"",
+      "/bin/zsh -lc 'make docs'",
+      "/bin/zsh -lc 'git diff $(git merge-base HEAD main 2>/dev/null || git merge-base HEAD develop)...HEAD'",
+      "/bin/zsh -lc 'git diff --check && git diff -- README.md && git status --short'"
+    ],
+    "eventTypes": [
+      "thread.started",
+      "turn.started",
+      "item.completed",
+      "item.started",
+      "turn.completed"
+    ],
+    "quality": {
+      "assertions": {
+        "boundedAttempts": true,
+        "correctionPreserved": true,
+        "checkerPreserved": true,
+        "blockerReported": true
+      },
+      "pass": true,
+      "completed": true
+    },
+    "sourceHash": "6ea35c763929148f65be416e5f2eb45d82b077c2d611c30314319869700d5692",
+    "promptHash": "ebe84d674f0b840c0acfcddcc0353ff7f8f45dd75583d69f1b5611f83b4030cf",
+    "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-Jz8z4e/retry-1-baseline",
+    "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-30T00-26-38-593Z/retry-1-baseline"
+  },
+  {
+    "id": "retry-1-candidate",
+    "variant": "candidate",
+    "scenario": "retry",
+    "repetition": 1,
+    "beganAt": "2026-09-30T00:30:05.048Z",
+    "elapsedMs": 36073.03675,
+    "timedOut": false,
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "cliInvocations": 1,
+    "toolCalls": 8,
+    "commandCalls": 7,
+    "verificationCommandCalls": 1,
+    "usage": {
+      "input_tokens": 139074,
+      "cached_input_tokens": 116864,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 783,
+      "reasoning_output_tokens": 36
+    },
+    "commands": [
+      "/bin/zsh -lc \"pwd; git status --short; cat ai-factory/AGENTS.md; rg --files -g '*AGENTS.md' -g '*protec*' -g '*convention*' -g '*README*' -g 'Makefile' -g '*biome*' -g '*docs*' ai-factory .\"",
+      "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+      "/bin/zsh -lc 'rg --files ai-factory; cat README.md; cat Makefile; cat AGENTS.md'",
+      "/bin/zsh -lc 'git status --short; git diff -- README.md; git diff --cached -- README.md'",
+      "/bin/zsh -lc \"cat ai-factory/docs/dont-touch.md ai-factory/docs/coding-standards.md ai-factory/docs/workspace-boundary.md ai-factory/docs/definition-of-done.md; cat check-docs.js; rg --files -g '\"'!ai-factory/**'\"' -g '\"'!node_modules/**'\"' -g '\"'! .git/**'\"'\"",
+      "/bin/zsh -lc 'make docs'",
+      "/bin/zsh -lc 'git diff --check; git diff -- README.md; git status --short; git diff -- Makefile check-docs.js; git ls-files --others --exclude-standard; cat ai-factory/runs/retry-count'"
+    ],
+    "eventTypes": [
+      "thread.started",
+      "turn.started",
+      "item.completed",
+      "item.started",
+      "turn.completed"
+    ],
+    "quality": {
+      "assertions": {
+        "boundedAttempts": true,
+        "correctionPreserved": true,
+        "checkerPreserved": true,
+        "blockerReported": true
+      },
+      "pass": true,
+      "completed": true
+    },
+    "sourceHash": "669c317be805432ed220b45dde0fa3074b47a1cc675ed8ad9b2f0556eaaee7de",
+    "promptHash": "09063e53dcf124889734dd054b8563bb9c396c27cdc4528b68e7de4dbdafe5f4",
+    "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-Jz8z4e/retry-1-candidate",
+    "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-30T00-26-38-593Z/retry-1-candidate"
+  },
+  {
+    "id": "unexpected-1-baseline",
+    "variant": "baseline",
+    "scenario": "unexpected",
+    "repetition": 1,
+    "beganAt": "2026-09-30T00:30:05.174Z",
+    "elapsedMs": 65253.457625,
+    "timedOut": false,
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "cliInvocations": 1,
+    "toolCalls": 15,
+    "commandCalls": 15,
+    "verificationCommandCalls": 4,
+    "usage": {
+      "input_tokens": 207165,
+      "cached_input_tokens": 181632,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1667,
+      "reasoning_output_tokens": 369
+    },
+    "commands": [
+      "/bin/zsh -lc 'pwd && git status --short && cat ai-factory/AGENTS.md && cat ai-factory/agents/implementer.md && cat ai-factory/docs/coding-standards.md && cat ai-factory/plans/0001-total.md'",
+      "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+      "/bin/zsh -lc 'cat ai-factory/agents/implementer.md ai-factory/docs/coding-standards.md ai-factory/plans/0001-total.md'",
+      "/bin/zsh -lc 'git status --short && cat ai-factory/docs/definition-of-done.md ai-factory/docs/architecture.md ai-factory/docs/fleet.md ai-factory/docs/dont-touch.md && rg --files ai-factory/skills ai-factory/specs && rg --files -g AGENTS.md -g Makefile -g package.json'",
+      "/bin/zsh -lc 'cat ai-factory/agents/implementer.md ai-factory/docs/coding-standards.md ai-factory/plans/0001-total.md'",
+      "/bin/zsh -lc 'cat ai-factory/plans/0001-total.md'",
+      "/bin/zsh -lc 'git status --short'",
+      "/bin/zsh -lc 'cat ai-factory/docs/definition-of-done.md ai-factory/docs/architecture.md ai-factory/docs/fleet.md ai-factory/docs/dont-touch.md'",
+      "/bin/zsh -lc 'rg --files ai-factory/skills ai-factory/specs; rg --files -g AGENTS.md -g Makefile -g package.json'",
+      "/bin/zsh -lc \"rg --files -g '\"'!ai-factory/runs/**'\"' -g '\"'!node_modules/**'\"' -g '\"'!'\"\\\\.git/**'\"",
+      "/bin/zsh -lc 'cat ai-factory/specs/0001-total.md app.js test/step-one.test.js test/step-two.test.js Makefile'",
+      "/bin/zsh -lc 'cat test/unexpected.test.js && make lint typecheck test'",
+      "/bin/zsh -lc 'make lint typecheck && git status --short && git diff --stat && git diff --cached --stat'",
+      "/bin/zsh -lc 'node --test test/step-two.test.js'",
+      "/bin/zsh -lc 'node --test test/step-one.test.js'"
+    ],
+    "eventTypes": [
+      "thread.started",
+      "turn.started",
+      "item.completed",
+      "item.started",
+      "turn.completed"
+    ],
+    "quality": {
+      "assertions": {
+        "stepUnticked": true,
+        "regressionPreserved": true,
+        "failureReported": true
+      },
+      "pass": true,
+      "completed": true
+    },
+    "sourceHash": "6ea35c763929148f65be416e5f2eb45d82b077c2d611c30314319869700d5692",
+    "promptHash": "86acc263efc6bc9b184467a80b7a7d68f7d62e6eb4bc4539270f6ed4c03a7f0b",
+    "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-Jz8z4e/unexpected-1-baseline",
+    "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-30T00-26-38-593Z/unexpected-1-baseline"
+  },
+  {
+    "id": "red-1-baseline",
+    "variant": "baseline",
+    "scenario": "red",
+    "repetition": 1,
+    "beganAt": "2026-09-30T00:31:10.535Z",
+    "elapsedMs": 72230.261,
+    "timedOut": false,
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "cliInvocations": 1,
+    "toolCalls": 19,
+    "commandCalls": 18,
+    "verificationCommandCalls": 6,
+    "usage": {
+      "input_tokens": 255142,
+      "cached_input_tokens": 228608,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 2408,
+      "reasoning_output_tokens": 384
+    },
+    "commands": [
+      "/bin/zsh -lc 'pwd; git status --short; cat ai-factory/AGENTS.md; cat ai-factory/agents/implementer.md; cat ai-factory/docs/coding-standards.md; cat ai-factory/plans/0001-empty.md'",
+      "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+      "/bin/zsh -lc 'cat ai-factory/agents/implementer.md; cat ai-factory/plans/0001-empty.md; git status --short'",
+      "/bin/zsh -lc \"cat ai-factory/docs/coding-standards.md; cat ai-factory/docs/definition-of-done.md; cat ai-factory/docs/architecture.md; cat ai-factory/docs/fleet.md; cat ai-factory/docs/dont-touch.md; rg --files ai-factory/skills; rg --files -g AGENTS.md -g Makefile -g package.json -g '*biome*'\"",
+      "/bin/zsh -lc 'cat ai-factory/agents/implementer.md; cat ai-factory/plans/0001-empty.md; git status --short'",
+      "/bin/zsh -lc \"cat ai-factory/docs/coding-standards.md; cat ai-factory/docs/definition-of-done.md; cat ai-factory/docs/architecture.md; cat ai-factory/docs/fleet.md; cat ai-factory/docs/dont-touch.md; rg --files ai-factory/skills; rg --files -g AGENTS.md -g Makefile -g package.json -g '*biome*'\"",
+      "/bin/zsh -lc 'cat ai-factory/docs/dont-touch.md; cat ai-factory/docs/architecture.md; cat ai-factory/docs/fleet.md; cat AGENTS.md'",
+      "/bin/zsh -lc \"cat ai-factory/specs/0001-empty.md; cat Makefile; cat app.js; rg --files -g '\"'!'\"\\\\.git' -g '\"'!node_modules'\"'; git status --porcelain=v1\"",
+      "/bin/zsh -lc 'cat ai-factory/tasks/run.md; cat ai-factory/tasks/test.md; cat ai-factory/agents/tester.md; cat test/app.test.js; cat ai-factory/plans/0001-empty.md; cat ai-factory/docs/tracker.md'",
+      "/bin/zsh -lc 'cat test/app.test.js'",
+      "/bin/zsh -lc 'cat ai-factory/plans/0001-empty.md'",
+      "/bin/zsh -lc 'make lint typecheck test'",
+      "/bin/zsh -lc 'node --check test/empty.test.js; command -v biome'",
+      "/bin/zsh -lc 'make lint typecheck test'",
+      "/bin/zsh -lc 'node --test test/empty.test.js'",
+      "/bin/zsh -lc \"python3 - <<'PY'\nfrom pathlib import Path\nplan = Path('ai-factory/plans/0001-empty.md')\nwith plan.open('a') as report:\n    report.write('''\n\n## Step 1 execution record — red phase\n\nExecuted the implementer role inline; verification is a self-check, not an independent review.\n\n- Added \"'`test/empty.test.js`, named `empty sum returns zero`, asserting `sum([]) === 0` for AC1.\n- Before the change, `make lint typecheck test` passed (1 test).\n- `node --test test/empty.test.js` exited 1 with `TypeError: Reduce of empty array with no initial value`, originating in `app.js`. This is the expected missing-behavior failure.\n- After the change, `make lint typecheck test` passed lint and typecheck, then exited 2 because the test target failed: 1 existing test passed and 1 new regression test failed as expected.\n- `node --check test/empty.test.js` passed. Biome is not available on PATH; no packages were installed. The fixture'\"'s lint and typecheck targets both use \"'`node --check app.js`.\n- Production code remains unchanged. Step 2 was not started.\n- Step 1 remains unticked: the requested red-phase evidence is established, but the supplied implementer/run instructions allow ticking only when tests are green and require stopping on red. Making this test green requires the unauthorized Step 2.\n- The plan/spec behavior is clear. Workflow limitations: red-phase completion conflicts with the green-only checkbox rule; `ai-factory/skills/` is absent. The explicitly requested test path is outside the local generic generated-work directory rule; the task'\"'s authoritative test path was followed, and this record stays under \"'`ai-factory/`.\n\nStopped after recording the expected failure. No assertion was weakened and no production fix was attempted.\n'\"''')\nPY\n\"",
+      "/bin/zsh -lc 'node --check test/empty.test.js'",
+      "/bin/zsh -lc 'git diff --check; git diff --stat; git status --short; git diff --exit-code -- app.js; git diff --cached --exit-code'"
+    ],
+    "eventTypes": [
+      "thread.started",
+      "turn.started",
+      "item.completed",
+      "item.started",
+      "turn.completed"
+    ],
+    "quality": {
+      "assertions": {
+        "testWritten": true,
+        "expectedFailure": true,
+        "productionPreserved": true,
+        "testProvesMissingBehavior": true,
+        "redStepRecorded": false,
+        "implementationUnticked": true
+      },
+      "pass": false,
+      "completed": true
+    },
+    "sourceHash": "6ea35c763929148f65be416e5f2eb45d82b077c2d611c30314319869700d5692",
+    "promptHash": "cb6d85ea20b2515fbf6834b1f73f59b1962bc63e17f9ac0bc676dd35e634fd0c",
+    "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-Jz8z4e/red-1-baseline",
+    "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-30T00-26-38-593Z/red-1-baseline"
+  },
+  {
+    "id": "unexpected-1-candidate",
+    "variant": "candidate",
+    "scenario": "unexpected",
+    "repetition": 1,
+    "beganAt": "2026-09-30T00:30:41.233Z",
+    "elapsedMs": 107424.803917,
+    "timedOut": false,
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "cliInvocations": 1,
+    "toolCalls": 22,
+    "commandCalls": 21,
+    "verificationCommandCalls": 3,
+    "usage": {
+      "input_tokens": 370670,
+      "cached_input_tokens": 343808,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 2515,
+      "reasoning_output_tokens": 359
+    },
+    "commands": [
+      "/bin/zsh -lc \"pwd; rg --files -g 'AGENTS.md' -g '*total*' -g '*implementer*' -g '*rules*' -g '*protec*' -g 'package.json' -g 'biome.json*' -g '*lock*' ai-factory . 2>/dev/null\"",
+      "/bin/zsh -lc 'git status --short; cat ai-factory/AGENTS.md; cat ai-factory/agents/implementer.md; cat ai-factory/plans/0001-total.md'",
+      "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+      "/bin/zsh -lc 'cat ai-factory/plans/0001-total.md; cat ai-factory/specs/0001-total.md; git status --short'",
+      "/bin/zsh -lc 'cat ai-factory/agents/implementer.md'",
+      "/bin/zsh -lc \"python3 - <<'PY'\nfrom pathlib import Path\nfor p in ['ai-factory/AGENTS.md','ai-factory/agents/implementer.md','ai-factory/plans/0001-total.md','ai-factory/specs/0001-total.md']:\n print(p)\n print(Path(p).read_text())\nPY\"",
+      "/bin/zsh -lc \"python3 - <<'PY'\nfrom pathlib import Path\nfor p in ['ai-factory/docs/coding-standards.md','ai-factory/docs/dont-touch.md','ai-factory/docs/workspace-boundary.md','Makefile','AGENTS.md']:\n print(p)\n print(Path(p).read_text() if Path(p).exists() else 'MISSING')\nPY\"",
+      "/bin/zsh -lc \"rg --files --hidden -g '\"'!.git'\"' -g '\"'!node_modules'\"'; git --no-pager diff; git --no-pager diff --cached; git status --porcelain=v1\"",
+      "/bin/zsh -c 'cat ai-factory/docs/coding-standards.md ai-factory/docs/dont-touch.md ai-factory/docs/workspace-boundary.md Makefile AGENTS.md'",
+      "/bin/zsh -c \"rg --files --hidden -g '\"'!.git'\"' -g '\"'!node_modules'\"'; git --no-pager diff; git --no-pager diff --cached; git status --porcelain=v1\"",
+      "/bin/zsh -lc \"python3 - <<'PY'\nfrom pathlib import Path\nfor p in ['ai-factory/docs/coding-standards.md','ai-factory/docs/dont-touch.md','ai-factory/docs/workspace-boundary.md','Makefile','AGENTS.md']:\n print(p)\n print(Path(p).read_text() if Path(p).exists() else 'MISSING')\nPY\"",
+      "/bin/zsh -lc \"rg --files --hidden -g '\"'!.git'\"' -g '\"'!node_modules'\"'; git --no-pager diff; git --no-pager diff --cached; git status --porcelain=v1\"",
+      "/bin/zsh -lc 'git status --porcelain=v1; git diff --stat; git diff --cached --stat'",
+      "/bin/zsh -lc \"python3 - <<'PY'\nfrom pathlib import Path\nfor p in ['app.js','test/step-one.test.js','test/step-two.test.js','test/unexpected.test.js']:\n print(p)\n print(Path(p).read_text())\nprint('Skills directory exists:',Path('ai-factory/skills').exists())\nPY\"",
+      "/bin/zsh -lc 'cat ai-factory/docs/coding-standards.md'",
+      "/bin/zsh -lc 'cat ai-factory/docs/dont-touch.md ai-factory/docs/workspace-boundary.md'",
+      "/bin/zsh -lc 'cat Makefile; command -v biome; ls -l app.js test/step-one.test.js ai-factory/plans/0001-total.md'",
+      "/bin/zsh -lc 'node --test test/step-two.test.js'",
+      "/bin/zsh -lc 'make lint typecheck test'",
+      "/bin/zsh -lc 'node --test test/step-one.test.js'",
+      "/bin/zsh -lc 'git diff --check; git --no-pager diff -- app.js test/step-one.test.js ai-factory/plans/0001-total.md test/step-two.test.js test/unexpected.test.js; git status --porcelain=v1'"
+    ],
+    "eventTypes": [
+      "thread.started",
+      "turn.started",
+      "item.completed",
+      "item.started",
+      "turn.completed"
+    ],
+    "quality": {
+      "assertions": {
+        "stepUnticked": true,
+        "regressionPreserved": true,
+        "failureReported": true
+      },
+      "pass": true,
+      "completed": true
+    },
+    "sourceHash": "669c317be805432ed220b45dde0fa3074b47a1cc675ed8ad9b2f0556eaaee7de",
+    "promptHash": "85f4a10227b7cf4ff8b559bc27c2eedba1e80b7f4053bd5ca65b4c9d19ad564d",
+    "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-Jz8z4e/unexpected-1-candidate",
+    "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-30T00-26-38-593Z/unexpected-1-candidate"
+  },
+  {
+    "id": "red-1-candidate",
+    "variant": "candidate",
+    "scenario": "red",
+    "repetition": 1,
+    "beganAt": "2026-09-30T00:32:23.127Z",
+    "elapsedMs": 65274.426333,
+    "timedOut": false,
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "cliInvocations": 1,
+    "toolCalls": 27,
+    "commandCalls": 25,
+    "verificationCommandCalls": 2,
+    "usage": {
+      "input_tokens": 239157,
+      "cached_input_tokens": 211456,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 2011,
+      "reasoning_output_tokens": 277
+    },
+    "commands": [
+      "/bin/zsh -lc \"pwd && rg --files -g 'AGENTS.md' -g '*rules*' -g '*protect*' -g '0001-empty.md' -g '*implementer*' ai-factory .\"",
+      "/bin/zsh -lc 'cat AGENTS.md ai-factory/AGENTS.md ai-factory/agents/implementer.md ai-factory/plans/0001-empty.md ai-factory/specs/0001-empty.md'",
+      "/bin/zsh -lc \"git status --short && rg --files -g '\"'!node_modules'\"' -g '\"'!'\"\\\\.git'\"",
+      "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+      "/bin/zsh -lc 'cat ai-factory/agents/implementer.md'",
+      "/bin/zsh -lc 'cat ai-factory/plans/0001-empty.md ai-factory/specs/0001-empty.md'",
+      "/bin/zsh -lc \"git status --short; rg --files -g '\"'!node_modules'\"' -g '\"'!.git'\"'\"",
+      "/bin/zsh -lc 'cat ai-factory/plans/0001-empty.md'",
+      "/bin/zsh -lc 'cat AGENTS.md'",
+      "/bin/zsh -lc 'cat ai-factory/specs/0001-empty.md'",
+      "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+      "/bin/zsh -lc 'cat ai-factory/agents/implementer.md'",
+      "/bin/zsh -lc \"git status --short; rg --files -g '\"'!node_modules'\"' -g '\"'!.git'\"'\"",
+      "/bin/zsh -lc \"sed -n '26,60p' ai-factory/agents/implementer.md\"",
+      "/bin/zsh -lc \"sed -n '1,25p' ai-factory/agents/implementer.md\"",
+      "/bin/zsh -lc 'cat app.js test/app.test.js Makefile'",
+      "/bin/zsh -lc 'git status --porcelain=v1'",
+      "/bin/zsh -lc 'cat ai-factory/docs/dont-touch.md ai-factory/docs/coding-standards.md ai-factory/docs/workspace-boundary.md ai-factory/docs/definition-of-done.md'",
+      "/bin/zsh -lc \"sed -n '20,45p' ai-factory/AGENTS.md\"",
+      "/bin/zsh -lc \"sed -n '10,25p' ai-factory/agents/implementer.md\"",
+      "/bin/zsh -lc \"cat ai-factory/docs/dont-touch.md; sed -n '1,14p' ai-factory/docs/workspace-boundary.md\"",
+      "/bin/zsh -lc \"rg --files --hidden -g 'AGENTS.md' -g '*biome*' -g 'package.json' -g '\"'!'\"\\\\.git'; if [ -d ai-factory/skills ]; then rg --files ai-factory/skills; fi; command -v biome || true\"",
+      "/bin/zsh -lc 'node --test test/empty.test.js'",
+      "/bin/zsh -lc 'make lint typecheck test'",
+      "/bin/zsh -lc 'git diff --check && git diff -- ai-factory/plans/0001-empty.md app.js && git status --short && cat test/empty.test.js'"
+    ],
+    "eventTypes": [
+      "thread.started",
+      "turn.started",
+      "item.completed",
+      "item.started",
+      "turn.completed"
+    ],
+    "quality": {
+      "assertions": {
+        "testWritten": true,
+        "expectedFailure": true,
+        "productionPreserved": true,
+        "testProvesMissingBehavior": true,
+        "redStepRecorded": true,
+        "implementationUnticked": true
+      },
+      "pass": true,
+      "completed": true
+    },
+    "sourceHash": "669c317be805432ed220b45dde0fa3074b47a1cc675ed8ad9b2f0556eaaee7de",
+    "promptHash": "97de48287bf063c659799aec3a59e5caa3094501384072d033b329f7aada66a1",
+    "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-Jz8z4e/red-1-candidate",
+    "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-30T00-26-38-593Z/red-1-candidate"
+  }
+]

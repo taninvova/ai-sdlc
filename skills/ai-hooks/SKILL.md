@@ -131,18 +131,23 @@ Lines beginning with "- `" — the backticked path prefix is the rule:
 - `.env`
 - `pnpm-lock.yaml` (or package-lock.json)
 
-## gitignore lines for every repo
-ai-factory/runs/*.json
-ai-factory/runs/*.jsonl
-ai-factory/runs/log.pending.csv
-ai-factory/runs/.counted.*
-ai-factory/runs/.task.*
-ai-factory/runs/report.html
-.claude/settings.local.json
-CLAUDE.local.md
+## gitignore lines inside ai-factory/.gitignore
+/runs/*.json
+/runs/*.jsonl
+/runs/log.pending.csv
+/runs/.counted.*
+/runs/.task.*
+/runs/report.html
+/runs/tmp/
 
-## gitattributes line for every repo
-ai-factory/runs/log.csv merge=union
+## gitattributes line inside ai-factory/.gitattributes
+runs/log.csv merge=union
+
+Keep these rules workspace-local. Preserve existing root Git files; do not add host personal
+settings to project policy. Hooks use host events and permissions; the Edit/Write/MultiEdit
+guard does not intercept arbitrary shell writes, and these Claude hooks are not installed by
+the Codex task adapter. A missing hook is not enforced protection. Never disable the host's
+sandbox or grant broad permissions to compensate.
 
 ## Fortnightly read
 hit_rate < 0.70 → something dynamic sits in the prefix (AGENTS.md edited mid-session, a hook printing, a restart).
@@ -150,5 +155,5 @@ Sessions with edits but no cmds → tests were not run; tighten the task prompt.
 Files in edits.jsonl not in the commit → what the model changed that you dropped; check why.
 
 ## Without the plugin
-Copy scripts/ (including `_common.js`, `_log-schema.js` and `_usage.js`) to ai-factory/make/hooks/ and register the
+Copy scripts/ (including `_common.js`, `_safe-files.js`, `_log-schema.js` and `_usage.js`) to ai-factory/make/hooks/ and register the
 same hooks in .claude/settings.json with `node ai-factory/make/hooks/<script>.js` as the command.

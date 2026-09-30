@@ -6,11 +6,14 @@
 set -euo pipefail
 shopt -s nullglob
 cd "$(dirname "$0")/../../.."
+# Disposable fixtures stay in the project workspace, including default mktemp calls.
+export TMPDIR="$PWD/ai-factory/runs/tmp"
+mkdir -p "$TMPDIR"
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
-bash ai-factory/make/sync-adapters.sh > /dev/null
+bash ai-factory/make/sync-adapters.sh --adapters=all > /dev/null
 before=$(find .claude .cursor .codex -type f -o -type l | sort | xargs shasum | shasum)
-bash ai-factory/make/sync-adapters.sh > /dev/null
+bash ai-factory/make/sync-adapters.sh --adapters=all > /dev/null
 [ "$before" = "$(find .claude .cursor .codex -type f -o -type l | sort | xargs shasum | shasum)" ] \
   || fail "sync-adapters is not idempotent"
 
@@ -76,7 +79,7 @@ printf -- '---\ndescription: stale\n---\n@../../ai/tasks/spec.md\n' > .claude/co
 printf -- '---\ndescription: stale\n---\n@../../ai/tasks/plan.md\n' > .claude/commands/ai-plan.md  # path-scan-ok: ditto, and it proves the cleanup matches both names
 mkdir -p .codex/skills/ai-spec && printf -- '---\nname: ai-spec\n---\nRead `ai-factory/tasks/spec.md`\n' > .codex/skills/ai-spec/SKILL.md
 printf -- '---\ndescription: mine\n---\nMy own prompt, nothing to do with ai-factory/tasks.\n' > .claude/commands/spec-of-mine.md
-bash ai-factory/make/sync-adapters.sh > /dev/null
+bash ai-factory/make/sync-adapters.sh --adapters=all > /dev/null
 [ ! -f .claude/commands/spec.md ]        || fail "sync left the pre-0.5.0 bare command in place"
 [ ! -f .claude/commands/ai-plan.md ]     || fail "sync left the 0.5.0-era ai- command in place"
 [ ! -d .codex/skills/ai-spec ]           || fail "sync left a stale codex skill in place"

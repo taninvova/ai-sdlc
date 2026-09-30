@@ -1,0 +1,11 @@
+Corrected `applciation` → `application` in [README.md](/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-Jz8z4e/retry-1-baseline/README.md:1). Only that file changed.
+
+- `git diff --check`: passed.
+- `make docs`: failed—“Verification service unavailable: fixed infrastructure failure.” Correction preserved; checker and Makefile unchanged.
+- No spec or ADR needed.
+
+Inline self-check:
+```json
+{"findings":[]}
+```
+I agree with the self-check: the diff contains only the requested correction.

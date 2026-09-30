@@ -1,0 +1,7 @@
+Files changed: `test/empty.test.js` and `ai-factory/plans/0001-empty.md`.
+
+Added “empty sum returns zero.” Verified expected failure: `TypeError: Reduce of empty array with no initial value`.
+
+Lint, typecheck, and the existing test pass. Biome is unavailable.
+
+Recorded red-phase evidence; Step 1 remains unticked because the workflow requires green tests to tick it. Production code is unchanged; Step 2 was not started.

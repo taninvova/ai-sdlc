@@ -27,6 +27,9 @@
 set -uo pipefail
 shopt -s nullglob
 cd "$(dirname "$0")/../../.."
+# Disposable fixtures stay in the project workspace, including default mktemp calls.
+export TMPDIR="$PWD/ai-factory/runs/tmp"
+mkdir -p "$TMPDIR"
 ROOT=$PWD
 STATE=skills/ai-layout/scripts/state.sh
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT

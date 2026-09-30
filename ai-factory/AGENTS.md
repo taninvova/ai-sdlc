@@ -14,7 +14,7 @@ Adapter sync (this repo): `bash ai-factory/make/sync-adapters.sh`
 Checks (all of them): `for f in skills/ai-layout/scripts/check-*.sh skills/ai-hooks/fixtures/check-*.sh; do bash "$f" || echo "FAIL $f"; done`
   — never pipe one to `tail`: the pipeline's status is `tail`'s, and a failure reads as a pass
 Hook fixtures: `node skills/ai-hooks/scripts/session-stop.js < skills/ai-hooks/fixtures/stop.json`
-Slash commands: /t4:fleet /t4:design /t4:adr /t4:analyse /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:check
+Slash commands: /t4:fleet /t4:design /t4:adr /t4:analyse /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:quick /t4:check
 Headless (CI only): make ai TASK=<name> INPUT="…"
 
 ## This repo is its own template
@@ -28,14 +28,19 @@ The layout exists here so plugin changes run through the loop they prescribe.
 - A prompt, skill or hook change ships with a before/after run linked in the MR
 - Hook scripts never print to stdout (cache-neutral) and no-op outside a repo with `ai-factory/`
 - Template changes are breaking for every adopted repo — say so in the MR and CHANGELOG
+- Keep plugin-owned project work in ai-factory/; follow docs/workspace-boundary.md. Preserve existing external entry files; create no new ones without an explicit request.
 
 ## Read before working
-ai-factory/docs/workflow.md for how the commands fit together · ai-factory/docs/coding-standards.md · ai-factory/docs/definition-of-done.md · ai-factory/docs/architecture.md · ai-factory/docs/fleet.md
-The spec in ai-factory/specs/ for the change · the plan in ai-factory/plans/ if one exists
+Read the applicable protection rules and coding standards, then only the context this task needs.
+Read architecture when placement is uncertain; fleet for cross-service work; the named spec/plan
+when the selected workflow requires them. Reuse unchanged context already in this session.
 
 ## Workflow
-/t4:explore (options) → /t4:spec → /t4:plan → /t4:test red → /t4:run one step at a time →
-/t4:test gaps → /t4:check → commit `ai(<task>): …` → MR (label ai-assisted)
+Small, understood local change: /t4:quick. Bug: /t4:fix. Maintenance: /t4:chore.
+Uncertain requirements, authorization, public contracts, migrations, dependencies or service
+boundaries: /t4:explore → /t4:spec → /t4:plan → /t4:test red → /t4:run → /t4:test gaps → /t4:check.
+Preserve existing changes. Never reset a working tree to start or finish a step. File count is
+not a risk classifier. Match verification to the phase and run required final checks at completion.
 
 ## Setup (once per developer)
 Works with whatever provider your tool is already configured with — nothing here assumes one.

@@ -1,0 +1,21 @@
+diff --git a/app.js b/app.js
+index f87c66f..fbbde85 100644
+--- a/app.js
++++ b/app.js
+@@ -1,2 +1,2 @@
+-exports.formatTotal = n => String(n);
++exports.formatTotal = n => n.toFixed(2);
+ exports.isValidTotal = n => true;
+diff --git a/test/step-one.test.js b/test/step-one.test.js
+index 6a5d026..330c663 100644
+--- a/test/step-one.test.js
++++ b/test/step-one.test.js
+@@ -1 +1,7 @@
+-const {test}=require('node:test');const assert=require('node:assert/strict');test('two decimals',()=>assert.equal(require('../app').formatTotal(2),'2.00'));
++const { test } = require("node:test");
++const assert = require("node:assert/strict");
++const { formatTotal } = require("../app");
++
++test("two decimals", () => assert.equal(formatTotal(2), "2.00"));
++test("zero has two decimals", () => assert.equal(formatTotal(0), "0.00"));
++test("pads fractional totals", () => assert.equal(formatTotal(2.5), "2.50"));

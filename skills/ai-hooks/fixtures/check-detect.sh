@@ -17,7 +17,8 @@ SUB=skills/ai-hooks/scripts/subagent-stop.js
 TASK=skills/ai-hooks/scripts/log-task.js
 TRANSCRIPT=$PWD/skills/ai-hooks/fixtures/transcript.jsonl
 AGENT_TRANSCRIPT=$PWD/skills/ai-hooks/fixtures/agent-transcript.jsonl
-TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
+mkdir -p ai-factory/runs/tmp
+TMP=$(mktemp -d "$PWD/ai-factory/runs/tmp/detect.XXXXXX"); trap 'rm -rf "$TMP"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
 # A repo whose layout directory is $1, carrying one dont-touch rule $2.
@@ -31,6 +32,7 @@ mkrepo() {
 # Run guard-paths.js for a write to $2 in repo $1. Echoes "<exit>|<stdout>|<stderr>".
 probe() {
   local root=$1 target=$2 out err rc
+  git init -q "$root"
   out=$TMP/out.$$; err=$TMP/err.$$
   printf '{"cwd":"%s","tool_input":{"file_path":"%s"}}' "$root" "$target" \
     | node "$PWD/$GUARD" >"$out" 2>"$err" && rc=0 || rc=$?
@@ -69,6 +71,7 @@ IFS='|' read -r rc out err <<<"$(probe "$R" "secrets/token.txt")"
 # --- 5. the Stop hook logs under whichever name the repo carries ---
 for dir in ai-factory ai; do
   R=$TMP/stop-$dir; mkdir -p "$R/$dir"
+  git init -q "$R"
   printf '{"session_id":"fixture-detect","cwd":"%s","transcript_path":"%s","hook_event_name":"Stop"}' \
     "$R" "$TRANSCRIPT" | node "$PWD/$STOP" >"$TMP/o" 2>"$TMP/e" || fail "$dir: Stop hook exited non-zero: $(cat "$TMP/e")"
   [ -s "$TMP/o" ] && fail "$dir: Stop hook wrote to stdout: $(cat "$TMP/o")"
@@ -81,6 +84,7 @@ done
 # The agent rows are the only place the `agent` column is ever filled, so an unmigrated repo that
 # stopped writing them would lose per-agent attribution with nothing to show for it.
 subagent() {   # subagent <repo> <agent_id>
+  git init -q "$1"
   printf '{"session_id":"fixture-detect-sub","cwd":"%s","agent_id":"%s","agent_type":"implementer","agent_transcript_path":"%s","hook_event_name":"SubagentStop"}' \
     "$1" "$2" "$AGENT_TRANSCRIPT" | node "$PWD/$SUB" >"$TMP/o" 2>"$TMP/e" \
     || fail "SubagentStop hook exited non-zero in $1: $(cat "$TMP/e")"
@@ -105,7 +109,7 @@ if [ -e "$R/ai/runs" ]; then fail "both: the old directory was written as well";
 # neither: no row, no directory, no output
 R=$TMP/sub-neither; mkdir -p "$R"
 subagent "$R" agent-none
-[ -z "$(ls -A "$R")" ] || fail "no layout: the SubagentStop hook created $(ls -A "$R")"
+[ "$(ls -A "$R")" = .git ] || fail "no layout: the SubagentStop hook created $(ls -A "$R")"
 
 # --- 7. the UserPromptSubmit hook, across the same four cases ----------------------------------
 # The task file is what fills the `task` column on every later row, so an unmigrated repo that
@@ -115,6 +119,7 @@ subagent "$R" agent-none
 # belt-and-braces: output from UserPromptSubmit reaches the model, so a single byte printed here
 # lands inside the cached prefix and invalidates it for the rest of the session.
 prompt() {   # prompt <repo> <prompt text>
+  git init -q "$1"
   printf '{"session_id":"fixture-detect-task","cwd":"%s","prompt":"%s","hook_event_name":"UserPromptSubmit"}' "$1" "$2" \
     | node "$PWD/$TASK" >"$TMP/o" 2>"$TMP/e" \
     || fail "UserPromptSubmit hook exited non-zero in $1: $(cat "$TMP/e")"
@@ -137,7 +142,7 @@ if [ -e "$R/ai/runs" ]; then fail "both: the old directory was written as well";
 # neither: no file, no directory, no output
 R=$TMP/task-neither; mkdir -p "$R"
 prompt "$R" "/t4:plan it"
-[ -z "$(ls -A "$R")" ] || fail "no layout: the UserPromptSubmit hook created $(ls -A "$R")"
+[ "$(ls -A "$R")" = .git ] || fail "no layout: the UserPromptSubmit hook created $(ls -A "$R")"
 # and a prompt naming no command leaves the last task standing rather than clearing it
 R=$TMP/task-keep; mkdir -p "$R/ai-factory"
 prompt "$R" "/t4:plan the feature"

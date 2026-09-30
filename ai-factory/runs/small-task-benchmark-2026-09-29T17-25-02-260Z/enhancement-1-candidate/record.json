@@ -1,0 +1,58 @@
+{
+  "id": "enhancement-1-candidate",
+  "variant": "candidate",
+  "scenario": "enhancement",
+  "repetition": 1,
+  "beganAt": "2026-09-29T17:30:03.249Z",
+  "elapsedMs": 65210.65325,
+  "timedOut": false,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "cliInvocations": 1,
+  "toolCalls": 17,
+  "commandCalls": 13,
+  "verificationCommandCalls": 2,
+  "usage": {
+    "input_tokens": 311528,
+    "cached_input_tokens": 260224,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 1797,
+    "reasoning_output_tokens": 127
+  },
+  "commands": [
+    "/bin/zsh -lc 'pwd; git status --short; cat ai-factory/AGENTS.md'",
+    "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+    "/bin/zsh -lc \"git status --short; rg --files -g AGENTS.md -g '*dont-touch*' -g '*coding*' -g '*conventions*' -g '*workspace-boundary*' -g '*Makefile*' -g '*biome*'; rg -n 'displayLabel' .\"",
+    "/bin/zsh -lc 'cat ai-factory/docs/dont-touch.md ai-factory/docs/coding-standards.md ai-factory/docs/workspace-boundary.md'",
+    "/bin/zsh -lc \"cat Makefile app.js test/app.test.js; rg --files --hidden -g '\"'!.git'\"' -g '\"'!ai-factory/runs/**'\"'\"",
+    "/bin/zsh -lc 'cat ai-factory/docs/definition-of-done.md; git diff --stat; git diff --cached --stat'",
+    "/bin/zsh -lc 'cat ai-factory/docs/workspace-boundary.md'",
+    "/bin/zsh -lc 'cat ai-factory/docs/dont-touch.md ai-factory/docs/coding-standards.md'",
+    "/bin/zsh -lc \"cat ai-factory/AGENTS.md; command -v biome; rg -n 'biome|lint|format' Makefile ai-factory/docs ai-factory/AGENTS.md; git status --porcelain=v1 --untracked-files=all\"",
+    "/bin/zsh -lc 'node --test test/app.test.js'",
+    "/bin/zsh -lc 'biome check --write app.js test/app.test.js'",
+    "/bin/zsh -lc 'git diff --check; git diff -- app.js test/app.test.js; git status --short --untracked-files=all; git diff --cached --stat'",
+    "/bin/zsh -lc 'make lint typecheck test'"
+  ],
+  "eventTypes": [
+    "thread.started",
+    "turn.started",
+    "item.completed",
+    "item.started",
+    "turn.completed"
+  ],
+  "quality": {
+    "assertions": {
+      "behavior": true,
+      "testsPass": true,
+      "regressionFailsWithoutFix": true
+    },
+    "pass": true
+  },
+  "sourceHash": "1708dc6863ce66f6d2a2dbf02bbff9417d85441ba1ba3b241b4ecbf450a878c9",
+  "promptHash": "8e5b2cb89b707a3e7774e4511417eea9107fb6391534a45d4c772787a32aef14",
+  "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-sqJUlG/enhancement-1-candidate",
+  "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-29T17-25-02-260Z/enhancement-1-candidate"
+}

@@ -3,6 +3,9 @@
 # so upstream edits can be simulated without touching this one.
 set -euo pipefail
 cd "$(dirname "$0")/../../.."   # repo root
+# Disposable fixtures stay in the project workspace, including default mktemp calls.
+export TMPDIR="$PWD/ai-factory/runs/tmp"
+mkdir -p "$TMPDIR"
 M=skills/ai-layout/scripts/manifest.js
 TMP=$(mktemp -d)
 # A failing assertion exits before any inline cleanup, so a test that provokes a manifest into

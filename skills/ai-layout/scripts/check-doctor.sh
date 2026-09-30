@@ -9,6 +9,9 @@
 set -uo pipefail
 shopt -s nullglob
 cd "$(dirname "$0")/../../.."
+# Disposable fixtures stay in the project workspace, including default mktemp calls.
+export TMPDIR="$PWD/ai-factory/runs/tmp"
+mkdir -p "$TMPDIR"
 ROOT=$PWD
 DOCTOR=skills/ai-layout/scripts/doctor.sh
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
@@ -130,6 +133,14 @@ grep -q '^summary: 0 finding(s), 0 unknown' <<<"$out" \
 $out"
 grep -q '^\[finding\]' <<<"$out" && fail "healthy repo produced a finding:
 $out"
+
+# Strict default must accept absent optional adapters; partial explicit sets are stale.
+grep -q '^\[ok *\] adapters .*strict workspace' <<<"$out" || fail "strict mode was not recognized: $out"
+( cd "$d" && node "$ROOT/skills/ai-layout/templates/ai-factory/make/sync-adapters.js" --adapters=claude ) >/dev/null || fail "explicit adapter generation failed"
+rm "$d/.claude/commands/t4/spec.md"
+stale_out=$(run "$d")
+grep -q '^\[finding\] adapters .*stale' <<<"$stale_out" || fail "partial explicit adapters were not diagnosed: $stale_out"
+( cd "$d" && node "$ROOT/skills/ai-layout/templates/ai-factory/make/sync-adapters.js" --adapters=claude ) >/dev/null || fail "adapter restoration failed"
 
 # 5. the config dir is absent — Codex, or a machine with no plugins ---------------------------
 # One unknown between install and cache, not one per check, and nothing else disturbed.

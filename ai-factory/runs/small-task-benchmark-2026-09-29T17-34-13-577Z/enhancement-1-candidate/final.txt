@@ -1,0 +1,8 @@
+Implemented in `app.js`: whitespace-only input displays `Anonymous`; ordinary names remain trimmed. Added regression coverage in `test/app.test.js`.
+
+- Demonstrated regression failure before the fix.
+- `make lint typecheck test` passed.
+- `git diff --check` passed.
+- Self-review found no concerns; only the two intended files changed.
+
+Biome is unavailable, so formatting verification remains incomplete. No packages were installed.

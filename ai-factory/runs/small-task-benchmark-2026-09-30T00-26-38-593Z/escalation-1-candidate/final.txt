@@ -1,0 +1,8 @@
+Stopped at the quick route’s scope gate. Authorization, public-contract changes, and uncertain requirements require the normal workflow.
+
+Unresolved decisions: which admin resources anonymous visitors may modify, which operations are allowed, and the permission policy. Next route: `/t4:explore` → `/t4:spec` → `/t4:plan`.
+
+- Files changed: none; working tree preserved and clean.
+- Self-review: no staged, unstaged, or untracked changes.
+- Verification: `make lint typecheck test` passed; the existing anonymous-denial test passed.
+- Acceptance: scope assessment complete; requested behavior remains unimplemented pending policy decisions.

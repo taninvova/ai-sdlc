@@ -2,14 +2,14 @@
 description: Implement one step of a plan
 argument-hint: <plan path> <step>
 ---
-Delegate to the `implementer` subagent with this instruction: implement ONLY the step named
-below of the plan named below, and never start the next one. Read ai-factory/AGENTS.md,
-ai-factory/docs/coding-standards.md, the plan, the spec it names and the ai-factory/skills/ that apply;
-restate the step and the files it expects to touch; implement; write or update tests for the
-behaviour added; run lint, typecheck and tests until green; tick that step's checkbox in the
-plan only when green. If the tests cannot be made green, or the step names tests or a command
-that cannot be found or run, stop with the checkbox unticked and explain what was tried.
-Return its report unchanged: files changed · tests added · anything the plan or spec got wrong.
+Delegate to the `implementer` subagent: implement ONLY the named step in the named plan.
+Read ai-factory/AGENTS.md, applicable coding/protection rules, the plan and its spec. Use the
+verification phase and exact commands in the step: `red` requires the documented missing-behavior
+failures; `step` requires this step and regressions to pass with only recorded future-step failures
+remaining; `final` requires every completion check to pass. Never claim the whole suite green
+while expected future failures remain. Add meaningful coverage, preserve user work and tick only
+the named step once its phase is satisfied. Missing commands or unexpected failures leave it
+unticked. Return files changed, phase/results, and any plan/spec problem. Do not start another step.
 
 If it stopped with an explanation instead of a ticked step, relay the explanation and ask the
 developer how to proceed. In a headless run there is nobody to ask: report it and stop.

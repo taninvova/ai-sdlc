@@ -1,0 +1,5 @@
+Changed only `applciation` → `application` in README.md; all other bytes preserved.
+
+Passed: `make lint typecheck test docs` and `git diff --check`. No spec or ADR needed.
+
+Independent review remains incomplete: reviewer delegation failed because the agent tool could not find the session thread. Local diff verification passed.

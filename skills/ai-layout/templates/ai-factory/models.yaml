@@ -3,6 +3,9 @@
 # Leave a value blank — the default — and the tool runs whatever model it is already
 # configured with. That works with any provider: the Anthropic API, Bedrock, Vertex, or an
 # OpenAI-compatible gateway. Set a value only when a task must pin a specific model.
+# For review/check: explicit MODEL wins, then review, then the tool, then CLI inheritance.
+# Explicit MODEL= (blank) requests inheritance and skips configured defaults.
+# CMD overrides must name one executable or path; shell fragments are not supported.
 claude:
 codex:
 review:

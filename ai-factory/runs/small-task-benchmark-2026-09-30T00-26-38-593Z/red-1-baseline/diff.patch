@@ -1,0 +1,24 @@
+diff --git a/ai-factory/plans/0001-empty.md b/ai-factory/plans/0001-empty.md
+index 2ef600f..cff5c57 100644
+--- a/ai-factory/plans/0001-empty.md
++++ b/ai-factory/plans/0001-empty.md
+@@ -2,3 +2,19 @@
+ Spec: ai-factory/specs/0001-empty.md
+ - [ ] Step 1: red phase; create test/empty.test.js named empty sum returns zero. Verify node --test test/empty.test.js fails because sum([]) lacks the empty-list identity. Production code must remain unchanged.
+ - [ ] Step 2: step phase; implement AC1 and pass all tests.
++
++
++## Step 1 execution record — red phase
++
++Executed the implementer role inline; verification is a self-check, not an independent review.
++
++- Added `test/empty.test.js`, named `empty sum returns zero`, asserting `sum([]) === 0` for AC1.
++- Before the change, `make lint typecheck test` passed (1 test).
++- `node --test test/empty.test.js` exited 1 with `TypeError: Reduce of empty array with no initial value`, originating in `app.js`. This is the expected missing-behavior failure.
++- After the change, `make lint typecheck test` passed lint and typecheck, then exited 2 because the test target failed: 1 existing test passed and 1 new regression test failed as expected.
++- `node --check test/empty.test.js` passed. Biome is not available on PATH; no packages were installed. The fixture's lint and typecheck targets both use `node --check app.js`.
++- Production code remains unchanged. Step 2 was not started.
++- Step 1 remains unticked: the requested red-phase evidence is established, but the supplied implementer/run instructions allow ticking only when tests are green and require stopping on red. Making this test green requires the unauthorized Step 2.
++- The plan/spec behavior is clear. Workflow limitations: red-phase completion conflicts with the green-only checkbox rule; `ai-factory/skills/` is absent. The explicitly requested test path is outside the local generic generated-work directory rule; the task's authoritative test path was followed, and this record stays under `ai-factory/`.
++
++Stopped after recording the expected failure. No assertion was weakened and no production fix was attempted.
