@@ -35,7 +35,26 @@ const selected = new Set(
 // for one of these puts a second /t4:<name> in the menu, with a different description and no way
 // for the user to tell which one runs. The plugin command wins: it works in strict mode, where no
 // pointer exists at all. Codex plugins ship no commands, so their skills are still generated.
-const nativeClaudeCommands = new Set(["quick"]);
+const nativeClaudeCommands = new Set([
+	"adopt-sdlc",
+	"doctor",
+	"quick",
+	"setup-tracker",
+	"state",
+	"sync-sdlc",
+	"adr",
+	"analyse",
+	"check",
+	"chore",
+	"design",
+	"explore",
+	"fix",
+	"fleet",
+	"plan",
+	"run",
+	"spec",
+	"test",
+]);
 // Agent names the plugin registers as `t4:<name>`, for the same reason: a pointer adds a second
 // agent with the same role and description to the picker. An agent this project added to
 // ai-factory/agents/ is not in this set and still gets its pointer, which is the only way it
@@ -177,8 +196,7 @@ try {
 			.readdirSync(path.join(root, "ai-factory/agents"))
 			.filter(
 				(n) =>
-					n.endsWith(".md") &&
-					!nativeClaudeAgents.has(path.basename(n, ".md")),
+					n.endsWith(".md") && !nativeClaudeAgents.has(path.basename(n, ".md")),
 			)) {
 			const source = fs.readFileSync(
 				path.join(root, "ai-factory/agents", name),

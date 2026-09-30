@@ -9,7 +9,7 @@ description: The ai-factory/ directory every t4 repo carries — AGENTS.md contr
 Use `node <installed-plugin>/skills/ai-layout/scripts/adopt.js .` for new adoption. It
 creates only `ai-factory/`, fills project placeholders, detects declared commands without
 running them, and refuses an existing workspace. Existing root and host files are preserved.
-The installed plugin supplies hooks and native commands; the workspace carries complete
+The installed plugin supplies hooks and all 18 native Claude commands; the workspace carries complete
 local task and agent procedures, runner scripts and project additions.
 
 Never write into `.claude/`, `.cursor/` or `.codex/` by hand. Default sync writes no external

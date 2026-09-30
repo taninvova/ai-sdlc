@@ -26,7 +26,8 @@ for c in commands/*.md; do
   [ -f "ai-factory/tasks/$n.md" ] && native+=("$n")
 done
 tasks=$(ls ai-factory/tasks/*.md | wc -l | tr -d ' ')
-cmds=$(ls .claude/commands/t4/*.md 2>/dev/null | wc -l | tr -d ' ')
+command_files=(.claude/commands/t4/*.md)
+cmds=${#command_files[@]}
 skills=$(ls -d .codex/skills/t4-*/ 2>/dev/null | wc -l | tr -d ' ')
 [ "$((tasks - ${#native[@]}))" = "$cmds" ] \
   || fail "$tasks tasks, ${#native[@]} of them already native plugin commands, but $cmds claude commands"
@@ -38,6 +39,7 @@ for n in ${native[@]+"${native[@]}"}; do
 done
 # A pointer left over from before the exclusion is removed by the next sync, not kept.
 if [ ${#native[@]} -gt 0 ]; then
+  mkdir -p .claude/commands/t4
   printf -- '---\ndescription: stale\n---\n@../../../ai-factory/tasks/%s.md\n' "${native[0]}" \
     > ".claude/commands/t4/${native[0]}.md"
   bash ai-factory/make/sync-adapters.sh --adapters=claude > /dev/null
