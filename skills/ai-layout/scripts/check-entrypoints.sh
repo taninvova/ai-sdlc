@@ -43,7 +43,7 @@ done
 
 # Workspace-local Git policy; root application/host files are not adoption outputs.
 SKILL=skills/ai-hooks/SKILL.md
-IGNORE=('/runs/*.json' '/runs/*.jsonl' '/runs/log.pending.csv' '/runs/.counted.*' '/runs/.task.*' '/runs/report.html' '/runs/tmp/')
+IGNORE=('/runs/*.json' '/runs/*.jsonl' '/runs/log.pending.csv' '/runs/.counted.*' '/runs/.task.*' '/runs/report.html' '/runs/tmp/' '/runs/evidence/' '/runs/lifecycle/' '/runs/telemetry/')
 for l in "${IGNORE[@]}"; do
   grep -qxF -- "$l" "$T/ai-factory/.gitignore" || fail "template workspace ignore misses $l"
   grep -qxF -- "$l" ai-factory/.gitignore || fail "repository workspace ignore misses $l"
@@ -60,7 +60,7 @@ if grep -q 'pnpm' "$T/Makefile"; then fail "generic optional Makefile assumes pn
 # that no longer exists is simply never missed. Named here so deleting one has to be deliberate.
 T=skills/ai-layout/templates/ai-factory
 for entry in AGENTS.md models.yaml docs tasks agents make plans/done runs/log.csv \
-             designs analyses explorations specs adr; do
+             designs analyses explorations specs adr contracts/README.md; do
   [ -e "$T/$entry" ] \
     || fail "the templates no longer carry $entry — every repo adopting from here on would be missing it, and no drift check would notice"
 done

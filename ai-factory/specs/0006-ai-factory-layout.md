@@ -76,11 +76,11 @@ hand-editing prompts in every repo that adopted.
   Then nothing is found: no `ai/`, `specs/`, `docs/adr` or `docs/workflow` survives in any prompt,
   agent, skill, hook, command, context doc or README.
   Two things the obvious pattern gets wrong, both found while doing the rename.
-  `(^|[^-[:alnum:]_./])(ai/|…)` excludes a preceding `/` so that `~/code/nsix/ai/ai-sdlc` survives —
+  `(^|[^-[:alnum:]_./])(ai/|…)` excludes a preceding `/` so that `~/code/ai/ai-sdlc` survives —
   and is therefore blind to `templates/ai/` and `templates/specs/`, which is where half the stale
   references were. The scan must neutralise the correct prefix first and then match with `/`
   allowed before, allow-listing the two paths that are not layout references at all (the GitLab
-  group `nsix.io:ai/` and the workspace directory `nsix/ai/`), and exempting lines marked
+  group in the remote URL and the workspace directory), and exempting lines marked
   deliberate.
   And **records are not scanned**: specs, plans, designs, analyses, ADRs and the CHANGELOG keep the
   paths that were true when they were written (AC9). `ai-factory/adr/0008-*` is therefore out of

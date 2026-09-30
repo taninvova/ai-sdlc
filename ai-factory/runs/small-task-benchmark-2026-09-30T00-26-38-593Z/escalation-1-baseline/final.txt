@@ -1,7 +1,0 @@
-Created [draft spec](ai-factory/specs/0001-anonymous-admin-authorization.md).
-
-Open decisions: eligible resources and operations, permission rules, anonymous-user representation, API result contract, existing-user behavior, and decision ownership.
-
-AC1 remains blocked until those decisions are resolved. No code or plan changed; existing work was preserved.
-
-Checks: `make docs` and `git diff --check` passed. Review was an inline self-check.

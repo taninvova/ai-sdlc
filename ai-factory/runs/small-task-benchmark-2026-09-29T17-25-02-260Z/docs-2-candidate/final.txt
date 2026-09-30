@@ -1,7 +1,0 @@
-Corrected only `applciation` → `application` in [README.md](/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-sqJUlG/docs-2-candidate/README.md:1).
-
-`★ Insight ─────────────────────────────────────`
-Self-review confirmed all other content is unchanged. The required `make docs` check and `git diff --check` passed.
-`─────────────────────────────────────────────────`
-
-No remaining failures or spec/ADR needs.

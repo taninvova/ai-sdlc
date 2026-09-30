@@ -224,7 +224,7 @@ nothing after it should be committed until they are settled.
   still passes; the spec's AC numbering is unbroken.
 
   **Result.** AC5 now describes a scan that works — the obvious pattern is blind to `templates/ai/`
-  because it excludes a preceding `/` to protect `~/code/nsix/ai/ai-sdlc` — and records, ADRs
+  because it excludes a preceding `/` to protect `~/code/ai/ai-sdlc` — and records, ADRs
   included, are stated to be out of the scanned set, which removes the contradiction of asking a
   scan to pass over the ADR that decides the rename. AC17's rationale is replaced by the measured
   failure: not a long report, but three wrong answers in a row, ending at `/t4:adopt-sdlc`
@@ -334,7 +334,7 @@ nothing after it should be committed until they are settled.
   *Proves:* definition of done 3 and 6. *Check:* the label is on, and the description names the
   blast radius.
 
-  **Result.** `http://gitlab.nsix.io/ai/sdlc/-/merge_requests/3`, labelled `ai-assisted`, from
+  **Result.** Merge request 3, labelled `ai-assisted`, from
   `ai/ai-factory-layout` into `main`. The description names the blast radius rather than leaving it in
   the CHANGELOG: breaking for every adopted repo, one command to migrate, the hooks working meanwhile,
   the two deprecations with their different end dates, and grep your own CI. It links the spec, the

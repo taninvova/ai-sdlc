@@ -29,4 +29,10 @@ Do not write the spec yourself in this task, and do not edit any file yourself.
 
 If nothing follows the command name, ask the user which feature to specify, and stop. Do not invent one, and do not take it from the branch name.
 
+Lifecycle telemetry, only when `ai-factory/contracts/config.json` sets `"lifecycle": {"enabled": true}`:
+first run `node ai-factory/make/lifecycle.js start --phase spec` and keep the run ID it prints;
+bracket any wait for the developer with `lifecycle.js wait-start --run <run>` and `wait-end --run <run>
+--wait <wait>`; at the end run `lifecycle.js end --run <run> --outcome succeeded|failed|interrupted --delivery <id from the new sidecar>`.
+A lifecycle message never changes this task's outcome; report it and carry on.
+
 Feature: $ARGUMENTS

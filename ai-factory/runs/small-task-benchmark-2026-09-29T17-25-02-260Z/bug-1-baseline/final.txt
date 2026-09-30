@@ -1,7 +1,0 @@
-Fixed `sum([])` by adding `0` as the `reduce` initial value.
-
-- Changed `app.js`, `test/app.test.js`, and added `ai-factory/specs/0001-sum.md`; the existing spec lacked sum behavior.
-- Confirmed the empty-array regression failed before the fix.
-- `make lint typecheck test` and `git diff --check` pass; all 3 tests pass.
-
-Limitations: independent tester/reviewer delegation failed due to a tool error. Biome was unavailable locally.

@@ -1,1 +1,0 @@
-usage ok — price resolves exact/prefix/default/estimate, the ledger is lazy and append-only, a shared uuid is counted once, and the Stop row is the increment

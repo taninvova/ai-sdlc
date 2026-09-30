@@ -32,6 +32,15 @@ code. Never `ai-factory/specs/`. Respect ai-factory/docs/dont-touch.md.
 - Risks and how each is checked
 - Verification: exact commands, phase (`red`, `step`, `final`), covered ACs and expected-red test identities/causes. Final completion requires all required checks.
 
+## Artifact contracts
+Only when `ai-factory/contracts/config.json` exists: name the ACs each step covers in its line,
+and write its checks as ``Verify (red|step|final): `command` `` with plain arguments — no pipes,
+quotes or globbing; use a script or make target instead. At least one step needs a `final`
+command. Then run `node ai-factory/make/contracts.js init plan <plan path> --spec <spec path>`
+and fix every diagnostic it reports (an uncovered or unknown AC, a step without a command, no
+final check) in the plan, rerunning it until the plan is valid. If the spec has no sidecar or is
+stale, report that; never edit the spec. Without that file, do none of this and say nothing about contracts.
+
 ## When you cannot proceed
 You cannot ask the developer. If no spec is named and ai-factory/specs/ holds several, write nothing and
 return the list of paths in your report — do not assume the newest. If the spec has open

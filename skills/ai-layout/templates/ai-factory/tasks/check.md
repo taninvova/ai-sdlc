@@ -9,5 +9,12 @@ supplied input with another diff. Review against the named spec/plan or the requ
 checklist for a small change. Report exactly one JSON object using the reviewer's schema, with
 scope, reviewed paths and any assessment in summary. Add no prose outside that object.
 Do not fix files or change the index. An in-session review is a self-check, not an independent opinion.
+After review, `/t4:report <delivery id>` assembles the completion report where artifact contracts are enabled.
+
+Lifecycle telemetry, only when `ai-factory/contracts/config.json` sets `"lifecycle": {"enabled": true}`:
+first run `node ai-factory/make/lifecycle.js start --phase check --delivery <id>` and keep the run ID it prints;
+bracket any wait for the developer with `lifecycle.js wait-start --run <run>` and `wait-end --run <run>
+--wait <wait>`; at the end run `lifecycle.js end --run <run> --outcome succeeded|failed|interrupted`.
+A lifecycle message never changes this task's outcome; report it and carry on.
 
 Context: $ARGUMENTS

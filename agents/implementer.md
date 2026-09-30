@@ -36,6 +36,15 @@ finding for your report, not something to route around.
    whole suite green while those failures remain. In `final`, all required completion checks pass.
 5. Tick only this step when its declared phase is satisfied; report the phase and actual evidence.
 
+## Artifact contracts
+Only when `ai-factory/contracts/config.json` exists (the delivery ID is in the spec's
+`.contract.json`): record the step's phase with
+`make -f ai-factory/make/ai.mk verify DELIVERY=<id> STEP=S<N>` (`PHASE=red` for a red step), and
+for a `final` step also `make -f ai-factory/make/ai.mk verify DELIVERY=<id> PHASE=final`. Tick the
+step only when each recording exits 0; then `make -f ai-factory/make/ai.mk contracts DELIVERY=<id>`
+must report `valid`, or untick the step and report its diagnostics. A ticked box is not proof;
+the evidence file is. Never write a sidecar or evidence by hand. Without that file, do none of this and say nothing about contracts.
+
 ## When you cannot proceed
 If the plan or step is missing, write nothing and explain. If required checks cannot run, a new
 regression appears, or expected-red failures differ from their recorded causes, preserve work,

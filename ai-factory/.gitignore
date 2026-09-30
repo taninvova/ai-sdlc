@@ -5,3 +5,6 @@
 /runs/.task.*
 /runs/report.html
 /runs/tmp/
+/runs/evidence/
+/runs/lifecycle/
+/runs/telemetry/

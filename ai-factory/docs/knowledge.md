@@ -9,7 +9,8 @@ ai-sdlc's ADR 0004 rule 3 to a second seam.
 Every repo receives this file. **A repo that has not declared a source never reaches any
 behaviour described here**, and must be unable to tell the feature shipped: no new line in a
 report, no new question, no new failure mode, no mention of a source, a seam or a declaration
-in any artefact.
+in any artefact. That rule binds the executors below; the setup commands under *Setting up a
+source* exist to change the answer, and are the only place an unconfigured repo hears of this.
 
 ## Is this repo configured?
 
@@ -116,6 +117,36 @@ finding for the reviewer, not a configuration.
 Whether the file is committed or gitignored is the adopting repo's choice, as for the tracker
 file: committed, every developer's session consults the same sources; ignored, this
 developer's alone.
+
+## Setting up a source
+
+Optional, always. This repo's own `ai-factory/docs/`, its ADRs and its code are the knowledge base;
+a declared source only enriches them and never outranks them. `/t4:adopt-sdlc` offers this step
+once and skips it by default; `/t4:setup-knowledge` runs it at any later time. Both follow this
+section and name nothing themselves.
+
+1. **The source must already be attached.** Attaching a server — its address, its credentials —
+   is the developer's tool configuration, not the layout's. Setup never writes that
+   configuration, never writes `.mcp.json`, and never copies a credential into `ai-factory/`. If
+   the source is not listed in the session, write nothing and say: attach it in your tool's
+   configuration, restart the session, then run setup again.
+2. **Find the `name`.** For `mcp`, it is the server segment of the tool names the session lists:
+   tools named `mcp__example_docs__search` belong to `example_docs`. Offer the servers the session
+   lists; accept a typed name only if the session lists it too.
+3. **Ask for `use`** — what the source is for, in the developer's words. It bounds what an
+   executor may ask the source, so a vague `use` is worth one follow-up question.
+4. **Write one row.** Create `ai-factory/knowledge_base.md` with the table header if it does not
+   exist; otherwise show its current contents and ask before appending. A `name` already in the
+   table is refused — two rows with one name make the whole file unconfigured.
+5. **Commit or ignore** — the adopting repo's choice, as described under *The declaration carries
+   identity only*.
+6. **Prove it.** Ask for one query and make one read-only call (a search or a read) on the
+   source, and report what came back. With no query offered, report the source as declared but
+   unverified. Never call a tool that changes state in the source to prove it.
+
+A common choice for `mcp` is a library-documentation server — Context7 is one — declared with a
+`use` such as `current API docs for third-party libraries`. Anything the session lists qualifies;
+the layout recommends none.
 
 ## Example declaration (synthetic — none of these systems exists)
 

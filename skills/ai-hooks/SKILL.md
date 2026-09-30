@@ -129,6 +129,20 @@ Rows written before 2.0.0 are cumulative rather than increments, and they are no
 the 17-column header moves every one of them to `ai-factory/runs/log.previous.csv` — the first
 bullet above — which is where rows written under the old semantics belong.
 
+## Lifecycle links (opt-in)
+
+When `ai-factory/contracts/config.json` sets `"lifecycle": {"enabled": true}`, a few hooks also
+write lifecycle events through `_lifecycle.js`:
+- **Stop and SubagentStop** write one `usage_linked` event after their row. The event is keyed by
+  the unique records the row counted, so a replay or a copied transcript links nothing twice.
+- **The Bash PostToolUse hook** writes a `session_bound` event when it sees `lifecycle.js start`
+  print a run ID.
+- **A headless parent** passes its run down as `T4_LIFECYCLE_RUN`.
+
+The rows themselves are byte-for-byte what they were. A lifecycle failure is one stderr line,
+never a lost row or a failed hook. `_lifecycle-events.js` must stay identical to
+`templates/ai-factory/make/lifecycle-events.js`; `check-lifecycle.sh` pins it.
+
 ## Pricing
 session-stop.js prices a run with the model the transcript says actually ran, so any
 provider costs correctly. It reads ai-factory/models.yaml if present:
@@ -155,6 +169,9 @@ Lines beginning with "- `" — the backticked path prefix is the rule:
 /runs/.task.*
 /runs/report.html
 /runs/tmp/
+/runs/evidence/
+/runs/lifecycle/
+/runs/telemetry/
 
 ## gitattributes line inside ai-factory/.gitattributes
 runs/log.csv merge=union

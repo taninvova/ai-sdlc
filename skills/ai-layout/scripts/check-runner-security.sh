@@ -39,7 +39,7 @@ process.stdin.on('end', () => {
   if (args[0] === 'exec') {
    fs.writeFileSync(args[args.indexOf('-o') + 1], '{"verdict":"approve","findings":[]}');
    process.stdout.write(JSON.stringify({type:'thread.started', thread_id:'fake'})+'\\n'+JSON.stringify({type:'turn.completed',usage:{input_tokens:2,output_tokens:1}})+'\\n');
-  } else process.stdout.write(JSON.stringify({session_id:'fake',usage:{input_tokens:2,output_tokens:1},total_cost_usd:0}));
+  } else process.stdout.write(JSON.stringify({session_id:'fake',usage:{input_tokens:2,output_tokens:1},total_cost_usd:0,...(process.env.REPORT_MODEL?{modelUsage:{[process.env.REPORT_MODEL]:{inputTokens:2}}}:{})}));
  }, Number(process.env.DELAY || 0));
 });
 `, { mode: 0o700 });
@@ -157,7 +157,63 @@ async function asyncRun(extra = {}) {
   fs.symlinkSync(path.join(runs,"tmp-saved"),path.join(runs,"tmp")); rejected();
   fs.unlinkSync(path.join(runs,"tmp"));
   fs.renameSync(path.join(runs,"tmp-saved"),path.join(runs,"tmp"));
-  console.log("PASS: safe runner arguments, selection, input bytes, model precedence, private concurrent scratch, interruption, and symlink rejection");
+  // --- per-task routing through make: exact argv, stderr, sidecar, no fallback launch ---------
+  fs.writeFileSync(path.join(payload,"tasks/plan.md"),"fixture plan");
+  fs.writeFileSync(path.join(payload,"tasks/test.md"),"fixture test");
+  const hostile=`gateway/planning claude $(touch '${marker}')`;
+  const routed=enabled=>`claude: tool/claude\ncodex: tool/codex\nreview:\nrouting:\n  enabled: ${enabled}\n  tasks:\n    plan:\n      claude: ${JSON.stringify(hostile)}\n      codex: gateway/planning-codex\n    test:\n      claude: gateway/testing-claude\n      codex: 'gateway/testing codex; touch ${marker}'\n`;
+  const expected={claude:{plan:hostile,test:"gateway/testing-claude"},codex:{plan:"gateway/planning-codex",test:`gateway/testing codex; touch ${marker}`}};
+  const sidecarOf=result=>{const saved=/run saved: (.+)\n/.exec(result.stdout)?.[1];assert.ok(saved,result.stdout);return JSON.parse(fs.readFileSync(path.join(root,saved+".model.json"),"utf8"));};
+  const flagValues=(record,flag)=>record.args.flatMap((arg,i)=>arg===flag?[record.args[i+1]]:[]);
+  modelFile(routed("true"));
+  for (const tool of ["claude","codex"]) {
+   const flag = tool === "codex" ? "-m" : "--model";
+   for (const task of ["plan","test","plan","test"]) {
+    const before=captures().length;
+    const result=invoke({TOOL:tool,TASK:task});
+    ok(result);
+    assert.equal(captures().length,before+1,"exactly one launch per run");
+    assert.deepEqual(flagValues(last(),flag),[expected[tool][task]],`${tool} ${task}: the model is one literal argument`);
+    assert.ok(result.stderr.includes(`model: ${task} / ${tool}: ${expected[tool][task]} (task default)`),result.stderr);
+    const record=sidecarOf(result);
+    assert.equal(record.schema,"t4.model-selection.v1");
+    assert.deepEqual([record.task,record.tool,record.requested_model,record.source,record.routing_enabled,record.outcome,record.model_argument,record.reported_models],[task,tool,expected[tool][task],"task",true,"succeeded","passed",null]);
+    assert.equal(fs.existsSync(marker),false);
+   }
+  }
+  // Requested and host-reported identities stay apart.
+  const reported=invoke({TASK:"plan",REPORT_MODEL:"provider/underlying-model"});ok(reported);
+  assert.deepEqual([sidecarOf(reported).requested_model,sidecarOf(reported).reported_models],[hostile,["provider/underlying-model"]]);
+  // Unmapped task: disclosed fallback. Explicit value and explicit blank beat the mapping.
+  const fallback=invoke({TASK:"chore"});ok(fallback);
+  assert.deepEqual(flagValues(last(),"--model"),["tool/claude"]);
+  assert.ok(fallback.stderr.includes("model: chore / claude: tool/claude (tool default; routing fallback: no chore mapping)"),fallback.stderr);
+  ok(invoke({TASK:"plan",MODEL:"explicit/model"}));assert.deepEqual(flagValues(last(),"--model"),["explicit/model"]);
+  const inherit=invoke({TASK:"plan"},["MODEL="]);ok(inherit);
+  assert.equal(last().args.includes("--model"),false);
+  assert.deepEqual([sidecarOf(inherit).source,sidecarOf(inherit).requested_model,sidecarOf(inherit).model_argument],["explicit-inherit",null,"omitted"]);
+  // A rejected model is the result: one launch, no retry on another model, no log row.
+  const logBeforeReject=fs.readFileSync(path.join(runs,"log.csv"),"utf8");
+  const beforeReject=captures().length;
+  const sidecarsBefore=new Set(fs.readdirSync(runs).filter(name=>name.endsWith(".model.json")));
+  const rejectedRun=invoke({TASK:"test",TOOL:"codex",FAIL_CLI:"1"});
+  assert.notEqual(rejectedRun.status,0);
+  assert.equal(captures().length,beforeReject+1,"a failed model launch must not be retried");
+  assert.deepEqual(flagValues(last(),"-m"),[expected.codex.test]);
+  assert.equal(fs.readFileSync(path.join(runs,"log.csv"),"utf8"),logBeforeReject,"a failed run wrote a success row");
+  const failedRecords=fs.readdirSync(runs).filter(name=>name.endsWith(".model.json")&&!sidecarsBefore.has(name)).map(name=>JSON.parse(fs.readFileSync(path.join(runs,name),"utf8"))).filter(r=>r.outcome==="failed");
+  assert.equal(failedRecords.length,1);assert.equal(failedRecords[0].requested_model,expected.codex.test);
+  // Disabled routing: the mapping has no effect.
+  modelFile(routed("false"));
+  ok(invoke({TASK:"plan"}));assert.deepEqual(flagValues(last(),"--model"),["tool/claude"]);
+  ok(invoke({TASK:"test",TOOL:"codex"}));assert.deepEqual(flagValues(last(),"-m"),["tool/codex"]);
+  // Invalid routing, or a host setting that would override the selection, launches nothing.
+  for (const body of ["routing:\n  enabled: ture\n","routing:\n  tasks:\n    plan:\n      claude: a\n      claude: b\n","routing:\n  tasks:\n    plan: gateway/x\n"]) { modelFile(body); rejected({TASK:"plan"}); }
+  modelFile(routed("true"));
+  rejected({TASK:"plan",CLAUDE_CODE_SUBAGENT_MODEL:"other/model"});
+  ok(invoke({TASK:"plan",TOOL:"codex",CLAUDE_CODE_SUBAGENT_MODEL:"other/model"}));
+  noScratch();
+  console.log("PASS: safe runner arguments, selection, input bytes, model precedence, private concurrent scratch, interruption, and symlink rejection; routed plan/test argv per tool through make, stderr and sidecar agree, reported identity kept apart, fallback disclosed, overrides win, one launch on failure, disabled and invalid routing");
  } finally { fs.rmSync(scratch,{recursive:true,force:true}); }
 })().catch(error => { console.error(error); process.exitCode=1; });
 NODE

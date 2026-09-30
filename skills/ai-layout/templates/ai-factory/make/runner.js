@@ -6,6 +6,8 @@ const crypto = require("node:crypto");
 const { spawn, execFileSync } = require("node:child_process");
 const { boundary, withLogLock } = require("./safe-files.js");
 const { digest } = require("./gate.js");
+const models = require("./models.js");
+const lifecycleStore = require("./lifecycle-events.js")({ boundary });
 // Preserve the invoked workspace when its entry point is a source-repo symlink.
 // Node resolves __dirname to the template's location, but argv[1] retains the entry.
 const ENTRY_DIRECTORY =
@@ -15,66 +17,18 @@ const WORKSPACE = path.join(ROOT, "ai-factory");
 const RUNS = path.join(WORKSPACE, "runs");
 const safe = boundary(WORKSPACE);
 
-function scalar(text, line) {
-	const value = text.trim();
-	if (!value || value.startsWith("#")) return "";
-	if (value.startsWith('"')) {
-		const match = value.match(/^("(?:[^"\\]|\\.)*")(?:\s+#.*)?$/);
-		if (!match) throw new Error(`Invalid quoted model on line ${line}`);
-		return JSON.parse(match[1]);
-	}
-	if (value.startsWith("'")) {
-		const match = value.match(/^'((?:[^']|'')*)'(?:\s+#.*)?$/);
-		if (!match) throw new Error(`Invalid quoted model on line ${line}`);
-		return match[1].replace(/''/g, "'");
-	}
-	if (/^[|>{[&*!]/.test(value))
-		throw new Error(`Unsupported model syntax on line ${line}`);
-	return value.replace(/\s+#.*$/, "").trim();
-}
-
 function readModels(file = path.join(WORKSPACE, "models.yaml")) {
-	let content;
-	try {
-		content = fs.readFileSync(file, "utf8");
-	} catch (error) {
-		if (error.code === "ENOENT") return {};
-		throw error;
-	}
-	const result = {};
-	const keys = new Set();
-	let pricing = false;
-	for (const [index, line] of content.split(/\r?\n/).entries()) {
-		if (/^\s*(#.*)?$/.test(line)) continue;
-		if (pricing && /^ {2}\S/.test(line)) continue;
-		const match = line.match(/^(claude|codex|review|pricing):(?:\s+(.*))?$/);
-		if (!match || keys.has(match[1]))
-			throw new Error(
-				`Invalid or duplicate models.yaml setting on line ${index + 1}`,
-			);
-		const [, key, raw = ""] = match;
-		keys.add(key);
-		pricing = key === "pricing";
-		if (pricing) {
-			if (raw.trim() && !raw.trim().startsWith("#"))
-				throw new Error("pricing must be an indented mapping");
-		} else {
-			result[key] = scalar(raw, index + 1);
-			if (/[\r\n\0]/.test(result[key]))
-				throw new Error(`Invalid model on line ${index + 1}`);
-		}
-	}
-	return result;
+	return models.readModels(file);
 }
 
-function resolveModel(tool, review, env = process.env) {
-	if (env.SDLC_MODEL_EXPLICIT === "1" || env.MODEL) {
-		if (/[\r\n\0]/.test(env.MODEL))
-			throw new Error("MODEL must be a single-line value");
-		return env.MODEL || "";
-	}
-	const models = readModels();
-	return (review && models.review) || models[tool] || "";
+// Kept for callers of the pre-routing signature; run() uses the structured selection.
+function resolveModel(tool, review, env = process.env, task) {
+	return models.selectModel({
+		root: ROOT,
+		tool,
+		task: review ? "check" : task,
+		env,
+	}).model;
 }
 
 function executable(tool, env) {
@@ -92,10 +46,11 @@ function executable(tool, env) {
 	return file;
 }
 
-function launch(command, args, input, output) {
+function launch(command, args, input, output, env = process.env) {
 	return new Promise((resolve, reject) => {
 		const child = spawn(command, args, {
 			cwd: ROOT,
+			env,
 			shell: false,
 			stdio: ["pipe", output, "inherit"],
 		});
@@ -136,6 +91,106 @@ function launch(command, args, input, output) {
 	});
 }
 
+// Lifecycle telemetry for a headless run (make/lifecycle.js). Opt-in, best effort: a refused or
+// failed event is one stderr line and never changes the run's own result or its run-log row.
+function lifecycleRun(env, task, tool, model) {
+	let config;
+	try {
+		config = lifecycleStore.config(WORKSPACE);
+	} catch (error) {
+		process.stderr.write(`lifecycle: config ignored — ${error.message}\n`);
+		return null;
+	}
+	if (!config.enabled) return null;
+	const valid = (pattern, value) => (pattern.test(value || "") ? value : null);
+	const P = lifecycleStore.PATTERNS;
+	const common = {
+		host: "headless",
+		run_id: lifecycleStore.newId("r"),
+		delivery_id: valid(P.delivery_id, env.DELIVERY),
+		parent_run_id: valid(P.run_id, env.T4_LIFECYCLE_RUN),
+		phase: valid(P.phase, task),
+		task: valid(P.task, task),
+		step: valid(P.step, env.STEP),
+	};
+	const attempt = lifecycleStore.newId("a");
+	const emit = (fields) => {
+		try {
+			lifecycleStore.emit(WORKSPACE, { ...common, ...fields });
+		} catch (error) {
+			process.stderr.write(`lifecycle: event not recorded — ${error.message}\n`);
+		}
+	};
+	emit({ type: "run_started", tool, model: model || null });
+	emit({ type: "phase_started", attempt_id: attempt });
+	return {
+		id: common.run_id,
+		// Usage from the run's own log row. The child's hooks may also see this session; the
+		// aggregate then keeps their per-record links and drops this envelope (child_session).
+		usage(row) {
+			const f = lifecycleStore.csvFields(row);
+			const number = (value) => (/^\d+$/.test(value) ? Number(value) : 0);
+			const price = f[15] === "" || !Number.isFinite(Number(f[15])) ? null : Number(f[15]);
+			emit({
+				event_id: lifecycleStore.hashId("usage", "headless", common.run_id),
+				type: "usage_linked",
+				session_id: valid(P.session_id, f[1]),
+				usage: {
+					source: "headless",
+					agent: null,
+					model: f[8] || null,
+					turns: number(f[9]),
+					input_tokens: number(f[10]),
+					output_tokens: number(f[11]),
+					cache_read_tokens: number(f[12]),
+					cache_write_tokens: number(f[13]),
+					cost_usd: price,
+					cost_provenance: price === null ? null : "host-reported",
+					record_key: require("node:crypto").createHash("sha256").update(`headless:${common.run_id}`).digest("hex"),
+					dedupable: true,
+					child_session: valid(P.session_id, f[1]),
+				},
+			});
+		},
+		end(outcome, reason) {
+			emit({ type: "phase_ended", attempt_id: attempt, outcome, reason: reason ? String(reason).slice(0, 200) : null });
+			emit({ type: "run_ended", outcome, reason: reason ? String(reason).slice(0, 200) : null });
+		},
+	};
+}
+// `<run>.json.model.json`: the requested model and why it was chosen, next to the output it
+// produced. A host-reported identity is kept apart from the request and is null when the output
+// names none; a gateway alias may still resolve to another model behind the provider.
+function selectionRecord(output, selection, { command, args, outcome, reason }) {
+	let reported = null;
+	try {
+		const text = fs.readFileSync(output, "utf8");
+		const found = new Set();
+		for (const line of text.split("\n")) {
+			if (!line.trim()) continue;
+			let value;
+			try {
+				value = JSON.parse(line);
+			} catch {
+				continue;
+			}
+			for (const id of Object.keys(value?.modelUsage || {})) found.add(id);
+			if (typeof value?.model === "string") found.add(value.model);
+		}
+		if (found.size) reported = [...found].sort();
+	} catch {}
+	const record = {
+		...selection,
+		requested_model: selection.model || null,
+		reported_models: reported,
+		model_argument: args ? (args.includes("--model") || args.includes("-m") ? "passed" : "omitted") : null,
+		executable: command ? path.basename(command) : null,
+		outcome,
+		reason: reason ? String(reason).slice(0, 200) : null,
+	};
+	delete record.model;
+	safe.write(`${output}.model.json`, `${JSON.stringify(record, null, 2)}\n`, { exclusive: true });
+}
 async function run(options = {}) {
 	const env = options.env || process.env;
 	const tool = options.tool || env.TOOL || "claude";
@@ -164,16 +219,31 @@ async function run(options = {}) {
 			input = fs.readFileSync(inputFile);
 		} else input = Buffer.from(env.INPUT || "", "utf8");
 	}
-	const model = resolveModel(tool, options.review || task === "check", env);
+	// Resolved once, before anything launches; a configuration error stops the run here.
+	const selection = models.selectModel({
+		root: ROOT,
+		tool,
+		task: options.review ? "check" : task,
+		env,
+	});
+	const model = selection.model;
+	if (selection.routing_enabled && model && tool === "claude" && env.CLAUDE_CODE_SUBAGENT_MODEL)
+		throw new Error(
+			`CLAUDE_CODE_SUBAGENT_MODEL overrides the subagents of this ${selection.task} run, so ${model} would not apply to them; unset it or disable routing`,
+		);
 	const command = executable(tool, env);
+	process.stderr.write(`model: ${models.describe(selection)}\n`);
 	safe.mkdir(RUNS);
 	for (const name of ["log.csv", "log.previous.csv"])
 		safe.assertPath(path.join(RUNS, name));
 	const scratch = safe.scratch(path.join(RUNS, "tmp"));
+	const lifecycle = lifecycleRun(env, task, tool, model);
 	const identity = `${new Date().toISOString().replace(/[:.]/g, "-")}-${crypto.randomUUID()}-${tool}-${task}`;
 	const output = path.join(RUNS, `${identity}.json`);
 	const sidecar = `${output}.last.txt`;
 	let fd;
+	let launched = false;
+	let args;
 	try {
 		const prompt = Buffer.concat([
 			fs.readFileSync(taskFile),
@@ -185,14 +255,17 @@ async function run(options = {}) {
 			output,
 			fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL,
 		);
-		const args =
+		args =
 			tool === "codex" ? ["exec", "--json", "--skip-git-repo-check"] : ["-p"];
 		if (model) args.push(tool === "codex" ? "-m" : "--model", model);
 		if (tool === "codex") {
 			safe.write(sidecar, "", { exclusive: true });
 			args.push("-o", sidecar, "-");
 		} else args.push("--output-format", "json");
-		await launch(command, args, prompt, fd);
+		// The child's hooks read T4_LIFECYCLE_RUN, so its usage links name this run explicitly.
+		// One launch only: a rejected model, failed login or refused request is the result.
+		launched = true;
+		await launch(command, args, prompt, fd, lifecycle ? { ...process.env, T4_LIFECYCLE_RUN: lifecycle.id } : process.env);
 		fs.closeSync(fd);
 		fd = undefined;
 		safe.assertPath(output, { allowMissing: false });
@@ -222,17 +295,31 @@ async function run(options = {}) {
 				},
 			);
 			safe.append(path.join(RUNS, "log.csv"), row);
+			lifecycle?.usage(row);
 		});
+		selectionRecord(output, selection, { command, args, outcome: "succeeded" });
+		lifecycle?.end("succeeded");
 		return {
 			output,
 			sidecar: tool === "codex" ? sidecar : undefined,
 			outputHash,
 			sidecarHash,
 			model,
+			selection,
 			tool,
 			task,
 			scope: options.scope,
 		};
+	} catch (error) {
+		if (launched) {
+			try {
+				selectionRecord(output, selection, { command, args, outcome: "failed", reason: error.message });
+			} catch (recordError) {
+				process.stderr.write(`runner: selection not recorded — ${recordError.message}\n`);
+			}
+		}
+		lifecycle?.end(/SIGINT|SIGTERM|SIGKILL/.test(error.message) ? "interrupted" : "failed", error.message);
+		throw error;
 	} finally {
 		if (fd !== undefined) fs.closeSync(fd);
 		safe.removeScratch(scratch);
@@ -364,12 +451,54 @@ async function review() {
 			"--sidecar-sha256",
 			result.sidecarHash,
 		);
-	execFileSync(process.execPath, args, {
-		cwd: ROOT,
-		shell: false,
-		stdio: "inherit",
-	});
+	let gateError;
+	try {
+		execFileSync(process.execPath, args, {
+			cwd: ROOT,
+			shell: false,
+			stdio: "inherit",
+		});
+	} catch (error) {
+		gateError = error;
+	}
+	if (process.env.DELIVERY) reviewEvidence(result);
+	if (gateError) throw gateError;
 	return result;
+}
+// With DELIVERY set, bind this exact gated output to the code it reviewed (make/contracts.js).
+// Approval is re-derived from the same hashed output the gate read, never from its exit code.
+function reviewEvidence(result) {
+	const { readReview } = require("./gate.js");
+	const { recordReview } = require("./contracts.js");
+	let verdict;
+	let reason;
+	try {
+		verdict = readReview({
+			file: result.output,
+			tool: result.tool,
+			sidecar: result.sidecar,
+			outputHash: result.outputHash,
+			sidecarHash: result.sidecarHash,
+		});
+	} catch (error) {
+		reason = `invalid review: ${error.message}`;
+	}
+	const approved =
+		verdict?.verdict === "approve" &&
+		!verdict.findings.some((finding) => finding.severity === "blocker");
+	const recorded = recordReview({
+		root: ROOT,
+		delivery: process.env.DELIVERY,
+		approved,
+		verdict: verdict?.verdict,
+		findings: verdict?.findings,
+		tool: result.tool,
+		outputHash: result.outputHash,
+		reason,
+	});
+	process.stdout.write(
+		`review evidence: ${recorded.evidence.status} → ${path.relative(ROOT, recorded.file)}\n`,
+	);
 }
 
 function flush() {

@@ -11,11 +11,18 @@ export TMPDIR="$PWD/ai-factory/runs/tmp"
 mkdir -p "$TMPDIR"
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
+# .claude/ is absent from a clean checkout: every task is a native plugin command, so the sync
+# writes no Claude pointer. Hash only the adapter directories that exist.
+adapter_hash() {
+  local dirs=() d
+  for d in .claude .cursor .codex; do [ -d "$d" ] && dirs+=("$d"); done
+  [ ${#dirs[@]} -gt 0 ] || { echo none; return; }
+  find "${dirs[@]}" -type f -o -type l | sort | xargs shasum | shasum
+}
 bash ai-factory/make/sync-adapters.sh --adapters=all > /dev/null
-before=$(find .claude .cursor .codex -type f -o -type l | sort | xargs shasum | shasum)
+before=$(adapter_hash)
 bash ai-factory/make/sync-adapters.sh --adapters=all > /dev/null
-[ "$before" = "$(find .claude .cursor .codex -type f -o -type l | sort | xargs shasum | shasum)" ] \
-  || fail "sync-adapters is not idempotent"
+[ "$before" = "$(adapter_hash)" ] || fail "sync-adapters is not idempotent"
 
 # A task whose name the plugin already registers as a native command (commands/<name>.md) takes no
 # Claude pointer: two /t4:<name> entries in one menu, described differently, is the bug this guards

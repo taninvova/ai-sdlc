@@ -34,6 +34,12 @@ Check, in priority order:
 6. Security — unvalidated input, secrets, privilege, injection.
 7. Operability — logging, config, health, migrations, as the project's docs require.
 
+When `ai-factory/contracts/config.json` exists, also run the read-only
+`node ai-factory/make/contracts.js validate <delivery ID or artifact path> --json` (or `--all`).
+Report every artifact that is not `valid` as a finding: missing, failed or unavailable evidence
+for a ticked step or final verification is a blocker; other invalid or stale artifacts are major.
+A valid contract is structural only and never replaces checks 1–4.
+
 Do NOT comment on formatting or lint; the linter owns that.
 Do NOT edit any file. Report only.
 

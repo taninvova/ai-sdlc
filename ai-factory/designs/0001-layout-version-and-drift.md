@@ -41,7 +41,7 @@ Facts from the code, not the map:
   no update path at all today. Re-running `/t4:adopt-sdlc` refuses when `ai/` exists (step 1).
 - Two files claim to be the plugin version: `.claude-plugin/plugin.json` (`0.5.0`) and
   `.claude-plugin/marketplace.json` (pins `0.3.0`).
-- `README.md` already installs from `git@gitlab.nsix.io:ai/sdlc.git`, matching the remote —
+- `README.md` already installs from the repo's own URL, matching the remote —
   the second Known gap in fleet.md appears **already fixed at HEAD** and the map is stale there.
 - Contracts in play: `skills/ai-layout/templates/` (consumed by adopted repos and both
   scaffolds), the `{{…}}` placeholder set, `hooks/hooks.json`, `ai/docs/dont-touch.md`'s
@@ -64,7 +64,7 @@ writes a drift record under `ai/runs/` and something else must surface it later.
 
 **D — Push from a central registry.** ai-sdlc owns a repo→version table and its release pipeline
 opens an MR or issue in each adopted repo. Needs GitLab CI, a group token and a bot identity in
-`nsix/ai/` — none of which exist.
+the GitLab group — none of which exist.
 
 ## 5. Comparison
 | Option | Boundaries crossed | Data ownership | Failure mode | Reversibility | Effort |
@@ -89,7 +89,7 @@ Rejected: **D**, because it inverts the boundary "the scaffolds depend on ai-sdl
 depend on a scaffold" and needs infrastructure the fleet has none of. **C** is deferred, not
 refused — it is strictly additive on top of B once something surfaces `ai/runs/`.
 
-**What would change my mind:** a group-level CI runner and bot token in `nsix/ai/` makes D cheap
+**What would change my mind:** a group-level CI runner and bot token in the GitLab group makes D cheap
 and turns the fleet-wide half from pull into push. Evidence that adopters routinely edit
 `ai/tasks/` and `ai/agents/` would collapse B's value back to A, because "untouched" would be rare.
 
@@ -159,8 +159,8 @@ Not yet specified: `/t4:sync-sdlc --update`, which needs specs 1–2 in the fiel
 > Owns the templates, the prompt text, and the `ai/.sdlc.json` schema. Writes only to
 > `ai/runs/` and, at adopt time, `ai/.sdlc.json` in the repo it runs in. Each adopted repo owns
 > its own manifest and is the source of truth for its layout version; this plugin keeps no
-> registry of adopter versions. Reads `ai/models.yaml` for model aliases; the LiteLLM proxy at
-> llm.nsix.io resolves them.
+> registry of adopter versions. Reads `ai/models.yaml` for model aliases; the team's LiteLLM
+> proxy resolves them.
 
 **`ai/docs/fleet.md`, replace the "adopted app repos" row with:**
 > | adopted app repos | various | their own application code; a copy of the layout under `ai/`; `ai/.sdlc.json`, the record of which ai-sdlc version they hold | `ai/.sdlc.json`, readable by `/t4:fleet` | the templates, via `/t4:adopt-sdlc` and `/t4:sync-sdlc` (d) | per repo |

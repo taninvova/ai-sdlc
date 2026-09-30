@@ -158,6 +158,53 @@ else
   fi
 fi
 
+# --- artifact contracts (opt-in) --------------------------------------------------------
+# Presence of ai-factory/contracts/config.json is the opt-in. The validator is read-only, so
+# running it here keeps the promise at the top of this file.
+if [ "$SELF" = yes ] || [ ! -d ai-factory ]; then
+  :
+elif [ ! -f ai-factory/contracts/config.json ]; then
+  if [ -f ai-factory/make/contracts.js ]; then
+    say ok contracts "not enabled — opt in with: node ai-factory/make/contracts.js enable"
+  fi
+elif [ ! -f ai-factory/make/contracts.js ]; then
+  say finding contracts "enabled, but ai-factory/make/contracts.js is missing — /t4:sync-sdlc reports it; take it from the templates"
+elif ! command -v node >/dev/null 2>&1; then
+  say unknown contracts "node not on PATH, so contracts cannot be validated"
+else
+  cap=$(node -e 'try { const v = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).capabilities?.contracts?.version; if (Number.isInteger(v)) console.log(v); } catch {}' ai-factory/.sdlc.json 2>/dev/null)
+  status=$(node ai-factory/make/contracts.js validate --all --json 2>/dev/null | sed -n 's/^  "status": "\([a-z_]*\)",$/\1/p' | head -1)
+  if [ -z "$status" ]; then
+    say unknown contracts "enabled, but the validator did not answer — run make -f ai-factory/make/ai.mk contracts"
+  elif [ "$status" = valid ]; then
+    say ok contracts "enabled (capability v${cap:-unrecorded}); every contract artifact is valid"
+  else
+    say finding contracts "enabled (capability v${cap:-unrecorded}); overall state is $status — run make -f ai-factory/make/ai.mk contracts for the diagnostics"
+  fi
+fi
+
+# --- model selection and routing --------------------------------------------------------
+# models.js owns the parser, so the diagnosis cannot disagree with what a run would do. Local
+# files only: whether a provider accepts an alias is never checked here.
+if [ ! -f ai-factory/make/models.js ]; then
+  if [ -f ai-factory/models.yaml ] && grep -q '^routing:' ai-factory/models.yaml; then
+    say finding routing "ai-factory/models.yaml has a routing: section but ai-factory/make/models.js is missing — routed tasks stop until /t4:sync-sdlc drift is taken"
+  fi
+elif ! command -v node >/dev/null 2>&1; then
+  say unknown routing "node not on PATH, so ai-factory/models.yaml cannot be checked"
+else
+  routing_out=$(node ai-factory/make/models.js doctor 2>&1)
+  if [ $? -ne 0 ]; then
+    say unknown routing "the model check did not complete: $(printf '%s' "$routing_out" | head -1)"
+  else
+    while IFS='|' read -r status label detail; do
+      [ -n "$status" ] && say "$status" "$label" "$detail"
+    done <<EOF_ROUTING
+$routing_out
+EOF_ROUTING
+  fi
+fi
+
 # --- environment: which copy is actually running -----------------------------------------
 # The repo checks above describe files. These describe the session, and they are the ones that
 # cost the most time to work out by hand: a plugin enabled for a different project, and older

@@ -17,8 +17,3 @@ CLAUDE.local.md
 # Code's own convention settings.json is the shared file and settings.local.json the personal
 # one, so ignoring it is a local decision here, not a pattern for adopters.
 .claude/settings.json
-
-# Serena MCP server's per-project config, cache and memories. Whether a developer runs Serena
-# is a personal choice, like .claude/settings.json above; it regenerates the directory on
-# activation, so nothing is lost by not sharing it. Local decision, not a pattern for adopters.
-.serena/

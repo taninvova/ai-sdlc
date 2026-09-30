@@ -18,4 +18,10 @@ Do not implement anything yourself in this task, and do not edit any file yourse
 
 If nothing follows the command name, ask the user which plan and which step, and stop. Name the unticked steps if the plan is obvious — do not start one on your own.
 
+Lifecycle telemetry, only when `ai-factory/contracts/config.json` sets `"lifecycle": {"enabled": true}`:
+first run `node ai-factory/make/lifecycle.js start --phase run --delivery <id> --step S<N>` and keep the run ID it prints;
+bracket any wait for the developer with `lifecycle.js wait-start --run <run>` and `wait-end --run <run>
+--wait <wait>`; at the end run `lifecycle.js end --run <run> --outcome succeeded|failed|interrupted`.
+A lifecycle message never changes this task's outcome; report it and carry on.
+
 Plan and step: $ARGUMENTS

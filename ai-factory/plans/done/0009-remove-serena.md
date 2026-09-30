@@ -139,7 +139,7 @@ kept only so its absence is visibly deliberate rather than forgotten.
   the checks and recording the run.
 
   **Result — AC1, AC2, AC3, AC4 and AC5 proved on the tree as it stands; spec Open questions 1, 2, 3
-  and 5 outstanding.** Run on 2026-09-28 from `/Users/tanin/code/nsix/ai/sdlc`, in the order of
+  and 5 outstanding.** Run on 2026-09-28 from the repo root, in the order of
   *Verification*, each command verbatim and none of them piped. No Serena tool was called at any
   point in this run.
   **#1 (AC1) pass:** `! test -e .serena` exited 0, and `ls -a` at the root shows no `.serena` entry.
@@ -295,7 +295,7 @@ blocks. **None is resolved in this plan.**
 
 ## Verification
 
-Run from the repo root — `/Users/tanin/code/nsix/ai/sdlc` — in this order. Each line below was run
+Run from the repo root, in this order. Each line below was run
 verbatim on 2026-09-28 and passed; there is no root `Makefile` in this repo, so no `make` target is
 named. Never pipe a check to `tail`: the pipeline's status is `tail`'s and a failure would read as a
 pass.

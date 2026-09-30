@@ -15,14 +15,19 @@ override JSON := $(value JSON)
 override TSV := $(value TSV)
 override REVIEW_SCOPE := $(value REVIEW_SCOPE)
 override GATE_ENFORCE := $(value GATE_ENFORCE)
+override DELIVERY := $(value DELIVERY)
+override STEP := $(value STEP)
+override PHASE := $(value PHASE)
+override REQUIRE := $(value REQUIRE)
 
 export TOOL TASK MODEL CMD INPUT INPUT_FILE
 export SDLC_MODEL_EXPLICIT
 export JSON
 export TSV
 export REVIEW_SCOPE GATE_ENFORCE
+export DELIVERY STEP PHASE REQUIRE
 
-.PHONY: ai review ai-sync log-flush clean-runs cost
+.PHONY: ai review ai-sync log-flush clean-runs cost contracts verify delivery-report lifecycle lifecycle-export
 ai:
 	@node ai-factory/make/runner.js ai
 review:
@@ -35,3 +40,13 @@ clean-runs:
 	@node ai-factory/make/runner.js clean-runs
 cost:
 	@node ai-factory/make/cost.js $(RUNS)/log.csv
+contracts:
+	@node ai-factory/make/contracts.js validate
+verify:
+	@node ai-factory/make/contracts.js record
+delivery-report:
+	@node ai-factory/make/delivery-report.js
+lifecycle:
+	@node ai-factory/make/lifecycle.js report
+lifecycle-export:
+	@node ai-factory/make/lifecycle.js export

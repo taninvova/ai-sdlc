@@ -1,3 +1,0 @@
-Blocked at stage 1: the subagent tool failed with `no thread with id`, so the required specifier delegation could not run.
-
-The workflow forbids writing the spec myself. No files were changed; no spec, plan, implementation, tests, or review were completed. The whitespace regression remains unresolved.

@@ -5,6 +5,7 @@ require("./_common").runHook(() => {
 	const ai = aiDir(ev);
 	if (!ai) return;
 	const cmd = String(ev.tool_input?.command || "");
+	require("./_lifecycle").bindSession(ai, ev);
 	if (
 		!/\b(vitest|biome|playwright|jest|tsc|(pnpm|npm|yarn)\s+(run\s+)?(test|lint|e2e|check|type-check|typecheck)(:\w+)?)\b/.test(
 			cmd,

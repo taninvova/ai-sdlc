@@ -1,8 +1,0 @@
-Implemented in `app.js` with regression coverage in `test/app.test.js`.
-
-- Whitespace-only and empty inputs return `Anonymous`; ordinary names remain trimmed.
-- Demonstrated six failing cases before fixing; all seven tests now pass.
-- `make lint typecheck test` and `git diff --check` passed.
-- Self-review found no issues. Existing staged, unstaged, and untracked work is preserved.
-
-Biome is unavailable locally, so its formatting check remains unverified.

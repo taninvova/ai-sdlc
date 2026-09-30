@@ -53,7 +53,9 @@ function claims(ai, sessionId) {
 // de-duplicated at all, so it is counted and never claimed: over-counting on a transcript format
 // that omits the key is a better failure than silently losing the tokens.
 function sumTranscript(file, claim) {
-	const t = { turns: 0, inp: 0, out: 0, cr: 0, cw: 0, model: "" };
+	// `claimed` and the first/last record timestamps feed lifecycle usage links (_lifecycle.js);
+	// the row columns are computed exactly as before.
+	const t = { turns: 0, inp: 0, out: 0, cr: 0, cw: 0, model: "", claimed: [], first_at: null, last_at: null };
 	let body;
 	try {
 		body = fs.readFileSync(file, "utf8");
@@ -74,6 +76,11 @@ function sumTranscript(file, claim) {
 		if (claim && id) {
 			if (claim.has("u:" + id)) continue;
 			claim.add("u:" + id);
+		}
+		if (id) t.claimed.push("u:" + id);
+		if (typeof r.timestamp === "string" && !Number.isNaN(Date.parse(r.timestamp))) {
+			if (!t.first_at || r.timestamp < t.first_at) t.first_at = r.timestamp;
+			if (!t.last_at || r.timestamp > t.last_at) t.last_at = r.timestamp;
 		}
 		t.turns++;
 		if (r.message?.model || r.model) t.model = r.message?.model || r.model;

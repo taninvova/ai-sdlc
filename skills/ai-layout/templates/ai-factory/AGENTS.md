@@ -5,7 +5,7 @@ One paragraph: what this project does and who uses it. Stack: {{stack}}. Scaffol
 
 ## Commands
 {{commands}}
-Slash commands: /t4:fleet /t4:design /t4:adr /t4:analyse /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:quick /t4:check
+Slash commands: /t4:fleet /t4:design /t4:adr /t4:analyse /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:quick /t4:check /t4:report
 Headless (CI only): make -f ai-factory/make/ai.mk ai TASK=<name> INPUT="…"
 
 ## Non-negotiable rules
@@ -23,7 +23,7 @@ when the selected workflow requires them. Reuse unchanged context already in thi
 ## Workflow
 Small, understood local change: /t4:quick. Bug: /t4:fix. Maintenance: /t4:chore.
 Uncertain requirements, authorization, public contracts, migrations, dependencies or service
-boundaries: /t4:explore → /t4:spec → /t4:plan → /t4:test red → /t4:run → /t4:test gaps → /t4:check.
+boundaries: /t4:explore → /t4:spec → /t4:plan → /t4:test red → /t4:run → /t4:test gaps → /t4:check (→ /t4:report with contracts).
 Preserve existing changes. Never reset a working tree to start or finish a step. File count is
 not a risk classifier. Match verification to the phase and run required final checks at completion.
 

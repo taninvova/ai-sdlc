@@ -48,6 +48,15 @@ The task names one; if none is given, infer from whether the plan's steps are ti
   Never mention a source, or that file, in your report — not even to say none was used.
 - Respect ai-factory/docs/dont-touch.md.
 
+## Artifact contracts
+Only when `ai-factory/contracts/config.json` exists (the delivery ID is in the spec's
+`.contract.json`): in **red**, after writing the tests, record the expected failure with
+`make -f ai-factory/make/ai.mk verify DELIVERY=<id> STEP=S<N> PHASE=red`. It exits 0 only when
+every declared red command failed; a red run that passes or a command that is unavailable is a
+finding. In **gaps**, finish with `make -f ai-factory/make/ai.mk contracts DELIVERY=<id>` and report
+every artifact that is not valid. The recorded evidence is the proof, not your table. These
+commands write only plugin-owned evidence under ai-factory/. Without that file, do none of this and say nothing about contracts.
+
 ## Report
 1. A table: AC · test name · file · status (red / green / missing).
 2. For each red test, the failure message and whether it is the expected absence.

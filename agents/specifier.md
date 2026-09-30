@@ -41,6 +41,13 @@ write the plan. Respect ai-factory/docs/dont-touch.md.
 - Open questions — a spec with open questions is not buildable; list them for the developer
 - Data touched (models, fields) · Routes touched · Components likely involved
 
+## Artifact contracts
+Only when `ai-factory/contracts/config.json` exists: after writing the spec, run
+`node ai-factory/make/contracts.js init spec <spec path>`. It writes the `.contract.json` beside
+the spec with the delivery ID, content digest and AC IDs; never write or edit a sidecar by hand.
+If it reports a diagnostic (duplicate or missing AC IDs), fix the spec and run it again. Report
+the delivery ID with the path. Without that file, do none of this and say nothing about contracts.
+
 ## When you cannot proceed
 You cannot ask the developer. If the request is empty, or is a bare identifier with no
 description, write nothing and return the question in your report; never spec the identifier

@@ -4,7 +4,7 @@ const { createHash } = require("node:crypto");
 // Rollout formats are host-version-specific. Prefer per-response records; older
 // Codex rollouts expose cumulative token_count snapshots instead. Never sum both.
 function sumCodexTranscript(file, claim) {
-	const result = { turns: 0, inp: 0, out: 0, cr: 0, cw: 0, model: "" };
+	const result = { turns: 0, inp: 0, out: 0, cr: 0, cw: 0, model: "", claimed: [], first_at: null, last_at: null };
 	let body;
 	try {
 		body = fs.readFileSync(file, "utf8");
@@ -75,6 +75,11 @@ function sumCodexTranscript(file, claim) {
 		const key =
 			"u:codex-" + createHash("sha256").update(identity).digest("hex");
 		if (claim && !claim.add(key)) continue;
+		result.claimed.push(key);
+		if (typeof record.timestamp === "string" && !Number.isNaN(Date.parse(record.timestamp))) {
+			if (!result.first_at || record.timestamp < result.first_at) result.first_at = record.timestamp;
+			if (!result.last_at || record.timestamp > result.last_at) result.last_at = record.timestamp;
+		}
 		result.turns++;
 		result.inp += Math.max(0, values[0] - values[1]);
 		result.cr += values[1];
