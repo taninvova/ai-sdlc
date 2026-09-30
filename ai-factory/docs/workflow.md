@@ -39,7 +39,7 @@ from `review:` to the selected tool setting to CLI inheritance. Configuration is
 not executable shell text; `CMD` names a trusted executable rather than a shell fragment.
 
 The Claude Edit/Write/MultiEdit guard is not a shell sandbox. Host permissions govern arbitrary
-commands. Codex adapters do not install Claude hooks; inline review is a self-check. Do not
+commands. Codex plugin hooks require host trust; adapters alone do not install them. Inline review is a self-check. Do not
 disable host protections or grant broad permissions to make tests pass.
 
 ## 1. Install, once per machine
@@ -295,42 +295,53 @@ template can never silently overwrite something you rely on.
 A repo adopted before `ai-factory/.sdlc.json` existed is told how to start a baseline. Never edit that
 file by hand; a hook blocks it, because a manifest edited by hand makes the check lie.
 
-## 8. Using it from Codex
+## 8. Using Claude Code and Codex
 
-`sync-adapters.sh --adapters=claude,codex,cursor` explicitly generates selected host pointers, so the same
-thirteen tasks are slash commands in Codex too. Strict mode uses explicit task paths or the local headless runner. If the installed
-Codex runtime supports project skill discovery and adapters were requested, it can load
-`.codex/skills/`. Do not assume automatic discovery where the host does not support it.
+Both hosts use the same `ai-factory/tasks/` and complete agent procedures. The Codex
+package includes native skills for every workflow and plugin command, including adoption,
+sync, doctor and state. Project adapters are optional; installing the plugin does not
+require generating files into `.codex/`.
 
-| | Claude Code | Codex |
+| Capability | Claude Code | Codex |
 |---|---|---|
-| The thirteen task procedures | native commands or requested adapters | explicit paths; requested adapters where supported |
-| Headless | `make -f ai-factory/make/ai.mk ai` | `make -f ai-factory/make/ai.mk ai TOOL=codex` |
-| the eight agents — reviewer, tester, architect, analyst, explorer, specifier, planner, implementer | separate subagent, own context | **inlined into the same session** |
-| Session log, edit log, cost row | yes | no |
-| `dont-touch.md` guard | enforced by a hook | **not enforced** |
+| Interactive tasks | `/t4:<task>` through plugin commands or selected project pointers | `$t4-<task>` through bundled plugin skills |
+| Setup | `/t4:adopt-sdlc` | `$t4-adopt-sdlc` |
+| Headless | `make -f ai-factory/make/ai.mk ai TOOL=claude` | `make -f ai-factory/make/ai.mk ai TOOL=codex` |
+| Lifecycle hooks | `hooks/hooks.json` | `hooks/codex.json`; review and trust in `/hooks` |
+| Protected edits | Edit, Write, MultiEdit paths | Every apply_patch path, including rename destinations |
+| Agent procedure | Registered Claude agent | Native delegation when available; otherwise labeled inline self-check |
+| Usage | Claude transcript records | Codex response records or older cumulative snapshots |
 
-Two differences are worth taking seriously rather than skimming:
+For Codex CLI, add this checkout as a marketplace with
+`codex plugin marketplace add /absolute/path/to/checkout`, then run
+`codex plugin add t4@sdlc`. In the desktop app, install t4 from the configured sdlc
+marketplace. Start a new session after installing or updating the plugin. Review changed
+hook definitions in `/hooks` before relying on automatic logging or edit guards.
 
-**The agents lose their independence.** Codex plugins cannot ship subagents, so `/t4:check`,
-`/t4:test`, `/t4:design`, `/t4:adr`, `/t4:analyse`, `/t4:explore`, `/t4:spec`, `/t4:plan` and
-`/t4:run` tell the session to follow `ai-factory/agents/<name>.md` itself.
-The generated skill says so. It matters most for the tester and the reviewer, whose whole point
-is independence: a tester that has seen the implementation writes tests that restate it, and a
-reviewer that wrote the code is not reviewing it. The four step agents lose something quieter:
-under Codex the step runs in the session that held the chat, so a spec can absorb twenty minutes
-of discussion that never reached the exploration. Treat every inlined agent's output as a
-self-check — useful, but not the second opinion the Claude Code path gives you.
+Subagent availability and foreground/background behavior depend on the host version.
+An inline review is a self-check, never an independent review. Both hosts preserve the
+host sandbox: arbitrary shell writes are outside the edit guard's coverage. Hosts that
+cannot execute local plugin hooks can still use the skills and headless runner, but do
+not provide automatic interactive logging or hook enforcement.
 
-**The Claude edit guard does not run through Codex adapters.** Its registered coverage is
-Claude's Edit, Write and MultiEdit tools. Under either runtime, arbitrary shell writes depend
-on host permissions. Treat a missing hook as absent protection, keep project constraints in
-the prompt, and use host sandbox controls for filesystem enforcement. Do not grant broader
-permissions to compensate for a missing hook.
+Codex usage excludes cached input from the `input_tokens` column so its meaning matches
+Claude rows. `output_tokens` already includes reasoning output. Codex `cost_usd` stays
+empty instead of using Claude prices. Its rollout format is version-specific; fixtures
+cover response records and legacy cumulative snapshots. Repeated Stops and inherited
+response IDs are counted once within a session's claim ledger.
 
-Headless costs: `codex exec` reports token counts but no price, so the `cost_usd` column stays
-empty for Codex rows rather than being filled with a guess. Its `input_tokens` include cached
-tokens, which `log.js` subtracts back out so the column means the same thing in every row.
+Validation (2026-09-29): all 22 regression scripts passed in an isolated checkout,
+including the existing Claude hooks and the new Codex event/rollout fixtures. Before the
+fix, safe Codex patches were blocked, edit/task/usage rows were absent, and native workflow
+skills were missing. Codex CLI 0.159.0 installed the package into a temporary profile;
+its real `skills/list` and `hooks/list` APIs discovered all 20 bundled skills and eight
+hook handlers with no errors. Hooks remained untrusted in that profile, as expected.
+This loader check did not execute an autonomous model turn or prove hook delivery in every
+Codex surface; host trust and local command-hook support remain deployment requirements.
+
+Official host contracts: [plugins](https://developers.openai.com/plugins/build/plugins),
+[hooks](https://developers.openai.com/codex/hooks), and
+[subagents](https://developers.openai.com/codex/agent-configuration/subagents).
 
 ## 9. What the hooks record
 
@@ -436,7 +447,7 @@ mid-session is not yet running.
 | Symptom | Cause |
 |---|---|
 | No `/t4:*` commands | Verify the installed plugin and host discovery support. Strict mode can use explicit task paths; request the specific host adapter only if wanted. |
-| `/t4:*` missing in Codex | Use an explicit task path or the local runner; where project skills are supported, explicitly request `/t4:sync-sdlc --adapters=codex`. |
+| t4 skills missing in Codex | Install/update the Codex plugin and start a new session; use `$t4-<task>`. The local runner remains available. |
 | A command behaves oddly | read `ai-factory/tasks/<name>.md`; that text *is* the behaviour. Fix it there via MR |
 | An edit was blocked | it matched `ai-factory/docs/dont-touch.md`. Edit the source, not the generated copy |
 | `.claude/` looks wrong | never edit it — it is generated. Change `ai-factory/` and run `/t4:sync-sdlc` |

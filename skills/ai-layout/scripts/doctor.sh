@@ -55,14 +55,30 @@ fi
 # --- adapters ---------------------------------------------------------------------------
 # Generated from ai-factory/tasks/. Fewer commands than tasks means a sync was missed, which is the
 # usual cause of "my slash commands are gone".
+# A task the plugin already ships as a native command takes no pointer — a pointer there would be
+# a second /t4:<name> in the menu. Read from the plugin's own commands/ so the expected count
+# follows that set rather than a copy of it.
+native=()
+for command in "$PLUGIN"/commands/*.md; do
+  [ -f "ai-factory/tasks/$(basename "$command")" ] && native+=("$(basename "$command" .md)")
+done
+expected=$(( ${#tasks[@]} - ${#native[@]} ))
 cmds=(.claude/commands/t4/*.md)
+duplicates=()
+for name in ${native[@]+"${native[@]}"}; do
+  [ -f ".claude/commands/t4/$name.md" ] && duplicates+=("/t4:$name")
+done
 if [ ${#cmds[@]} -eq 0 ]; then
   say ok adapters "no project Claude adapters — strict workspace mode uses installed commands or explicit task paths"
-elif [ ${#cmds[@]} -ne ${#tasks[@]} ]; then
-  say finding adapters "${#tasks[@]} tasks but ${#cmds[@]} commands — existing adapters are stale. Explicitly request /t4:sync-sdlc --adapters=claude"
+elif [ $(( ${#cmds[@]} - ${#duplicates[@]} )) -ne "$expected" ]; then
+  say finding adapters "$expected of ${#tasks[@]} tasks take a project command but ${#cmds[@]} exist — existing adapters are stale. Explicitly request /t4:sync-sdlc --adapters=claude"
 else
-  say ok adapters "${#cmds[@]} commands match ${#tasks[@]} tasks"
+  say ok adapters "${#cmds[@]} commands match the $expected tasks that take one"
 fi
+# A leftover pointer for a plugin command is the menu showing the same command twice, each entry
+# describing itself differently. Named separately from the count above, because the remedy removes
+# a file rather than adding one.
+[ ${#duplicates[@]} -gt 0 ] && say finding adapters "${duplicates[*]} listed twice — shipped by the plugin and repeated by a project pointer. Explicitly request /t4:sync-sdlc --adapters=claude to drop the pointer"
 # Root commands may be hand-authored. Diagnose only positively marked generated ones.
 stale=()
 for command in .claude/commands/*.md; do

@@ -25,7 +25,9 @@ require("./_common").runHook(() => {
 	const ev = readEvent();
 	const ai = aiDir(ev);
 	if (!ai) return;
-	const m = /\/t4:([a-z][a-z0-9-]*)/.exec(String(ev.prompt || ""));
+	const m = /(?:\/t4:|\$(?:t4:)?t4-)([a-z][a-z0-9-]*)/.exec(
+		String(ev.prompt || ""),
+	);
 	if (!m) return;
 	const file = path.join(ai, "runs", ".task." + identifier(ev.session_id));
 	withLogLock(ai, (safe) => {

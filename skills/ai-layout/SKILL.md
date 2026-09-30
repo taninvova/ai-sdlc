@@ -15,8 +15,8 @@ local task and agent procedures, runner scripts and project additions.
 Never write into `.claude/`, `.cursor/` or `.codex/` by hand. Default sync writes no external
 files. Only after an explicit request, select adapters with
 `node ai-factory/make/sync-adapters.js --adapters=claude,codex,cursor` (or a selected subset).
-Generated entries point at local canonical content. Codex adapters run agent procedures
-in the current session and label inline review accurately.
+Generated entries point at local canonical content. Codex skills and adapters use native delegation when available, with complete local agent
+procedures; otherwise they run inline and label reviews as self-checks.
 
 ```
 ai-factory/AGENTS.md                  the contract, < 60 lines, no dynamic content

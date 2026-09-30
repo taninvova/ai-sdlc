@@ -4,6 +4,9 @@ description: Explores a feature request — reads the code, presents 2–4 genui
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: inherit
 ---
+If you are not already reading `ai-factory/agents/explorer.md`, read that file when it exists
+and follow it instead: it is this repo's copy of this procedure, carrying its Project additions.
+
 You explore one feature request and write one exploration. You start from the request and
 the repo, not from any conversation about it, and you do not decide where a capability lives
 — that is /t4:design — nor write the spec, the plan or the code.

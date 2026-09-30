@@ -142,6 +142,27 @@ stale_out=$(run "$d")
 grep -q '^\[finding\] adapters .*stale' <<<"$stale_out" || fail "partial explicit adapters were not diagnosed: $stale_out"
 ( cd "$d" && node "$ROOT/skills/ai-layout/templates/ai-factory/make/sync-adapters.js" --adapters=claude ) >/dev/null || fail "adapter restoration failed"
 
+# A generated set is complete without a pointer for a task the plugin ships as its own command:
+# the one the plugin ships is the whole reason the pointer would be a duplicate.
+full_out=$(run "$d")
+grep -q '^\[ok *\] adapters .*commands match' <<<"$full_out" \
+  || fail "a complete explicit adapter set was not recognized: $full_out"
+grep -q '^\[finding\] adapters .*listed twice' <<<"$full_out" \
+  && fail "a complete adapter set was reported as duplicating a plugin command: $full_out"
+# A pointer surviving from an older sync makes the menu show the command twice; doctor must name
+# it as that, not as a missing sync.
+for c in "$ROOT"/commands/*.md; do
+  n=$(basename "$c" .md)
+  [ -f "$d/ai-factory/tasks/$n.md" ] || continue
+  printf -- '---\ndescription: stale\n---\n@../../../ai-factory/tasks/%s.md\n' "$n" > "$d/.claude/commands/t4/$n.md"
+  dupe_out=$(run "$d")
+  grep -q "^\[finding\] adapters .*/t4:$n listed twice" <<<"$dupe_out" \
+    || fail "a pointer duplicating the plugin's /t4:$n was not diagnosed: $dupe_out"
+  [ "$(grep -c '^\[finding\] adapters' <<<"$dupe_out")" = 1 ] \
+    || fail "one duplicate pointer produced more than one adapters finding: $dupe_out"
+  rm "$d/.claude/commands/t4/$n.md"
+done
+
 # 5. the config dir is absent — Codex, or a machine with no plugins ---------------------------
 # One unknown between install and cache, not one per check, and nothing else disturbed.
 out=$(CLAUDE_CONFIG_DIR=$TMP/nope bash "$ROOT/$DOCTOR" "$d" "$ROOT" 2>&1); st=$?

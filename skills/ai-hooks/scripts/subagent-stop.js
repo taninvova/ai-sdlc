@@ -10,15 +10,7 @@ require("./_common").runHook(() => {
 	// The parent `transcript_path` is never opened. Every field comes from the payload, from
 	// `agent_transcript_path`, or from `cwd` — so an unreadable or absent parent transcript costs this
 	// row nothing, and the event adds exactly one transcript read to the turn.
-	const {
-		readEvent,
-		aiDir,
-		user,
-		branch,
-		task,
-		fs,
-		path,
-	} = require("./_common");
+	const { readEvent, aiDir, user, branch, task, path } = require("./_common");
 	const { claims, sumTranscript, price } = require("./_usage");
 	const ev = readEvent();
 	const ai = aiDir(ev);
@@ -45,10 +37,19 @@ require("./_common").runHook(() => {
 
 		// That transcript only, and subject to the uuid rule. A missing, unreadable or unparseable file
 		// sums to nothing, which is the same no-row exit as a transcript carrying no usage at all.
-		const { turns, inp, out, cr, cw, model } = sumTranscript(
-			ev.agent_transcript_path,
-			ledger,
-		);
+		const sum =
+			ev.host === "codex"
+				? require("./_codex-usage").sumCodexTranscript
+				: sumTranscript;
+		const {
+			turns,
+			inp,
+			out,
+			cr,
+			cw,
+			model: transcriptModel,
+		} = sum(ev.agent_transcript_path, ledger);
+		const model = transcriptModel || ev.model || "";
 		if (turns === 0) return;
 
 		const { rate, approx } = price(ai, model);
@@ -79,7 +80,7 @@ require("./_common").runHook(() => {
 					// agent→task map. Empty when the session has run no command. `agent` is the payload's
 					// agent_type verbatim, and `tool` still carries `claude` alone, unsplit and unqualified.
 					taskName,
-					"claude",
+					ev.host === "codex" ? "codex" : "claude",
 					ev.agent_type || "",
 					model,
 					turns,
@@ -88,7 +89,7 @@ require("./_common").runHook(() => {
 					cr,
 					cw,
 					hit,
-					approx + cost.toFixed(4),
+					ev.host === "codex" ? "" : approx + cost.toFixed(4),
 					"",
 				]
 					.map(csv)

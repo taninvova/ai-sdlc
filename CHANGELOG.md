@@ -1,5 +1,25 @@
 # Changelog
 
+**Unreleased working-tree fix:** Codex now ships native skills for all t4 workflows and
+setup commands, backed by the canonical procedures. Its explicit hook adapter handles
+`apply_patch` paths (including renames), skill task labels, and Codex rollout usage with
+response de-duplication and separate cached input. Codex costs remain unknown. Claude
+hooks retain their existing event and transcript formats. Updated project adapters use
+native delegation when available and label inline reviews as self-checks. Existing
+adopted repos take that adapter wording through an explicit sync; plugin skills and
+hooks require reinstall/restart, and changed Codex hooks require trust review. Version
+unchanged; this working-tree change does not publish a release.
+
+**Unreleased working-tree fix:** `/t4:quick` is listed once again. 2.3.0 added `ai-factory/tasks/quick.md`
+while the plugin already shipped `/t4:quick` as its own command, so an explicit
+`--adapters=claude` generated a second `/t4:quick` pointer and the menu offered the same command
+twice under two descriptions. Claude pointers are no longer generated for a task name the plugin
+registers natively, and the next sync removes one left behind by 2.3.0. `/t4:doctor` names a
+surviving duplicate as a duplicate — the remedy deletes a file — instead of counting it as a stale
+sync. Codex skills are still generated for every task, because Codex plugins ship no commands.
+Touches a template (`ai-factory/make/sync-adapters.js`): an adopted repo takes it by regenerating
+its adapters. Version unchanged; the release bump is a separate step.
+
 **Unreleased working-tree fix:** `/t4:state` recognizes explicit numbered withdrawal results
 without editing archived checkboxes. Withdrawn steps are omitted from pending work and `--next`;
 `--done` distinguishes `closed` plans/specs from fully `complete` ones. Pending and unknown work

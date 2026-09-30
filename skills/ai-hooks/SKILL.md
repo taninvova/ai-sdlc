@@ -1,10 +1,26 @@
 ---
 name: ai-hooks
 user-invocable: false
-description: Claude Code hooks that log sessions, edits, test commands and per-session token usage to ai-factory/runs/, and guard dont-touch paths. Use when the run log is empty or wrong, when a session edits a file it should not, or when installing hooks in a repo without the plugin.
+description: Claude Code and Codex hooks that log sessions, edits, test commands and per-session token usage to ai-factory/runs/, and guard dont-touch paths. Use when the run log is empty or wrong, when a session edits a file it should not, or when installing hooks in a repo without the plugin.
 ---
 
 # ai-hooks
+
+Claude loads `hooks/hooks.json`; Codex loads `hooks/codex.json` through its plugin
+manifest. In Codex, review and trust the definitions in `/hooks`; installing a plugin
+alone does not enable untrusted hooks. Codex adapters by themselves do not install hooks.
+The Codex bridge selects the host explicitly and shares policy, schema and locking code.
+Its `apply_patch` parser checks every add, update, delete and rename destination before
+allowing the operation, and logs each touched path after execution.
+
+Codex Stop/SubagentStop accounting reads rollout `token_usage_record` entries using
+response IDs for de-duplication. Older `event_msg/token_count` rollouts use differences
+between cumulative snapshots. Mirrored snapshots are ignored when response records exist.
+Cached input is separated from total input; reasoning output is already included in output.
+Codex cost stays empty because rollouts do not report a price. Transcript formats are
+version-specific; keep `fixtures/check-codex.sh` and a host smoke run with any format change.
+Task attribution accepts `/t4:<task>`, `$t4-<task>` and `$t4:t4-<task>`.
+
 
 The plugin registers these hooks globally (hooks/hooks.json). Every script:
 - reads the hook event JSON from stdin (session_id, transcript_path, cwd, tool_name, tool_input);

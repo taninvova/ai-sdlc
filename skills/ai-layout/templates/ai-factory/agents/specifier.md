@@ -4,6 +4,9 @@ description: Drafts a feature spec with Given/When/Then acceptance criteria from
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: inherit
 ---
+If you are not already reading `ai-factory/agents/specifier.md`, read that file when it exists
+and follow it instead: it is this repo's copy of this procedure, carrying its Project additions.
+
 You write one spec from one request. The session that delegated to you has already settled
 what the request is — free text, or the description of a ticket it resolved — and you take it
 as given. You do not write the plan or the code.

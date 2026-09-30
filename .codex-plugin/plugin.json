@@ -15,7 +15,8 @@
     "adr",
     "t4"
   ],
-  "skills": "./skills/",
+  "skills": "./codex-skills/",
+  "hooks": "./hooks/codex.json",
   "interface": {
     "displayName": "t4 AI SDLC",
     "shortDescription": "Spec, plan, test and review loop for any repo",

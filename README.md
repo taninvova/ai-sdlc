@@ -1,6 +1,6 @@
 # ai-sdlc — t4 AI SDLC core plugin (repo: ai-sdlc)
 
-The operating-model half of AI-native delivery, as a Claude Code plugin. Standalone: it depends on no other repo and adds no runtime dependency. Framework-neutral — overlay plugins build on it by filling the `{{…_extra}}` slots in its templates.
+The operating-model half of AI-native delivery, as a Claude Code and Codex plugin. Standalone: it depends on no other repo and adds no runtime dependency. Framework-neutral — overlay plugins build on it by filling the `{{…_extra}}` slots in its templates.
 
 **[ai-factory/docs/workflow.md](ai-factory/docs/workflow.md) — how to install it, what each command is for, and the order to run them in.**
 
@@ -37,7 +37,7 @@ analyst, architect and reviewer agents then read it and cite what they used as e
 unverified; an unreachable source is one report line, never a halt. `ai-factory/docs/knowledge.md` is the
 only file that knows how; a repo that declares nothing sees nothing.
 
-Project-level slash commands (generated into each repo from `ai-factory/tasks/`): `/t4:fleet /t4:design /t4:adr /t4:analyse /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:quick /t4:check`.
+Project-level slash commands (generated into each repo from `ai-factory/tasks/`): `/t4:fleet /t4:design /t4:adr /t4:analyse /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:check`. `/t4:quick` has a task file too, but the plugin ships it as a command above, so no pointer is generated for it — two menu entries for one command tell the user nothing about which runs.
 
 ## Skills (model-invoked, hidden from the menu)
 - `ai-layout` — the `ai-factory/` directory and its templates; where an AI-related file belongs
@@ -54,6 +54,18 @@ Project-level slash commands (generated into each repo from `ai-factory/tasks/`)
 Registered plugin-wide; no-op in repos without `ai-factory/`; never print to stdout (cache-neutral).
 
 ## Install
+
+Claude Code uses `/t4:<task>`. Codex uses the bundled `$t4-<task>` skills, including
+`$t4-adopt-sdlc`, `$t4-doctor` and `$t4-state`; no project adapters are required for
+native Codex discovery. Both hosts use the same project procedures. Codex plugin hooks
+support patch protection and session/agent accounting after review and trust in `/hooks`.
+
+For Codex CLI: `codex plugin marketplace add /absolute/path/to/checkout`, then
+`codex plugin add t4@sdlc`. Restart the session after installation. See the
+[host support table](ai-factory/docs/workflow.md#8-using-claude-code-and-codex).
+
+Claude Code installation:
+
 ```
 /plugin marketplace add git@gitlab.nsix.io:ai/sdlc.git
 /plugin install t4@sdlc

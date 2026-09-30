@@ -35,10 +35,19 @@ require("./_common").runHook(() => {
 		// them, and later deltas will not re-report them.
 		const taskName = task(ai, ev.session_id);
 		const ledger = claims(ai, ev.session_id);
-		const { turns, inp, out, cr, cw, model } = sumTranscript(
-			ev.transcript_path,
-			ledger,
-		);
+		const sum =
+			ev.host === "codex"
+				? require("./_codex-usage").sumCodexTranscript
+				: sumTranscript;
+		const {
+			turns,
+			inp,
+			out,
+			cr,
+			cw,
+			model: transcriptModel,
+		} = sum(ev.transcript_path, ledger);
+		const model = transcriptModel || ev.model || "";
 		if (turns === 0) return;
 
 		const { rate, approx } = price(ai, model);
@@ -70,7 +79,7 @@ require("./_common").runHook(() => {
 					// empty when it ran none. `agent` is empty on a session row: the subagent rows carry their own
 					// name.
 					taskName,
-					"claude",
+					ev.host === "codex" ? "codex" : "claude",
 					"",
 					model,
 					turns,
@@ -79,7 +88,7 @@ require("./_common").runHook(() => {
 					cr,
 					cw,
 					hit,
-					approx + cost.toFixed(4),
+					ev.host === "codex" ? "" : approx + cost.toFixed(4),
 					"",
 				]
 					.map(csv)

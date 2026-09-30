@@ -17,11 +17,33 @@ bash ai-factory/make/sync-adapters.sh --adapters=all > /dev/null
 [ "$before" = "$(find .claude .cursor .codex -type f -o -type l | sort | xargs shasum | shasum)" ] \
   || fail "sync-adapters is not idempotent"
 
+# A task whose name the plugin already registers as a native command (commands/<name>.md) takes no
+# Claude pointer: two /t4:<name> entries in one menu, described differently, is the bug this guards
+# against. Codex plugins ship no commands, so every task still gets a Codex skill.
+native=()
+for c in commands/*.md; do
+  n=$(basename "$c" .md)
+  [ -f "ai-factory/tasks/$n.md" ] && native+=("$n")
+done
 tasks=$(ls ai-factory/tasks/*.md | wc -l | tr -d ' ')
 cmds=$(ls .claude/commands/t4/*.md 2>/dev/null | wc -l | tr -d ' ')
 skills=$(ls -d .codex/skills/t4-*/ 2>/dev/null | wc -l | tr -d ' ')
-[ "$tasks" = "$cmds" ]   || fail "$tasks tasks but $cmds claude commands"
+[ "$((tasks - ${#native[@]}))" = "$cmds" ] \
+  || fail "$tasks tasks, ${#native[@]} of them already native plugin commands, but $cmds claude commands"
 [ "$tasks" = "$skills" ] || fail "$tasks tasks but $skills codex skills"
+for n in ${native[@]+"${native[@]}"}; do
+  [ -f ".claude/commands/t4/$n.md" ] \
+    && fail ".claude/commands/t4/$n.md repeats the plugin's own /t4:$n — the menu would list it twice"
+  [ -f ".codex/skills/t4-$n/SKILL.md" ] || fail "missing .codex/skills/t4-$n/SKILL.md"
+done
+# A pointer left over from before the exclusion is removed by the next sync, not kept.
+if [ ${#native[@]} -gt 0 ]; then
+  printf -- '---\ndescription: stale\n---\n@../../../ai-factory/tasks/%s.md\n' "${native[0]}" \
+    > ".claude/commands/t4/${native[0]}.md"
+  bash ai-factory/make/sync-adapters.sh --adapters=claude > /dev/null
+  [ ! -f ".claude/commands/t4/${native[0]}.md" ] \
+    || fail "sync kept a pointer that repeats the plugin's /t4:${native[0]}"
+fi
 
 for t in ai-factory/tasks/*.md; do
   n=$(basename "$t" .md); s=".codex/skills/t4-$n/SKILL.md"
@@ -31,15 +53,16 @@ for t in ai-factory/tasks/*.md; do
   # A task that delegates must carry the note; one that does not must not.
   if grep -q 'Delegate to the `[a-z]*` subagent' "$t"; then
     a=$(sed -n 's/.*Delegate to the `\([a-z]*\)` subagent.*/\1/p' "$t" | head -1)
-    grep -q "cannot ship subagents" "$s" || fail "$s is missing the inline-agent note"
+    grep -q "native delegation" "$s" || fail "$s is missing the inline-agent note"
     grep -q "ai-factory/agents/$a.md" "$s"       || fail "$s does not name ai-factory/agents/$a.md"
   else
-    grep -q "cannot ship subagents" "$s" && fail "$s has an inline-agent note but $t delegates to nothing"
+    grep -q "native delegation" "$s" && fail "$s has an inline-agent note but $t delegates to nothing"
   fi
 done
 
 for t in ai-factory/tasks/*.md; do
   n=$(basename "$t" .md); c=".claude/commands/t4/$n.md"
+  [ -f "commands/$n.md" ] && continue   # the plugin's own command, asserted absent above
   [ -f "$c" ] || fail "missing $c"
   inc=$(sed -n 's/^@//p' "$c" | head -1)
   [ -n "$inc" ] || fail "$c has no @include"
@@ -53,6 +76,7 @@ done
 # gain an empty one.
 for t in ai-factory/tasks/*.md; do
   n=$(basename "$t" .md); c=".claude/commands/t4/$n.md"
+  [ -f "commands/$n.md" ] && c="commands/$n.md"   # the plugin's own command carries the hint instead
   h=$(sed -n 's/^argument-hint: *//p' "$t" | head -1)
   g=$(sed -n 's/^argument-hint: *//p' "$c" | head -1)
   [ "$h" = "$g" ] || fail "$n: task hint '$h' but command hint '$g'"
@@ -167,4 +191,4 @@ done
 body=$(sed -n '/^---$/,/^---$/!p' .codex/skills/t4-spec/SKILL.md | wc -l | tr -d ' ')
 [ "$body" -lt 15 ] || fail "codex skills look like copies of the task, not pointers ($body lines)"
 
-echo "adapters ok — $tasks tasks → claude commands + codex skills, idempotent, agent notes correct"
+echo "adapters ok — $tasks tasks → $cmds claude commands (${#native[@]} left to the plugin) + $skills codex skills, idempotent, agent notes correct"
