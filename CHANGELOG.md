@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.3.2 — 2026-09-29
+
+Fix Claude command discovery: 2.3.1 shipped six native slash commands, while its other
+workflow prompts were available only through repo-local pointers. The plugin now ships
+all 18 commands, including all 13 project task entry points. Thin wrappers read the repo's
+`ai-factory/tasks/<name>.md`, preserve customizations and user arguments, and report missing
+workspaces or tasks without creating adapters or silently adopting a repo.
+
+**Adapter template change for adopted repos:** take the updated
+`ai-factory/make/sync-adapters.js` explicitly before requesting Claude adapter sync.
+The sync removes old generated pointers for built-in commands, preserves hand-authored
+files, and still creates pointers for project-specific tasks. Repos retaining an older
+adapter generator may recreate duplicate entries; update the template before syncing.
+No workspace-layout or log-schema change is required. Codex skills remain available.
+
+Update/reinstall the plugin and restart Claude Code (or reload plugins) to load the native
+commands. A real Claude Code 2.1.277 SDK initialization in an empty directory confirmed
+six t4 commands from installed 2.3.1 and 18 from the updated checkout, without repo-local
+pointers or a model turn. Regression coverage checks both native host surfaces, stale
+pointer cleanup, custom task preservation, and command metadata/procedure references.
+
+
 ## 2.3.1 — 2026-09-29
 
 Compatibility fixes for Claude Code and Codex, plus accurate reporting of withdrawn work.

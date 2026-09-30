@@ -136,8 +136,11 @@ $out"
 
 # Strict default must accept absent optional adapters; partial explicit sets are stale.
 grep -q '^\[ok *\] adapters .*strict workspace' <<<"$out" || fail "strict mode was not recognized: $out"
+for task in domain-check domain-report; do
+  printf -- '---\ndescription: Project task\n---\nCheck this project.\n' > "$d/ai-factory/tasks/$task.md"
+done
 ( cd "$d" && node "$ROOT/skills/ai-layout/templates/ai-factory/make/sync-adapters.js" --adapters=claude ) >/dev/null || fail "explicit adapter generation failed"
-rm "$d/.claude/commands/t4/spec.md"
+rm "$d/.claude/commands/t4/domain-check.md"
 stale_out=$(run "$d")
 grep -q '^\[finding\] adapters .*stale' <<<"$stale_out" || fail "partial explicit adapters were not diagnosed: $stale_out"
 ( cd "$d" && node "$ROOT/skills/ai-layout/templates/ai-factory/make/sync-adapters.js" --adapters=claude ) >/dev/null || fail "adapter restoration failed"

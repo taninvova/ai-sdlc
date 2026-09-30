@@ -23,10 +23,11 @@ The file-edit guard is defense in depth; arbitrary shell commands remain governe
 
 `/t4:migrate-layout`, which moved a repo adopted before 1.0.0 onto `ai-factory/`, was **removed in 2.1.0**. A repo that never ran it runs it from an ai-sdlc checkout at 2.0.0 or earlier; its hooks keep working until then, because the fallback to the old directory name stays until 3.0.0.
 
-Claude Code and Codex use the same canonical task files. Strict mode creates no external
-project adapters. On an explicit request, `bash ai-factory/make/sync-adapters.sh --adapters=claude,codex`
-generates only those hosts' pointers. Native discovery depends on the host; headless invocation
-works without those adapters. See [workflow](ai-factory/docs/workflow.md).
+Claude Code and Codex use the same canonical task files. The plugin ships all 18 Claude
+slash commands and the matching Codex workflow skills; strict mode needs no project
+pointers for built-in tasks. Explicit `--adapters=claude` sync removes old generated
+pointers for native commands and creates pointers only for project-specific tasks.
+Other host adapters remain opt-in. See [workflow](ai-factory/docs/workflow.md).
 
 `/t4:spec` also accepts a tracker ticket key — `/t4:spec ABC-12` — in a repo that has
 committed `ai-factory/jira.yaml`. Off by default: without that file nothing changes, whatever you type.
@@ -37,7 +38,7 @@ analyst, architect and reviewer agents then read it and cite what they used as e
 unverified; an unreachable source is one report line, never a halt. `ai-factory/docs/knowledge.md` is the
 only file that knows how; a repo that declares nothing sees nothing.
 
-Project-level slash commands (generated into each repo from `ai-factory/tasks/`): `/t4:fleet /t4:design /t4:adr /t4:analyse /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:check`. `/t4:quick` has a task file too, but the plugin ships it as a command above, so no pointer is generated for it — two menu entries for one command tell the user nothing about which runs.
+Native project-workflow commands: `/t4:fleet /t4:design /t4:adr /t4:analyse /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:check`, plus `/t4:quick` listed above. Each loads the matching `ai-factory/tasks/<name>.md` from the user's repo, preserving project customizations. The commands are discoverable immediately after plugin installation; executing a project task requires an adopted workspace.
 
 ## Skills (model-invoked, hidden from the menu)
 - `ai-layout` — the `ai-factory/` directory and its templates; where an AI-related file belongs

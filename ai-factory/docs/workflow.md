@@ -3,7 +3,7 @@
 How to install it, what each command is for, and the order to run them in.
 
 The plugin gives you three things: an `ai-factory/` directory in your repo that holds the project's
-context and prompts, slash commands generated from it, and eight agents. Everything a command
+context and prompts, native slash commands that read its procedures, and eight agents. Everything a command
 does is written in a file you can read and change — `ai-factory/tasks/<name>.md`. If a command keeps
 needing steering in chat, the prompt is missing a line; fix the prompt, don't repeat yourself.
 
@@ -51,9 +51,10 @@ disable host protections or grant broad permissions to make tests pass.
 
 Working on the plugin itself: `claude --plugin-dir ~/code/nsix/ai/sdlc`.  <!-- path-scan-ok -->
 
-You now have two commands in **every** repo — `/t4:adopt-sdlc` and `/t4:sync-sdlc` — plus
-hooks that stay silent in repos without an `ai-factory/` directory. `/t4:explore` is a project
-command: it arrives with the layout, so a repo has to adopt before it can explore.
+The installed plugin exposes 18 `/t4:*` commands in every repo, including all 13 project
+task entry points. No `.claude/commands/` pointers are needed for built-in workflows.
+The commands are visible before adoption; a project workflow reports a missing workspace
+or task instead of silently scaffolding it. Hooks stay silent outside an adopted repo.
 
 No model configuration is required. The plugin runs whatever model your tool is already
 configured with, whatever the provider.
@@ -81,7 +82,7 @@ that decides whether any of the rest is worth running:
 
 An agent with a placeholder `architecture.md` produces placeholder-quality work.
 
-Restart the session (or `/reload-plugins`) and the thirteen `/t4:*` commands appear.
+Restart the session (or `/reload-plugins`) after a plugin update to load all 18 `/t4:*` commands.
 
 ---
 
@@ -189,7 +190,7 @@ dont-touch guard and the run log keep going. The prompts do not — they name `a
 `/t4:spec` and the rest will look in a directory that is not there yet. `/t4:doctor` says which of
 the three states a repo is in, and `/t4:sync-sdlc` stops and points here rather than syncing.
 
-### Project tasks — explicit procedures or requested host adapters
+### Project tasks — native commands backed by repo procedures
 
 | Command | Use it when | Writes | Never does |
 |---|---|---|---|
@@ -304,7 +305,7 @@ require generating files into `.codex/`.
 
 | Capability | Claude Code | Codex |
 |---|---|---|
-| Interactive tasks | `/t4:<task>` through plugin commands or selected project pointers | `$t4-<task>` through bundled plugin skills |
+| Interactive tasks | `/t4:<task>` through native plugin commands | `$t4-<task>` through bundled plugin skills |
 | Setup | `/t4:adopt-sdlc` | `$t4-adopt-sdlc` |
 | Headless | `make -f ai-factory/make/ai.mk ai TOOL=claude` | `make -f ai-factory/make/ai.mk ai TOOL=codex` |
 | Lifecycle hooks | `hooks/hooks.json` | `hooks/codex.json`; review and trust in `/hooks` |
@@ -338,6 +339,13 @@ its real `skills/list` and `hooks/list` APIs discovered all 20 bundled skills an
 hook handlers with no errors. Hooks remained untrusted in that profile, as expected.
 This loader check did not execute an autonomous model turn or prove hook delivery in every
 Codex surface; host trust and local command-hook support remain deployment requirements.
+
+Claude discovery correction (2.3.2): the installed 2.3.1 package exposed only six native
+commands; the remaining task files required project pointers. A fresh Claude Code 2.1.277
+SDK initialization in an empty directory discovered six t4 commands from that installed
+package and all 18 from the updated checkout. No project adapters or model turns were used.
+This validates command registration, not every task's model-driven behavior. Explicit
+Claude adapter sync removes generated duplicates and retains pointers for custom tasks.
 
 Official host contracts: [plugins](https://developers.openai.com/plugins/build/plugins),
 [hooks](https://developers.openai.com/codex/hooks), and
