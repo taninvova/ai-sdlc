@@ -1,0 +1,3 @@
+Corrected only `applciation` → `application` in README.md. All other content preserved.
+
+Checks passed: `make docs`, `git diff --check`, and exact-content comparison. No remaining failures or spec/ADR needs.

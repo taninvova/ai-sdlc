@@ -1,0 +1,7 @@
+ M README.md
+M  user-notes.txt
+?? ai-factory/plans/
+?? ai-factory/specs/0001-display-label-whitespace.md
+?? ai-factory/test-red-output.txt
+?? test/display-label.test.js
+?? untracked-note.txt

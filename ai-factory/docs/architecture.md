@@ -19,8 +19,11 @@ from that agent's own transcript.
 - `ai-factory/` — this repo's own layout, symlinked to the templates (see ai-factory/AGENTS.md)
 
 ## Data ownership
-Owns the templates, the prompt text and the `ai-factory/.sdlc.json` schema. Writes only to `ai-factory/runs/`
-and, at adopt time, `ai-factory/.sdlc.json` in the repo it runs in. Each adopted repo owns its own
+Owns the templates, the prompt text and the `ai-factory/.sdlc.json` schema. The target write boundary
+is one project workspace, `ai-factory/`, as recorded in ADR 0009 and docs/workspace-boundary.md.
+Current adoption still copies root entry files, sync generates tool directories, and the runner
+uses system temporary prompts; plans 0011 and 0012 must close those gaps before compliance is claimed.
+Each adopted repo owns its own
 manifest and is the source of truth for its layout version; this plugin keeps no registry of
 adopter versions.
 Reads `ai-factory/models.yaml` for the model each headless task pins, and for per-model prices.

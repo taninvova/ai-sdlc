@@ -13,11 +13,23 @@ SCHEMA=skills/ai-hooks/scripts/_log-schema.js
 FLUSH=skills/ai-hooks/scripts/log-flush.js
 MAKE=skills/ai-layout/templates/ai-factory/make/log.js
 COST=skills/ai-layout/templates/ai-factory/make/cost.js
-TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
+mkdir -p ai-factory/runs/tmp
+TMP=$(mktemp -d "$PWD/ai-factory/runs/tmp/accounting.XXXXXX"); trap 'rm -rf "$TMP"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
-h1=$(sed -n 's/^const HEADER = "\(.*\)";$/\1/p' "$SCHEMA" | head -1)
-h2=$(sed -n 's/^const HEADER = "\(.*\)";$/\1/p' "$MAKE" | head -1)
+# Read the literal without executing the writer; formatting may wrap the assignment.
+header() {
+  node - "$1" <<'NODE'
+const fs = require('node:fs');
+const source = fs.readFileSync(process.argv[2], 'utf8');
+const match = /const HEADER\s*=\s*("(?:[^"\\]|\\.)*");/.exec(source);
+if (!match) process.exit(1);
+process.stdout.write(JSON.parse(match[1]));
+NODE
+}
+h1=$(header "$SCHEMA")
+h2=$(header "$MAKE")
+
 [ -n "$h1" ] && [ -n "$h2" ] || fail "could not read HEADER from both writers"
 [ "$h1" = "$h2" ] || fail "writers disagree on the header:
   hook: $h1
@@ -31,6 +43,7 @@ cols=$(awk -F, '{print NF}' <<<"$h1")
   $h1"
 
 # 1. interactive writer — into the pending file, never straight into log.csv
+git init -q "$TMP"
 mkdir -p "$TMP/ai-factory/runs"; cp skills/ai-hooks/fixtures/transcript.jsonl "$TMP/"
 stop() { printf '{"session_id":"fx","cwd":"%s","transcript_path":"%s/transcript.jsonl","hook_event_name":"Stop"}' "$TMP" "$TMP" | node "$HOOK"; }
 flush() { printf '{"session_id":"fx","cwd":"%s","tool_name":"Bash","tool_input":{"command":%s}}' "$TMP" "$1" | node "$FLUSH"; }

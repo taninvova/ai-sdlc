@@ -17,6 +17,9 @@
 set -euo pipefail
 shopt -s nullglob
 cd "$(dirname "$0")/../../.."
+# Disposable fixtures stay in the project workspace, including default mktemp calls.
+export TMPDIR="$PWD/ai-factory/runs/tmp"
+mkdir -p "$TMPDIR"
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
 # `ai` here is the GitLab group and the workspace directory, not a layout: git@gitlab.nsix.io:ai/

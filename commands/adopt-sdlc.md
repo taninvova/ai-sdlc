@@ -1,25 +1,18 @@
 ---
-description: Add the ai-factory/ layout (AGENTS.md, docs, tasks, eight agents, hooks log, adapters) to an existing repo without a framework scaffold
-argument-hint: [--owner <name>]
-allowed-tools: Bash, Read, Write, Edit, Glob, Grep
+description: Add a self-contained ai-factory workspace without changing root files
+argument-hint: [owner]
+allowed-tools: Bash, Read
 ---
-Add the generic ai-sdlc layout to the current repo. Use the `ai-layout` and `ai-hooks`
-skills. Do NOT scaffold an application — that is an overlay plugin's job; an overlay calls
-this same layout and fills the `{{…_extra}}` slots with its own rules, docs and skills.
+Adopt the current project using the installed plugin. Do not scaffold application code.
 
-1. If `ai-factory/` already exists, stop and suggest /t4:sync-sdlc instead.
-2. Detect the stack from the repo (package.json, go.mod, pyproject, etc.) and the
-   commands that build, lint, typecheck and test it. Fill `{{stack}}` and `{{commands}}`.
-3. Copy `${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/templates/` to the repo root; substitute
-   `{{app}}` (repo dir name), `{{stack}}`, `{{commands}}`, `{{owner}}` (git user.name or
-   --owner), `{{backup}}` = TBD, `{{date}}`, `{{plugin_version}}`; remove every remaining
-   `{{…_extra}}` / `{{overlay_note}}` placeholder line.
-4. Write root `AGENTS.md` ("See ai-factory/AGENTS.md") and `CLAUDE.md` ("@ai-factory/AGENTS.md") if absent.
-5. Append the gitignore lines and the gitattributes line from the ai-hooks skill. Create
-   `ai-factory/runs/log.csv` header.
-6. Run `bash ai-factory/make/sync-adapters.sh`.
-6b. Record what this repo received, so `/t4:sync-sdlc` can detect drift later:
-   `node "${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/scripts/manifest.js" write . "${CLAUDE_PLUGIN_ROOT}"`
-   This writes `ai-factory/.sdlc.json`. Commit it. Never hand-edit it.
-7. Report the files created and ask the developer to fill the prose in
-   ai-factory/docs/architecture.md before the first /spec.
+1. Run `node "${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/scripts/adopt.js" .`.
+   If an owner was supplied, pass it as one literal additional argument, never shell program text.
+   The script detects declared project commands, copies only ai-factory/, materializes the complete
+   agent payload, and records the manifest. If ai-factory/ exists it refuses without overwriting it.
+2. Report the created workspace and any commands that could not be detected. No invented checks.
+3. Preserve root AGENTS.md, CLAUDE.md, Makefile, Git configuration and tool directories.
+   Do not generate external adapters as part of adoption. The default is strict containment.
+4. Point to ai-factory/AGENTS.md for explicit invocation and the remaining project context to fill in.
+   Do not commit automatically or require a tracker, knowledge source or overlay.
+
+Owner: $ARGUMENTS

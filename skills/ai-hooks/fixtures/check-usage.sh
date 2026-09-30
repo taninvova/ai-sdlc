@@ -16,7 +16,8 @@ shopt -s nullglob
 cd "$(dirname "$0")/../../.."   # repo root
 U=$PWD/skills/ai-hooks/scripts/_usage.js
 STOP=$PWD/skills/ai-hooks/scripts/session-stop.js
-TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
+mkdir -p ai-factory/runs/tmp
+TMP=$(mktemp -d "$PWD/ai-factory/runs/tmp/accounting.XXXXXX"); trap 'rm -rf "$TMP"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
 # run <js> — evaluates <js> with `U` bound to the module. Whatever it prints comes back.
@@ -100,6 +101,7 @@ eq "no uuid, second pass" "$(sum "$TMP/nouuid.jsonl" ", U.claims('$AI', 's4')")"
 # already claimed, sums to nothing and writes no row at all. The delta across a transcript that
 # GREW between two Stops is pinned in check-log-schema.sh, against transcript-uuid.jsonl.
 R=$TMP/stopped; mkdir -p "$R/ai-factory"
+git init -q "$R"
 cp "$TMP/parent.jsonl" "$R/t.jsonl"
 stop() {
   printf '{"session_id":"fx-usage","cwd":"%s","transcript_path":"%s/t.jsonl","hook_event_name":"Stop"}' "$R" "$R" \

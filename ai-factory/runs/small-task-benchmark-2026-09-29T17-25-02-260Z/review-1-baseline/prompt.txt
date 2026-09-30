@@ -1,0 +1,19 @@
+You are running a real, isolated benchmark of this plugin's documented workflow. Execute the requested work inside this fixture only. The task and available local role prompts below are authoritative for this replay. There is no slash-command runtime in this fixture: replay the supplied task instructions directly. If a task names an agent, use its local ai-factory/agents/<role>.md instructions; delegate only if a supported tool exists, otherwise report that limitation accurately. Do not invent independence. All work is authorized; do not ask the user questions. No network, package installation, external integration, sibling repository access, commits, staging, resets, or changes to global settings. Preserve pre-existing staged/unstaged/untracked files. Keep generated plans/reports under ai-factory/. Follow the documented workflow even if it takes longer; do not optimize merely because this is a benchmark. If the workflow conflicts with the requested boundary, preserve files and report the limitation.
+
+Task request: Perform the plugin's default pre-commit review of this fixture. The requirements are in README.md. Do not modify application files or the index. Return the review verdict as one JSON object with verdict, findings, and summary. Use the plugin's documented default scope; do not invent a different scope.
+
+### Workflow stage 1: check
+---
+description: Independent read-only review of the current branch diff
+argument-hint: [context]
+---
+Delegate to the `reviewer` subagent with this instruction: review the diff
+`git diff $(git merge-base HEAD main 2>/dev/null || git merge-base HEAD develop)...HEAD`
+against the spec and plan in flight. Return its JSON verdict unchanged, then add one line:
+which findings you agree with and which you would dispute, with a reason.
+Do not fix anything in this task.
+
+Context: $ARGUMENTS
+
+
+For a multistage task, continue the listed stages in order as far as the documented workflow allows; do not stop merely because one artifact was drafted. For two-step work, only Step 1 is authorized. At completion state actual checks and any remaining failure.

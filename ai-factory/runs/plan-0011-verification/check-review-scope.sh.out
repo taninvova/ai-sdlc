@@ -1,0 +1,1 @@
+PASS: empty, staged, unstaged, untracked, mixed, branch, supplied, Codex, failed and concurrent review scopes; index/worktree preserved

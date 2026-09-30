@@ -25,9 +25,9 @@ code. Never `ai-factory/specs/`. Respect ai-factory/docs/dont-touch.md.
 - Files to create / modify, each with one line on why
 - Server vs client components, with reasons
 - Steps as a numbered checklist `- [ ] Step N — …`, each small enough for one `/t4:run`,
-  each naming the tests that prove it (map to AC numbers)
+  each naming the tests that prove it (map to AC numbers), the verification phase, and expected-red failures where applicable
 - Risks and how each is checked
-- Verification: the exact commands and tests that must pass at the end
+- Verification: exact commands, phase (`red`, `step`, `final`), covered ACs and expected-red test identities/causes. Final completion requires all required checks.
 
 ## When you cannot proceed
 You cannot ask the developer. If no spec is named and ai-factory/specs/ holds several, write nothing and

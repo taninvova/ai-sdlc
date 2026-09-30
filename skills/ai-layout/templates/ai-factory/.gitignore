@@ -1,0 +1,7 @@
+/runs/*.json
+/runs/*.jsonl
+/runs/log.pending.csv
+/runs/.counted.*
+/runs/.task.*
+/runs/report.html
+/runs/tmp/

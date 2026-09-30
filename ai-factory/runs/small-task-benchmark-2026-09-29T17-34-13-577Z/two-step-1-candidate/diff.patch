@@ -1,0 +1,32 @@
+diff --git a/ai-factory/plans/0001-total.md b/ai-factory/plans/0001-total.md
+index d15ceb2..ea463af 100644
+--- a/ai-factory/plans/0001-total.md
++++ b/ai-factory/plans/0001-total.md
+@@ -1,4 +1,4 @@
+ # Total implementation
+ Spec: ai-factory/specs/0001-total.md
+-- [ ] Step 1: implement formatTotal to satisfy AC1. Verification phase: step. Run node --test test/step-one.test.js; it must pass. Run node --test test/step-two.test.js; the existing reject negatives failure is expected until Step 2. Do not change isValidTotal.
++- [x] Step 1: implement formatTotal to satisfy AC1. Verification phase: step. Run node --test test/step-one.test.js; it must pass. Run node --test test/step-two.test.js; the existing reject negatives failure is expected until Step 2. Do not change isValidTotal.
+ - [ ] Step 2: implement isValidTotal to satisfy AC2. Verification phase: final. Run make lint typecheck test; all must pass.
+diff --git a/app.js b/app.js
+index f87c66f..fbbde85 100644
+--- a/app.js
++++ b/app.js
+@@ -1,2 +1,2 @@
+-exports.formatTotal = n => String(n);
++exports.formatTotal = n => n.toFixed(2);
+ exports.isValidTotal = n => true;
+diff --git a/test/step-one.test.js b/test/step-one.test.js
+index 6a5d026..ae3215c 100644
+--- a/test/step-one.test.js
++++ b/test/step-one.test.js
+@@ -1 +1,8 @@
+-const {test}=require('node:test');const assert=require('node:assert/strict');test('two decimals',()=>assert.equal(require('../app').formatTotal(2),'2.00'));
++const { test } = require('node:test');
++const assert = require('node:assert/strict');
++const { formatTotal } = require('../app');
++
++test('two decimals', () => assert.equal(formatTotal(2), '2.00'));
++test('formats zero', () => assert.equal(formatTotal(0), '0.00'));
++test('pads fractional totals', () => assert.equal(formatTotal(2.5), '2.50'));
++test('rounds to two decimals', () => assert.equal(formatTotal(2.456), '2.46'));

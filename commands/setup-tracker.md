@@ -30,7 +30,8 @@ service, no URL, no configuration filename.
    something there deliberately. Write only what that document defines as required, and nothing
    more: a key nothing reads yet is a key that goes stale unnoticed.
 
-5. **Ask whether to commit it or ignore it.** If ignored, add the line to `.gitignore` — never
+5. **Ask whether to commit it or ignore it.** If ignored, add the configuration path relative to
+   `ai-factory/` to `ai-factory/.gitignore` — never
    duplicating one already there — and say plainly that the repo is now configured for this
    developer alone: a teammate who clones it gets the unconfigured behaviour, so the same
    command means different things to different people on one team. Choosing that is fine;

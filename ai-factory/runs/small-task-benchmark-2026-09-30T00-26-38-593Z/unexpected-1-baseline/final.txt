@@ -1,0 +1,9 @@
+Inline implementer self-check stopped: the baseline contains an unexpected failure beyond the permitted Step 2 failure.
+
+- Files changed: none. Tests added: none.
+- `make lint typecheck`: passed.
+- Both named step tests: failed.
+- Full suite: 3 failures, including `unexpected.test.js`, which expects `formatTotal(7)` to equal `"unrelated regression sentinel"`.
+- Plan discrepancy: that additional failure is not recorded or supported by the spec.
+
+Step 1 remains unimplemented and unticked. Step 2 and all tests are preserved unchanged. Stopped as required for the headless run.

@@ -30,6 +30,9 @@
 set -euo pipefail
 shopt -s nullglob
 cd "$(dirname "$0")/../../.."
+# Disposable fixtures stay in the project workspace, including default mktemp calls.
+export TMPDIR="$PWD/ai-factory/runs/tmp"
+mkdir -p "$TMPDIR"
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
 # The subject of these documents is the pre-1.0.0 layout, so this file never spells that
@@ -156,7 +159,7 @@ says "$rec" 'breaking' \
   "CHANGELOG.md's $RENAME_ENTRY entry does not mark the change breaking"
 says "$rec" '(run|in each|each repo)[^.]*/t4:migrate-layout' \
   "CHANGELOG.md's $RENAME_ENTRY entry does not tell an adopted repo to run /t4:migrate-layout"
-says "$rec" 'hooks[^.]*(accept|keep)[^.]*(guard|log)' \
+says "$rec" 'hooks[^.]*(accept|keep)[^.]*(old directory name|unmigrated repo)[^.]*(guard|log)' \
   "CHANGELOG.md's $RENAME_ENTRY entry does not say the hooks keep working in the meantime — with the dont-touch guard and the run log they carry"
 says "$rec" 'grep[^.]*(CI|pipeline|tooling)' \
   "CHANGELOG.md's $RENAME_ENTRY entry does not tell the developer to grep their own CI, pipeline and tooling config — paths the plugin cannot see and does not touch"
@@ -187,7 +190,7 @@ says "$branch" '(not sync|without syncing|instead of syncing)' \
 
 # ...and the stop is reachable before the two things it exists to prevent.
 line_of() { grep -n -- "$1" "$SYNC" | head -1 | cut -d: -f1 || true; }
-b=$(line_of "$OLD/tasks/"); s=$(line_of 'sync-adapters.sh'); m=$(line_of 'manifest.js')
+b=$(line_of "$OLD/tasks/"); s=$(line_of 'sync-adapters.js'); m=$(line_of 'manifest.js')
 [ -n "$b" ] && [ -n "$s" ] && [ -n "$m" ] \
   || fail "$SYNC: cannot locate all three of the branch (${b:-none}), the adapter run (${s:-none}) and the drift report (${m:-none})"
 [ "$b" -lt "$s" ] \
@@ -368,8 +371,25 @@ $out"
   no "a compliant top entry over a $RENAME_ENTRY entry missing statement 1" "$e" \
     "CHANGELOG.md's $RENAME_ENTRY entry does not mark the change breaking"
 
+  # Mutate the real record: unrelated accounting prose must not satisfy compatibility.
+  f=$(repo actual-compatibility-removed)
+  node - "$ROOT/CHANGELOG.md" "$f/CHANGELOG.md" <<'NODE'
+const fs = require('node:fs');
+const body = fs.readFileSync(process.argv[2], 'utf8');
+const changed = body.replace(/The hooks still accept the old directory name[\s\S]*?exactly as they do in a migrated repo\./, 'Compatibility statement removed for this fixture.');
+if (changed === body) throw new Error('Could not locate the actual compatibility statement');
+fs.writeFileSync(process.argv[3], changed);
+NODE
+  no "actual compatibility statement removed with accounting prose retained" "$f" \
+    "CHANGELOG.md's $RENAME_ENTRY entry does not say the hooks keep working in the meantime"
+  g=$(repo actual-compatibility-wrapped)
+  node - "$ROOT/CHANGELOG.md" "$g/CHANGELOG.md" <<'NODE'
+const fs = require('node:fs');
+fs.writeFileSync(process.argv[3], fs.readFileSync(process.argv[2], 'utf8').replace('The hooks still accept the old directory name', 'The hooks\nstill accept the old\ndirectory name'));
+NODE
+  ok "actual compatibility statement with different wrapping" "$g"
   rm -rf "$T"; trap - EXIT
-  SELFTEST_NOTE=" (and the CHANGELOG bindings proved over 11 scratch fixtures)"
+  SELFTEST_NOTE=" (and the CHANGELOG bindings proved over 13 scratch fixtures)"
 fi
 
 echo "release docs ok — ${ADR#ai-factory/adr/} records the decision, the bounded exception and both removal versions; CHANGELOG's top entry $ver is the version the manifests ship, and its $RENAME_ENTRY entry still carries breaking, the migration, the fallback and the CI warning wherever it now sits; /t4:sync-sdlc stops an unmigrated repo before it syncs or reports drift; no template cites an ADR by path; no prompt, hook or template names the migration script 2.1.0 removed${SELFTEST_NOTE:-}"

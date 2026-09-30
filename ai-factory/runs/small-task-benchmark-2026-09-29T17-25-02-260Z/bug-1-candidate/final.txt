@@ -1,0 +1,9 @@
+Fixed `sum([])` to return `0` by adding the missing `reduce` initializer.
+
+- Changed `app.js`, `test/app.test.js`, and `ai-factory/runs/log.csv`.
+- Confirmed the regression failed before the fix.
+- `make lint typecheck test` passed: 2 tests, including the existing nonempty sum.
+- `git diff --check` passed.
+- Behavioral spec coverage was incomplete; the README was correct.
+
+No remaining test failures. Biome was unavailable locally.

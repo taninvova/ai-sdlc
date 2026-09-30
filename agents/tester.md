@@ -22,13 +22,12 @@ public surface does not exist yet, derive it from the spec and the plan and say 
 ## Modes
 The task names one; if none is given, infer from whether the plan's steps are ticked.
 
-- **red** — before implementation. Write a test for each acceptance criterion the plan's
-  steps cover. Run them. They are EXPECTED to fail, and to fail for the right reason:
+- **red** — before implementation. Write tests for the next named implementation step's acceptance criteria. If explicitly asked for the whole plan, record each failing test identity and cause, grouped by its owning step. Run them. They are EXPECTED to fail, and to fail for the right reason:
   a missing behaviour, not a typo, a bad import or a missing fixture. Report the failure
   message for each. A test that passes before the code exists is a broken test — fix it.
 - **gaps** — after implementation. Map every AC to the tests that cover it, then write
   tests only for the ACs with none, or whose test would still pass if the behaviour were
-  reverted. Run the suite. Report which tests you added and which failed.
+  reverted. Run the affected checks; at final completion run the full required suite once. Report which tests you added and which failed.
 
 ## Rules
 - Write only test files. Never create or edit anything under the project's source paths.

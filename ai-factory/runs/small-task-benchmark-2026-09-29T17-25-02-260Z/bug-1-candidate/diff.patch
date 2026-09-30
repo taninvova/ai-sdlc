@@ -1,0 +1,14 @@
+diff --git a/app.js b/app.js
+index 0895351..8d689a5 100644
+--- a/app.js
++++ b/app.js
+@@ -1 +1 @@
+-exports.sum = values => values.reduce((total,value)=>total+value);
++exports.sum = values => values.reduce((total,value)=>total+value,0);
+diff --git a/test/app.test.js b/test/app.test.js
+index 6f2acc4..b1718b0 100644
+--- a/test/app.test.js
++++ b/test/app.test.js
+@@ -1 +1,2 @@
+ const {test}=require('node:test');const assert=require('node:assert/strict');test('sum',()=>assert.equal(require('../app').sum([1,2]),3));
++test('sum of an empty array is zero',()=>assert.equal(require('../app').sum([]),0));

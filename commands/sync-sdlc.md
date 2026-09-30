@@ -1,5 +1,5 @@
 ---
-description: Regenerate .claude/ and .cursor/ adapters from this repo's ai-factory/ directory
+description: Inspect workspace drift; generate host pointers only when explicitly requested
 allowed-tools: Bash, Read, Glob
 ---
 This command is for repos that carry the `ai-factory/` layout. It does nothing in other repos.
@@ -12,15 +12,13 @@ This command is for repos that carry the `ai-factory/` layout. It does nothing i
      a directory the prompts no longer name, and drift across the rename is not comparable.
    - If neither holds any, report "No ai-factory/ layout in this repo — /t4:sync-sdlc applies to
      scaffolded projects." and STOP.
-2. If `ai-factory/make/sync-adapters.sh` is missing, copy it from
-   `${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/templates/ai-factory/make/sync-adapters.sh`.
-3. Run `bash ai-factory/make/sync-adapters.sh`.
-4. Report what changed under `.claude/` and `.cursor/` (`git status --short`).
-5. Report layout drift — whether this repo's `ai-factory/` is behind the installed templates:
+2. Run `node "${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/templates/ai-factory/make/sync-adapters.js"`.
+   Its default is strict mode: no external project files are written or removed. Existing host
+   integration files are preserved. Do not use an older local generator that creates them by default.
+   Only if the user explicitly requested particular host adapters, pass `--adapters=claude`,
+   `--adapters=codex`, `--adapters=cursor`, or a comma-separated combination. Never infer all hosts.
+3. Report layout drift with:
    `node "${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/scripts/manifest.js" check . "${CLAUDE_PLUGIN_ROOT}"`
-   Print its output as-is. It only reports: it changes nothing under `ai-factory/`, and a repo with
-   no `ai-factory/.sdlc.json` is told how to start one rather than treated as an error. A repo still
-   on the old layout gets the migration instruction instead of a per-file report, because across
-   the rename every path differs and the list would bury the one thing to do. Do not act on the
-   findings in this task — taking an upstream change is a separate, reviewable edit.
-Never edit anything under `.claude/` or `.cursor/` by hand — they are generated.
+   Print its output as-is. This only reports: taking upstream changes remains a separate,
+   reviewable edit that preserves local changes. Do not silently copy changed templates.
+4. Report the selected mode and any changed files. Never hand-edit generated integration files.

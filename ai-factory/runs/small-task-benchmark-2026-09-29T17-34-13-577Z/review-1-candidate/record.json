@@ -1,0 +1,67 @@
+{
+  "id": "review-1-candidate",
+  "variant": "candidate",
+  "scenario": "review",
+  "repetition": 1,
+  "beganAt": "2026-09-29T17:37:14.070Z",
+  "elapsedMs": 83766.688833,
+  "timedOut": false,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "cliInvocations": 1,
+  "toolCalls": 19,
+  "commandCalls": 19,
+  "verificationCommandCalls": 1,
+  "usage": {
+    "input_tokens": 261756,
+    "cached_input_tokens": 230400,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 1679,
+    "reasoning_output_tokens": 112
+  },
+  "commands": [
+    "/bin/zsh -lc \"pwd; rg --files -g AGENTS.md -g README.md -g '*reviewer*' -g '\"'!node_modules'\"' -g '\"'!vendor'\"'\"",
+    "/bin/zsh -lc 'cat AGENTS.md ai-factory/AGENTS.md ai-factory/agents/reviewer.md README.md'",
+    "/bin/zsh -lc 'git status --short --untracked-files=all; git diff --stat; git diff --cached --stat'",
+    "/bin/zsh -lc 'cat ai-factory/AGENTS.md'",
+    "/bin/zsh -lc 'cat ai-factory/agents/reviewer.md'",
+    "/bin/zsh -lc 'cat README.md AGENTS.md'",
+    "/bin/zsh -lc \"sed -n '31,70p' ai-factory/AGENTS.md\"",
+    "/bin/zsh -lc \"sed -n '31,80p' ai-factory/agents/reviewer.md\"",
+    "/bin/zsh -lc \"sed -n '1,30p' ai-factory/agents/reviewer.md\"",
+    "/bin/zsh -lc \"sed -n '1,30p' ai-factory/AGENTS.md\"",
+    "/bin/zsh -lc 'cat ai-factory/AGENTS.md ai-factory/agents/reviewer.md'",
+    "/bin/zsh -lc 'cat ai-factory/docs/dont-touch.md ai-factory/docs/coding-standards.md ai-factory/docs/workspace-boundary.md ai-factory/docs/knowledge.md'",
+    "/bin/zsh -lc 'git diff --no-ext-diff --no-textconv --cached; git diff --no-ext-diff --no-textconv; cat untracked.js'",
+    "/bin/zsh -lc \"rg --files --hidden -g '\"'!.git'\"' -g '\"'!node_modules'\"'\"",
+    "/bin/zsh -lc 'cat Makefile app.js test/app.test.js; git ls-files --others --exclude-standard'",
+    "/bin/zsh -lc \"sed -n '24,44p' ai-factory/agents/reviewer.md; sed -n '20,45p' ai-factory/AGENTS.md\"",
+    "/bin/zsh -lc \"node <<'NODE'\nconst assert = require('node:assert/strict');\nconst cases = [\n  ['staged.js', 'double', 2, 4],\n  ['unstaged.js', 'half', 2, 1],\n  ['untracked.js', 'position', 0, 1],\n];\nlet failures = 0;\nfor (const [file, name, input, expected] of cases) {\n  const actual = require(\"'`./${file}`)[name](input);\n  try {\n    assert.equal(actual, expected);\n    console.log(`PASS ${file}: ${name}(${input})`);\n  } catch {\n    failures++;\n    console.log(`FAIL ${file}: ${name}(${input}) = ${actual}; expected ${expected}`);\n  }\n}\nprocess.exitCode = failures ? 1 : 0;\nNODE'",
+    "/bin/zsh -lc 'make lint typecheck test'",
+    "/bin/zsh -lc 'git status --short --untracked-files=all; git diff --no-ext-diff --no-textconv --cached; git diff --no-ext-diff --no-textconv; cat untracked.js'"
+  ],
+  "eventTypes": [
+    "thread.started",
+    "turn.started",
+    "item.completed",
+    "item.started",
+    "turn.completed"
+  ],
+  "quality": {
+    "assertions": {
+      "structuredReview": true,
+      "found:staged.js": true,
+      "found:unstaged.js": true,
+      "found:untracked.js": true,
+      "indexPreserved": true,
+      "workPreserved": true
+    },
+    "pass": true
+  },
+  "sourceHash": "669c317be805432ed220b45dde0fa3074b47a1cc675ed8ad9b2f0556eaaee7de",
+  "promptHash": "5ab416f8f6a29da946b7f4aeb113a11bf69e8c2983a8801031d70b6ecdbd6650",
+  "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-fxMsRB/review-1-candidate",
+  "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-29T17-34-13-577Z/review-1-candidate"
+}

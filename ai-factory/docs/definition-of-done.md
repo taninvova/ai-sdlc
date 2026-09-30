@@ -9,7 +9,7 @@
 3. Template changes name the blast radius (which adopted repos, breaking or not) and are
    recorded in CHANGELOG.md with the version bumped in every manifest —
    `bash skills/ai-layout/scripts/check-versions.sh` enforces it, after two silent drifts.
-4. Spec updated if behaviour changed; plan step ticked.
+4. Planned work updates the spec if behaviour changed and ticks verified plan steps. Quick work reports its acceptance checklist and relevant verification without requiring a spec or plan.
 5. `/t4:check` run; no `blocker` findings open.
 6. Commit message `ai(<task>): …` when AI produced the change; MR labelled `ai-assisted`.
 7. README command table still matches what the plugin actually ships.

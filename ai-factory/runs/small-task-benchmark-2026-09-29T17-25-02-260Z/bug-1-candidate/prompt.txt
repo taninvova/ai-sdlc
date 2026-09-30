@@ -1,0 +1,21 @@
+You are running a real, isolated benchmark of this plugin's documented workflow. Execute the requested work inside this fixture only. The task and available local role prompts below are authoritative for this replay. There is no slash-command runtime in this fixture: replay the supplied task instructions directly. If a task names an agent, use its local ai-factory/agents/<role>.md instructions; delegate only if a supported tool exists, otherwise report that limitation accurately. Do not invent independence. All work is authorized; do not ask the user questions. No network, package installation, external integration, sibling repository access, commits, staging, resets, or changes to global settings. Preserve pre-existing staged/unstaged/untracked files. Keep generated plans/reports under ai-factory/. Follow the documented workflow even if it takes longer; do not optimize merely because this is a benchmark. If the workflow conflicts with the requested boundary, preserve files and report the limitation.
+
+Task request: Fix sum([]) so it returns 0 instead of throwing, preserving sums of nonempty numeric arrays. Follow the plugin's bug workflow, demonstrate a failing regression before the fix, then verify it.
+
+### Workflow stage 1: fix
+---
+description: Reproduce a bug with a failing test, then fix it minimally
+argument-hint: <bug: symptom and how to reproduce>
+---
+Read ai-factory/AGENTS.md and ai-factory/docs/coding-standards.md. Find the spec that covers the behaviour.
+1. Reproduce with a failing test (unit or end-to-end, per the project's test setup) BEFORE changing any code.
+2. Fix with the smallest change that makes the test pass. No unrelated refactoring.
+3. Run affected checks and the project's required completion checks (see ai-factory/AGENTS.md); run the full required suite once at completion. Prose-only changes need applicable document checks, not invented runtime tests. Investigate failures with new evidence; after two repeated attempts with no new hypothesis or evidence, preserve work and report the blocker. Never weaken tests.
+4. Report: root cause · files changed · whether the spec was wrong or incomplete.
+
+If nothing follows the command name, ask the user what the bug is and how to reproduce it, and stop. Do not go hunting for something that looks broken.
+
+Bug: $ARGUMENTS
+
+
+For a multistage task, continue the listed stages in order as far as the documented workflow allows; do not stop merely because one artifact was drafted. For two-step work, only Step 1 is authorized. At completion state actual checks and any remaining failure.

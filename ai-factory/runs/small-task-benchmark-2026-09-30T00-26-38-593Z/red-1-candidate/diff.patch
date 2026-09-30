@@ -1,0 +1,10 @@
+diff --git a/ai-factory/plans/0001-empty.md b/ai-factory/plans/0001-empty.md
+index 2ef600f..e8d0b00 100644
+--- a/ai-factory/plans/0001-empty.md
++++ b/ai-factory/plans/0001-empty.md
+@@ -1,4 +1,4 @@
+ # Plan
+ Spec: ai-factory/specs/0001-empty.md
+-- [ ] Step 1: red phase; create test/empty.test.js named empty sum returns zero. Verify node --test test/empty.test.js fails because sum([]) lacks the empty-list identity. Production code must remain unchanged.
++- [x] Step 1: red phase; create test/empty.test.js named empty sum returns zero. Verify node --test test/empty.test.js fails because sum([]) lacks the empty-list identity. Production code must remain unchanged.
+ - [ ] Step 2: step phase; implement AC1 and pass all tests.

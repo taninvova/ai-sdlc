@@ -1,0 +1,21 @@
+diff --git a/app.js b/app.js
+index 0895351..8d689a5 100644
+--- a/app.js
++++ b/app.js
+@@ -1 +1 @@
+-exports.sum = values => values.reduce((total,value)=>total+value);
++exports.sum = values => values.reduce((total,value)=>total+value,0);
+diff --git a/test/app.test.js b/test/app.test.js
+index 6f2acc4..851c858 100644
+--- a/test/app.test.js
++++ b/test/app.test.js
+@@ -1 +1,9 @@
+ const {test}=require('node:test');const assert=require('node:assert/strict');test('sum',()=>assert.equal(require('../app').sum([1,2]),3));
++test('sum of an empty array is zero',()=>assert.equal(require('../app').sum([]),0));
++test('sum preserves nonempty numeric arrays',()=>{
++  const {sum}=require('../app');
++  assert.equal(sum([7]),7);
++  assert.equal(sum([-2,-3]),-5);
++  assert.equal(sum([-2,5]),3);
++  assert.equal(sum([0.5,1.25]),1.75);
++});

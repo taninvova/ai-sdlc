@@ -1,0 +1,6 @@
+2026-09-29T17:37:14.655387Z  WARN codex_skills::interface: ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/
+2026-09-29T17:37:14.655515Z  WARN codex_skills::interface: ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/
+2026-09-29T17:37:14.697914Z  WARN codex_rollout::list: state db discrepancy during find_thread_path_by_id_str_in_subdir: falling_back
+2026-09-29T17:37:15.006072Z  WARN codex_skills::interface: ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/
+2026-09-29T17:37:15.006102Z  WARN codex_skills::interface: ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/
+2026-09-29T17:37:20.732445Z  WARN codex_core_plugins::manager: failed to auto-upgrade configured marketplace marketplace="n6" error=upgraded marketplace name `sdlc` does not match configured marketplace `n6`

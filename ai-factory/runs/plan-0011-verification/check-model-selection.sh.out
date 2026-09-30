@@ -1,0 +1,1 @@
+PASS: both tools honor explicit override, explicit blank inheritance, review/tool defaults, missing config, and literal gateway aliases

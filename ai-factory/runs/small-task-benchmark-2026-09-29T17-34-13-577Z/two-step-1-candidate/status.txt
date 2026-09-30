@@ -1,0 +1,3 @@
+ M ai-factory/plans/0001-total.md
+ M app.js
+ M test/step-one.test.js

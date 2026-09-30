@@ -5,7 +5,10 @@ argument-hint: <spec path> red|gaps
 Delegate to the `tester` subagent with this instruction: write the acceptance tests for the
 spec and plan named below, in the mode named below (`red` before implementation, `gaps`
 after). Read the spec's ACs, the plan, and the project's existing tests; read the
-implementation's public surface only. Write test files only — never production code.
+implementation's public surface only. In `red`, target the next implementation step unless
+the user requests whole-plan coverage; group any future-step failures by test identity and
+expected cause. A red step succeeds only on its documented missing behavior. In `gaps`, run
+the relevant regressions and report any uncovered criteria. Write test files only — never production code.
 Return its AC → test table and failure messages unchanged, then add one line: whether the
 red tests fail for the right reason, or which ACs are still uncovered.
 

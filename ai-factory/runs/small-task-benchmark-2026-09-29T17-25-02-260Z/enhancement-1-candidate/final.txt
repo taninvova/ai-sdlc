@@ -1,0 +1,8 @@
+Implemented in `app.js`: whitespace-only input displays `Anonymous`; ordinary names remain trimmed.
+
+- Added regression coverage in `test/app.test.js`; demonstrated failure before fixing.
+- `make lint typecheck test` passed: 2 tests.
+- `git diff --check` passed.
+- Self-review completed; only the two intended files changed.
+
+Workflow remains incomplete because required Biome formatting verification is unavailable (`biome: command not found`). No packages were installed.

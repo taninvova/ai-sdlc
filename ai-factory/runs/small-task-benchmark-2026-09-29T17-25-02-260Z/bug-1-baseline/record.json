@@ -1,0 +1,57 @@
+{
+  "id": "bug-1-baseline",
+  "variant": "baseline",
+  "scenario": "bug",
+  "repetition": 1,
+  "beganAt": "2026-09-29T17:28:18.267Z",
+  "elapsedMs": 104712.847875,
+  "timedOut": false,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "cliInvocations": 1,
+  "toolCalls": 16,
+  "commandCalls": 12,
+  "verificationCommandCalls": 2,
+  "usage": {
+    "input_tokens": 426613,
+    "cached_input_tokens": 392448,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 2582,
+    "reasoning_output_tokens": 421
+  },
+  "commands": [
+    "/bin/zsh -lc 'pwd && git status --short && cat ai-factory/AGENTS.md && cat ai-factory/docs/coding-standards.md'",
+    "/bin/zsh -c 'cat ai-factory/AGENTS.md ai-factory/docs/coding-standards.md'",
+    "/bin/zsh -c \"git status --short && rg --files -g '\"'!node_modules'\"' -g '\"'!package-lock.json'\"'\"",
+    "/bin/zsh -c 'cat ai-factory/AGENTS.md ai-factory/docs/coding-standards.md'",
+    "/bin/zsh -c 'cat ai-factory/docs/dont-touch.md ai-factory/docs/definition-of-done.md ai-factory/docs/architecture.md ai-factory/docs/fleet.md'",
+    "/bin/zsh -c \"git status --short && rg --files --hidden -g '\"'!.git'\"' -g '\"'!node_modules'\"'\"",
+    "/bin/zsh -c 'cat app.js test/app.test.js Makefile ai-factory/specs/0000-scaffold.md'",
+    "/bin/zsh -c 'cat ai-factory/tasks/fix.md ai-factory/tasks/test.md ai-factory/tasks/check.md ai-factory/agents/reviewer.md ai-factory/agents/tester.md'",
+    "/bin/zsh -c 'cat app.js test/app.test.js ai-factory/AGENTS.md'",
+    "/bin/zsh -c 'make test'",
+    "/bin/zsh -c 'git diff --check && git diff -- app.js test/app.test.js && git status --short && command -v biome'",
+    "/bin/zsh -c 'make lint typecheck test'"
+  ],
+  "eventTypes": [
+    "thread.started",
+    "turn.started",
+    "item.completed",
+    "item.started",
+    "turn.completed"
+  ],
+  "quality": {
+    "assertions": {
+      "behavior": true,
+      "testsPass": true,
+      "regressionFailsWithoutFix": true
+    },
+    "pass": true
+  },
+  "sourceHash": "6ea35c763929148f65be416e5f2eb45d82b077c2d611c30314319869700d5692",
+  "promptHash": "1c712c0cc06de072008c4e1d6fc95ab89c45d172a6c472fb7f002d745c7483fc",
+  "fixturePath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-sqJUlG/bug-1-baseline",
+  "artifactPath": "/Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/small-task-benchmark-2026-09-29T17-25-02-260Z/bug-1-baseline"
+}

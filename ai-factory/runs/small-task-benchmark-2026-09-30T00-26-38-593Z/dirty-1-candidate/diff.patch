@@ -1,0 +1,45 @@
+diff --git a/README.md b/README.md
+index 883bcbf..ad2b27e 100644
+--- a/README.md
++++ b/README.md
+@@ -1 +1,2 @@
+ displayLabel trims local UI labels.
++Unstaged user note.
+diff --git a/app.js b/app.js
+index 52d74ad..b6ae844 100644
+--- a/app.js
++++ b/app.js
+@@ -1 +1 @@
+-exports.displayLabel = name => name.trim();
++exports.displayLabel = (name) => name.trim() || "Anonymous";
+diff --git a/test/app.test.js b/test/app.test.js
+index f7a8932..79e3fd6 100644
+--- a/test/app.test.js
++++ b/test/app.test.js
+@@ -1 +1,18 @@
+-const {test}=require('node:test');const assert=require('node:assert/strict');test('trim',()=>assert.equal(require('../app').displayLabel(' Ada '),'Ada'));
++const { test } = require("node:test");
++const assert = require("node:assert/strict");
++const { displayLabel } = require("../app");
++
++test("trims ordinary names while preserving internal spaces", () => {
++	assert.equal(displayLabel(" Ada "), "Ada");
++	assert.equal(displayLabel("\t Ada Lovelace \n"), "Ada Lovelace");
++});
++
++for (const input of [" ", "\t", "\n", " \t\r\n ", "\u00a0\u2003"]) {
++	test(`uses Anonymous for whitespace-only input ${JSON.stringify(input)}`, () => {
++		assert.equal(displayLabel(input), "Anonymous");
++	});
++}
++
++test("uses Anonymous for empty input", () => {
++	assert.equal(displayLabel(""), "Anonymous");
++});
+diff --git a/user-notes.txt b/user-notes.txt
+index 460a295..e2fda3f 100644
+--- a/user-notes.txt
++++ b/user-notes.txt
+@@ -1 +1 @@
+-original user notes
++staged user note

@@ -38,6 +38,9 @@
 set -euo pipefail
 shopt -s nullglob
 cd "$(dirname "$0")/../../.."   # repo root
+# Disposable fixtures stay in the project workspace, including default mktemp calls.
+export TMPDIR="$PWD/ai-factory/runs/tmp"
+mkdir -p "$TMPDIR"
 COST=$PWD/skills/ai-layout/templates/ai-factory/make/cost.js
 FX=$PWD/skills/ai-hooks/fixtures/cost
 SCHEMA=$PWD/skills/ai-hooks/scripts/_log-schema.js
@@ -49,7 +52,14 @@ eq() { [ "$2" = "$3" ] || fail "$1: got '$2', want '$3'"; }
 
 # The fixtures must not drift from the header the two writers agree on, or this whole file would
 # be pinning the reader against a schema nothing writes.
-HEADER=$(sed -n 's/^const HEADER = "\(.*\)";$/\1/p' "$SCHEMA" | head -1)
+HEADER=$(node -e '
+const fs = require("node:fs");
+const source = fs.readFileSync(process.argv[1], "utf8");
+const match = /const HEADER\s*=\s*("(?:[^"\\]|\\.)*");/.exec(source);
+if (!match) process.exit(1);
+process.stdout.write(JSON.parse(match[1]));
+' "$SCHEMA")
+
 [ -n "$HEADER" ] || fail "could not read HEADER from $SCHEMA"
 
 # Byte-identity, half one: the checksum of every fixture before a single read.

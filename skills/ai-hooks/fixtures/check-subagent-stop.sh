@@ -25,7 +25,8 @@ STOP=$PWD/skills/ai-hooks/scripts/session-stop.js
 JSON=$PWD/skills/ai-hooks/fixtures/subagent-stop.json
 PARENT=$PWD/skills/ai-hooks/fixtures/agent-transcript.jsonl
 CHILD=$PWD/skills/ai-hooks/fixtures/agent-child-transcript.jsonl
-TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
+mkdir -p ai-factory/runs/tmp
+TMP=$(mktemp -d "$PWD/ai-factory/runs/tmp/accounting.XXXXXX"); trap 'rm -rf "$TMP"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 eq() { [ "$2" = "$3" ] || fail "$1: got '$2', want '$3'"; }
 
@@ -81,6 +82,7 @@ rate() { node -e 'const a = process.argv.slice(1).map(Number);
 # `default` is deliberately WRONG, so an exact-id hit is the only way to the right cost.
 repo() {
   local root=$TMP/$1; mkdir -p "$root/ai-factory/runs"
+  git init -q "$root"
   if [ "${2:-}" = priced ]; then
     cat > "$root/ai-factory/models.yaml" <<'YAML'
 pricing:

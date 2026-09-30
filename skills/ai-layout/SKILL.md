@@ -1,19 +1,22 @@
 ---
 name: ai-layout
 user-invocable: false
-description: The ai-factory/ directory every t4 repo carries — AGENTS.md contract, context docs, task prompts (fleet, design, adr, analyse, explore, spec, plan, test, run, fix, chore, check — exposed as /t4:<name>), reviewer, tester, architect, analyst, explorer, specifier, planner and implementer agents, plans, explorations, run log, Makefile include, tool adapters. Use when adding the layout to a repo, adding or changing a task prompt or context doc, or when a session asks where an AI-related file belongs.
+description: The ai-factory/ directory every t4 repo carries — AGENTS.md contract, context docs, task prompts (fleet, design, adr, analyse, explore, spec, plan, test, run, fix, chore, quick, check — exposed as /t4:<name>), reviewer, tester, architect, analyst, explorer, specifier, planner and implementer agents, plans, explorations, run log, Makefile include, tool adapters. Use when adding the layout to a repo, adding or changing a task prompt or context doc, or when a session asks where an AI-related file belongs.
 ---
 
 # ai-layout
 
-Copy `templates/` to the repo root, preserving paths, then substitute
-`{{app}}` `{{stack}}` `{{commands}}` `{{owner}}` `{{backup}}` `{{date}}` `{{plugin_version}}`.
-Slots for framework overlays: `{{overlay_note}}` `{{rules_extra}}` `{{dod_extra}}`
-`{{dont_touch_extra}}` `{{fleet_extra}}` — a scaffold plugin fills them; `/t4:adopt-sdlc`
-removes them.
-Never write into `.claude/`, `.cursor/` or `.codex/` by hand — `ai-factory/make/sync-adapters.sh`
-generates all three from `ai-factory/`. Codex reads `.codex/skills/<name>/SKILL.md` as slash commands;
-since it cannot take subagents, the nine agent-backed tasks get an inline-the-agent note.
+Use `node <installed-plugin>/skills/ai-layout/scripts/adopt.js .` for new adoption. It
+creates only `ai-factory/`, fills project placeholders, detects declared commands without
+running them, and refuses an existing workspace. Existing root and host files are preserved.
+The installed plugin supplies hooks and native commands; the workspace carries complete
+local task and agent procedures, runner scripts and project additions.
+
+Never write into `.claude/`, `.cursor/` or `.codex/` by hand. Default sync writes no external
+files. Only after an explicit request, select adapters with
+`node ai-factory/make/sync-adapters.js --adapters=claude,codex,cursor` (or a selected subset).
+Generated entries point at local canonical content. Codex adapters run agent procedures
+in the current session and label inline review accurately.
 
 ```
 ai-factory/AGENTS.md                  the contract, < 60 lines, no dynamic content
@@ -46,7 +49,6 @@ ai-factory/.sdlc.json                 which ai-sdlc version this repo holds + a 
                               written by /t4:adopt-sdlc, read by /t4:sync-sdlc, never by hand
 ai-factory/specs/              one file per feature, Given/When/Then
 ai-factory/adr/                0000-template.md; /t4:adr writes here
-AGENTS.md  →  "See ai-factory/AGENTS.md"      CLAUDE.md  →  "@ai-factory/AGENTS.md"
 ```
 
 ## Rules for AGENTS.md
@@ -57,17 +59,29 @@ AGENTS.md  →  "See ai-factory/AGENTS.md"      CLAUDE.md  →  "@ai-factory/AGE
 ## Rules for task prompts
 - Fixed text first; `$ARGUMENTS` at the END so the cached prefix is stable.
 - Each task states: read first · steps · what done means · output.
-- Code-changing tasks end by running lint/typecheck/tests and reporting.
+- Code-changing tasks use their declared red/step/final verification phase and report evidence. Run full required checks at completion.
 - A task that keeps needing chat steering is missing a line; add it via MR.
 
 ## Interactive vs headless
-Slash commands (generated from ai-factory/tasks/) are the default for developers.
-`make ai TASK=<name> INPUT=…` runs the same file headless — CI uses this. Pass
-`INPUT_FILE=<path>` instead for anything large or containing `$`, quotes or newlines (a diff):
-make re-expands values routed through a variable, a file is passed through untouched.
-Both read identical bytes, so the cache is shared.
+Installed plugin commands or explicit task paths are the default in strict mode. Optional
+project adapters expose the same tasks only when requested. From the project root,
+`make -f ai-factory/make/ai.mk ai TASK=<name> INPUT=…` runs the local file headless.
+Use `INPUT_FILE=<path>` for large or multiline input; configuration is passed as data,
+never shell program text. No root Makefile is required. Match verification to the phase.
+
+## Strict workspace default
+
+Adoption copies only ai-factory/ and preserves all existing root files. Use the installed
+`adopt.js` script; it detects commands without running them. Complete agent templates are
+materialized from canonical agents plus explicit project additions before release. Run
+`node skills/ai-layout/scripts/materialize-agents.js --check` to verify that payload.
+No sibling repo, overlay or integration is required. Scratch belongs in ai-factory/runs/tmp/.
+Default sync changes no external files; host pointers require an explicit request. Read
+ai-factory/docs/workspace-boundary.md for ownership and host limitations.
 
 ## The loop
+
+For a local, understood small enhancement, use `/t4:quick`: acceptance checklist, implementation, relevant checks, and labeled self-review. Use `/t4:fix` for a bug and `/t4:chore` for maintenance. Escalate uncertain or high-risk work to the planned loop.
 /t4:explore → /t4:spec → /t4:plan → /t4:test red → /t4:run (one step) → /t4:test gaps → /t4:check → commit → MR.
 /t4:explore is optional for small, obvious changes; mandatory when the request could be
 built more than one way or touches an RMQ contract, a schema, or a public API.
@@ -86,5 +100,5 @@ or code, and never turns an assumption into a fact.
 
 ## Adding a task
 1. Write ai-factory/tasks/<name>.md with a `description:` front-matter line.
-2. `bash ai-factory/make/sync-adapters.sh` → `/<name>` appears.
+2. Use the installed command or explicit task path in strict mode. If the user requested external adapters, run `node ai-factory/make/sync-adapters.js --adapters=<claude|codex|cursor>`; the selected `/t4:<name>` entry appears.
 3. Run it twice on a real input; fix the prompt; MR.

@@ -1,5 +1,63 @@
 # Changelog
 
+## 2.3.0 — 2026-09-29
+
+Security fixes and a shorter route for small changes. Performance measurements and
+remaining validation limits are recorded in `ai-factory/docs/small-task-benchmark.md`;
+this release does not promise a particular model latency improvement.
+
+### Workspace and workflow
+
+- New adoption creates only `ai-factory/`, detects declared commands without running
+  them, and preserves existing root files. Complete agent procedures are delivered
+  locally. Node, Bash, Git and a configured AI CLI remain prerequisites; no new package
+  or optional integration is required.
+- Adapter generation is now opt-in per host. Default `/t4:sync-sdlc` reports drift and
+  preserves existing integration files. Explicit generation refuses user-file collisions.
+  Manifest writes reject redirected destinations; adapter writes reject shared hard links.
+  Use `make -f ai-factory/make/ai.mk` without a root Makefile. Scratch and Git rules live
+  inside the workspace. Existing external files are not automatically moved or removed.
+- `/t4:quick` handles understood local enhancements with an acceptance checklist,
+  regression evidence and labeled self-review. Uncertainty or sensitive boundaries use
+  the planned workflow. Planned verification distinguishes expected red, step, and final
+  checks; a future-step failure can remain only when its recorded identity and cause match.
+- Headless review defaults to staged, unstaged and nonignored untracked changes;
+  committed branch and supplied-input scopes remain explicit. Review model selection
+  honors explicit `MODEL`, then `review:`, tool default, and CLI inheritance. Explicit
+  blank `MODEL=` means inheritance. Interactive agents retain their session model.
+
+### Security and compatibility changes
+
+- The launcher treats Make/config values as data and invokes executables with argument
+  arrays. `CMD` now selects one executable name or path; shell-fragment overrides are
+  rejected. Per-run private scratch and exact review-output identities prevent overlap.
+- The edit guard resolves the repository from nested directories and checks canonical
+  targets. Missing or malformed policy in an adopted repository fails closed. Intentional
+  empty policy requires `<!-- t4:allow-empty-policy -->`. No-layout repositories remain
+  a deliberate no-op; the historical old-layout hook fallback remains until 3.0.0.
+- Hook and runner writers reject symlinked or shared mutable destinations and unsafe
+  event identifiers. Existing projects using redirected run directories must move them
+  into a real local workspace before these writers can resume.
+- `GATE_ENFORCE=1` now requires a schema-valid `approve` with no blockers. Unknown
+  verdicts, malformed output, missing output and `request_changes` fail. Unset/`0` is
+  advisory; invalid enforcement settings fail. Output and Codex sidecars bind to one run.
+- These checks provide defense in depth. The host sandbox still governs arbitrary shell
+  execution and concurrent hostile filesystem races; the edit hook is not a sandbox.
+
+### Adoption and validation
+
+Update the installed plugin and restart its host session to load hooks and native commands.
+Run `/t4:sync-sdlc` to inspect drift, then take template changes as a separate reviewed edit,
+preserving project additions. Existing adopted runners do not update automatically. Include
+`runner.js`, `safe-files.js`, `gate.js`, `log.js`, the Make entry point, complete agents,
+workflow prompts, and local Git rules when taking this release. Generate external adapters
+only when requested for the selected host. No package is published by this working-tree edit.
+
+Regression coverage adds literal configuration payloads, canonical path checks, unsafe
+writer destinations, concurrent accounting, exact review binding, diff scope/model
+selection, isolated adoption, optional adapters and actual-text release assertions.
+
+
 ## 2.2.0 — 2026-09-29
 
 `/t4:state` lists what is still outstanding in a repo — every spec and plan that is not finished,
