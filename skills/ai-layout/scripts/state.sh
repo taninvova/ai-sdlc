@@ -165,10 +165,35 @@ title_of() {
   clean "$(sed -n 's/^# \(.*\)/\1/p' "$1" 2>/dev/null | head -1)"
 }
 
+# withdrawn_steps_of <plan> — explicit numbered result records, never prose or code examples.
+# Keep the old checkboxes intact: withdrawal resolves a step without proving it was executed.
+withdrawn_steps_of() {
+  awk '
+    {
+      line=$0
+      sub(/^[[:space:]]*/, "", line)
+      if (match(line, /^`+/) || match(line, /^~+/)) {
+        size=RLENGTH; char=substr(line, 1, 1)
+        if (fence) {
+          if (char == fencechar && size >= fence && substr(line, size+1) ~ /^[[:space:]]*$/) fence=0
+        } else if (size >= 3) { fence=size; fencechar=char }
+        next
+      }
+      if (fence || $0 ~ /^    / || $0 ~ /^\t/) next
+      if (line ~ /^\*\*Result — Step [0-9]+ (is )?withdrawn(;|\.|\*\*)/) {
+        sub(/^\*\*Result — Step /, "", line)
+        sub(/ (is )?withdrawn.*/, "", line)
+        printf "%d ", line+0
+      }
+    }
+  ' "$1"
+}
+
 # --- 1. the plans -------------------------------------------------------------------------
 # Glob and sort; never iterate a counter. The numbers are not dense — ai-factory/plans/ can hold
 # none at all while done/ holds nine — and a plan's DIRECTORY says nothing about its state: a
-# plan filed under done/ with one `- [~]` step is outstanding (AC10). Only the checkboxes decide.
+# plan filed under done/ with one `- [~]` step is outstanding (AC10), unless that step has an
+# explicit withdrawal result (AC17). Filing a plan never resolves its work.
 PLAN_SPEC=(); PLAN_STATE=(); NP=0
 
 plan_list=$( { for f in ai-factory/plans/*.md ai-factory/plans/*/*.md; do
@@ -192,7 +217,8 @@ while IFS= read -r plan; do
       for cand in ai-factory/specs/"$pnum"-*.md; do specref=$cand; break; done
     }
 
-    ok=0; bad=0; incomplete=0
+    withdrawn_steps=$(withdrawn_steps_of "$plan")
+    ok=0; bad=0; incomplete=0; withdrawn=0
     while IFS= read -r line; do
       case "$line" in
         '- ['*) ;;
@@ -231,6 +257,12 @@ while IFS= read -r plan; do
       fi
       [ -n "$ident" ] || ident="(step)"
       snum=$(printf '%s' "$ident" | sed 's/[^0-9]//g')
+      snum=$(printf '%s' "$snum" | sed 's/^0*\([0-9]\)/\1/')
+      if [[ "$ident" =~ ^Step\ [0-9]+$ ]]; then
+        case " $withdrawn_steps" in
+          *" $snum "*) withdrawn=$((withdrawn + 1)); continue ;;
+        esac
+      fi
 
       case "$mark" in
         '~') sstate=part-done ;;
@@ -249,7 +281,7 @@ while IFS= read -r plan; do
     elif [ "$ok" -eq 0 ]; then
       state=unknown; reason="no step lines were found in this plan"
     elif [ "$incomplete" -eq 0 ]; then
-      state=complete
+      if [ "$withdrawn" -gt 0 ]; then state=closed; else state=complete; fi
     else
       state=outstanding
     fi
@@ -273,6 +305,8 @@ EOF_STEPS
       # default listing drops it at the filter below, where AC4 is enforced in one place for
       # every kind of row rather than by never building it.
       add "$plan" 0 plan "$pnum" complete "-" "$(title_of "$plan")" ;;
+    closed)
+      add "$plan" 0 plan "$pnum" closed "-" "$(title_of "$plan") — $withdrawn withdrawn step(s); no pending steps" ;;
   esac
 done <<EOF_PLANS
 $plan_list
@@ -293,7 +327,7 @@ while IFS= read -r spec; do
     continue
   fi
 
-  paired=0; any_open=0; any_unknown=0
+  paired=0; any_open=0; any_unknown=0; any_closed=0
   i=0
   while [ "$i" -lt "$NP" ]; do
     if [ "${PLAN_SPEC[$i]}" = "$spec" ]; then
@@ -301,6 +335,7 @@ while IFS= read -r spec; do
       case "${PLAN_STATE[$i]}" in
         unknown)     any_unknown=1 ;;
         outstanding) any_open=1 ;;
+        closed)      any_closed=1 ;;
       esac
     fi
     i=$((i + 1))
@@ -312,6 +347,8 @@ while IFS= read -r spec; do
     add "$spec" 0 spec "$snum" unknown "-" "its plan could not be read or interpreted"
   elif [ "$any_open" -eq 1 ]; then
     add "$spec" 0 spec "$snum" part-done "-" "$(title_of "$spec")"
+  elif [ "$any_closed" -eq 1 ]; then
+    add "$spec" 0 spec "$snum" closed "-" "$(title_of "$spec") — its plans have no pending steps; includes withdrawn work"
   else
     # Every paired plan is complete, so the spec is: a row --done prints and the default
     # listing filters out (AC4, AC5).
@@ -324,21 +361,21 @@ EOF_SPECS
 # --- 3. the answer ------------------------------------------------------------------------
 # Every artefact above became a row carrying its state, whatever that state is. The flag picks
 # which states are printed, and nothing else differs: same builder, same sort, same header, same
-# fields. The default listing shows what is not complete — AC4's "not struck through, not greyed,
+# fields. The default listing shows what is neither complete nor closed — AC4's "not struck through, not greyed,
 # not shown with a done marker" is this one comparison — and --done shows what is, which is the
 # mirror image over any tree (AC5). `unknown` is neither, so it appears in the default listing and
 # never under --done: an artefact that could not be read or interpreted is never complete (AC12).
 SELECTED=$(printf '%s' "$ROWS" | grep -v '^$' | LC_ALL=C sort \
-  | awk -F'\t' -v mode="$MODE" '{ done_row = ($5 == "complete"); if ((mode == "done") == done_row) print }')
+  | awk -F'\t' -v mode="$MODE" '{ done_row = ($5 == "complete" || $5 == "closed"); if ((mode == "done") == done_row) print }')
 
 # An empty result is an answer, not an error and not silence: one line, exit 0 (AC11).
 if [ -z "$SELECTED" ]; then
   if [ ! -d ai-factory/specs ] && [ ! -d ai-factory/plans ]; then
     echo "nothing to list — this repo has no ai-factory/specs or ai-factory/plans directory"
   elif [ "$MODE" = done ]; then
-    echo "nothing finished yet — no spec or plan in this repo has every step complete"
+    echo "nothing finished yet — no spec or plan in this repo is complete or closed"
   else
-    echo "nothing outstanding — every spec and plan in this repo is complete"
+    echo "nothing outstanding — every spec and plan in this repo is complete or closed"
   fi
   exit 0
 fi

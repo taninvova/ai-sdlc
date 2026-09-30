@@ -48,7 +48,7 @@ reports, it does not interview, and it must behave the same in a headless run.
    judgement — when the answer lands, this instruction is the one place it changes.
 
 5. If the script answers in a single line rather than a table — nothing to list because the repo
-   has no layout, nothing outstanding because every spec and plan is complete, or an argument it
+   has no layout, nothing outstanding because every spec and plan is complete or closed, or an argument it
    refused — pass that line through as it stands and stop. An empty or refused result is a valid
    answer, not an error and not silence, so do not pad it, do not go looking for work it missed,
    and do not turn it into a table with no rows.
@@ -57,6 +57,10 @@ reports, it does not interview, and it must behave the same in a headless run.
    interpret, and its `detail` field carries the reason. Keep both: show the row with the rest,
    with its reason beside it. Never quietly promote it to complete, never leave it out because it
    spoils the table, and never guess at what its steps would have said.
+
+   Under `--done`, preserve `closed` as distinct from `complete`: the recorded steps include
+   explicit withdrawals, so there is no pending work but not all work was executed. The script
+   reads numbered `**Result — Step N withdrawn; …**` records; do not infer withdrawals yourself.
 
 7. After the table, at most two lines of your own, and only where they change what the developer
    does next: how many items the table lists — outstanding ones by default, finished ones under

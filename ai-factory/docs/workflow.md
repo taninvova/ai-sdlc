@@ -154,6 +154,10 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
   outstanding, each outstanding plan with its incomplete steps, so you pick the next step up from
   the artefacts on disk rather than from what you remember of the last session. Read-only — it
   names the work and starts none of it.
+  An explicit `**Result — Step N withdrawn; …**` record resolves that numbered step without
+  ticking it. `--done` labels plans resolved partly by withdrawal as `closed`, not `complete`;
+  blocked or deferred steps without such a record stay pending. This reports recorded work,
+  not proof of acceptance criteria. Quoted or fenced examples never withdraw a step.
 - **Plan when risk or uncertainty warrants it.** File count alone does not determine the workflow.
 - **Steering in chat for 20+ minutes with code changed?** Stop. Write the decision into the
   plan, commit, and continue. Long chat threads lose the decision.

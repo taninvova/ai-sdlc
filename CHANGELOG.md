@@ -1,5 +1,11 @@
 # Changelog
 
+**Unreleased working-tree fix:** `/t4:state` recognizes explicit numbered withdrawal results
+without editing archived checkboxes. Withdrawn steps are omitted from pending work and `--next`;
+`--done` distinguishes `closed` plans/specs from fully `complete` ones. Pending and unknown work
+still takes precedence. Quoted and fenced examples do not resolve steps. This changes plugin
+reporting only; adopted templates and the released version are unchanged.
+
 ## 2.3.0 — 2026-09-29
 
 Security fixes and a shorter route for small changes. Performance measurements and
