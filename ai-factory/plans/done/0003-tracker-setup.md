@@ -42,7 +42,7 @@ a prompt.
   from assumed answers because a repo that merely *looks* configured is worse than one that is
   not. Nothing was written in either: no `ai/jira.yaml`, no `.gitignore`.
 
-- [~] **Step 2 — Detect, show, confirm.** Detect the reachable site, show it, ask before
+- [x] **Step 2 — Detect, show, confirm.** Detect the reachable site, show it, ask before
   writing (AC1). Unreachable → report why and what to do, write nothing (AC4).
   *Proves:* AC1, AC4. *Check:* real run; and with the connector unavailable, which is the state
   `specs/0001` AC4 was proved in.
@@ -56,6 +56,30 @@ a prompt.
   that state for `/t4:spec`, which is a different command, and manufacturing it costs the
   developer a re-authorisation for a case that will arise on its own. It waits for a session
   already in that state.
+
+  **Result — AC4 proved in an interactive Codex session, 2026-09-29.** This supersedes the
+  outstanding note above; AC1's earlier live evidence remains unchanged. Executed the current
+  `commands/setup-tracker.md` procedure in-session against two scratch repos under
+  `ai-factory/runs/tmp/tracker-ac4-9def3ret/`: one unconfigured, one carrying an existing
+  `ai-factory/jira.yaml`. Both had the current tracker seam and sentinel ignore files.
+  The session could ask the developer, so AC8's headless refusal was not the branch tested.
+
+  The exposed tool inventory contained no Atlassian/Jira tool, and neither fixture had
+  `ai-factory/make/jira.sh`. Both executions therefore stopped at step 3, reported that no
+  tracker connector or fallback was available, and named authorizing the connector in a
+  supported session and rerunning setup as the recovery. No site was guessed, no credential
+  was changed, and no tracker tool was called. Before/after snapshots had identical file
+  lists, SHA-256 hashes, modes and modification timestamps: configuration stayed absent
+  in the first repo and byte-identical in the second; both ignore files were preserved.
+
+  Evidence identifies the exact instructions exercised:
+  - command SHA-256: `f0e7a5bcf34e32563a13a77bda406f283115fe64167097f3a6cb6a231700bdde`
+  - seam SHA-256: `1e0a185d07464cd6bee7e9e44b2c772354a8d0e5ecd287ad9f89c837111c3fac`
+  - source commit: `b858aef`; two cases passed, zero configuration writes, zero tracker calls.
+
+  This is an in-session prompt-procedure run, not a native Claude slash-command invocation,
+  a connector outage test, or an independent model evaluation. No implementation change was
+  needed to close AC4's unavailable-connector case; the existing refusal behaved as specified.
 
 - [x] **Step 3 — Write, without ever silently overwriting.** Write `base_url` and nothing else
   (AC2, AC11). If the file exists, show it and require a second confirmation (AC3). The file is
