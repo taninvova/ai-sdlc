@@ -1,5 +1,248 @@
 # Changelog
 
+## 2.8.0 — 2026-09-30
+
+Opt-in per-task model routing (spec 0016). `ai-factory/models.yaml` can name a model for each task
+and tool. When enabled, the model is enforced before the task's work starts, for headless runs
+and for interactive `/t4:<task>` and `$t4-<task>`. **With routing absent or `enabled: false`,
+model selection is unchanged.**
+
+- **Configuration.** Add `routing: { enabled, tasks.<task>.<claude|codex> }` in the existing
+  file, written as the documented two-space block. The template ships it disabled.
+  - Task names are the files in `ai-factory/tasks/`, custom ones included. Map `check`; `make review`
+    runs it, and `review` under `tasks:` is rejected.
+  - Aliases are passed verbatim and select a model, not a provider.
+  - `pricing` is unchanged.
+- **Resolution, first match wins:**
+  1. explicit `MODEL=<id>` or `--task-model=<id>`;
+  2. explicit `MODEL=` or `--task-model=inherit`;
+  3. the task mapping;
+  4. `review:` for check;
+  5. the tool entry;
+  6. the CLI's own configuration.
+
+  A missing or blank mapping falls back, and says so.
+- **Strict parsing.** A new shared module, `make/models.js`, is the only parser. Tabs, flow
+  syntax, duplicates, unknown keys and non-literal booleans (`enabled: ture`) fail with their line
+  number before anything launches, even while routing is disabled. Nothing retries on another model.
+- **Headless.**
+  - Every run prints `model: <task> / <tool>: <model> (<source>)` to stderr.
+  - It writes a `<run>.json.model.json` sidecar (`t4.model-selection.v1`), keeping the requested
+    model apart from any model identity the CLI output reported.
+  - With routing on, a Claude run refuses to start while `CLAUDE_CODE_SUBAGENT_MODEL` would
+    override its subagents.
+  - `log.csv` and `make cost` are unchanged.
+- **Interactive.**
+  - Every task command and skill first runs `node ai-factory/make/models.js dispatch`, which prints
+    one directive: `legacy`, `inherit`, `route` or `blocked`.
+  - A routed task runs in a generated worker agent pinned to its model:
+    `.claude/agents/t4-route-<task>-<hash>.md` or `.codex/agents/t4-route-<task>-<hash>.toml`.
+  - The chat only relays questions and results. It never does the task itself, and never falls
+    back to its own model.
+  - Worker agents are written by `sync-adapters.sh --adapters=routing` (also by the claude and
+    codex selections). Their names are content-addressed, so a session holding an outdated agent
+    stops with a restart instruction instead of using the old model.
+  - Dispatches and outcomes go to `ai-factory/runs/routing.jsonl` (`t4.model-dispatch.v1`).
+- **Doctor** reports invalid routing, mappings with no task file, missing or stale worker agents,
+  and `CLAUDE_CODE_SUBAGENT_MODEL`. It makes no network calls.
+- **Checks.**
+  - New: `check-interactive-model-routing.sh`, 12 cases.
+  - Extended:
+    - `check-model-selection.sh`: the precedence matrix and 28 invalid configurations;
+    - `check-runner-security.sh`: routed argv through Make, sidecars, and one launch on failure;
+    - `check-review-scope.sh`: `make review` and `make ai TASK=check` agree.
+- **Not verified on live hosts.** No live Claude Code or Codex session has run a routed task with
+  gateway aliases. Arbitrary aliases in agent files, reload timing and the model a worker actually
+  used are unverified on both hosts. See the host matrix in `ai-factory/docs/workflow.md` §8 and
+  plan 0016, Step 7.
+- **Template change for adopted repos:**
+  - New file: `make/models.js`.
+  - Changed: `make/runner.js` and `make/sync-adapters.js`, which gains the `routing` selector and
+    puts the routing step in project pointers. Custom-task Claude pointers now name the task file
+    instead of `@`-importing it.
+  - `models.yaml` gains the disabled `routing:` block and the precedence notes.
+  - `docs/workspace-boundary.md` notes the local selection records.
+
+## 2.7.0 — 2026-09-30
+
+Opt-in lifecycle telemetry (spec 0015). It records delivery-level duration, waits, retries,
+outcomes and attribution coverage beside the existing accounting. **`log.csv` and `make cost` are
+unchanged**, whether telemetry is enabled or disabled.
+
+- **Enabling it.** Set `"lifecycle": {"enabled": true, "retention_days": 90}` in
+  `ai-factory/contracts/config.json`. Without it, nothing is recorded.
+- **Recording.**
+  - Events are local, one immutable file each, under the gitignored `ai-factory/runs/lifecycle/`.
+  - Each run, attempt and wait gets its own ID, with explicit parent runs for delegated work.
+  - Replayed hooks are idempotent: the same event lands under the same file name.
+  - Events hold IDs, timings, outcomes and token counts only.
+- **Instrumentation.**
+  - The headless runner records its own runs (`DELIVERY`, `STEP`) and passes `T4_LIFECYCLE_RUN`
+    to the CLI child.
+  - Stop and SubagentStop link the usage they counted.
+  - The Bash hook binds a session to a run when it sees `lifecycle.js start`.
+  - The spec, plan, test, run, check and quick procedures bracket their work with
+    `lifecycle.js start`/`end` and `wait-start`/`wait-end`.
+- **Reporting.** `make lifecycle [DELIVERY=] [JSON=1]` covers:
+  - elapsed time as an interval union, and waiting as a union of recorded waits;
+  - active time, and agent effort, which is labelled and may exceed elapsed;
+  - retries (resumptions and reruns are counted separately) and outcomes;
+  - tokens, each unique source record counted once;
+  - cost as a known subtotal plus the unpriced remainder, with provenance.
+
+  Open runs, open waits, invalid clocks and missing prices show as unknown or partial, never
+  zero. Ambiguous or unbound usage is reported as unattributed.
+- **Export and retention.** `make lifecycle-export DELIVERY=<id>` writes the telemetry v1 export,
+  and `make delivery-report` reads live lifecycle numbers when enabled. `lifecycle.js prune` keeps
+  deliveries with saved reports and records what it removed.
+- **Docs.** The workflow guide, README and FACTORY.md describe the three opt-in layers together:
+  artifact contracts, the completion report and lifecycle telemetry. That includes the main-loop
+  diagram, the CI gating commands, what the hooks record and what is gitignored, troubleshooting
+  rows, and the short version.
+- **Checks.** New `skills/ai-layout/scripts/check-lifecycle.sh`, 13 cases. All existing accounting
+  checks pass unchanged.
+- **Template change for adopted repos:**
+  - New files: `ai-factory/make/lifecycle.js`, `lifecycle-events.js` and
+    `contracts/schema/lifecycle-event.v1.json`.
+  - `make/runner.js` and `make/delivery-report.js` are extended.
+  - `make/ai.mk` gains `lifecycle` and `lifecycle-export`.
+  - `.gitignore` gains `/runs/lifecycle/` and `/runs/telemetry/`.
+  - Six task procedures gain one lifecycle paragraph, which only applies when lifecycle is enabled.
+  - `AGENTS.md` ends its workflow line with `(→ /t4:report with contracts)`.
+  - `docs/definition-of-done.md` gains item 8, the completion report before handoff where contracts
+    are enabled, and loses a stray duplicated line under item 2.
+  - `docs/workspace-boundary.md` names where reports, lifecycle events and telemetry exports live.
+
+  Take these via `/t4:sync-sdlc`. The plugin hooks update with the plugin. **Not verified on real
+  hosts:** interactive Claude and Codex sessions were not exercised live, and Codex session binding
+  depends on a PostToolUse payload field that has not been confirmed.
+
+## 2.6.0 — 2026-09-30
+
+Delivery completion report (spec 0014): one local, reproducible answer to "what was asked,
+what changed, what actually ran, what review found and what is still open", for finished and
+unfinished work alike. It builds on the 2.5.0 artifact contracts and only reads.
+
+- **New `/t4:report <delivery id>`** (Codex `t4-report`) and
+  `make -f ai-factory/make/ai.mk delivery-report DELIVERY=<id>`. Both write
+  `ai-factory/reports/<id>/completion.md` and `completion.json`, rendered from one model with
+  schema `t4-delivery-report` v1.
+- **Status** is `ready`, `incomplete`, `blocked` or `unverified`, with every contributing reason
+  and its evidence reference.
+  - A failed required check or a blocking review finding blocks.
+  - Missing, stale or interrupted evidence leaves the delivery unverified.
+  - Unfinished work is incomplete.
+  - `ready` means ready for handoff, not merged.
+- **Criteria.** The report has one row per AC or QC, uncovered ones included. A criterion is
+  mapped only to the steps its plan sidecar names, never by wording. Quick deliveries use their
+  checklist, and no spec is generated for them.
+- **Read-only.** The report runs no check, edits no source artifact and publishes nothing; its
+  MR description is a draft.
+  - Collection is fingerprinted and retried, and aborts rather than mix two states of the evidence.
+  - Writes are atomic, and a failed write keeps the previous report.
+  - Logs are referenced by path and hash, never inlined.
+  - Unsafe IDs and symlinked destinations are refused.
+- **Completion policy.** An optional `completion` block in `ai-factory/contracts/config.json`
+  sets `require_review`, `require_review_quick`, `blocking_severities` and `allow_attestation`.
+- **Attestation.** New `contracts.js attest` records who, when, why and against which content.
+  An attestation is always shown, counts only when policy allows it, never overrides a failed
+  check, and goes stale when the spec changes.
+- **Review evidence** now keeps a summary of the findings: severity, file, line and issue,
+  truncated.
+- **Telemetry** is optional. The report reads `ai-factory/runs/telemetry/<id>.json` (provisional
+  schema `t4-delivery-telemetry` v1) if one exists. Nothing produces that file yet, so the section
+  says `unavailable`. Unknown values are never shown as zero, and telemetry never affects status.
+- New check: `skills/ai-layout/scripts/check-delivery-report.sh`, with 20 cases.
+- **Template change for adopted repos:**
+  - New files: `ai-factory/make/delivery-report.js` and `ai-factory/tasks/report.md`.
+  - New schemas: `contracts/schema/{report,attestation,telemetry}.v1.json`.
+  - `make/ai.mk` gains `delivery-report`.
+  - `make/contracts.js` gains `attest`, attestation evidence, the completion policy and findings in
+    review evidence; `make/runner.js` passes those findings.
+  - `make/sync-adapters.js` lists `report` as a native command.
+  - `tasks/check.md` and `tasks/quick.md` mention `/t4:report`.
+  - `AGENTS.md` lists `/t4:report`.
+
+  Take these via `/t4:sync-sdlc`. Repos without contracts are unaffected; `/t4:report` needs a
+  delivery ID from an enabled repo.
+
+## 2.5.0 — 2026-09-30
+
+Opt-in validated artifact contracts (spec 0013): deterministic, read-only checks between
+workflow steps, so a malformed, incomplete or stale spec, plan, checklist or verification result
+is never silently used as the next step's input. Nothing changes for a repo that does not opt in.
+
+- New `ai-factory/make/contracts.js`, which uses Node built-ins only. It adds `validate`,
+  `init spec|plan|quick`, `record`, `snapshot`, `enable` and `migrate`, plus the
+  `make contracts` and `make verify` targets.
+- **Sidecars and states.** JSON sidecars beside the Markdown carry a stable `delivery_id`, the
+  content digests, the AC and step IDs, and the verification argv. The validator reports each
+  artifact as `valid`, `invalid`, `stale` or `legacy_unverified`, with stable JSON diagnostics
+  (`--json` / `JSON=1`). Missing or unsupported metadata is never valid.
+- **Freshness** is decided by content: SHA-256 of the Markdown (checkbox marks normalized) and of
+  a Git-listed code snapshot that never includes `ai-factory/`.
+  - Editing a spec makes its plan and evidence stale.
+  - Editing in-scope code makes final, quick and review evidence stale.
+  - A ticked step without passing evidence is `not_run`.
+- **Evidence** is recorded only by running the declared commands without a shell, as `passed`,
+  `failed`, `not_run` or `unavailable`. Red runs expect failure and never count as final
+  verification. `make review DELIVERY=<id>` records review evidence bound to the exact gated
+  output.
+- **Read-only validation.** Validation writes nothing and reads through the `safe-files.js`
+  boundary. Path escapes and symlinks are rejected, and a path mentioned in artifact prose is
+  never opened.
+- **Legacy artifacts.** `contracts.js migrate` is a dry run by default. `--write` drafts sidecars
+  for legacy specs and plans. It never edits Markdown and never invents IDs or evidence, and its
+  drafts stay `legacy_unverified` until reviewed. Running it twice changes nothing.
+- `/t4:doctor` reports whether contracts are enabled and the overall contract state.
+  `/t4:sync-sdlc` offers the opt-in and the migration dry run.
+- New check: `skills/ai-layout/scripts/check-contracts.sh`, 37 cases in disposable repositories.
+- **Template change for adopted repos:**
+  - New files: `ai-factory/make/contracts.js` and `ai-factory/contracts/` (README and v1 schemas).
+  - `make/ai.mk` gains `contracts` and `verify`; `make/runner.js` records review evidence when
+    `DELIVERY` is set.
+  - `.gitignore` gains `/runs/evidence/`, and `docs/workspace-boundary.md` names the evidence
+    locations.
+  - The specifier, planner, tester, implementer and reviewer agents and the quick task gain a
+    contracts section that applies only when `ai-factory/contracts/config.json` exists.
+
+  Take these via `/t4:sync-sdlc`, then opt in with `node ai-factory/make/contracts.js enable`.
+  Opting out means deleting `config.json`; sidecars and evidence stay in place and are never
+  reinterpreted as verified.
+
+## 2.4.0 — 2026-09-30
+
+An optional external documentation source, offered at adoption and addable later. The repo's own
+`ai-factory/docs/` stays the primary knowledge base; nothing changes for a repo that skips it.
+
+- New `/t4:setup-knowledge` (and Codex `t4-setup-knowledge`): interactive, modelled on
+  `/t4:setup-tracker`. It picks a source the session already lists, asks what it is for, writes
+  one row to the knowledge declaration after confirming, asks whether to commit or ignore it, and
+  proves it with one read-only call. It never writes tool configuration or credentials.
+- `/t4:adopt-sdlc` asks once, in an interactive session only, whether to declare an external
+  documentation source; the default is skip. Skipping, or a headless run, writes nothing and the
+  report names `/t4:setup-knowledge` for later.
+- `/t4:doctor` points an unconfigured repo at `/t4:setup-knowledge`, as information, not a finding.
+- **Template change for adopted repos:** `ai-factory/docs/knowledge.md` gains *Setting up a source*,
+  and `ai-factory/make/sync-adapters.js` lists `setup-knowledge` as a native command. Take both
+  via `/t4:sync-sdlc`; until then `/t4:setup-knowledge` still works from the older `knowledge.md`.
+
+## 2.3.3 — 2026-09-30
+
+Maintenance release; no workspace-layout, log-schema or prompt change for adopted repos.
+
+- `check-adapters.sh` no longer fails on a clean checkout. Since 2.3.2 every task is a native
+  plugin command, so the adapter sync writes no `.claude/` pointer and the directory does not
+  exist; the idempotence hash now covers only the adapter directories that are present.
+- A root `Makefile` adds `make check`, which runs every `check-*.sh` in the plugin and stops at the
+  first failure. It is plugin-only; the adopter `ai.mk` template is unchanged.
+- The Claude manifest names the repository, as the Codex one already did; the Codex manifest no
+  longer declares an MIT license that contradicted `LICENSE` (internal use).
+- The local-development command is `claude --plugin-dir .` from the repo root, which works
+  wherever the checkout lives.
+- `.gitignore` drops the `.serena/` entry left over from Serena's removal.
+
+
 ## 2.3.2 — 2026-09-29
 
 Fix Claude command discovery: 2.3.1 shipped six native slash commands, while its other
@@ -695,7 +938,7 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
 - The marketplace now matches the git project it is served from, `ai/sdlc.git`, so the name
   in the manifest and the name in the URL finally agree.
 - Unchanged: the org is still `t4 platform`, the plugin is still `t4`, the repo is still
-  `ai-sdlc`, and `/plugin marketplace add git@gitlab.nsix.io:ai/sdlc.git` is the same line
+  `ai-sdlc`, and the `/plugin marketplace add` line is the same
   as before. Only the handle's right-hand side moved.
 - The 0.13.0 entry's claim that "plugin and marketplace share a name" was left in place as a
   sentence but is no longer true, so it is removed there rather than left to mislead.
@@ -756,7 +999,7 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   every adopted repo already has one; renaming it would make `manifest.js` miss the file and
   report a fresh repo, silently losing each repo's drift baseline. The prose around it now
   says ai-sdlc while the filename does not — a deliberate seam, not an oversight.
-- The git remote is unchanged: `git@gitlab.nsix.io:ai/sdlc.git`. The GitLab project keeps
+- The git remote is unchanged. The GitLab project keeps
   the short name; only the plugin was renamed.
 - Records were rewritten rather than left standing, matching the choice made for the org
   rename in 0.11.0. Two entries now assert things that were never true, and are left that
@@ -768,7 +1011,7 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
 ## 0.11.0 — 2026-09-07
 - **The marketplace is now `t4`, not `n6`.** Breaking for anyone who installed by handle:
   `ai-sdlc@n6` no longer resolves. Re-point with `/plugin marketplace remove n6`, then
-  `/plugin marketplace add git@gitlab.nsix.io:ai/sdlc.git` and `/plugin install ai-sdlc@t4`.
+  `/plugin marketplace add <repo URL>` and `/plugin install ai-sdlc@t4`.
   The git remote is unchanged — only the marketplace handle and the org name moved.
 - The rename is total: manifests, install instructions, the owner and author fields, the
   LICENSE holder, and the earlier changelog entry that named the old org. Outside this entry

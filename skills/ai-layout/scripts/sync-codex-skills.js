@@ -3,6 +3,10 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const root = path.resolve(__dirname, "../../..");
+const { entryPreamble } = require(path.join(
+	root,
+	"skills/ai-layout/templates/ai-factory/make/models.js",
+));
 const check = process.argv.includes("--check");
 const expected = new Map();
 function add(name, description, body) {
@@ -34,9 +38,9 @@ for (const file of fs
 	add(
 		`t4-${name}`,
 		/^description: (.+)$/m.exec(text)?.[1] || name,
-		`Read \`ai-factory/tasks/${name}.md\` in the user's repository and follow it with the user's request as input. If the workspace is absent, report that it needs the t4-adopt-sdlc skill. If the task is missing from an existing workspace, report it and use t4-sync-sdlc to inspect drift. Do not generate project adapters to run this skill.\n` +
+		`${entryPreamble("codex", name)}\n\nUnless the directive routed the task to a worker, read \`ai-factory/tasks/${name}.md\` in the user's repository and follow it with the user's request as input. If the workspace is absent, report that it needs the t4-adopt-sdlc skill. If the task is missing from an existing workspace, report it and use t4-sync-sdlc to inspect drift. Do not generate project adapters to run this skill.\n` +
 			(agent
-				? `\nRead the complete procedure in \`ai-factory/agents/${agent}.md\`. When native delegation is available, give that procedure and the task input to a delegate. Otherwise run it in this session and label any review as a self-check, not an independent review.\n`
+				? `\nRead the complete procedure in \`ai-factory/agents/${agent}.md\`. When native delegation is available, give that procedure and the task input to a delegate. Otherwise run it in this session and label any review as a self-check, not an independent review. This same-session fallback applies only to the legacy and inherit directives; a routed task never falls back to this session.\n`
 				: ""),
 	);
 }

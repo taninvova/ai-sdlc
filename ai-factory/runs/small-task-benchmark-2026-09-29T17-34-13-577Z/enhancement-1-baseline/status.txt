@@ -1,4 +1,0 @@
- M app.js
- M test/app.test.js
-?? ai-factory/plans/
-?? ai-factory/specs/0001-display-label.md

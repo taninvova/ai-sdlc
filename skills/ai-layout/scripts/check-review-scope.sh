@@ -72,6 +72,19 @@ async function asyncReview(extra){return new Promise((resolve,reject)=>{const ch
  const concurrent=await Promise.all([asyncReview({TOOL:"codex",FAKE_VERDICT:"approve",DELAY:"150"}),asyncReview({TOOL:"codex",FAKE_VERDICT:"request_changes",DELAY:"30"})]);
  ok(concurrent[0]);assert.notEqual(concurrent[1].status,0,"concurrent review used another invocation's approval");
  assert.deepEqual(fs.readdirSync(path.join(payload,"runs/tmp")),[]);
- console.log("PASS: empty, staged, unstaged, untracked, mixed, branch, supplied, Codex, failed and concurrent review scopes; index/worktree preserved");
+ // make review and make ai TASK=check resolve the same task model; scope and gate are unchanged.
+ fs.writeFileSync(path.join(payload,"models.yaml"),"claude:\ncodex:\nreview: review/default\nrouting:\n  enabled: true\n  tasks:\n    check:\n      codex: gateway/review-codex\n");
+ const modelArg=(args,flag)=>args.flatMap((arg,i)=>arg===flag?[args[i+1]]:[]);
+ const direct=extra=>spawnSync("make",["-f","ai-factory/make/ai.mk","ai","TASK=check"],{cwd:root,env:{...env,INPUT:"direct check",...extra},encoding:"utf8"});
+ for(const [tool,flag,expected] of [["codex","-m","gateway/review-codex"],["claude","--model","review/default"]]){
+  const reviewed=review({TOOL:tool});ok(reviewed);
+  assert.deepEqual(modelArg(capture().at(-1).args,flag),[expected],`make review ${tool}`);
+  assert.match(capture().at(-1).input,/Review scope: working-tree/);
+  const checked=direct({TOOL:tool});ok(checked);
+  assert.deepEqual(modelArg(capture().at(-1).args,flag),[expected],`make ai TASK=check ${tool}`);
+  assert.equal(reviewed.stderr.match(/model: .*\n/)[0],checked.stderr.match(/model: .*\n/)[0]);
+ }
+ assert.notEqual(review({TOOL:"codex",FAKE_VERDICT:"request_changes"}).status,0,"routing must not change gate enforcement");
+ console.log("PASS: empty, staged, unstaged, untracked, mixed, branch, supplied, Codex, failed and concurrent review scopes; index/worktree preserved; make review and make ai TASK=check share the routed check model");
 }finally{fs.rmSync(scratch,{recursive:true,force:true});}})().catch(error=>{console.error(error);process.exitCode=1;});
 NODE

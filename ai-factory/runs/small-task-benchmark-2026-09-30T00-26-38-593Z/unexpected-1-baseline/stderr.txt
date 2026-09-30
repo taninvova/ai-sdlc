@@ -1,5 +1,0 @@
-2026-09-30T00:30:05.751151Z  WARN codex_skills::interface: ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/
-2026-09-30T00:30:05.751278Z  WARN codex_skills::interface: ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/
-2026-09-30T00:30:05.786795Z  WARN codex_rollout::list: state db discrepancy during find_thread_path_by_id_str_in_subdir: falling_back
-2026-09-30T00:30:11.585661Z  WARN codex_core_plugins::manager: failed to auto-upgrade configured marketplace marketplace="n6" error=upgraded marketplace name `sdlc` does not match configured marketplace `n6`
-2026-09-30T00:31:08.943918Z  WARN codex_core::shell_snapshot: Failed to delete shell snapshot at AbsolutePathBuf("/Users/tanin/.codex/shell_snapshots/01a0efb7-f5a5-7df1-9c01-d01a37fbbcec.1790728205772049000.sh"): Os { code: 2, kind: NotFound, message: "No such file or directory" }

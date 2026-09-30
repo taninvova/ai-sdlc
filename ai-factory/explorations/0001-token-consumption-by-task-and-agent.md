@@ -321,7 +321,7 @@ same structure. Shipping them apart costs more than it saves — R3 is a flag on
 
 ### The fleet path
 
-**Measured, in this workspace** (`/Users/tanin/code/nsix`, confirmed **not** a git repo:
+**Measured, in this workspace** (the parent workspace directory, confirmed **not** a git repo:
 `git rev-parse` returns "fatal: not a git repository"; 29 leaf directories are):
 
 - **Ten `runs/log.csv` files exist, 322 rows total** (re-scanned two levels deeper than my first
@@ -455,7 +455,7 @@ with status **Rejected** rather than deleted:
 
 | Id | Surface | Status |
 |---|---|---|
-| RS-001 | A local Next.js app started on demand (`make report`, served on localhost, live drill-down per run and agent) | **Rejected** by the developer, 2026-09-25: too heavy. It would be the plugin's first dependency, first lockfile, first build step and first long-running process, and so needs an ADR that would have to amend `.claude-plugin/plugin.json`'s advertised "Standalone — no dependency on any other repo and no runtime dependency", `ai-factory/AGENTS.md`'s "No application code, no build step" and `architecture.md`'s "Nothing runs as a service". Measured, all three are literally true today: no `package.json`, and only `fs`/`path`/`child_process` in every script. An on-demand `npx` invocation does **not** rescue it — a Next app needs its own `package.json`, so something is installed somewhere on first run, it needs network, and without a lockfile two developers resolve different trees, turning a declared dependency into an undeclared one. The web-page requirement is met by R2 instead: one generated file, opened from disk, no server. **If an interactive dashboard is ever genuinely wanted it belongs in the consuming workspace, not here** — `/Users/tanin/code/nsix/webapp/storefront` (`base-shop`) already runs `next ^14.2.23`, and a dashboard inherently wants every repo's `log.csv` at once — see *The fleet path*, and it would consume R3's contract like any other fleet view. Kept for the record. |
+| RS-001 | A local Next.js app started on demand (`make report`, served on localhost, live drill-down per run and agent) | **Rejected** by the developer, 2026-09-25: too heavy. It would be the plugin's first dependency, first lockfile, first build step and first long-running process, and so needs an ADR that would have to amend `.claude-plugin/plugin.json`'s advertised "Standalone — no dependency on any other repo and no runtime dependency", `ai-factory/AGENTS.md`'s "No application code, no build step" and `architecture.md`'s "Nothing runs as a service". Measured, all three are literally true today: no `package.json`, and only `fs`/`path`/`child_process` in every script. An on-demand `npx` invocation does **not** rescue it — a Next app needs its own `package.json`, so something is installed somewhere on first run, it needs network, and without a lockfile two developers resolve different trees, turning a declared dependency into an undeclared one. The web-page requirement is met by R2 instead: one generated file, opened from disk, no server. **If an interactive dashboard is ever genuinely wanted it belongs in the consuming workspace, not here** — `webapp/storefront` in the parent workspace (`base-shop`) already runs `next ^14.2.23`, and a dashboard inherently wants every repo's `log.csv` at once — see *The fleet path*, and it would consume R3's contract like any other fleet view. Kept for the record. |
 | RS-002 | A `/t4:cost` task that has a model read `log.csv` and write a markdown report into `ai-factory/runs/` | **Not recommended** (opinion): no dependency and no code, but a model summing a CSV is non-deterministic and unverifiable, and arithmetic is the one thing a 30-line script does better and cheaper. Kept for the record. |
 
 ## Comparison
@@ -523,7 +523,7 @@ task — and the fleet view multiplies that across all 322 rows in ten logs, two
 hold cumulative snapshots of the same sessions as their children. The only part worth
 building early is R3's schema plus R1's aggregation against fixture CSVs.
 
-*What would change my mind on the surface:* a group-level CI runner and token in `nsix/ai/` —
+*What would change my mind on the surface:* a group-level CI runner and token in the GitLab group —
 the same condition design 0001 names as what would make its rejected push option cheap — would
 turn the fleet half from pull into push, and the walker would become a CI job publishing one
 artefact rather than a target a developer runs.
@@ -586,7 +586,7 @@ the second's export.
 ```
 
 Third, and **not in this repo** — the fleet walker is the workspace's, per `designs/0001` §6. Run
-this one from `/Users/tanin/code/nsix` (which has its own adopted layout at `ai/` and its own
+this one from the parent workspace directory (which has its own adopted layout at `ai/` and its own
 `specs/`), after the export above exists:
 
 ```

@@ -1,10 +1,9 @@
-# Which model each tool uses for headless runs (make ai / make review).
+# Which model each tool uses for a task.
 #
 # Leave a value blank — the default — and the tool runs whatever model it is already
 # configured with. That works with any provider: the Anthropic API, Bedrock, Vertex, or an
 # OpenAI-compatible gateway. Set a value only when a task must pin a specific model.
-# For review/check: explicit MODEL wins, then review, then the tool, then CLI inheritance.
-# Explicit MODEL= (blank) requests inheritance and skips configured defaults.
+# Without routing (below), these apply to headless runs only (make ai / make review).
 # CMD overrides must name one executable or path; shell fragments are not supported.
 claude:
 codex:
@@ -17,6 +16,32 @@ review:
 # (for Claude Code: ANTHROPIC_BASE_URL and ANTHROPIC_API_KEY):
 #   claude: my-fast-alias
 #   review: my-review-alias
+
+# Per-task model routing — off until `enabled: true`. When on, it applies to headless runs AND
+# to interactive /t4:<task> commands and $t4-<task> skills: the task runs in a worker pinned to
+# the selected model, never on the chat's own model instead. Resolution, first match wins:
+#   1. explicit MODEL=<id> (headless) or --task-model=<id> (interactive)
+#   2. explicit MODEL= (headless) or --task-model=inherit (interactive): the CLI's own model
+#   3. routing.tasks.<task>.<tool>, when enabled and not blank
+#   4. review: above, for check (make review runs check)
+#   5. the tool's entry above
+#   6. the CLI's own configuration
+# Task names are the files in ai-factory/tasks/ (plan, test, run, check, quick, fix, …); map
+# `check`, not `review`. A missing or blank entry falls back and says so. Aliases are passed
+# verbatim: they select a model, not a provider — endpoints and keys stay in the tool.
+# After changing routing, run `bash ai-factory/make/sync-adapters.sh --adapters=routing` and
+# restart the session; interactive tasks stop with that instruction until you do.
+# Supported syntax: this layout, two spaces per level, `enabled: true|false`, one scalar per tool.
+routing:
+  enabled: false
+  tasks:
+# Delete only the leading # to use an example; the indentation is already right.
+#    plan:
+#      claude: gateway/planning-claude
+#      codex: gateway/planning-codex
+#    test:
+#      claude: gateway/testing-claude
+#      codex: gateway/testing-codex
 
 # USD per million tokens — read by the session-stop hook to cost each row of ai-factory/runs/log.csv.
 # `default` covers anything not listed. Add a block per model id when you run more than one;

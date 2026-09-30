@@ -1,12 +1,11 @@
 {
   "name": "t4",
-  "version": "2.3.2",
-  "description": "t4 AI SDLC core: the ai-factory/ layout (AGENTS.md, context docs, task prompts, reviewer / tester / architect / analyst agents and the explorer / specifier / planner / implementer step agents, fleet map), dont-touch guard, adapter sync. Standalone \u2014 no dependency on any other repo and no runtime dependency; two optional task paths reach services a repo configures (a tracker, a read-only knowledge source), each inert where nothing is declared; framework overlays build on it through the template slots.",
+  "version": "2.8.0",
+  "description": "T4 AI SDLC core: the ai-factory/ layout (AGENTS.md, context docs, task prompts, reviewer / tester / architect / analyst agents and the explorer / specifier / planner / implementer step agents, fleet map), session/edit/usage logging hooks, dont-touch guard, adapter sync. Standalone — no dependency on any other repo and no runtime dependency; two optional task paths reach services a repo configures (a tracker, a read-only knowledge source), each inert where nothing is declared; framework overlays build on it through the template slots.",
   "author": {
-    "name": "t4 platform"
+    "name": "T4 platform"
   },
-  "repository": "git@gitlab.nsix.io:ai/sdlc.git",
-  "license": "MIT",
+  "repository": "git@git.epam.com:volodymyr_tanin/ai-sdlc-plugin.git",
   "keywords": [
     "ai-sdlc",
     "review",
@@ -16,10 +15,10 @@
     "t4"
   ],
   "skills": "./codex-skills/",
-  "hooks": "./hooks/codex.json",
   "interface": {
-    "displayName": "t4 AI SDLC",
+    "displayName": "T4 AI SDLC",
     "shortDescription": "Spec, plan, test and review loop for any repo",
     "category": "Developer Tools"
-  }
+  },
+  "hooks": "./hooks/codex.json"
 }

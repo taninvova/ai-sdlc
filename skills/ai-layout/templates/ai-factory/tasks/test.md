@@ -16,4 +16,10 @@ Do not implement anything in this task, and do not edit any file yourself.
 
 If nothing follows the command name, ask the user which spec and which mode, red or gaps, and stop.
 
+Lifecycle telemetry, only when `ai-factory/contracts/config.json` sets `"lifecycle": {"enabled": true}`:
+first run `node ai-factory/make/lifecycle.js start --phase test --delivery <id> --step S<N>` and keep the run ID it prints;
+bracket any wait for the developer with `lifecycle.js wait-start --run <run>` and `wait-end --run <run>
+--wait <wait>`; at the end run `lifecycle.js end --run <run> --outcome succeeded|failed|interrupted`.
+A lifecycle message never changes this task's outcome; report it and carry on.
+
 Spec, plan and mode: $ARGUMENTS

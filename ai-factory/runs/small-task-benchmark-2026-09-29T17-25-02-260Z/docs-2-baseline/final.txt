@@ -1,5 +1,0 @@
-Corrected `applciation` to `application` in README.md. Verified all other content is unchanged.
-
-Passed: `make docs lint typecheck test` and `git diff --check`.
-
-Independent review remains incomplete: reviewer delegation failed with a session-thread error. No spec or ADR changes identified.

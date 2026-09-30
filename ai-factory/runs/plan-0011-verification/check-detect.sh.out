@@ -1,1 +1,0 @@
-detect ok — ai-factory/ preferred, ai/ still guarded and logged for Stop, SubagentStop and UserPromptSubmit, neither is a silent no-op

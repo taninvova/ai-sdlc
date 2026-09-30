@@ -26,7 +26,7 @@ Facts, established by reading the repo:
   sudden appearance blocked. `ai-factory/runs/` is on `ai-factory/docs/dont-touch.md`.
 - Nothing in this repo configures the Serena MCP server — there is no `.mcp.json`. The server is
   attached at the developer's level, outside the repo, and the repo cannot turn it off.
-- `ai/sdlc` is the only repo in the `nsix` workspace with a `.serena/`.
+- `ai/sdlc` is the only repo in the workspace with a `.serena/`.
 
 ## User story
 As a developer working in `ai/sdlc`, I want `.serena/` gone from the repo, so that the working
@@ -74,7 +74,7 @@ None of these is answered by the request. The spec is not buildable until they a
    that keeps the tree clean if question 1 is answered "delete it locally"; removing them makes a
    regenerated `.serena/` show up as untracked in every `git status` from then on. Both readings
    fit "remove `.serena`".
-3. **Is `ai/sdlc` the whole scope?** `ai/sdlc` is its own git repo; the `nsix` root is not one and
+3. **Is `ai/sdlc` the whole scope?** `ai/sdlc` is its own git repo; the workspace root is not one and
    carries no `.gitignore` rule for Serena. Today only this repo has a `.serena/`. Should the
    answer to question 2 be written anywhere above this repo, or is this a one-repo change?
 4. **Is anything in `.serena/` wanted before it goes?** `memories/` and `cache/typescript/` are

@@ -109,17 +109,17 @@ A fact in the wrong layer is the failure mode (ADR 0004 rule 3, ADR 0007 rule 1)
   the MR as the before/after run.
 
   **Result — AC3, AC4, AC5, AC7, AC8 proved; AC6 outstanding.** Scratch repo: a `telephony-svc`
-  stub declaring `claude_ai_docs_nsix_io` (`mcp`), whose `ai/docs/architecture.md` was written to
+  stub declaring `claude_ai_docs_kb` (`mcp`), whose `ai/docs/architecture.md` was written to
   say cross-service calls are HTTP — the fleet map in the source says the opposite. Request:
   "send the merchant a notification when a call is missed".
-  **AC3 pass:** every fact from the source carries `[claude_ai_docs_nsix_io, external,
-  unverified]`; the report ends `Sources consulted: claude_ai_docs_nsix_io`. **AC4 pass:** the
+  **AC3 pass:** every fact from the source carries `[claude_ai_docs_kb, external,
+  unverified]`; the report ends `Sources consulted: claude_ai_docs_kb`. **AC4 pass:** the
   exploration follows the repo's HTTP rule and records the disagreement as Open question 1,
   naming the source. **AC5 pass:** the transcript shows 5 × `fetch`, 4 × `list_documents`,
   1 × `list_collections` on the source and nothing else, against a server that exposes create,
   update, delete and comment tools. **AC7 partially proved (headless):** under `make ai TASK=explore` the
   source's first call was denied — a headless run has nobody to grant it — and the run
-  proceeded, asked nothing, and carried exactly one line: `claude_ai_docs_nsix_io (mcp) not
+  proceeded, asked nothing, and carried exactly one line: `claude_ai_docs_kb (mcp) not
   consulted: error: …`. AC7's first clause, "the artefact is written", holds only in the
   interactive run; headless, the runner denied the Write (see below). **AC8 pass:** exit 0, one
   row appended to `ai/runs/log.csv`.

@@ -1,14 +1,14 @@
 {
   "name": "sdlc",
   "owner": {
-    "name": "t4 platform"
+    "name": "T4 platform"
   },
   "plugins": [
     {
       "name": "t4",
       "source": ".",
-      "description": "t4 AI SDLC core plugin (ai-sdlc)",
-      "version": "2.3.2"
+      "description": "T4 AI SDLC core plugin (ai-sdlc)",
+      "version": "2.8.0"
     }
   ]
 }

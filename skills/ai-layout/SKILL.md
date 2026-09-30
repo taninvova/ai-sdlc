@@ -1,7 +1,7 @@
 ---
 name: ai-layout
 user-invocable: false
-description: The ai-factory/ directory every t4 repo carries — AGENTS.md contract, context docs, task prompts (fleet, design, adr, analyse, explore, spec, plan, test, run, fix, chore, quick, check — exposed as /t4:<name>), reviewer, tester, architect, analyst, explorer, specifier, planner and implementer agents, plans, explorations, run log, Makefile include, tool adapters. Use when adding the layout to a repo, adding or changing a task prompt or context doc, or when a session asks where an AI-related file belongs.
+description: The ai-factory/ directory every t4 repo carries — AGENTS.md contract, context docs, task prompts (fleet, design, adr, analyse, explore, spec, plan, test, run, fix, chore, quick, check, report — exposed as /t4:<name>), reviewer, tester, architect, analyst, explorer, specifier, planner and implementer agents, plans, explorations, run log, Makefile include, tool adapters. Use when adding the layout to a repo, adding or changing a task prompt or context doc, or when a session asks where an AI-related file belongs.
 ---
 
 # ai-layout
@@ -9,7 +9,7 @@ description: The ai-factory/ directory every t4 repo carries — AGENTS.md contr
 Use `node <installed-plugin>/skills/ai-layout/scripts/adopt.js .` for new adoption. It
 creates only `ai-factory/`, fills project placeholders, detects declared commands without
 running them, and refuses an existing workspace. Existing root and host files are preserved.
-The installed plugin supplies hooks and all 18 native Claude commands; the workspace carries complete
+The installed plugin supplies hooks and all 20 native Claude commands; the workspace carries complete
 local task and agent procedures, runner scripts and project additions.
 
 Never write into `.claude/`, `.cursor/` or `.codex/` by hand. Default sync writes no external
@@ -20,14 +20,14 @@ procedures; otherwise they run inline and label reviews as self-checks.
 
 ```
 ai-factory/AGENTS.md                  the contract, < 60 lines, no dynamic content
-ai-factory/models.yaml                blank = the tool's own model (any provider) · or pin an id · per-model prices
+ai-factory/models.yaml                blank = the tool's own model (any provider) · or pin an id · opt-in per-task routing · per-model prices
 ai-factory/docs/architecture.md       shape, module map, data ownership, environments
 ai-factory/docs/fleet.md              service map the architect reads; /t4:fleet fills it by asking
 ai-factory/docs/knowledge.md          knowledge seam: the only file that names how a declared source is read (ADR 0007)
 ai-factory/docs/coding-standards.md   rules that hold in every repo; overlays add framework rules
 ai-factory/docs/definition-of-done.md
 ai-factory/docs/dont-touch.md         guard-paths.js reads the backticked prefixes
-ai-factory/tasks/*.md                 fleet design adr analyse explore spec plan test run fix chore check  → /t4:<name>
+ai-factory/tasks/*.md                 fleet design adr analyse explore spec plan test run fix chore quick check report  → /t4:<name>
 ai-factory/skills/                    empty here; overlays add framework skills
 ai-factory/agents/reviewer.md         project copy of the plugin reviewer (may add project checks)
 ai-factory/agents/tester.md           project copy of the plugin tester (test conventions go here)
@@ -42,9 +42,15 @@ ai-factory/analyses/                  /t4:analyse output: requirements pack — 
 ai-factory/explorations/            /t4:explore output: options + recommendation per request
 ai-factory/plans/  ai-factory/plans/done/     plans in flight / merged
 ai-factory/runs/log.csv               header only; the Stop hook and ai-factory/make/log.js append the same 17 columns
-ai-factory/make/ai.mk                 headless runner for CI (make ai / make review)
-ai-factory/make/gate.js  log.js  cost.js  sync-adapters.sh
+ai-factory/make/ai.mk                 headless runner for CI (make ai / review / contracts / verify)
+ai-factory/make/runner.js  models.js  gate.js  contracts.js  delivery-report.js  lifecycle.js  lifecycle-events.js  safe-files.js  log.js  cost.js  sync-adapters.js  sync-adapters.sh
+                                      models.js parses models.yaml and resolves each task's model — runner, routed dispatch, sync and doctor share it
                                       cost.js reads log.csv for `make cost` — read-only, 17 columns by name
+                                      contracts.js validates spec/plan/quick sidecars and records evidence (opt-in)
+ai-factory/contracts/                 README + v1 schemas; config.json (created by `contracts.js enable`) opts in
+ai-factory/quick/  ai-factory/evidence/   with contracts only: quick checklists; committed verification evidence
+ai-factory/reports/<id>/              make delivery-report (/t4:report): completion.md + completion.json snapshots
+ai-factory/runs/lifecycle/            opt-in lifecycle events, one immutable file each (gitignored); make lifecycle reads them
 ai-factory/.sdlc.json                 which ai-sdlc version this repo holds + a hash per received file;
                               written by /t4:adopt-sdlc, read by /t4:sync-sdlc, never by hand
 ai-factory/specs/              one file per feature, Given/When/Then

@@ -113,6 +113,8 @@ function build(repoRoot, pluginRoot, prev) {
 		// Free-form and never written by ai-sdlc — an overlay owns its own block, which is how the
 		// one-way dependency survives: ai-sdlc need not know any overlay exists.
 		...(prev?.overlay ? { overlay: prev.overlay } : {}),
+		// Opt-in capabilities (contracts.js enable) are the adopter's choice; a rewrite keeps them.
+		...(prev?.capabilities ? { capabilities: prev.capabilities } : {}),
 		files,
 	};
 }

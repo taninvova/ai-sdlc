@@ -1,9 +1,0 @@
-Implemented Step 1 inline.
-
-- Files changed: `app.js`, `test/step-one.test.js`.
-- Tests: retained AC1; added zero and fractional-total formatting cases. All 3 pass.
-- Checks: lint and typecheck pass. Full suite: 3 pass, 1 expected Step 2 failure.
-- Step 2 remains unchanged.
-- Step 1 checkbox remains unticked under the workflow’s all-green requirement.
-- Plan/spec issues: no behavior discrepancy; the expected failure conflicts with that completion gate.
-- Biome unavailable; no installation attempted. Verification was a self-check.

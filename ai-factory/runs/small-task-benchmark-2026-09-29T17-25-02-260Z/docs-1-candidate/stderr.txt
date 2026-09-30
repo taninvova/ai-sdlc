@@ -1,6 +1,0 @@
-2026-09-29T17:25:03.289118Z  WARN codex_skills::interface: ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/
-2026-09-29T17:25:03.289796Z  WARN codex_skills::interface: ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/
-2026-09-29T17:25:03.360391Z  WARN codex_rollout::list: state db discrepancy during find_thread_path_by_id_str_in_subdir: falling_back
-2026-09-29T17:25:13.343988Z  WARN codex_core_plugins::manager: failed to auto-upgrade configured marketplace marketplace="n6" error=upgraded marketplace name `sdlc` does not match configured marketplace `n6`
-2026-09-29T17:25:45.194953Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in /Users/tanin/code/nsix/ai/sdlc/ai-factory/runs/tmp/run-sqJUlG/docs-1-candidate/README.md:
-Run applciation locally.

@@ -22,7 +22,8 @@ headless run.
 
 2b. Add one line about the knowledge seam, the same way. If `ai-factory/docs/knowledge.md` exists,
    follow it to decide whether this repo has declared a source, and report configured or
-   not. If it does not exist, say this layout predates knowledge-source support and name
+   not. When not configured, that line is not a finding: add only that `/t4:setup-knowledge`
+   declares one, optionally. If it does not exist, say this layout predates knowledge-source support and name
    `/t4:sync-sdlc`. Name nothing specific — no source, no provider, no filename; that
    document is the only thing allowed to know them.
 

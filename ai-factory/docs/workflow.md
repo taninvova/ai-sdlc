@@ -7,6 +7,14 @@ context and prompts, native slash commands that read its procedures, and eight a
 does is written in a file you can read and change — `ai-factory/tasks/<name>.md`. If a command keeps
 needing steering in chat, the prompt is missing a line; fix the prompt, don't repeat yourself.
 
+Three opt-in layers sit on top of the loop and change nothing until a repo enables them in
+`ai-factory/contracts/config.json`:
+- **artifact contracts** — checked handoffs between steps, with recorded evidence;
+- **the completion report** — `/t4:report`, a status for handoff;
+- **lifecycle telemetry** — duration, waits, retries, outcomes and attributed tokens.
+
+See *Artifact contracts* in section 4.
+
 ---
 
 ## Workspace defaults and small changes
@@ -34,9 +42,10 @@ Headless review defaults to `REVIEW_SCOPE=working-tree` (staged, unstaged, relev
 select `branch` explicitly for the committed range. `INPUT_FILE` supplies the review diff and
 is not replaced by another range. The gate consumes the exact current run. `GATE_ENFORCE=1`
 requires a valid approval without blockers; unset/0 is advisory. Invalid enforcement values fail.
-Explicit `MODEL` wins, including a blank value for CLI inheritance; review config falls back
-from `review:` to the selected tool setting to CLI inheritance. Configuration is passed as data,
-not executable shell text; `CMD` names a trusted executable rather than a shell fragment.
+Explicit `MODEL` wins, including a blank value for CLI inheritance; with routing enabled a task
+mapping comes next; review config falls back from `review:` to the selected tool setting to CLI
+inheritance. Configuration is passed as data, not executable shell text; `CMD` names a trusted
+executable rather than a shell fragment. See *Choosing a model per task* in section 6.
 
 The Claude Edit/Write/MultiEdit guard is not a shell sandbox. Host permissions govern arbitrary
 commands. Codex plugin hooks require host trust; adapters alone do not install them. Inline review is a self-check. Do not
@@ -45,13 +54,13 @@ disable host protections or grant broad permissions to make tests pass.
 ## 1. Install, once per machine
 
 ```
-/plugin marketplace add git@gitlab.nsix.io:ai/sdlc.git  <!-- path-scan-ok -->
+/plugin marketplace add git@git.epam.com:volodymyr_tanin/ai-sdlc-plugin.git  <!-- path-scan-ok -->
 /plugin install t4@sdlc
 ```
 
-Working on the plugin itself: `claude --plugin-dir ~/code/nsix/ai/sdlc`.  <!-- path-scan-ok -->
+Working on the plugin itself, from its repo root: `claude --plugin-dir .`.  <!-- path-scan-ok -->
 
-The installed plugin exposes 18 `/t4:*` commands in every repo, including all 13 project
+The installed plugin exposes 20 `/t4:*` commands in every repo, including all 14 project
 task entry points. No `.claude/commands/` pointers are needed for built-in workflows.
 The commands are visible before adoption; a project workflow reports a missing workspace
 or task instead of silently scaffolding it. Hooks stay silent outside an adopted repo.
@@ -65,6 +74,7 @@ configured with, whatever the provider.
 /t4:adopt-sdlc                 # detects your stack and its build/lint/test commands
 /t4:fleet                   # fills in ai-factory/docs/fleet.md by asking you
 /t4:setup-tracker           # optional — only if you want /t4:spec ABC-12 to work
+/t4:setup-knowledge         # optional — declare an external documentation source (MCP)
 ```
 
 `/t4:adopt-sdlc` copies only `ai-factory/` and writes its manifest. External host pointers are opt-in. It refuses if `ai-factory/` already exists — use `/t4:sync-sdlc` there instead.
@@ -82,7 +92,7 @@ that decides whether any of the rest is worth running:
 
 An agent with a placeholder `architecture.md` produces placeholder-quality work.
 
-Restart the session (or `/reload-plugins`) after a plugin update to load all 18 `/t4:*` commands.
+Restart the session (or `/reload-plugins`) after a plugin update to load all 20 `/t4:*` commands.
 
 ---
 
@@ -112,7 +122,7 @@ it exposes, explore decides **how** to build it in one repo whose home is alread
 ## 4. The main loop
 
 ```
-/t4:spec  →  /t4:plan  →  /t4:test red  →  /t4:run ×N  →  /t4:test gaps  →  /t4:check
+/t4:spec  →  /t4:plan  →  /t4:test red  →  /t4:run ×N  →  /t4:test gaps  →  /t4:check  (→ /t4:report)
 ```
 
 A worked example — adding CSV export to a reports page:
@@ -144,6 +154,10 @@ A worked example — adding CSV export to a reports page:
 
 /t4:check
     → the reviewer agent on the selected diff; JSON verdict
+
+/t4:report d-20260930-1a2b3c          (artifact contracts enabled)
+    → ai-factory/reports/d-20260930-1a2b3c/completion.md — ready, incomplete, blocked or
+      unverified, each reason tied to its evidence, plus a draft MR description
 ```
 
 Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
@@ -164,6 +178,83 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
   plan, commit, and continue. Long chat threads lose the decision.
 - **Answer a spec's open questions before planning.** They are listed because the model could
   not resolve them, and a plan built on a guess encodes the guess.
+
+### Artifact contracts (opt-in)
+
+Contracts make every handoff in the loop above checkable. Each spec, plan and quick checklist
+gets a `.contract.json` beside it, and each check that runs leaves evidence. Nothing moves on
+unchecked. They check structure only, never whether a requirement is right.
+
+**Turn them on** once per repo, and commit the result:
+
+```
+node ai-factory/make/contracts.js enable
+git add ai-factory/contracts/config.json ai-factory/.sdlc.json
+```
+
+Then set `code_scope` in `ai-factory/contracts/config.json` to the files that count as code,
+and exclude generated test output. `/t4:sync-sdlc` offers the same opt-in.
+
+**Then work exactly as before.** The commands do the bookkeeping:
+
+| Command | Adds, when contracts are on |
+|---|---|
+| `/t4:spec` | numbered `AC1…` criteria; `contracts.js init spec` records the delivery ID (`d-YYYYMMDD-xxxxxx`) |
+| `/t4:plan` | each step names its ACs and ``Verify (red\|step\|final): `command` `` checks; `init plan` rejects uncovered ACs or missing checks |
+| `/t4:test … red` | `make verify DELIVERY=<id> STEP=S1 PHASE=red` proves the new tests fail |
+| `/t4:run … step N` | `make verify DELIVERY=<id> STEP=SN`; the box is ticked only on passing evidence; the last step adds `PHASE=final` |
+| `/t4:check` | reports every artifact that is not valid as a finding; headless `make review DELIVERY=<id>` records review evidence |
+| `/t4:quick` | the checklist goes to `ai-factory/quick/<slug>.md` as `QC1…` items, finished by `make verify DELIVERY=<id>` |
+
+(`make` here is `make -f ai-factory/make/ai.mk`.)
+
+**Where a delivery stands:**
+
+```
+make -f ai-factory/make/ai.mk contracts                                   # everything
+make -f ai-factory/make/ai.mk contracts DELIVERY=<id>                     # one delivery
+make -f ai-factory/make/ai.mk contracts DELIVERY=<id> REQUIRE=final,review   # before merging
+```
+
+Every artifact is reported as `valid`, `invalid`, `stale` or `legacy_unverified`. A line that
+is not valid names a code and says what to do. The usual causes:
+- a spec edited after planning (`S_SPEC_CHANGED`): check the plan, then `init plan` again;
+- code edited after verification or review (`S_CODE_CHANGED`): run the same `make verify` or
+  `make review` again;
+- a ticked box without evidence (`E_EVIDENCE_NOT_RUN`): record the step's verification.
+
+Never edit a sidecar or an evidence file by hand.
+
+**The completion report.** `/t4:report <id>`, or `make -f ai-factory/make/ai.mk delivery-report
+DELIVERY=<id>`, writes `ai-factory/reports/<id>/completion.md` and `.json`. It contains:
+- the status (`ready`, `incomplete`, `blocked` or `unverified`) with every reason and its evidence;
+- one row per criterion;
+- the changed files and the checks that actually ran;
+- the review findings and the open follow-up;
+- telemetry, which shows as unavailable until a per-delivery export exists;
+- a draft MR description.
+
+It only reads: it runs no check and publishes nothing. `ready` means ready for handoff. The
+`completion` policy in `ai-factory/contracts/config.json` decides whether review is required,
+which finding severities block, and whether human attestations (`contracts.js attest`) may count.
+
+**Lifecycle telemetry (opt-in).** `"lifecycle": {"enabled": true}` in
+`ai-factory/contracts/config.json` enables a separate, local event stream under the gitignored
+`ai-factory/runs/lifecycle/`. `log.csv` and `make cost` are unchanged.
+- **Headless runs** record themselves.
+- **Interactive tasks** bracket their work with `node ai-factory/make/lifecycle.js start` / `end` and,
+  while waiting on you, `wait-start` / `wait-end`.
+- **Reading it.** `make -f ai-factory/make/ai.mk lifecycle [DELIVERY=<id>] [JSON=1]` reports elapsed,
+  waiting and active time, agent effort, retries, outcomes, tokens and priced/unpriced cost per
+  delivery, plus unattributed activity. Anything not measured shows as unknown, never zero.
+- **In the completion report.** `/t4:report` includes these numbers when lifecycle is enabled.
+
+**Repos with existing specs and plans.** `node ai-factory/make/contracts.js migrate` shows the
+drafts it would create; `--write` creates them. Drafts stay unverified until you review them
+and rerun `init`. Migration never edits Markdown or invents IDs.
+
+The full walkthrough, the diagnostic table and the file formats are in
+`ai-factory/contracts/README.md` in any adopted repo.
 
 ## 5. Every command
 
@@ -209,6 +300,7 @@ the three states a repo is in, and `/t4:sync-sdlc` stops and points here rather 
 | `/t4:quick <change>` | a small understood local change | code, meaningful tests, checklist report | change public contracts or silently widen scope |
 | `/t4:chore <change>` | small maintenance, no behaviour change | code + tests | change behaviour beyond the request |
 | `/t4:check` | before committing | nothing — JSON verdict | fix anything it finds |
+| `/t4:report <delivery id>` | after review, or any time you need to know where a delivery stands (contracts enabled) | `ai-factory/reports/<id>/completion.{md,json}` | run checks, edit artifacts or publish anything — its MR text is a draft |
 
 ### The agents
 
@@ -258,7 +350,8 @@ code and an accepted ADR, and a disagreement becomes an open question. Nothing i
 back. A source that cannot be reached — Codex, headless, not attached — is one line in the
 report; the loop never halts on it, unlike a ticket the tracker cannot resolve, because a ticket
 is input and knowledge is enrichment. `ai-factory/docs/knowledge.md` holds every detail; a repo that
-declares nothing sees no change at all. `/t4:doctor` says whether a repo is configured.
+declares nothing sees no change at all. `/t4:adopt-sdlc` offers to declare one (default: skip);
+`/t4:setup-knowledge` declares one at any later time. `/t4:doctor` says whether a repo is configured.
 
 ---
 
@@ -277,6 +370,95 @@ results, `request_changes`, and invalid enforcement values fail. Unset or `0` is
 Explicit `MODEL` wins; `MODEL=` requests CLI inheritance. Otherwise check/review uses
 `review:`, the tool default, then CLI inheritance. `CMD` selects a single executable,
 not a shell fragment. Neither a root Makefile nor project adapters are required.
+
+With artifact contracts enabled, CI can gate on the handoff chain as well:
+
+```
+make -f ai-factory/make/ai.mk contracts JSON=1                         # nonzero on anything not valid
+make -f ai-factory/make/ai.mk contracts DELIVERY=<id> REQUIRE=final,review
+make -f ai-factory/make/ai.mk delivery-report DELIVERY=<id>            # exit 0 only when ready
+make -f ai-factory/make/ai.mk review DELIVERY=<id>                     # also records review evidence
+```
+
+Keep `ai-factory/reports/<id>/completion.md` as a job artifact. With lifecycle telemetry enabled,
+headless runs record themselves (`DELIVERY=` and `STEP=` name what they belong to), and
+`make -f ai-factory/make/ai.mk lifecycle JSON=1` prints the per-delivery summary. Telemetry never
+changes a job's exit status.
+
+### Choosing a model per task (opt-in)
+
+`ai-factory/models.yaml` can name a model per task and tool. Routing is off until you enable it,
+and the same mapping then applies to headless runs and interactive tasks:
+
+```yaml
+routing:
+  enabled: true
+  tasks:
+    plan:
+      claude: gateway/planning-claude
+      codex: gateway/planning-codex
+    test:
+      claude: gateway/testing-claude
+      codex: gateway/testing-codex
+```
+
+Task names are the files in `ai-factory/tasks/`, custom ones included. `make review` runs the
+`check` task, so map `check`; `review` is rejected under `tasks:`. Aliases are passed verbatim and
+select a model, not a provider — endpoints, keys and gateways stay in each tool's own configuration.
+
+The model is resolved once per task, first match wins:
+
+| # | Source | Headless | Interactive |
+|---|---|---|---|
+| 1 | explicit | `MODEL=<id>` | `/t4:plan --task-model=<id> -- <input>` |
+| 2 | explicit inherit | `MODEL=` on the command line | `--task-model=inherit` |
+| 3 | task default | `routing.tasks.<task>.<tool>`, when enabled and not blank | same |
+| 4 | review default | `review:`, for `check` only | same |
+| 5 | tool default | `claude:` or `codex:` | same |
+| 6 | CLI default | no model argument; the tool's own configuration | the session's model |
+
+A missing or blank entry falls back and says so. Setting `enabled: false`, or removing the section,
+restores the old behavior exactly, and keeps the mappings for later. The file is parsed strictly:
+a typo such as `enabled: ture`, a duplicate key, flow syntax or bad indentation stops the task
+with the line number before anything launches, and never selects another model. A rejected alias,
+a failed login or a refused request is returned as the failure; nothing retries on a different model.
+
+**Headless.** Every run prints its selection to stderr — `model: plan / codex: gateway/planning-codex
+(task default)` — and writes `ai-factory/runs/<run>.json.model.json` (schema
+`t4.model-selection.v1`): task, tool, requested model, source, routing state, configuration digest,
+outcome, and any model identity the CLI output reported, kept separate. This is the *requested*
+model; a gateway alias can still resolve to something else behind the provider. `log.csv` is unchanged.
+
+**Interactive.** A routed task runs in a worker agent pinned to the selected model; the chat
+itself keeps its own model and only relays questions and results. Each `/t4:<task>` command and
+`$t4-<task>` skill first runs `node ai-factory/make/models.js dispatch`, which prints one directive:
+
+| Directive | What the session does |
+|---|---|
+| `legacy` | routing is off: the task runs exactly as before |
+| `inherit` | routing is on, but no model is configured for this task: it runs on the session's model |
+| `route` | launch the named worker; do not read or do the task in the chat |
+| `blocked` | stop and report; no task work, and never on another model |
+
+The workers are generated agent files, one per task, written only by an explicit sync:
+
+```
+bash ai-factory/make/sync-adapters.sh --adapters=routing   # or /t4:sync-sdlc --adapters=routing
+```
+
+Then restart the session: both hosts load agent files when a session starts. Each agent's name
+carries a hash of its content, so editing a mapping produces a new agent name. A session that
+still holds the old agent cannot reach the new one; its routed task stops with a restart
+instruction instead of running on the old model. A worker already running keeps its model.
+Until the sync runs, a routed task stops with the sync command.
+
+`--task-model=<id>` sends one task to another model without a generated agent. It is limited to
+letters, digits and `. _ : / @ + -`. Claude Code accepts only its own model aliases for a single
+call, such as `opus` or `haiku`. To route an arbitrary gateway alias on Claude, map it and sync.
+Codex offers only the models its spawn tool lists. Changing the chat's own model does not override
+a mapping. Dispatches are recorded in `ai-factory/runs/routing.jsonl` (schema `t4.model-dispatch.v1`),
+with the worker ID and the outcome added when the task ends. `/t4:doctor` reports invalid
+configuration, mappings with no task file, missing or stale agents, and `CLAUDE_CODE_SUBAGENT_MODEL`.
 
 ## 7. Staying current
 
@@ -312,6 +494,24 @@ require generating files into `.codex/`.
 | Protected edits | Edit, Write, MultiEdit paths | Every apply_patch path, including rename destinations |
 | Agent procedure | Registered Claude agent | Native delegation when available; otherwise labeled inline self-check |
 | Usage | Claude transcript records | Codex response records or older cumulative snapshots |
+| Completion report | `/t4:report <delivery id>` | `$t4-report <delivery id>`; both run `make … delivery-report` |
+| Lifecycle session binding | Bash PostToolUse output shows `lifecycle.js start` | Unconfirmed: depends on the hook payload carrying command output; otherwise usage stays unattributed |
+| Per-task model routing | `.claude/agents/t4-route-<task>-<hash>.md` with `model:`, launched by the Agent tool without a per-call model | `.codex/agents/t4-route-<task>-<hash>.toml` with `model`, spawned by `agent_type` with `fork_turns` `none` |
+| Routing override | Agent tool `model`, Claude aliases only | `spawn_agent` `model`, the models the host lists |
+| Routing blockers | `CLAUDE_CODE_SUBAGENT_MODEL` overrides every subagent; agent files load at session start | Agent files load at session start; a full-history fork inherits the parent agent type |
+
+Routing adapter evidence (2026-09-30, Claude Code 2.1.285, Codex CLI 0.153.2):
+- **Claude Code — documented.** Subagent `model:` frontmatter takes aliases, full model IDs or
+  `inherit`. `CLAUDE_CODE_SUBAGENT_MODEL` overrides it.
+- **Claude Code — observed in the host.** The Agent tool's per-call `model` is an alias enum.
+- **Codex — read from the 0.153.2 binary.** It discovers `.codex/agents`, and an agent file must
+  define a non-empty `name`, `description` and `developer_instructions`. `spawn_agent` lists
+  "available model overrides", and a full-history fork inherits the parent's agent type.
+- **Not verified on either host.** Arbitrary gateway aliases in an agent file's model field, and
+  the model a worker actually used. No live routed session ran on either host. Treat interactive
+  routing on a host as unverified until a smoke run there has used your gateway aliases:
+  planning, then testing, in one session.
+
 
 For Codex CLI, add this checkout as a marketplace with
 `codex plugin marketplace add /absolute/path/to/checkout`, then run
@@ -380,9 +580,15 @@ Silently, into `ai-factory/runs/` — nothing prints to your terminal:
 - `sessions.jsonl`, `edits.jsonl`, `cmds.jsonl` — what ran, what was edited, which test and
   lint commands were used.
 - The guard blocks any edit to a path in `ai-factory/docs/dont-touch.md` and says which rule matched.
+- With lifecycle telemetry enabled, Stop and SubagentStop also write one `usage_linked` event per
+  row into `ai-factory/runs/lifecycle/events/`, and the Bash hook binds the session to a run when
+  it sees `lifecycle.js start`. The rows themselves are identical either way. A lifecycle failure
+  is one stderr line, never a lost row.
 
-`ai-factory/runs/*.json`, `*.jsonl` and `log.pending.csv` are gitignored; `log.csv` is committed, with
-`merge=union` in `.gitattributes` so two branches' rows never conflict.
+`ai-factory/runs/*.json`, `*.jsonl`, `log.pending.csv`, `runs/tmp/`, `runs/evidence/` (command logs),
+`runs/lifecycle/` and `runs/telemetry/` are gitignored. `log.csv` is committed, with
+`merge=union` in `.gitattributes` so two branches' rows never conflict. Contract sidecars,
+`ai-factory/evidence/` and `ai-factory/reports/` are committed when you use them.
 
 Hooks run from the **installed** plugin, not from a working copy. After updating the plugin,
 restart the session — until you do, an older hook keeps writing the older row shape, and a
@@ -461,6 +667,11 @@ mid-session is not yet running.
 | `.claude/` looks wrong | never edit it — it is generated. Change `ai-factory/` and run `/t4:sync-sdlc` |
 | The reviewer is too lenient | add project checks to `ai-factory/agents/reviewer.md` |
 | Tests pass but prove nothing | `/t4:test gaps` — it flags ACs whose tests would still pass if the behaviour were reverted |
+| `make contracts` reports `stale` | Something upstream changed after it was checked. Rerun the `init` or `make verify` named in the hint; never edit a sidecar or evidence file by hand |
+| `/t4:report` says `unverified` but the work is done | Required evidence is missing or stale. The reasons table names each file and the command that records it |
+| `make lifecycle` shows `unknown` | A run or wait was never ended, a clock went backwards, or no run was bound to the session. Unknown is deliberate; end the run with `lifecycle.js end` |
+| A task says `directive: blocked` | Routing cannot honor the selected model: fix the named `models.yaml` line, run `bash ai-factory/make/sync-adapters.sh --adapters=routing`, unset `CLAUDE_CODE_SUBAGENT_MODEL`, or restart the session, as the message says. Nothing ran on another model |
+| "Unknown agent type t4-route-…" | The session started before that agent file existed or changed. Restart it; the task did not run |
 
 ## 11. The short version
 
@@ -468,6 +679,8 @@ mid-session is not yet running.
 once:      /t4:adopt-sdlc  →  /t4:fleet  →  fill in ai-factory/docs/*
 per change: /t4:design? → /t4:analyse? → /t4:explore? → /t4:spec → /t4:plan
             → /t4:test red → /t4:run ×N → /t4:test gaps → /t4:check
-            → commit ai(<task>): …  →  MR labelled ai-assisted
+            → /t4:report (with contracts)  →  commit ai(<task>): …  →  MR labelled ai-assisted
 per dependency or lasting decision: /t4:adr
+opt-in:    node ai-factory/make/contracts.js enable  ·  "lifecycle": {"enabled": true} in contracts/config.json
+           routing.enabled: true in ai-factory/models.yaml → sync-adapters.sh --adapters=routing → restart
 ```

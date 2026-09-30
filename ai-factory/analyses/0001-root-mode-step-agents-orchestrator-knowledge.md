@@ -37,7 +37,7 @@ statement belongs to one requirement it is tagged R1–R4:
 
 ### 1.1 Sources
 
-Every path is relative to the repo root `/Users/tanin/code/nsix/ai/sdlc`. `ai/tasks/`, `ai/agents/` and
+Every path is relative to the repo root. `ai/tasks/`, `ai/agents/` and
 `ai/make/` are symlinks into `skills/ai-layout/templates/ai/` and `agents/` (SRC-001); the target paths are
 cited.
 

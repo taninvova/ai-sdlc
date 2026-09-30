@@ -1,6 +1,6 @@
 {
   "name": "sdlc",
-  "interface": { "displayName": "t4 platform" },
+  "interface": { "displayName": "T4 platform" },
   "plugins": [
     {
       "name": "t4",

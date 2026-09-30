@@ -41,14 +41,8 @@ require("./_common").runHook(() => {
 			ev.host === "codex"
 				? require("./_codex-usage").sumCodexTranscript
 				: sumTranscript;
-		const {
-			turns,
-			inp,
-			out,
-			cr,
-			cw,
-			model: transcriptModel,
-		} = sum(ev.agent_transcript_path, ledger);
+		const summed = sum(ev.agent_transcript_path, ledger);
+		const { turns, inp, out, cr, cw, model: transcriptModel } = summed;
 		const model = transcriptModel || ev.model || "";
 		if (turns === 0) return;
 
@@ -60,6 +54,7 @@ require("./_common").runHook(() => {
 				cw * rate.cache_write) /
 			1e6;
 		const hit = (cr / (inp + cr + cw || 1)).toFixed(2);
+		const costCell = ev.host === "codex" ? "" : approx + cost.toFixed(4);
 
 		// Into log.pending.csv, never straight into the committed log.csv — log-flush.js moves the rows
 		// when the session commits, so the log changes only inside the commit that produced the work.
@@ -89,7 +84,7 @@ require("./_common").runHook(() => {
 					cr,
 					cw,
 					hit,
-					ev.host === "codex" ? "" : approx + cost.toFixed(4),
+					costCell,
 					"",
 				]
 					.map(csv)
@@ -98,5 +93,7 @@ require("./_common").runHook(() => {
 		} catch (error) {
 			throw error;
 		}
+		// After the row, never instead of it: the run log is written whatever lifecycle does.
+		require("./_lifecycle").linkUsage(ai, ev, { source: "agent", agent: ev.agent_type || "", model, sum: summed, costCell, extraClaims: ev.agent_id ? ["a:" + ev.agent_id] : [] });
 	});
 });

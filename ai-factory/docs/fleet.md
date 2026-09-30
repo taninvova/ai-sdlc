@@ -85,8 +85,8 @@ carries per-model prices for the cost column of `ai-factory/runs/log.csv`.
 - ~~`.claude-plugin/marketplace.json` pinned ai-sdlc at `0.3.0` while `plugin.json` was
   `0.5.0`~~ — **fixed**; the definition of done now requires both files bumped together,
   since they drifted silently through 0.4.0 and 0.5.0. Nothing yet *checks* that they agree.
-- ~~`README.md` installed from `git@gitlab.nsix.io:ai/ai-sdlc.git` while the remote is
-  `ai-factory/sdlc.git`~~ — **fixed**; the documented install command works now.
+- ~~`README.md` installed from a URL that did not match the
+  remote~~ — **fixed**; the documented install command works now.
 - ~~An adopted repo has no way to learn its layout is behind these templates~~ — **built** in
   0.8.0: `/t4:adopt-sdlc` writes `ai-factory/.sdlc.json` and `/t4:sync-sdlc` reports drift against it
   (ai-factory/adr/0001–0003). Still open: taking an upstream change is manual — there is no

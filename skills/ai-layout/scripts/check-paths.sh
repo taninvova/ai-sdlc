@@ -5,15 +5,14 @@
 # have, and the rename that produced them touched 180 files — far too many to re-read by eye.
 #
 # Why this is not one grep. The obvious pattern, `(^|[^-[:alnum:]_./])(ai/|specs/|…)`, excludes a
-# preceding "/" so that `~/code/nsix/ai/ai-sdlc` survives — and is therefore blind to
+# preceding "/" so that `~/code/ai/ai-sdlc` survives — and is therefore blind to
 # `templates/ai/` and `templates/specs/`, which is exactly where half the stale references were
 # during the rename. Widening the class instead flags the workspace path on every run.
 #
 # So: neutralise every CORRECT reference first by rewriting `ai-factory/` to a letter, then match
 # the old paths with "/" allowed before them. `ai-factory/specs/` becomes `Lspecs/` and cannot
-# match; a bare `specs/` or a `templates/specs/` still does. Two external paths that are not
-# layout references at all are allow-listed, and a line that must name an old path on purpose
-# says so with `path-scan-ok`.
+# match; a bare `specs/` or a `templates/specs/` still does. A line that must name an old path on
+# purpose says so with `path-scan-ok`.
 set -euo pipefail
 shopt -s nullglob
 cd "$(dirname "$0")/../../.."
@@ -22,9 +21,7 @@ export TMPDIR="$PWD/ai-factory/runs/tmp"
 mkdir -p "$TMPDIR"
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
-# `ai` here is the GitLab group and the workspace directory, not a layout: git@gitlab.nsix.io:ai/
-# and ~/code/nsix/ai/. Neither moves when the layout is renamed.
-ALLOW='nsix/ai/|nsix\.io:ai/|path-scan-ok'
+ALLOW='path-scan-ok'
 
 # scan_paths <file>… — fails on the first file naming a pre-1.0.0 path, quoting up to three
 # offending lines with their numbers. Reports the original line, not the neutralised one.
@@ -94,8 +91,8 @@ for good in 'Read ai-factory/tasks/spec.md and follow it.' \
             'Record it in ai-factory/adr/NNNN-slug.md.' \
             'See ai-factory/docs/workflow.md for the loop.' \
             'Copy skills/ai-layout/templates/ai-factory/specs/0000-scaffold.md.' \
-            'Install with claude --plugin-dir ~/code/nsix/ai/ai-sdlc' \
-            'Add git@gitlab.nsix.io:ai/sdlc.git as the marketplace.' \
+            'Install with claude --plugin-dir .' \
+            'Add git@git.epam.com:volodymyr_tanin/ai-sdlc-plugin.git as the marketplace.' \
             'The old ai/tasks/ name, kept on purpose. path-scan-ok'; do
   printf '%s\n' "$good" > "$t"
   (scan_paths "$t") 2>/dev/null || fail "the scan rejected a correct line: $good"

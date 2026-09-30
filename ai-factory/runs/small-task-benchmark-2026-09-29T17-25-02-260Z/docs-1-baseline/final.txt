@@ -1,5 +1,0 @@
-Changed only `applciation` → `application` in README.md. Verified all other bytes are preserved.
-
-Passed: `make docs`, `make lint typecheck test` (1 test), and `git diff --check`.
-
-Independent review remains incomplete: the delegation tool failed with “no thread with id.” No spec or ADR needed.
