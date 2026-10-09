@@ -43,11 +43,15 @@ ai-factory/explorations/            /t4:explore output: options + recommendation
 ai-factory/plans/  ai-factory/plans/done/     plans in flight / merged
 ai-factory/runs/log.csv               header only; the Stop hook and ai-factory/make/log.js append the same 17 columns
 ai-factory/make/ai.mk                 headless runner for CI (make ai / review / contracts / verify)
-ai-factory/make/runner.js  models.js  gate.js  contracts.js  delivery-report.js  lifecycle.js  lifecycle-events.js  safe-files.js  log.js  cost.js  sync-adapters.js  sync-adapters.sh
+ai-factory/make/runner.js  models.js  gate.js  contracts.js  delivery-report.js  delivery-status.js  continue.js  assurance.js  lifecycle.js  lifecycle-events.js  safe-files.js  log.js  cost.js  sync-adapters.js  sync-adapters.sh
                                       models.js parses models.yaml and resolves each task's model — runner, routed dispatch, sync and doctor share it
                                       cost.js reads log.csv for `make cost` — read-only, 17 columns by name
                                       contracts.js validates spec/plan/quick sidecars and records evidence (opt-in)
+                                      delivery-status.js prints one delivery's read-only status for `/t4:state --delivery <id>`
+                                      continue.js inspects a planned delivery read-only and hands off one task for /t4:continue
+                                      assurance.js shows, selects (`set <preset> --apply`) and checks completion for an opt-in assurance preset
 ai-factory/contracts/                 README + v1 schemas; config.json (created by `contracts.js enable`) opts in
+ai-factory/assurance.json             opt-in preset selection (light|standard|strict), written only by `assurance.js set <preset> --apply`; adoption and sync never create it
 ai-factory/quick/  ai-factory/evidence/   with contracts only: quick checklists; committed verification evidence
 ai-factory/reports/<id>/              make delivery-report (/t4:report): completion.md + completion.json snapshots
 ai-factory/runs/lifecycle/            opt-in lifecycle events, one immutable file each (gitignored); make lifecycle reads them

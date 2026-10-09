@@ -267,6 +267,84 @@ make -f ai-factory/make/ai.mk delivery-report DELIVERY="$DELIVERY"   # exit 0 on
 
 Run the validator against the branch's working tree. It reads only sidecars, the Markdown beside them, evidence records and in-scope code, and it writes nothing.
 
+### 10. Assurance presets (opt-in)
+
+A preset is one setting that chooses the checks every delivery in the repo needs. It sets minimums over the controls described above. Without `ai-factory/assurance.json`, nothing in this section applies and every command behaves as before.
+
+```
+node ai-factory/make/assurance.js show [--json]                         # read-only: the preset, every effective requirement and its source
+node ai-factory/make/assurance.js set light|standard|strict [--json]    # preview: what would change; writes nothing
+node ai-factory/make/assurance.js set <preset> --apply [--json]         # make the change
+node ai-factory/make/assurance.js complete <id> [--json]                # may completion be claimed? exit 0 only if so
+git add ai-factory/assurance.json ai-factory/contracts/config.json
+```
+
+**What each preset requires.** These are the shipped defaults. They are a reviewable design, not settled policy.
+
+| Requirement | `light` | `standard` | `strict` |
+|---|---|---|---|
+| `contracts` | not required | required | required |
+| `final_verification` | not required | required | required |
+| `review_required`, `review_required_quick` | no | yes, for quick, fix and chore work too | yes, for quick, fix and chore work too |
+| `review_independence` | `self` (labelled self-review) | `independent` | `independent` |
+| `gate` | advisory | advisory | enforced |
+| `completion` | `summary` (normal task summary) | `recorded_checks` (evaluated now; saved report optional) | `fresh_ready_report` (generated now and `ready`) |
+| `blocking_severities` | as configured | includes `blocker` | includes `blocker` |
+
+**Minimums, never replacements.** Each requirement is the stronger of the preset and what the repo already has:
+- A stronger existing control wins. `show` prints it with its source and `retained above preset`. Examples are contracts already enabled, `require_review_quick: true`, `major` in `blocking_severities` or `GATE_ENFORCE=1`.
+- `allow_attestation` and `code_scope` are shown as configured. No preset changes them.
+- `light` in a repo that already has contracts keeps contracts, final verification, the configured review requirement and evidence-based completion. Selecting it never deletes `config.json` or any evidence.
+- No preset changes risk routing. Uncertain requirements, authorization, public contracts, migrations, dependencies and service boundaries still need the normal workflow under `light`. The rules in `ai-factory/` still apply.
+- Legacy mode (no selection) reports `review_independence` as `unspecified`, because nothing has been decided.
+
+**Setup.**
+- `set` without `--apply` only previews. It lists the changes and the effective settings afterwards.
+- With `--apply`, `standard` and `strict` first enable contracts if they are off, the same way `contracts.js enable` does. Only then is `ai-factory/assurance.json` written, as `{"schema":"t4-assurance","version":1,"preset":"standard"}`.
+- If a write fails, the command names the failed step and what had already been done. The preset is not active.
+- A conflict, such as `strict` with `GATE_ENFORCE=0` in the environment, blocks the change.
+- A malformed selection file is refused and never overwritten. Fix it or remove it, then run `set` again.
+- Select a preset only through `set --apply`. Adoption and `/t4:sync-sdlc` never create, change or remove the selection.
+
+**Status.**
+
+| Status | Meaning |
+|---|---|
+| `legacy` | No preset is selected. Existing configuration and behavior apply unchanged. |
+| `active` | The preset's requirements apply. |
+| `incomplete` (`U_CONTRACTS_NOT_ENABLED`) | The preset needs contracts, but `config.json` is missing, for example because it was deleted after selection. Run `set <preset> --apply` again. |
+| `conflict` (`E_GATE_CONFLICT`, `E_GATE_INVALID`) | `GATE_ENFORCE=0` under `strict`, or a `GATE_ENFORCE` value that is not `0`, `1` or unset. |
+
+`show` exits `0` for `legacy` and `active`, `1` for `incomplete` and `conflict`, and `2` for an invocation error or an unreadable selection. It never writes.
+
+**The review gate.**
+- **No preset.** `GATE_ENFORCE` keeps its existing meaning.
+- **`standard`.** The gate is advisory. `make review` may exit 0 on a rejection. **An advisory exit is not approval.** The delivery's completion stays non-ready until an approving independent review is recorded. `GATE_ENFORCE=1` enforces the gate and is shown as `retained`.
+- **`strict`.** The gate is enforced. A missing, invalid, rejected or blocked review fails. `GATE_ENFORCE=0` is `E_GATE_CONFLICT`: `gate.js` exits 2, and `make ai` and `make review` stop before launching any host CLI.
+- **Before every headless run.** With a preset selected, `make ai` and `make review` print the effective requirements on stderr before anything launches. A malformed selection also stops them.
+
+**Review provenance.** Review evidence now records `independence` (`independent`, `self` or `unspecified`) and the `boundary` that recorded it.
+- Only `make review DELIVERY=<id>` records `independent`, with boundary `make review`. A task procedure runs it only from a session the developer invoked directly.
+- Routed workers, headless task runs, the reviewer and an interactive `/t4:check` never run it. They report the review as an unmet requirement and name that command.
+- Under `standard` and `strict`, quick, fix and chore work needs independent review too. Self-review never satisfies it, and a review whose provenance is not `independent` is reported as `REVIEW_NOT_INDEPENDENT`.
+- Review evidence recorded before this release has no provenance. It does not count under these presets until `make review DELIVERY=<id>` is run again.
+
+**Completion.** `assurance.js complete <id>` uses the completion-report rules to evaluate the delivery's current evidence. It never reads a saved report, so an earlier report cannot authorize completion, and generating a report never needs a previous one.
+- **`summary`.** Only a normal task summary is required. Project rules still apply.
+- **`recorded_checks`.** The evaluation must be `ready`. Nothing is read from or written to `ai-factory/reports/`. Saving a report with `/t4:report` is optional.
+- **`fresh_ready_report`.** The command writes `ai-factory/reports/<id>/completion.{md,json}` now, and that fresh report must be `ready`.
+
+The command exits `0` only when completion may be claimed. Otherwise it exits `1` and lists every open reason with its evidence. A `conflict` is never claimable. The task procedures claim completion only after it exits `0`.
+
+**Reports.** With a preset selected, the completion report applies the effective completion policy, the stronger of `completion` in `config.json` and the preset. `completion.json` gains an optional `assurance` object (the resolved settings, conflicts and unmet requirements). The Markdown gains an `## Assurance` section and a `Review independence:` line. Without a selection, reports are unchanged. The report fingerprint includes `assurance.json` when it exists, so a report generated under another selection no longer matches the current evidence.
+
+**Known limitations.**
+- **Provenance is a label, not proof.** `contracts.recordReview()` accepts `independence: "independent"` from any caller. A script that calls it directly can claim independence it does not have. The presets rely on review evidence being recorded only through `make review`.
+- **`/t4:continue` still wants a saved report.** `continue.js` returns `complete` only when a matching saved completion report exists, even under `standard`, where `assurance.js complete` does not need one. It proposes `/t4:report` first.
+- **Host behavior is unverified.** The task and agent procedures were not exercised in real Claude Code or Codex sessions. `check-assurance.sh` proves the helpers and the procedure wording, not that a model follows it.
+
+**Switching and rollback.** `set <other preset> --apply` changes the selection. Switching down keeps contracts configuration and evidence. Deleting `ai-factory/assurance.json` returns to legacy behavior. Contracts stay enabled until you delete `config.json` as well.
+
 ## Adoption
 
 - Contracts are opt-in. Run `node ai-factory/make/contracts.js enable`, or accept the offer in `/t4:sync-sdlc`. Either one creates `ai-factory/contracts/config.json` and records `capabilities.contracts.version` in `ai-factory/.sdlc.json`.
@@ -295,7 +373,8 @@ Run the validator against the branch's working tree. It reads only sidecars, the
 | `ai-factory/quick/<name>.md` + `.contract.json` | the quick task, then `contracts.js init quick <md>` | checklist `QC1…` and verification argv |
 | `ai-factory/evidence/<delivery_id>/S<N>-red.json`, `S<N>-step.json`, `final.json`, `quick.json`, `review.json` | `make verify` and `make review` only | what actually ran, its outcome, and the input and code digests it ran against |
 | `ai-factory/evidence/<delivery_id>/AC<n>-attest.json` or `QC<n>-attest.json` | `contracts.js attest` only | a human attestation: actor, time, rationale, source, and the content it was made against |
-| `ai-factory/reports/<delivery_id>/completion.{md,json}` | `make delivery-report` only | the completion report snapshot |
+| `ai-factory/assurance.json` | `assurance.js set <preset> --apply` only | the opt-in preset selection: schema, version and preset |
+| `ai-factory/reports/<delivery_id>/completion.{md,json}` | `make delivery-report`, or `assurance.js complete` under `strict` | the completion report snapshot |
 | `ai-factory/runs/evidence/<delivery_id>/*.log` (gitignored) | `make verify` | command output, referenced from the evidence by path and hash |
 
 The JSON Schema documents in `schema/` are informative. The validator implements the same rules directly and has no schema dependency.

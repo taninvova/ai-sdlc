@@ -85,6 +85,10 @@ function fingerprint(ctx, id) {
 	if (!contracts.guardPath(ctx, evidence))
 		for (const name of fs.readdirSync(evidence).sort()) add(path.join(evidence, name));
 	add(path.join(ctx.workspace, "runs", "telemetry", `${id}.json`));
+	// A selected preset changes what the evidence must show, so a report made under another
+	// selection never matches. Absent selection adds nothing: legacy fingerprints are unchanged.
+	const selection = path.join(ctx.workspace, "assurance.json");
+	if (contracts.readInside(ctx, selection).code !== "E_MISSING_FILE") add(selection);
 	// Live lifecycle events count too: the telemetry section is computed from them when enabled.
 	const events = path.join(ctx.workspace, "runs", "lifecycle", "events");
 	if (!contracts.guardPath(ctx, events)) for (const name of fs.readdirSync(events).sort()) if (!name.startsWith(".")) add(path.join(events, name));
@@ -162,14 +166,16 @@ function checkTelemetry(value, id, source) {
 		pricing: value.pricing && typeof value.pricing.source === "string" ? { source: clip(value.pricing.source, 200) } : null,
 	};
 }
-function build(ctx, id) {
+function build(ctx, id, env = process.env) {
 	const index = contracts.scan(ctx);
 	const mine = index.sidecars.filter((item) => item.value?.delivery_id === id);
 	const evidenceDir = path.join(ctx.workspace, "evidence", id);
 	const guard = contracts.guardPath(ctx, evidenceDir);
 	if (!mine.length && guard?.code === "E_MISSING_FILE")
 		throw new Invocation(`delivery-report: no sidecar or evidence carries delivery ${id}`);
-	const policy = ctx.config.completion;
+	// The completion policy the selected preset makes effective (the configured one without a preset).
+	const assured = contracts.assurance(ctx, env);
+	const policy = assured.completion;
 	const byKind = (kind) => mine.filter((item) => item.kind === kind);
 	const [specSide] = byKind("spec");
 	const [planSide] = byKind("plan");
@@ -234,6 +240,8 @@ function build(ctx, id) {
 		output_sha256: reviewRecord?.review?.output_sha256 || null,
 		findings: Array.isArray(reviewRecord?.review?.findings) ? reviewRecord.review.findings.map((f) => ({ ...f, blocking: policy.blocking_severities.includes(f.severity) })) : null,
 		reason: reviewRecord?.review?.reason || null,
+		// Recorded provenance; null for review evidence written before provenance was recorded.
+		independence: reviewRecord ? reviewRecord.review?.independence || null : null,
 	};
 	const attestations = [...records.entries()]
 		.filter(([, item]) => item.shape.kind === "attest")
@@ -257,6 +265,7 @@ function build(ctx, id) {
 		},
 		snapshot: { code_sha256: code?.snapshot_sha256 || null, head: code?.head || null, files: code?.files ?? null },
 		policy,
+		assurance: assured.policy,
 		contract: { status: doc.status, artifacts: doc.artifacts },
 		plan: planSide?.value || null,
 		spec: specSide?.value || null,
@@ -284,7 +293,7 @@ function collect(options = {}) {
 		const before = fingerprint(ctx, id);
 		ctx.snapshot = undefined;
 		options.onAttempt?.(attempt);
-		const collected = build(ctx, id);
+		const collected = build(ctx, id, options.env);
 		const after = fingerprint(ctx, id);
 		if (before === after) return { ...collected, fingerprint: after, attempts: attempt };
 	}
@@ -399,6 +408,15 @@ function evaluate(collected) {
 		reason("incomplete", "REVIEW_PENDING", "no review has been recorded yet", null);
 	}
 	if (delivery.kind === "planned" && !collected.spec) reason("unverified", "NO_SPEC", "no spec sidecar carries this delivery", null);
+	// A selected preset's requirements, from the same resolved policy every caller uses.
+	const assurance = collected.assurance?.mode === "preset" ? collected.assurance : null;
+	if (assurance) {
+		for (const item of assurance.conflicts) reason("blocked", item.code, `${item.message}. ${item.hint}`, "ai-factory/assurance.json");
+		for (const item of assurance.unmet) reason("unverified", item.code, `${item.message}. ${item.hint}`, "ai-factory/assurance.json");
+		// Only the headless review boundary records independence; self-review never satisfies it.
+		if (assurance.settings.review_independence.value === "independent" && review.evidence && review.independence !== "independent")
+			reason("unverified", "REVIEW_NOT_INDEPENDENT", `preset ${assurance.preset} requires an independent review, but this review's provenance is ${review.independence || "not recorded"}; record one with make review DELIVERY=${delivery.id}`, review.evidence);
+	}
 	for (const artifact of attestations)
 		if (!policy.allow_attestation) reason("ready", "ATTESTATION_IGNORED", `${artifact.criterion} is attested by ${artifact.actor}, but policy does not allow attestation to count`, artifact.evidence);
 	// Safety net: ready needs every criterion demonstrated.
@@ -431,6 +449,7 @@ function model(collected, generatedAt = new Date().toISOString()) {
 		...(collected.verification.length ? collected.verification.filter((item) => item.phase !== "red").map((item) => `- ${item.commands.map((c) => `\`${c.argv.join(" ")}\``).join(", ")} — ${item.status}`) : ["- none recorded"]),
 		"",
 		`Review: ${collected.review.verdict || "not recorded"}`,
+		...(collected.assurance?.mode === "preset" ? ["", `Assurance: preset ${collected.assurance.preset} (${collected.assurance.status})`] : []),
 		...(followUp.length ? ["", "Open before handoff:", ...followUp.map((line) => `- ${line}`)] : []),
 	].join("\n");
 	return {
@@ -444,6 +463,8 @@ function model(collected, generatedAt = new Date().toISOString()) {
 		reasons: readiness.reasons,
 		counts: readiness.counts,
 		policy: collected.policy,
+		// Optional (schema report.v1): present only when a preset is selected.
+		...(collected.assurance?.mode === "preset" ? { assurance: collected.assurance } : {}),
 		criteria: readiness.criteria,
 		steps: collected.progress.steps.map((step) => ({
 			id: step.id,
@@ -491,6 +512,22 @@ function renderMarkdown(report) {
 		line("|---|---|---|---|");
 		for (const item of report.reasons) line(`| ${item.state} | ${item.code} | ${cell(item.message)} | ${item.evidence_ref ? `\`${cell(item.evidence_ref)}\`` : "—"} |`);
 	}
+	if (report.assurance) {
+		const a = report.assurance;
+		const shown = (item) => (Array.isArray(item) ? item.join(", ") || "none" : item && typeof item === "object" ? JSON.stringify(item) : item);
+		line();
+		line("## Assurance");
+		line();
+		line(`Preset **${a.preset}** — ${a.status}. ${cell(a.note)}`);
+		line();
+		line("| Requirement | Value | Source |");
+		line("|---|---|---|");
+		for (const [key, item] of Object.entries(a.settings)) line(`| ${key} | ${cell(shown(item.value))} | ${cell(item.source)}${item.retained ? " (retained above preset)" : ""} |`);
+		for (const item of [...a.conflicts, ...a.unmet]) {
+			line();
+			line(`- ${item.code}: ${cell(item.message)} — ${cell(item.hint)}`);
+		}
+	}
 	line();
 	line("## Sources");
 	line();
@@ -535,6 +572,7 @@ function renderMarkdown(report) {
 	if (!r.evidence) line(`No review recorded${r.required ? " (required by policy)" : ""}.`);
 	else {
 		line(`Verdict **${r.verdict || "invalid"}** (${r.status}, ${r.state}) by ${cell(r.tool || "unknown")} — \`${cell(r.evidence)}\`${r.reason ? ` — ${cell(r.reason)}` : ""}.`);
+		if (report.assurance) line(`Review independence: ${cell(r.independence || "not recorded")}.`);
 		if (r.findings === null) line("Findings were not recorded with this review.");
 		else if (!r.findings.length) line("No findings.");
 		else {
@@ -617,6 +655,42 @@ function generate(options = {}) {
 	const files = options.write === false ? [] : save(ctx, report);
 	return { report, files: files.map((file) => ctx.rel(file)) };
 }
+// May completion be claimed? Readiness is evaluated now from current evidence and never read
+// from a saved report, so a cached report authorizes nothing and generating a report never needs
+// a previous one. The effective completion requirement decides what else is needed:
+//   summary             only a normal task summary (light, or no contracts, without a preset)
+//   recorded_checks     the report evaluated now must be ready; saving it is optional (nothing written)
+//   fresh_ready_report  the report is generated and saved now, and must be ready (strict)
+function completion(options = {}) {
+	const env = options.env || process.env;
+	const ctx = options.ctx || contracts.context(options.root || ROOT);
+	ctx.config = ctx.config || contracts.readConfig(ctx);
+	const collected = collect({ ...options, ctx, env });
+	const report = model(collected, options.generatedAt);
+	const policy = collected.assurance;
+	const requirement = policy ? policy.settings.completion.value : ctx.config.adopted ? "recorded_checks" : "summary";
+	const files = requirement === "fresh_ready_report" ? save(ctx, report).map((file) => ctx.rel(file)) : [];
+	const claimable = policy?.status !== "conflict" && (requirement === "summary" || report.status === "ready");
+	return {
+		schema: "t4-assurance-completion",
+		version: VERSION,
+		delivery: report.delivery.id,
+		mode: policy ? policy.mode : "legacy",
+		preset: policy ? policy.preset : null,
+		status: policy ? policy.status : "legacy",
+		requirement,
+		report_status: report.status,
+		claimable,
+		written: files,
+		open: report.reasons.filter((item) => item.state !== "ready"),
+		note:
+			requirement === "fresh_ready_report"
+				? "Strict completion needs this freshly generated report to be ready; an earlier saved report never counts."
+				: requirement === "recorded_checks"
+					? "Required checks and review are judged from current evidence; a saved report is optional and none was read or written."
+					: "This policy requires only a normal task summary; project rules still apply.",
+	};
+}
 function main(argv = process.argv.slice(2), env = process.env) {
 	const out = (text) => process.stdout.write(`${text}\n`);
 	const err = (text) => process.stderr.write(`${text}\n`);
@@ -627,7 +701,7 @@ function main(argv = process.argv.slice(2), env = process.env) {
 		if (positional.some((arg) => arg.startsWith("--")) || positional.length > 1) throw new Invocation("usage: delivery-report.js <delivery id> [--json]  (or DELIVERY=… in make)");
 		const delivery = positional[0] || env.DELIVERY;
 		if (!delivery) throw new Invocation("delivery-report: name a delivery (DELIVERY=d-YYYYMMDD-xxxxxx); make contracts lists them");
-		const { report, files } = generate({ delivery });
+		const { report, files } = generate({ delivery, env });
 		if (json) out(renderJson(report).trimEnd());
 		else {
 			out(`delivery-report: ${report.status} — ${report.delivery.id} (${report.delivery.kind})`);
@@ -644,4 +718,4 @@ function main(argv = process.argv.slice(2), env = process.env) {
 	}
 }
 if (require.main === module) process.exitCode = main();
-module.exports = { SCHEMA, VERSION, STATES, collect, evaluate, model, renderJson, renderMarkdown, save, generate, main };
+module.exports = { SCHEMA, VERSION, STATES, collect, evaluate, model, renderJson, renderMarkdown, save, generate, completion, main };

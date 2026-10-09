@@ -44,6 +44,13 @@ for (const [event, groups] of Object.entries(claude.hooks)) {
   const codexHandlers = hooks.hooks[event].flatMap(group => group.hooks.map(h => h.command.split(' ').at(-1)));
   assert.deepEqual(codexHandlers, handlers, `${event}: host handler coverage differs`);
 }
+// Continuation is interactive on both hosts and shares one task procedure.
+for (const file of ['commands/continue.md', path.join(manifest.skills, 't4-continue', 'SKILL.md')]) {
+  assert.ok(fs.existsSync(file), `missing continuation entry ${file}`);
+  const text = fs.readFileSync(file, 'utf8');
+  assert.ok(text.includes('ai-factory/tasks/continue.md'), `${file} must load the shared continue procedure`);
+  assert.match(text, /continue\.js handoff --host (claude|codex)/, `${file} must hand off through continue.js`);
+}
 const discovered = fs.readdirSync(manifest.skills).filter(name => fs.existsSync(path.join(manifest.skills, name, 'SKILL.md')));
 assert.deepEqual(discovered.sort(), [...names].sort(), 'Stale or missing native skills');
 console.log(`plugin hosts ok — ${fs.readdirSync('commands').filter(f => f.endsWith('.md')).length} native Claude commands, ${names.size} Codex skills and lifecycle hooks`);

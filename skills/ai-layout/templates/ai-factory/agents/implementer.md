@@ -45,6 +45,13 @@ step only when each recording exits 0; then `make -f ai-factory/make/ai.mk contr
 must report `valid`, or untick the step and report its diagnostics. A ticked box is not proof;
 the evidence file is. Never write a sidecar or evidence by hand. Without that file, do none of this and say nothing about contracts.
 
+## Assurance
+Only when `ai-factory/assurance.json` exists: run the read-only `node ai-factory/make/assurance.js show`
+and report the preset and effective requirements; they add to the phase rules above and never
+relax them. Never run `make -f ai-factory/make/ai.mk review`, `assurance.js complete` or a delegated review:
+independent review and completion are decided after the steps, by the session the developer invoked.
+A ticked final step is not a completed delivery: never claim the delivery complete.
+
 ## When you cannot proceed
 If the plan or step is missing, write nothing and explain. If required checks cannot run, a new
 regression appears, or expected-red failures differ from their recorded causes, preserve work,

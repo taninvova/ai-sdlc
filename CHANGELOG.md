@@ -1,5 +1,151 @@
 # Changelog
 
+**Unreleased — plan 0021 assurance presets (no version bump)**
+
+- Add opt-in assurance presets `light`, `standard` and `strict`, managed by the new
+  `make/assurance.js`. `show [--json]` is read-only and prints the preset, each effective requirement
+  and its source. `set <preset>` previews the change. `set <preset> --apply` enables contracts first
+  where the preset needs them, then writes `ai-factory/assurance.json`
+  (`{"schema":"t4-assurance","version":1,"preset":…}`). It refuses to overwrite a malformed selection.
+  `complete <delivery> [--json]` exits 0 only when completion may be claimed.
+  Statuses are `legacy`, `active`, `incomplete` (`U_CONTRACTS_NOT_ENABLED`) and `conflict`
+  (`E_GATE_CONFLICT`, `E_GATE_INVALID`).
+- **Presets set minimums.** Stronger existing controls are kept and shown as `retained`. `standard` and `strict` require
+  contracts, final verification, `blocker` among the blocking severities and independent review, including quick, fix and chore work.
+  `allow_attestation` and `code_scope` stay as configured. `light` never removes contracts configuration
+  or evidence: in a contracts-enabled repo it keeps final verification and the configured review requirement.
+  No preset changes risk routing. The mapping is a reviewable default.
+- **Review gate.** `strict` enforces it. `GATE_ENFORCE=0` under `strict` is `E_GATE_CONFLICT`: `gate.js` exits 2,
+  and `make ai`/`make review` stop before launching a host. `standard` stays advisory and says that an advisory exit is not approval.
+  Without a selection `GATE_ENFORCE` is unchanged. With a preset, `make ai` and `make review` print the
+  effective requirements on stderr first.
+- **Review provenance.** Review evidence records `independence` and `boundary`. Only
+  `make -f ai-factory/make/ai.mk review DELIVERY=<id>` records `independent`.
+  - `quick`, `fix` and `chore` run it only from a session the developer invoked. Routed workers, headless task runs,
+    the reviewer and an interactive `/t4:check` report the review as unmet with that command, and self-review never satisfies it.
+  - Under `standard` and `strict`, a review without independent provenance is `REVIEW_NOT_INDEPENDENT`. This includes
+    review evidence recorded before this release, which must be recorded again with `make review`.
+- **Completion.** `assurance.js complete` evaluates current evidence and never reads a saved report. Under `strict` it writes
+  the fresh completion report, which must be `ready`. Under `standard` a saved report is optional.
+- **Reports.** `completion.json` gains an optional `assurance` object and the Markdown an `## Assurance` section,
+  only when a preset is selected. `report.v1.json` changes compatibly. Legacy reports are unchanged.
+  The report fingerprint includes `assurance.json` when it exists.
+- **Procedures.** `quick`, `fix`, `chore`, `run`, `check` and `report`, plus the implementer and reviewer agents,
+  consult `assurance.js show` only when a selection exists.
+- **Known limitations.**
+  - `contracts.recordReview()` accepts `independence: "independent"` from any caller, so provenance is a label, not proof.
+  - `continue.js` still requires a saved completion report before returning `complete`, even under `standard`.
+  - The paired Claude Code and Codex host runs in `skills/ai-layout/fixtures/assurance/cases.md` were waived.
+    Host behavior of the changed procedures is unverified on both hosts, and the prompt changes carry no before/after run.
+- Add `check-assurance.sh` (groups `policy`, `runtime`, `procedures`, `docs`). Extend `check-manifest.sh`, `check-workspace.sh`,
+  `check-review-gate.sh` and `check-delivery-report.sh`.
+- **Template upgrade impact:** this changes the templates of every adopted repository: the task procedures, the agents,
+  `make/` helpers and the contracts README and schemas. Adopted repositories receive `make/assurance.js` on their next
+  `/t4:adopt-sdlc` or `/t4:sync-sdlc`. Adoption and sync never create a selection, and both preserve an existing selection, a customized
+  `contracts/config.json` and evidence. Until a repo selects a preset its behavior is unchanged. A repo that has
+  `ai-factory/assurance.json` without the helper stops headless runs and the gate with `/t4:sync-sdlc` guidance.
+
+**Unreleased — `/t4:state` ends its turn (no version bump)**
+
+- `commands/state.md` now says to launch no agent, background task, workflow, command or skill,
+  and to end the turn after the table. "Change nothing" alone did not stop a session that had just
+  run several `/t4:run` hand-offs from delegating the next step straight after the listing.
+  `check-state.sh` pins both sentences. Codex `$t4-state` reads the same file.
+
+**Unreleased — plan 0020 workflow evaluations (no version bump)**
+
+- The opt-in benchmark (`skills/ai-layout/scripts/benchmark-small-tasks.js --real`) now reports five
+  outcomes per run: missed requirements, escaped defects, unnecessary questions, completion time and
+  cost. Each comes with its evidence or `unknown`.
+  - An evaluator rubric outside the model's fixture (`skills/ai-layout/fixtures/workflow-evaluations/rubric.json`,
+    pinned by digest) decides requirement outcomes. Escapes are fixture-detected, never production defects.
+  - Completion is read from a final `Completion status: completed|blocked|failed` line (prompt protocol 2). Runs
+    recorded before it are not comparable. A clean exit alone is not completion, and a timeout is `interrupted`.
+- Pairs record their fixture, request, rubric, settings, CLI, runtime and limits. A model, reasoning or provider setting
+  is known only when it is pinned in `~/.codex/config.toml`; anything unset makes the pair `unverified`.
+  Time and cost are compared only for matched pairs where both runs completed, every requirement is satisfied
+  and there are no escaped defects.
+- Money stays unknown unless `cost-links.json` links a run to a lifecycle report delivery that holds only that run.
+  Lifecycle usage is never added to benchmark tokens. `make cost` is unchanged.
+- New offline `--summarize=<run-directory>` regenerates `summary.md` and `report.json` inside the `ai-factory/`
+  boundary and never launches a model. It reads optional human judgments (`judgments.json`, `t4-workflow-judgments` v1):
+  questions labelled necessary/unnecessary/uncertain with a rationale, review markers and completion rulings.
+  Unreviewed question counts are unknown, never 0.
+- **Report format change:** the summary is now a workflow-evaluation report. The *Quality passes* column is replaced by
+  a *Legacy assertions* count, which is not a quality criterion. The default `--real` selection is still 14 calls.
+  `make check` makes no model calls.
+- Add `check-workflow-evaluations.sh` with the groups `quality`, `pairing`, `report` and `harness`. The `harness` group
+  drives `--real` end to end with a fake `codex` executable. It checks the opt-in refusal, the 14-call default, the
+  timeout and concurrency bounds, fixture isolation and report regeneration. No templates or prompts shipped to adopted
+  repositories change. The benchmark's own replay prompt adds the completion line, and no real before/after model run was made.
+
+**Unreleased — delivery 0019 (no version bump)**
+
+- Add `/t4:state --delivery <id>` (Codex `$t4-state --delivery <id>`): one contract delivery's
+  status — planned or quick — as a read-only `field`/`value` table. It needs artifact contracts
+  enabled and one delivery ID (`d-YYYYMMDD-xxxxxx`). `state.sh` passes the ID literally to the new
+  `make/delivery-status.js`, which collects and evaluates once in memory through
+  `delivery-report.js`. It never generates or saves a report, runs no checks, review or
+  continuation, writes nothing and names no next action.
+- Rows show evidence-derived progress (`planning`, `implementation`, `verification-unproven`,
+  `review-pending`, `ready` or `unknown` — never a claim that work is running), the existing
+  readiness, ticks as recorded progress only, criteria grouped as verified, attested, remaining
+  and unknown, the latest verification by `finished_at` (ties by path; any unreadable timestamp
+  makes it `unknown`), review, blockers, limitations and source paths.
+- The default listing, `--done` and `--next` are unchanged. `--delivery` combines with neither and
+  refuses a missing, repeated, malformed, unknown or duplicated ID in one line.
+- **Template upgrade impact:** adopted repositories need the new `make/delivery-status.js` from
+  `/t4:sync-sdlc` (or adoption). Until then `--delivery` answers with `/t4:sync-sdlc` guidance
+  and writes nothing; the listing modes keep working. Repos without contracts are unaffected.
+- Add `check-delivery-status.sh` (`helper` and `cli` groups) and legacy-listing coverage in
+  `check-state.sh`. Live host status:
+  [delivery 0019 report](ai-factory/reports/0019-delivery-status.md).
+
+**Unreleased — scaffold spec simplification**
+
+- Simplify `0000-scaffold.md` to four plain-language setup checks. Replace the API feature
+  example with a small quick change and describe pending logs accurately.
+- **Template upgrade impact:** adopted repositories will see this spec as changed upstream;
+  review it through `/t4:sync-sdlc` and preserve local acceptance criteria. Runtime behavior is unchanged.
+
+**Unreleased — delivery 0018 (no version bump)**
+
+- Add interactive `/t4:continue <delivery id>` and `$t4-continue`. It accepts one artifact-contract
+  delivery ID for a contracts-enabled planned delivery. A read-only selector (`make/continue.js`)
+  reuses contract validation and report evaluation, runs no checks, writes nothing, and returns
+  `action`, `question`, `blocked` or `complete` with evidence references and a fingerprint.
+- Actions are limited to one existing task per invocation: plan, test red or gaps, run one named
+  step, check (working tree), or report. Uncertain gaps-testing or skipped-red status asks first;
+  answers (`--answer gaps_tested=yes|no`, `--answer red:S<N>=proceed`) choose between tasks and
+  never stand in for evidence. Spec drift stops with downstream work named for manual
+  reconciliation; nothing is regenerated, rehashed or deleted.
+- The handoff validates the result and allowlisted arguments, rechecks the fingerprint, and
+  dispatches exactly once under the destination's own model policy, with no fallback. Continue
+  always runs in the invoking session: `routing.tasks.continue` is ignored and flagged by doctor,
+  no route agent is generated for it, and a concrete continue `--task-model` is refused.
+- Unsupported: headless `TASK=continue` (rejected before launch or run artifacts), spec/plan paths,
+  quick deliveries and contracts-disabled repos.
+- **Template upgrade impact:** adopted repositories need the new `tasks/continue.md` and
+  `make/continue.js`, plus updated models.js, runner.js, sync-adapters.js and AGENTS.md. Inspect
+  `/t4:sync-sdlc` drift and preserve local additions. Regenerate routing adapters and restart the host if
+  routing is enabled. Direct tasks are unchanged and no adapters are written silently.
+- Add `check-continuation.sh` (selector, handoff, integration groups) and transcript scenarios in
+  `skills/ai-layout/fixtures/continuation/cases.md`. Live host status:
+  [delivery 0018 report](ai-factory/reports/0018-reliable-continuation.md).
+
+
+- Add interactive `/t4:start` and `$t4-start`: bounded read-only classification, one validated
+  session-owned handoff, original request preservation, and independent destination model selection.
+  Existing direct commands remain available; headless `TASK=start` rejects before launch or artifacts.
+- Concrete start model overrides are rejected because generic workers cannot enforce read-only
+  classification. Use a configured native routing adapter or explicit `inherit` instead.
+- **Template upgrade impact:** adopted repositories need the new start task and updated models.js,
+  runner.js, sync-adapters.js and AGENTS.md. Inspect `/t4:sync-sdlc` drift, preserve local additions,
+  and explicitly regenerate configured routing adapters/restart the host when needed. No silent
+  adapter writes or release/version bump.
+- Add dispatch, entry, headless and adoption regression coverage. Live acceptance status and
+  verification evidence: [delivery 0017 report](ai-factory/reports/0017-start-entry-command.md).
+
 ## 2.8.0 — 2026-09-30
 
 Opt-in per-task model routing (spec 0016). `ai-factory/models.yaml` can name a model for each task

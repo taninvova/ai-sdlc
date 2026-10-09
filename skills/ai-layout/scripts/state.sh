@@ -14,6 +14,12 @@
 #               two do not compose: --done --next, in either order, is refused in one line.
 #               A flag that is neither is named back in one line with the flags that exist.
 #               Both answers exit 0 and print no rows — a refused result is an answer.
+#               --delivery <id> is a separate detail mode (spec 0019): it runs the repo's
+#               adopted ai-factory/make/delivery-status.js with the ID as one literal argument
+#               and prints its `field<TAB>value` table unchanged. It does not combine with
+#               --done or --next, takes exactly one ID, and a missing helper is answered with
+#               /t4:sync-sdlc guidance — all one-line refusals with exit 0. The helper's own
+#               refusals pass through the same way; a helper runtime failure exits non-zero.
 #
 # Output: a tab-separated table — a header row, then one row per listed thing:
 #
@@ -40,8 +46,23 @@ shopt -s nullglob
 # Each argument is classified as it is read rather than by matching the joined string, so
 # `--done --next` and `--next --done` reach the same answer: order carries no meaning here.
 REPO=""; PLUGIN=""; EXTRA=""; HAS_DONE=0; HAS_NEXT=0; UNKNOWN=""
-for arg in "$@"; do
+# --delivery <id> is its own mode (plan 0019). It consumes the one argument after it as the
+# delivery ID — unless that argument is missing or is itself a flag, which leaves the ID missing
+# rather than swallowing the flag. Nothing here interprets the ID: the adopted helper validates it.
+HAS_DELIVERY=0; DELIVERY_ID=""; DELIVERY_MISSING=0
+while [ "$#" -gt 0 ]; do
+  arg=$1; shift
   case "$arg" in
+    --delivery)
+      HAS_DELIVERY=$((HAS_DELIVERY + 1))
+      EXTRA="${EXTRA:+$EXTRA }$arg"
+      if [ "$#" -gt 0 ] && [ -n "$1" ] && [ "${1#-}" = "$1" ]; then
+        DELIVERY_ID=$1; shift
+      else
+        DELIVERY_MISSING=1
+        # An empty argument is a missing ID too; consume it so it is not read as a repo root.
+        if [ "$#" -gt 0 ] && [ -z "$1" ]; then shift; fi
+      fi ;;
     -*)
       EXTRA="${EXTRA:+$EXTRA }$arg"
       case "$arg" in
@@ -82,7 +103,23 @@ MODE=default
 if [ -n "$UNKNOWN" ]; then
   # An unrecognised token: say what it is, and what this command does take. The rules for --done
   # and --next are settled and implemented, so this line no longer claims anything is undecided.
-  echo "'$UNKNOWN' is not a flag /t4:state takes — it takes --done, which lists what is finished instead of what is outstanding, or --next, which names the single item to pick up next; with no flag at all it lists everything outstanding. Nothing was listed."
+  echo "'$UNKNOWN' is not a flag /t4:state takes — it takes --done, which lists what is finished instead of what is outstanding, or --next, which names the single item to pick up next, or --delivery <id>, which shows one contract delivery's status; with no flag at all it lists everything outstanding. Nothing was listed."
+  exit 0
+elif [ "$HAS_DELIVERY" -gt 0 ] && [ "$DELIVERY_MISSING" = 1 ]; then
+  # --delivery with nothing after it, or with a flag where its ID belongs. The flag exists, so this
+  # names what is missing rather than calling anything unknown.
+  echo "--delivery needs a delivery ID after it — name one contract delivery, as in --delivery d-YYYYMMDD-xxxxxx (make contracts lists them). Nothing was listed or shown."
+  exit 0
+elif [ "$HAS_DELIVERY" -gt 1 ]; then
+  # Two IDs would be two questions; neither is chosen for the developer.
+  echo "--delivery was given more than once — it shows one contract delivery's status, so ask about one delivery ID at a time. Nothing was listed or shown."
+  exit 0
+elif [ "$HAS_DELIVERY" = 1 ] && { [ "$HAS_DONE" = 1 ] || [ "$HAS_NEXT" = 1 ]; }; then
+  # A detail mode and a listing mode, in any order: refused outright, never reduced to either one.
+  listing=""
+  [ "$HAS_DONE" = 1 ] && listing="--done"
+  [ "$HAS_NEXT" = 1 ] && listing="${listing:+$listing and }--next"
+  echo "--delivery does not combine with $listing — --delivery shows one contract delivery's status, while --done and --next are listings, so ask one at a time. Nothing was listed or shown."
   exit 0
 elif [ "$HAS_DONE" = 1 ] && [ "$HAS_NEXT" = 1 ]; then
   # Both flags, in either order. Neither wins: the combination is refused outright.
@@ -98,6 +135,51 @@ fi
 # Everything below is read relative to the repo root and nothing resolves above it, so a run in
 # one repo of a workspace never reads a sibling (AC15).
 cd "$REPO" || { echo "nothing to list — cannot enter that directory"; exit 0; }
+
+# --- --delivery: one contract delivery's status, from the workspace's adopted helper ----------
+# Plan 0019, Step 3. The listing code below is never reached in this mode, and this block is never
+# reached by a listing, so the two cannot change each other's answers (AC6). The helper is the
+# repo's own copy, received through adoption and kept current by /t4:sync-sdlc; nothing here
+# creates, repairs or substitutes it, and its absence is never answered with a listing instead.
+#
+# The ID is handed over as one literal argv element — never through a shell string — and the
+# helper validates it. Its contract: exit 0 with the field/value table on stdout, passed through
+# byte for byte; exit 2 with one refusal line on stderr, printed here as the answer with exit 0
+# like every other state refusal; anything else is a runtime failure, reported on stderr with a
+# non-zero exit so it is never mistaken for a refusal or a status.
+if [ "$HAS_DELIVERY" = 1 ]; then
+  helper=ai-factory/make/delivery-status.js
+  missing=""
+  for f in "$helper" ai-factory/make/delivery-report.js ai-factory/make/contracts.js \
+           ai-factory/make/gate.js ai-factory/make/safe-files.js; do
+    [ -f "$f" ] || missing="${missing:+$missing, }$f"
+  done
+  if [ -n "$missing" ]; then
+    echo "--delivery needs the workspace's delivery-status helper, and this workspace is missing $missing — run /t4:sync-sdlc to receive the current ai-factory/make/ scripts (or /t4:adopt-sdlc if this repo was never adopted). Nothing was shown."
+    exit 0
+  fi
+  command -v node >/dev/null 2>&1 \
+    || { echo "state --delivery: node is not installed, so $helper cannot run. Nothing was shown." >&2; exit 1; }
+
+  # stdout goes straight through (byte-identical to the helper's); stderr is captured to decide.
+  # GIT_DIR and GIT_WORK_TREE are dropped so an inherited hook environment cannot redirect reads.
+  { err=$( unset GIT_DIR GIT_WORK_TREE; node "$helper" "$DELIVERY_ID" 2>&1 1>&3 3>&- ); rc=$?; } 3>&1
+  case "$rc" in
+    0)
+      [ -z "$err" ] || printf '%s\n' "$err" >&2
+      exit 0 ;;
+    2)
+      line=$(printf '%s' "$err" | tr '\t\r' '  ' | grep -v '^[[:space:]]*$' | head -1)
+      printf '%s\n' "${line:-delivery-status: the helper refused the request without saying why}"
+      exit 0 ;;
+    *)
+      # A crash prints a stack; keep its error line, on one line and without tabs.
+      line=$(printf '%s' "$err" | tr '\t\r' '  ' | grep -E '^[[:space:]]*[A-Za-z]*Error([: ]|$)|^delivery-status:' | head -1)
+      [ -n "$line" ] || line=$(printf '%s' "$err" | tr '\t\r' '  ' | grep -v '^[[:space:]]*$' | head -1)
+      echo "state --delivery: $helper failed (exit $rc): ${line:-no diagnostic} — this is a runtime failure, not a status or a refusal; if the workspace's ai-factory/make/ scripts are outdated, /t4:sync-sdlc updates them." >&2
+      exit "$rc" ;;
+  esac
+fi
 
 TAB=$'\t'
 ROWS=""           # sort key, tab, sort key, tab, the row itself — sorted and cut below

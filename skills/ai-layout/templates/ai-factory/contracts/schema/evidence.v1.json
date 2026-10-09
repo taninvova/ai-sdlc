@@ -53,7 +53,13 @@
     },
     "status": { "enum": ["passed", "failed", "not_run", "unavailable"] },
     "reason": { "type": "string" },
-    "review": { "type": "object" },
+    "review": {
+      "type": "object",
+      "properties": {
+        "independence": { "enum": ["independent", "self", "unspecified"], "description": "Optional provenance: who reviewed. make review records independent; absent in evidence recorded before provenance existed." },
+        "boundary": { "type": "string", "description": "Optional: where the review ran, for example make review." }
+      }
+    },
     "output_ref": { "type": "string", "pattern": "^ai-factory/runs/evidence/[^/]+/[^/]+$", "description": "A reference only; validation never reads it." },
     "output_sha256": { "type": "string" },
     "started_at": { "type": "string" },

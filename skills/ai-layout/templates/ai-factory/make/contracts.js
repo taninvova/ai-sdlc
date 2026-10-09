@@ -7,7 +7,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const { spawn, execFileSync } = require("node:child_process");
 const { boundary } = require("./safe-files.js");
-const { digest } = require("./gate.js");
+const { digest, assuranceModule } = require("./gate.js");
 // Preserve the invoked workspace when its entry point is a source-repo symlink (see runner.js).
 const ENTRY_DIRECTORY =
 	require.main === module ? path.dirname(process.argv[1]) : __dirname;
@@ -181,6 +181,33 @@ function readConfig(ctx) {
 			exclude: scope.exclude || [],
 		},
 		completion,
+	};
+}
+// The assurance policy over this configuration and the completion policy it makes effective.
+// The configuration itself is never rewritten. Without a selection the completion policy is the
+// configured one, unchanged; with one, each requirement is the stronger of the two, so a preset
+// can only add requirements. `policy` is null only where make/assurance.js is not installed.
+function assurance(ctx, env = process.env) {
+	ctx.config = ctx.config || readConfig(ctx);
+	const helper = assuranceModule(ctx.root);
+	if (!helper) return { policy: null, completion: ctx.config.completion };
+	const selection = helper.readSelection(ctx.root);
+	const policy = {
+		...helper.resolve({ preset: selection.preset, contracts: ctx.config, env }),
+		selection: { file: "ai-factory/assurance.json", selected: selection.selected },
+	};
+	if (selection.preset === null) return { policy, completion: ctx.config.completion };
+	const base = ctx.config.completion;
+	const settings = policy.settings;
+	const severities = ["blocker", "major", "minor"];
+	return {
+		policy,
+		completion: {
+			require_review: base.require_review === true || settings.review_required.value === true,
+			require_review_quick: base.require_review_quick === true || settings.review_required_quick.value === true,
+			blocking_severities: severities.filter((item) => base.blocking_severities.includes(item) || settings.blocking_severities.value.includes(item)),
+			allow_attestation: base.allow_attestation,
+		},
 	};
 }
 function isLink(file) {
@@ -1213,6 +1240,10 @@ function recordReview(options) {
 					}))
 				: null,
 			...(options.reason ? { reason: options.reason } : {}),
+			// Provenance: who reviewed. Only the headless review boundary (make review) records an
+			// independent review; anything else is labelled as what it is, never as independent.
+			independence: ["independent", "self"].includes(options.independence) ? options.independence : "unspecified",
+			boundary: typeof options.boundary === "string" && options.boundary ? options.boundary.slice(0, 100) : "unspecified",
 		},
 		started_at: options.started || new Date().toISOString(),
 		finished_at: new Date().toISOString(),
@@ -1461,6 +1492,7 @@ module.exports = {
 	guardPath,
 	readInside,
 	readConfig,
+	assurance,
 	scan,
 	readEvidence,
 	stateOf,

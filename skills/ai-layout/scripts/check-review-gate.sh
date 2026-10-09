@@ -8,7 +8,7 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { boundary } = require("./skills/ai-layout/templates/ai-factory/make/safe-files.js");
 const gateFile = path.resolve("skills/ai-layout/templates/ai-factory/make/gate.js");
-const { digest } = require(gateFile);
+const { digest, evaluate } = require(gateFile);
 const safe = boundary(path.resolve("ai-factory"));
 const scratch = safe.scratch(path.resolve("ai-factory/runs/tmp"));
 const file = path.join(scratch,"run.json");
@@ -66,6 +66,21 @@ try {
  for(const text of ["not JSONL\n",JSON.stringify({type:"turn.failed"})+"\n",stream+JSON.stringify({type:"error"})+"\n"]) {
   fs.writeFileSync(file,text);const invalid=[...bound];invalid[5]=digest(fs.readFileSync(file));code(gate(invalid),1);
  }
- console.log("PASS: strict review schema, advisory/enforced settings, current-run hashes, and Codex sidecar identity");
+ // Assurance presets (spec 0021) share one enforcement rule; without a preset nothing changes.
+ write({...approved,verdict:"request_changes"});
+ const legacyText=evaluate({file},"").message.split("\n").at(-1);
+ assert.equal(legacyText,"gate: advisory — approval requirements not met","legacy advisory text is unchanged");
+ const standard=evaluate({file},"","standard");
+ assert.equal(standard.code,0,"standard keeps an advisory gate");
+ assert.match(standard.message,/gate: advisory \(preset standard\) — approval requirements not met; an advisory exit is not approval/);
+ assert.equal(evaluate({file},"1","standard").code,1,"a stricter GATE_ENFORCE=1 applies under standard");
+ assert.equal(evaluate({file},"","strict").code,1,"strict enforces without GATE_ENFORCE");
+ assert.equal(evaluate({file},"1","strict").code,1);
+ const conflict=evaluate({file},"0","strict");
+ assert.equal(conflict.code,2);assert.match(conflict.message,/E_GATE_CONFLICT/);
+ assert.equal(evaluate({file},"yes","standard").code,2,"invalid GATE_ENFORCE stays an error under a preset");
+ assert.doesNotMatch(evaluate({file},"","light").message,/not approval/,"light requires no review, so no approval note");
+ write(approved);assert.equal(evaluate({file},"","strict").code,0,"strict accepts a valid approval");
+ console.log("PASS: strict review schema, advisory/enforced settings, current-run hashes, and Codex sidecar identity; preset enforcement (advisory standard, enforced strict, GATE_ENFORCE=0 conflict)");
 } finally { fs.rmSync(scratch,{recursive:true,force:true}); }
 NODE

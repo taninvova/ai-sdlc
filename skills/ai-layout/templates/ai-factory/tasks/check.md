@@ -9,6 +9,11 @@ supplied input with another diff. Review against the named spec/plan or the requ
 checklist for a small change. Report exactly one JSON object using the reviewer's schema, with
 scope, reviewed paths and any assessment in summary. Add no prose outside that object.
 Do not fix files or change the index. An in-session review is a self-check, not an independent opinion.
+Assurance, only when `ai-factory/assurance.json` exists: run the read-only
+`node ai-factory/make/assurance.js show` and name the preset and its review requirement in summary.
+Only the headless `make -f ai-factory/make/ai.mk review DELIVERY=<id>` run records independent review; when
+the preset requires it, an interactive review says in summary that it does not satisfy that
+requirement. Never run `make -f ai-factory/make/ai.mk review` from this task: a review never launches another.
 After review, `/t4:report <delivery id>` assembles the completion report where artifact contracts are enabled.
 
 Lifecycle telemetry, only when `ai-factory/contracts/config.json` sets `"lifecycle": {"enabled": true}`:

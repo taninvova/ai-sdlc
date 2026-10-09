@@ -1,0 +1,5 @@
+Implemented the empty-array fix. `sum` now uses `0` as the `reduce` initial value, and the regression test confirms `sum([]) === 0` while the existing nonempty sum test still passes.
+
+The regression failed before the fix with `Reduce of empty array with no initial value`. `make lint typecheck test` passed after the fix. The only available spec is the scaffold spec, which marks application features out of scope; it doesn’t define `sum`, so the behavior was unspecified rather than incorrectly specified.
+
+Changed: [app.js](/private/tmp/claude-501/-Users-Volodymyr-Tanin-code-ai-sdlc-t4-ai-sdlc-plugin/2fcda2c6-b07c-457d-9ea4-79300d0a3bb4/scratchpad/before-head/ai-factory/runs/tmp/run-r6Y6PY/bug-1-candidate/app.js) and [test/app.test.js](/private/tmp/claude-501/-Users-Volodymyr-Tanin-code-ai-sdlc-t4-ai-sdlc-plugin/2fcda2c6-b07c-457d-9ea4-79300d0a3bb4/scratchpad/before-head/ai-factory/runs/tmp/run-r6Y6PY/bug-1-candidate/test/app.test.js). Self-review found no unrelated changes.

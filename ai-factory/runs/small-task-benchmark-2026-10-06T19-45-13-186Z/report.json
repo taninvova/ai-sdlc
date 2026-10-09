@@ -1,0 +1,449 @@
+{
+  "schema": "t4-workflow-evaluation-report",
+  "version": 1,
+  "run": {
+    "startedAt": "2026-10-06T19:45:13.187Z",
+    "baselineCommit": "8c68cb20282ae897a9f2a3dccbcaa1d50ca5af1a",
+    "promptProtocol": 2,
+    "settings": {
+      "model": "gpt-6-luna",
+      "model_reasoning_effort": "medium",
+      "model_provider": null
+    },
+    "cliVersion": "codex-cli 0.160.0",
+    "rubric": {
+      "path": "skills/ai-layout/fixtures/workflow-evaluations/rubric.json",
+      "version": 1,
+      "digest": "04dbe6439a0f0955221c7331bc9d9efe1946845c4ea09b38fb3a807084077a00"
+    },
+    "adaptation": "inline-agents",
+    "jobs": 1,
+    "timeoutMs": 150000
+  },
+  "sources": {
+    "records": "records.json",
+    "judgments": null,
+    "costLinks": null,
+    "lifecycleReport": null
+  },
+  "sample": {
+    "runs": {
+      "total": 2,
+      "baseline": 1,
+      "candidate": 1
+    },
+    "scenarios": [
+      "bug"
+    ],
+    "pairs": {
+      "total": 1,
+      "matched": 0,
+      "mismatched": 0,
+      "unverified": 1,
+      "incomplete": 0,
+      "qualityComparable": 0
+    }
+  },
+  "totals": {
+    "baseline": {
+      "runs": 1,
+      "completion": {
+        "completed": 1,
+        "blocked": 0,
+        "failed": 0,
+        "interrupted": 0,
+        "unknown": 0
+      },
+      "requirements": {
+        "satisfied": 3,
+        "unmet": 0,
+        "unassessed": 0
+      },
+      "defectChecks": {
+        "satisfied": 2,
+        "unmet": 0,
+        "unassessed": 0
+      },
+      "missedRequirements": {
+        "total": 0,
+        "knownSubtotal": 0,
+        "knownRuns": 1,
+        "unknownRuns": 0
+      },
+      "escapedDefects": {
+        "total": 0,
+        "knownSubtotal": 0,
+        "knownRuns": 1,
+        "unknownRuns": 0
+      },
+      "unnecessaryQuestions": {
+        "total": null,
+        "knownSubtotal": 0,
+        "knownRuns": 0,
+        "unknownRuns": 1
+      },
+      "questions": {
+        "observed": {
+          "total": null,
+          "knownSubtotal": 0,
+          "knownRuns": 0,
+          "unknownRuns": 1
+        },
+        "necessary": 0,
+        "unnecessary": 0,
+        "uncertain": 0
+      },
+      "legacyAssertions": {
+        "passed": 1,
+        "recorded": 1
+      }
+    },
+    "candidate": {
+      "runs": 1,
+      "completion": {
+        "completed": 1,
+        "blocked": 0,
+        "failed": 0,
+        "interrupted": 0,
+        "unknown": 0
+      },
+      "requirements": {
+        "satisfied": 3,
+        "unmet": 0,
+        "unassessed": 0
+      },
+      "defectChecks": {
+        "satisfied": 2,
+        "unmet": 0,
+        "unassessed": 0
+      },
+      "missedRequirements": {
+        "total": 0,
+        "knownSubtotal": 0,
+        "knownRuns": 1,
+        "unknownRuns": 0
+      },
+      "escapedDefects": {
+        "total": 0,
+        "knownSubtotal": 0,
+        "knownRuns": 1,
+        "unknownRuns": 0
+      },
+      "unnecessaryQuestions": {
+        "total": null,
+        "knownSubtotal": 0,
+        "knownRuns": 0,
+        "unknownRuns": 1
+      },
+      "questions": {
+        "observed": {
+          "total": null,
+          "knownSubtotal": 0,
+          "knownRuns": 0,
+          "unknownRuns": 1
+        },
+        "necessary": 0,
+        "unnecessary": 0,
+        "uncertain": 0
+      },
+      "legacyAssertions": {
+        "passed": 1,
+        "recorded": 1
+      }
+    }
+  },
+  "runs": [
+    {
+      "id": "bug-1-baseline",
+      "scenario": "bug",
+      "variant": "baseline",
+      "repetition": 1,
+      "completion": {
+        "process": {
+          "exitCode": 0,
+          "signal": null,
+          "error": null,
+          "timedOut": false,
+          "ok": true
+        },
+        "reported": "completed",
+        "status": "completed",
+        "source": "marker",
+        "adjudication": null
+      },
+      "quality": {
+        "satisfied": true,
+        "reason": "every requirement satisfied; no escaped defect"
+      },
+      "metrics": {
+        "missedRequirements": {
+          "count": 0,
+          "unmet": [],
+          "unassessed": []
+        },
+        "escapedDefects": {
+          "count": 0,
+          "origin": "fixture-detected",
+          "items": [],
+          "unassessed": []
+        },
+        "unnecessaryQuestions": {
+          "review": "absent",
+          "reviewer": null,
+          "transcript": null,
+          "observed": null,
+          "necessary": 0,
+          "unnecessary": 0,
+          "uncertain": 0,
+          "count": null,
+          "judgments": [],
+          "reason": "unknown: no question review recorded; an absent review is not zero"
+        },
+        "completionTime": {
+          "boundary": "codex exec process: spawn to close, including CLI startup and model scheduling; excludes fixture setup, evaluation and human waiting",
+          "elapsedMs": 34213.077333,
+          "completedDeliveryMs": 34213.077333
+        },
+        "cost": {
+          "status": "unknown",
+          "totalUsd": null,
+          "knownSubtotalUsd": null,
+          "unknownRecords": null,
+          "basis": null,
+          "billed": false,
+          "source": null,
+          "tokens": {
+            "source": "codex exec turn.completed usage",
+            "events": 1,
+            "input_tokens": 195341,
+            "cached_input_tokens": 178944,
+            "output_tokens": 1128,
+            "reasoning_output_tokens": 175
+          },
+          "tokenSource": "benchmark",
+          "reason": "unknown: no linked monetary evidence; tokens are observed, not priced"
+        }
+      },
+      "outcomes": {
+        "requirements": {
+          "satisfied": 3,
+          "unmet": 0,
+          "unassessed": 0
+        },
+        "defectChecks": {
+          "satisfied": 2,
+          "unmet": 0,
+          "unassessed": 0
+        }
+      },
+      "legacyAssertions": true,
+      "evidence": [
+        "bug-1-baseline/record.json",
+        "bug-1-baseline/final.txt",
+        "bug-1-baseline/events.jsonl",
+        "bug-1-baseline/stderr.txt",
+        "bug-1-baseline/diff.patch",
+        "bug-1-baseline/status.txt",
+        "bug-1-baseline/prompt.txt"
+      ]
+    },
+    {
+      "id": "bug-1-candidate",
+      "scenario": "bug",
+      "variant": "candidate",
+      "repetition": 1,
+      "completion": {
+        "process": {
+          "exitCode": 0,
+          "signal": null,
+          "error": null,
+          "timedOut": false,
+          "ok": true
+        },
+        "reported": "completed",
+        "status": "completed",
+        "source": "marker",
+        "adjudication": null
+      },
+      "quality": {
+        "satisfied": true,
+        "reason": "every requirement satisfied; no escaped defect"
+      },
+      "metrics": {
+        "missedRequirements": {
+          "count": 0,
+          "unmet": [],
+          "unassessed": []
+        },
+        "escapedDefects": {
+          "count": 0,
+          "origin": "fixture-detected",
+          "items": [],
+          "unassessed": []
+        },
+        "unnecessaryQuestions": {
+          "review": "absent",
+          "reviewer": null,
+          "transcript": null,
+          "observed": null,
+          "necessary": 0,
+          "unnecessary": 0,
+          "uncertain": 0,
+          "count": null,
+          "judgments": [],
+          "reason": "unknown: no question review recorded; an absent review is not zero"
+        },
+        "completionTime": {
+          "boundary": "codex exec process: spawn to close, including CLI startup and model scheduling; excludes fixture setup, evaluation and human waiting",
+          "elapsedMs": 43612.581833,
+          "completedDeliveryMs": 43612.581833
+        },
+        "cost": {
+          "status": "unknown",
+          "totalUsd": null,
+          "knownSubtotalUsd": null,
+          "unknownRecords": null,
+          "basis": null,
+          "billed": false,
+          "source": null,
+          "tokens": {
+            "source": "codex exec turn.completed usage",
+            "events": 1,
+            "input_tokens": 192826,
+            "cached_input_tokens": 177920,
+            "output_tokens": 1684,
+            "reasoning_output_tokens": 244
+          },
+          "tokenSource": "benchmark",
+          "reason": "unknown: no linked monetary evidence; tokens are observed, not priced"
+        }
+      },
+      "outcomes": {
+        "requirements": {
+          "satisfied": 3,
+          "unmet": 0,
+          "unassessed": 0
+        },
+        "defectChecks": {
+          "satisfied": 2,
+          "unmet": 0,
+          "unassessed": 0
+        }
+      },
+      "legacyAssertions": true,
+      "evidence": [
+        "bug-1-candidate/record.json",
+        "bug-1-candidate/final.txt",
+        "bug-1-candidate/events.jsonl",
+        "bug-1-candidate/stderr.txt",
+        "bug-1-candidate/diff.patch",
+        "bug-1-candidate/status.txt",
+        "bug-1-candidate/prompt.txt"
+      ]
+    }
+  ],
+  "pairs": [
+    {
+      "pair": "bug-1",
+      "scenario": "bug",
+      "repetition": 1,
+      "baseline": "bug-1-baseline",
+      "candidate": "bug-1-candidate",
+      "status": "unverified",
+      "comparable": false,
+      "mismatches": [],
+      "unknown": [
+        "settings.model_provider"
+      ],
+      "order": [
+        "baseline",
+        "candidate"
+      ],
+      "concurrency": 1,
+      "elapsed": {
+        "baselineMs": 34213.077333,
+        "candidateMs": 43612.581833
+      },
+      "quality": {
+        "baseline": {
+          "satisfied": true,
+          "reason": "every requirement satisfied; no escaped defect"
+        },
+        "candidate": {
+          "satisfied": true,
+          "reason": "every requirement satisfied; no escaped defect"
+        }
+      },
+      "eligible": false,
+      "completionTime": {
+        "baselineMs": 34213.077333,
+        "candidateMs": 43612.581833,
+        "deltaMs": null,
+        "claim": false,
+        "reason": "no comparison: unknown conditions (settings.model_provider)"
+      },
+      "cost": {
+        "baselineUsd": null,
+        "candidateUsd": null,
+        "deltaUsd": null,
+        "claim": false,
+        "basis": {
+          "baseline": null,
+          "candidate": null
+        },
+        "billed": false,
+        "reason": "no comparison: unknown conditions (settings.model_provider)"
+      }
+    }
+  ],
+  "missingness": {
+    "missedRequirements": {
+      "unknown": 0,
+      "of": 2,
+      "runs": []
+    },
+    "escapedDefects": {
+      "unknown": 0,
+      "of": 2,
+      "runs": []
+    },
+    "unnecessaryQuestions": {
+      "unknown": 2,
+      "of": 2,
+      "runs": [
+        {
+          "id": "bug-1-baseline",
+          "reason": "unknown: no question review recorded; an absent review is not zero"
+        },
+        {
+          "id": "bug-1-candidate",
+          "reason": "unknown: no question review recorded; an absent review is not zero"
+        }
+      ]
+    },
+    "completionTime": {
+      "unknown": 0,
+      "of": 2,
+      "runs": []
+    },
+    "cost": {
+      "unknown": 2,
+      "of": 2,
+      "runs": [
+        {
+          "id": "bug-1-baseline",
+          "reason": "unknown: no linked monetary evidence; tokens are observed, not priced"
+        },
+        {
+          "id": "bug-1-candidate",
+          "reason": "unknown: no linked monetary evidence; tokens are observed, not priced"
+        }
+      ]
+    }
+  },
+  "boundaries": {
+    "completionTime": "codex exec process: spawn to close, including CLI startup and model scheduling; excludes fixture setup, evaluation and human waiting",
+    "cost": "no linked lifecycle evidence: every cost is unknown; observed tokens are shown, not priced, and no figure is a billed amount",
+    "escapedDefects": "fixture-detected: evaluator defect checks that failed after the run reported completion; not production defects"
+  }
+}

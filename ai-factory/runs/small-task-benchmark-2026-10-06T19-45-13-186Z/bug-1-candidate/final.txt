@@ -1,0 +1,7 @@
+Fixed `sum([])` to return `0` by passing `0` as `reduce`’s initial value. The existing nonempty-array test still passes.
+
+The regression test failed before the fix with `Reduce of empty array with no initial value`. The scaffold spec marks application features out of scope, so it does not define this behavior; it was incomplete for the requested behavior.
+
+Changed [app.js](/Users/Volodymyr_Tanin/code/ai-sdlc/t4/ai-sdlc-plugin/ai-factory/runs/tmp/run-pMNzUS/bug-1-candidate/app.js) and [test/app.test.js](/Users/Volodymyr_Tanin/code/ai-sdlc/t4/ai-sdlc-plugin/ai-factory/runs/tmp/run-pMNzUS/bug-1-candidate/test/app.test.js). `make lint`, `make typecheck`, `make test`, and `git diff --check` passed.
+
+Completion status: completed

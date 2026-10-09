@@ -65,7 +65,28 @@
     "contract_status": { "enum": ["valid", "invalid", "stale", "legacy_unverified"] },
     "changes": { "type": "object", "required": ["base", "counts", "total", "paths", "truncated"], "description": "Paths and status letters only, never file contents." },
     "verification": { "type": "array", "description": "Commands, exit codes, signals and output references; logs are never inlined." },
-    "review": { "type": "object", "required": ["required", "evidence", "state", "status", "verdict", "findings"] },
+    "review": {
+      "type": "object",
+      "required": ["required", "evidence", "state", "status", "verdict", "findings"],
+      "properties": {
+        "independence": { "enum": ["independent", "self", "unspecified", null], "description": "Optional. Recorded review provenance; null when no review, or review evidence predates provenance. Only make review records independent." }
+      }
+    },
+    "assurance": {
+      "type": "object",
+      "description": "Optional; present only when an assurance preset is selected (ai-factory/assurance.json). The resolved policy the report applied, as make/assurance.js show --json prints it. Readers must accept reports without it.",
+      "required": ["schema", "version", "mode", "preset", "status", "settings", "conflicts", "unmet"],
+      "properties": {
+        "schema": { "const": "t4-assurance-policy" },
+        "version": { "const": 1 },
+        "mode": { "const": "preset" },
+        "preset": { "enum": ["light", "standard", "strict"] },
+        "status": { "enum": ["active", "incomplete", "conflict"] },
+        "settings": { "type": "object", "additionalProperties": { "type": "object", "required": ["value", "source", "retained"] } },
+        "conflicts": { "type": "array", "items": { "type": "object", "required": ["code", "message", "hint"] } },
+        "unmet": { "type": "array", "items": { "type": "object", "required": ["code", "message", "hint"] } }
+      }
+    },
     "attestations": { "type": "array" },
     "limitations": { "type": "object", "required": ["open_questions", "risks", "follow_up"] },
     "telemetry": {

@@ -20,6 +20,8 @@ fs.mkdirSync(path.join(payload, "tasks"), { recursive: true });
 fs.cpSync(path.join(repo, "skills/ai-layout/templates/ai-factory/make"), path.join(payload, "make"), { recursive: true });
 fs.writeFileSync(path.join(payload, "tasks/chore.md"), "fixture task");
 fs.writeFileSync(path.join(payload, "tasks/check.md"), "fixture check");
+fs.writeFileSync(path.join(payload, "tasks/start.md"), "fixture classifier");
+fs.writeFileSync(path.join(payload, "tasks/continue.md"), "fixture continuation");
 const fake = path.join(root, "fake cli");
 fs.writeFileSync(fake, `#!/usr/bin/env node
 const fs = require('node:fs'), path = require('node:path');
@@ -72,6 +74,20 @@ async function asyncRun(extra = {}) {
 }
 (async () => {
  try {
+  for (const tool of ["claude", "codex"]) {
+   const result = invoke({ TOOL: tool, TASK: "start" });
+   assert.notEqual(result.status, 0);
+   assert.match(result.stderr, /interactive.*destination task/s);
+   assert.equal(captures().length, 0);
+   assert.equal(fs.existsSync(runs), false, "start rejection creates no run artifacts");
+  }
+  for (const tool of ["claude", "codex"]) {
+   const result = invoke({ TOOL: tool, TASK: "continue", INPUT: "d-20260101-abcdef" });
+   assert.notEqual(result.status, 0);
+   assert.match(result.stderr, /TASK=continue requires an interactive session.*plan, test, run, check or report/s);
+   assert.equal(captures().length, 0, "continue rejection reaches no CLI");
+   assert.equal(fs.existsSync(runs), false, "continue rejection creates no run artifacts");
+  }
   for (const tool of ["claude", "codex"]) {
    for (const model of [`$(touch '${marker}')`, "`touch '" + marker + "'`", `alias with spaces; touch '${marker}'`, 'alias"quote']) {
     modelFile(`${tool}: ${JSON.stringify(model)}\n`);

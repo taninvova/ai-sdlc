@@ -12,6 +12,13 @@ Exit 0 means `ready`, 1 means another status (the report is still written), 2 me
 not be generated. Report the status, every listed reason with its evidence reference, and the
 two file paths.
 
+Assurance, only when `ai-factory/assurance.json` exists: first run `node ai-factory/make/assurance.js show`
+and report the preset and effective requirements. After the report, run
+`node ai-factory/make/assurance.js complete <id>` and report whether completion may be claimed (exit 0)
+and each open reason. It evaluates current evidence: under strict it regenerates the report, and
+only that fresh report, `ready`, permits completion; an earlier saved report never counts. Under
+standard a saved report is optional. Never claim completion while it exits non-zero.
+
 Do not rerun checks to change the result, do not edit the report, and publish nothing: no tracker
 comment, no MR, no commit. The MR description inside the report is a draft for the developer.
 When the status is not `ready`, name the command that addresses each reason (`make … verify`,

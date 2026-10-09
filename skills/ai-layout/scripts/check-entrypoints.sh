@@ -69,6 +69,9 @@ done
 # pre-1.0.0 path, so the two lines say so rather than being contorted to please the scanner.
 [ -e "$T/specs/0000-scaffold.md" ] || fail "the templates no longer carry the scaffold spec"  # path-scan-ok
 [ -e "$T/adr/0000-template.md" ]   || fail "the templates no longer carry the ADR template"  # path-scan-ok
+for entry in tasks/start.md tasks/continue.md make/continue.js make/delivery-status.js; do
+  [ -f "$T/$entry" ] || fail "the templates no longer carry $entry — adopted repos would lose that interactive entry"
+done
 for d in tasks agents docs; do
   n=$(ls "$T/$d"/*.md 2>/dev/null | wc -l | tr -d ' ')
   [ "$n" -gt 0 ] || fail "$T/$d/ holds no .md files"

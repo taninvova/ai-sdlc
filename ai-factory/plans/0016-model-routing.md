@@ -1,6 +1,6 @@
 # Plan 0016 — Automatic model selection for CLI and interactive sessions
 
-**Status:** Implemented with deterministic evidence. Steps 1–6 are checked off. Step 7 stays open until opt-in smoke runs on real hosts prove interactive routing with real gateway aliases. Those runs are the release criterion for claiming a host supported.
+**Status:** Complete. Steps 1–7 are checked off. Step 7 was marked complete by the owner on 2026-10-05 without the opt-in real-host smoke runs; interactive routing on each host remains implemented but unverified until those runs are captured.
 
 **Goal:** Resolve a per-task model from `ai-factory/models.yaml` once, and enforce it for headless runs and interactive tasks, never falling back to another model.
 
@@ -53,10 +53,10 @@ Design consequences:
   - Doctor gains a routing section: invalid configuration, orphan mappings, missing or stale agents, host override.
   - Adoption still refuses over an existing workspace, so a customized configuration survives.
   - **Verify:** `check-interactive-model-routing.sh` (doctor and adoption cases), `check-doctor.sh`.
-- [ ] **Step 7 — Document and verify the release.** AC1–AC17.
+- [x] **Step 7 — Document and verify the release.** AC1–AC17.
   - Workflow guide, README, FACTORY.md, the layout skill, architecture, changelog and version: done.
   - Deterministic checks: `make check` passes.
-  - **Open.** Opt-in smoke runs on real hosts, in a disposable adopted project, with valid gateway aliases. Plan, then test, in one Claude Code session and in one Codex session. Capture the host's invocation or configuration evidence, and the provider-side model where needed. These have not been run. Until they are, interactive routing on each host is implemented but unverified.
+  - **Waived by the owner (2026-10-05).** Opt-in smoke runs on real hosts, in a disposable adopted project, with valid gateway aliases. Plan, then test, in one Claude Code session and in one Codex session. Capture the host's invocation or configuration evidence, and the provider-side model where needed. These have not been run. Until they are, interactive routing on each host is implemented but unverified.
 
 ## Risks and how each is checked
 
@@ -65,7 +65,7 @@ Design consequences:
 | Ambiguous override precedence | The resolution matrix in `check-model-selection.sh`, and the argv checks through Make in `check-runner-security.sh` |
 | The custom YAML subset accepts a typo | 28 rejected configurations, each asserted by line |
 | A stale native binding runs the old model | Content-addressed names: an edited mapping yields a new agent; dispatch compares the file byte for byte |
-| Claiming more host control than verified | The matrix above marks what is unverified; the workflow guide says so; Step 7 stays open |
+| Claiming more host control than verified | The matrix above marks what is unverified; the workflow guide says so; Step 7 records the waived smoke runs |
 | The chat does the task itself | Directive text, a worker that forbids redispatch, and the Codex fallback limited to the legacy and inherit directives. Prompt behavior itself is only provable by a host smoke run |
 
 ## Verification commands

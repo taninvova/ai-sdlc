@@ -36,9 +36,69 @@ node -e 'const m=require(process.argv[1]);
   if(Object.keys(m.files).some(k=>k.startsWith("ai-factory/runs/")))throw new Error("ai-factory/runs must be skipped");
 ' "$REPO/ai-factory/.sdlc.json"
 
+echo "== start adoption and drift preserve local work =="
+node - "$REPO" "$PLUG" "$TMP" "$M" <<'NODE'
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const {spawnSync} = require('node:child_process');
+const [fresh, plugin, tmp, manifest] = process.argv.slice(2);
+const task = 'ai-factory/tasks/start.md';
+assert.ok(fs.existsSync(path.join(fresh, task)), 'fresh adoption includes start');
+assert.ok(JSON.parse(fs.readFileSync(path.join(fresh,'ai-factory/.sdlc.json'))).files[task], 'manifest discovers start');
+for (const file of ['ai-factory/tasks/continue.md', 'ai-factory/make/continue.js', 'ai-factory/make/delivery-status.js', 'ai-factory/make/assurance.js']) {
+ assert.ok(fs.existsSync(path.join(fresh, file)), `fresh adoption includes ${file}`);
+ assert.ok(JSON.parse(fs.readFileSync(path.join(fresh,'ai-factory/.sdlc.json'))).files[file], `manifest discovers ${file}`);
+}
+function snapshot(root) {
+ return fs.readdirSync(root, {withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name)).map(e => {
+  const file = path.join(root,e.name);
+  return [e.name,e.isDirectory() ? snapshot(file) : fs.readFileSync(file).toString('base64')];
+ });
+}
+for (const mode of ['older', 'modified']) {
+ const repo = path.join(tmp, `start-${mode}`);
+ fs.cpSync(fresh,repo,{recursive:true});
+ if (mode === 'older') {
+  fs.unlinkSync(path.join(repo, task));
+  const file = path.join(repo,'ai-factory/.sdlc.json');
+  const value = JSON.parse(fs.readFileSync(file)); delete value.files[task]; fs.writeFileSync(file,JSON.stringify(value));
+ } else fs.appendFileSync(path.join(repo,task),'\nLocal classification rule.\n');
+ fs.writeFileSync(path.join(repo,'untracked-user-note'),'preserve me');
+ const before = snapshot(repo);
+ const result = spawnSync(process.execPath,[manifest,'check',repo,plugin],{encoding:'utf8'});
+ assert.equal(result.status,0,result.stderr);
+ assert.match(result.stdout,/ai-factory\/tasks\/start\.md/);
+ assert.match(result.stdout,mode === 'older' ? /new upstream/ : /locally modified/);
+ assert.deepEqual(snapshot(repo),before,'drift inspection changed user files or generated adapters');
+ for (const host of ['.claude','.codex','.cursor']) assert.equal(fs.existsSync(path.join(repo,host)),false);
+}
+NODE
+
 echo "== clean check =="
 node "$M" check "$REPO" "$PLUG" > "$TMP/o"; has "$TMP/o" "up to date"
 hasnt "$TMP/o" "upstream changed"
+
+echo "== assurance selection, local configuration and evidence stay the adopter's =="
+# Opt-in presets: adoption ships no selection; check and a manifest rewrite neither track nor touch
+# ai-factory/assurance.json, a customized contracts configuration or recorded evidence.
+[ ! -e "$REPO/ai-factory/assurance.json" ] || fail "adoption selected an assurance preset"
+SEL=$TMP/selected; cp -R "$REPO" "$SEL"
+mkdir -p "$SEL/ai-factory/contracts" "$SEL/ai-factory/evidence/d-20260101-abcdef"
+printf '{"schema":"t4-assurance","version":1,"preset":"standard"}\n' > "$SEL/ai-factory/assurance.json"
+printf '{"schema":"t4-contracts-config","version":1,"code_scope":{"include":["src/**"],"exclude":[]},"completion":{"require_review_quick":true}}\n' > "$SEL/ai-factory/contracts/config.json"
+printf '{"recorded":true}\n' > "$SEL/ai-factory/evidence/d-20260101-abcdef/final.json"
+KEPT=$(cd "$SEL" && shasum ai-factory/assurance.json ai-factory/contracts/config.json ai-factory/evidence/d-20260101-abcdef/final.json)
+BEFORE=$(find "$SEL" -type f -exec shasum {} \; | sort | shasum)
+node "$M" check "$SEL" "$PLUG" > "$TMP/o"; has "$TMP/o" "up to date"
+hasnt "$TMP/o" "assurance.json"; hasnt "$TMP/o" "ai-factory/evidence/"; hasnt "$TMP/o" "contracts/config.json"
+[ "$BEFORE" = "$(find "$SEL" -type f -exec shasum {} \; | sort | shasum)" ] || fail "check modified a repo with a preset selected"
+node "$M" write "$SEL" "$PLUG" > /dev/null
+[ "$KEPT" = "$(cd "$SEL" && shasum ai-factory/assurance.json ai-factory/contracts/config.json ai-factory/evidence/d-20260101-abcdef/final.json)" ] || fail "a manifest rewrite changed the selection, configuration or evidence"
+node -e 'const m=require(process.argv[1]);
+  for(const k of Object.keys(m.files))if(k==="ai-factory/assurance.json"||k.startsWith("ai-factory/evidence/")||k==="ai-factory/contracts/config.json")throw new Error(`manifest tracks adopter-owned ${k}`);
+  if(!m.files["ai-factory/make/assurance.js"])throw new Error("manifest does not track the assurance helper");
+' "$SEL/ai-factory/.sdlc.json"
 
 echo "== locally modified =="
 echo "a local rule" >> "$REPO/ai-factory/docs/coding-standards.md"

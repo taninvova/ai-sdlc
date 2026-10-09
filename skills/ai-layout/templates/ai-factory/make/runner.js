@@ -5,7 +5,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const { spawn, execFileSync } = require("node:child_process");
 const { boundary, withLogLock } = require("./safe-files.js");
-const { digest } = require("./gate.js");
+const { digest, selectedPreset } = require("./gate.js");
 const models = require("./models.js");
 const lifecycleStore = require("./lifecycle-events.js")({ boundary });
 // Preserve the invoked workspace when its entry point is a source-repo symlink.
@@ -191,10 +191,31 @@ function selectionRecord(output, selection, { command, args, outcome, reason }) 
 	delete record.model;
 	safe.write(`${output}.model.json`, `${JSON.stringify(record, null, 2)}\n`, { exclusive: true });
 }
+// With a preset selected, its effective requirements are shown before any host runs, and a
+// conflicting configuration (strict with GATE_ENFORCE=0) or a malformed selection stops here.
+// Without a selection nothing is read or printed: existing behavior is unchanged.
+function assurancePreflight(env = process.env) {
+	const preset = selectedPreset(ROOT);
+	if (preset === null) return null;
+	const assurance = require("./assurance.js");
+	const policy = assurance.show({ root: ROOT, env });
+	process.stderr.write(`${assurance.describe(policy)}\n`);
+	for (const item of policy.unmet)
+		process.stderr.write(`assurance: unmet ${item.code}: ${item.message}\n  ${item.hint}\n`);
+	if (policy.conflicts.length)
+		throw new Error(
+			`assurance: preset ${preset} cannot run with this configuration; nothing was launched\n${policy.conflicts.map((item) => `  ${item.code}: ${item.message}\n  ${item.hint}`).join("\n")}`,
+		);
+	return policy;
+}
 async function run(options = {}) {
 	const env = options.env || process.env;
 	const tool = options.tool || env.TOOL || "claude";
 	const task = options.task || env.TASK || "chore";
+	if (task === "start")
+		throw new Error("TASK=start requires an interactive session in v1; CI must name a destination task such as quick, fix, chore, analyse, design, explore or spec");
+	if (task === "continue")
+		throw new Error("TASK=continue requires an interactive session in v1: it may need answers from a developer and never waits for or guesses them. Run /t4:continue <delivery> interactively, or have CI name the destination task directly: plan, test, run, check or report");
 	if (!["claude", "codex"].includes(tool))
 		throw new Error(`Unsupported tool: ${tool}`);
 	if (!/^[a-z][a-z0-9-]*$/.test(task))
@@ -220,6 +241,7 @@ async function run(options = {}) {
 		} else input = Buffer.from(env.INPUT || "", "utf8");
 	}
 	// Resolved once, before anything launches; a configuration error stops the run here.
+	assurancePreflight(env);
 	const selection = models.selectModel({
 		root: ROOT,
 		tool,
@@ -436,8 +458,9 @@ async function review() {
 		input,
 		scope: selected.selection,
 	});
+	// The workspace's own entry point, so the gate reads this workspace's assurance selection.
 	const args = [
-		path.join(__dirname, "gate.js"),
+		path.join(WORKSPACE, "make", "gate.js"),
 		result.output,
 		"--tool",
 		result.tool,
@@ -495,6 +518,9 @@ function reviewEvidence(result) {
 		tool: result.tool,
 		outputHash: result.outputHash,
 		reason,
+		// A separate headless check run that saw only the selected diff: the independent boundary.
+		independence: "independent",
+		boundary: "make review",
 	});
 	process.stdout.write(
 		`review evidence: ${recorded.evidence.status} → ${path.relative(ROOT, recorded.file)}\n`,

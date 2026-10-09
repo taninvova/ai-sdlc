@@ -1,0 +1,224 @@
+{
+	"schema": "t4-workflow-evaluation-synthetic-results",
+	"version": 1,
+	"note": "Synthetic final states for offline evaluator checks. No model produced these; each is applied over a fresh benchmark fixture and evaluated by the harness.",
+	"records": [
+		{
+			"id": "bug-completed-clean",
+			"scenario": "bug",
+			"exit": { "code": 0, "signal": null },
+			"timedOut": false,
+			"final": "Added an empty-list regression test, fixed sum and ran make test.\nCompletion status: completed\n",
+			"files": {
+				"app.js": "exports.sum = values => values.reduce((total,value)=>total+value,0);\n",
+				"test/empty.test.js": "const {test}=require('node:test');const assert=require('node:assert/strict');test('empty sum',()=>assert.equal(require('../app').sum([]),0));\n"
+			}
+		},
+		{
+			"id": "bug-completed-escape",
+			"scenario": "bug",
+			"exit": { "code": 0, "signal": null },
+			"timedOut": false,
+			"final": "Fixed sum([]) and verified the tests.\nCompletion status: completed\n",
+			"files": {
+				"app.js": "exports.sum = values => { values.push(0); return values.reduce((total,value)=>total+value); };\n",
+				"test/empty.test.js": "const {test}=require('node:test');const assert=require('node:assert/strict');test('empty sum',()=>assert.equal(require('../app').sum([]),0));\n"
+			}
+		},
+		{
+			"id": "bug-generated-test-oracle",
+			"scenario": "bug",
+			"exit": { "code": 0, "signal": null },
+			"timedOut": false,
+			"final": "All tests pass; sum([]) is fixed.\nCompletion status: completed\n",
+			"files": {
+				"test/app.test.js": "const {test}=require('node:test');test('sum',()=>{});\n"
+			}
+		},
+		{
+			"id": "escalation-exit-zero-blocked",
+			"scenario": "escalation",
+			"exit": { "code": 0, "signal": null },
+			"timedOut": false,
+			"final": "The anonymous permission policy is undecided, so I preserved app.js and stopped before changing authorize.\nCompletion status: blocked\n",
+			"files": {}
+		},
+		{
+			"id": "enhancement-interrupted",
+			"scenario": "enhancement",
+			"exit": { "code": null, "signal": "SIGTERM" },
+			"timedOut": true,
+			"final": "Completion status: completed\n",
+			"files": {
+				"app.js": "exports.displayLabel = name => name.trim() || 'Anonymous';\n"
+			}
+		},
+		{
+			"id": "docs-failed",
+			"scenario": "docs",
+			"exit": { "code": 1, "signal": null },
+			"timedOut": false,
+			"final": "",
+			"files": {}
+		},
+		{
+			"id": "docs-ambiguous-claim",
+			"scenario": "docs",
+			"exit": { "code": 0, "signal": null },
+			"timedOut": false,
+			"final": "I think the spelling is mostly sorted now.\n",
+			"files": {
+				"README.md": "Run the application locally.\n"
+			}
+		},
+		{
+			"id": "review-no-rubric",
+			"scenario": "review",
+			"exit": { "code": 0, "signal": null },
+			"timedOut": false,
+			"final": "{\"verdict\":\"request_changes\",\"findings\":[],\"summary\":\"\"}\nCompletion status: completed\n",
+			"files": {}
+		},
+		{
+			"id": "docs-reasks-spelling",
+			"scenario": "docs",
+			"exit": { "code": 0, "signal": null },
+			"timedOut": false,
+			"final": "Should I change applciation to application in README.md? The request names exactly that correction, so I applied it and ran make docs.\nCompletion status: completed\n",
+			"files": {
+				"README.md": "Run the application locally.\n"
+			}
+		},
+		{
+			"id": "escalation-asks-policy",
+			"scenario": "escalation",
+			"exit": { "code": 0, "signal": null },
+			"timedOut": false,
+			"final": "Which admin resources may unauthenticated visitors modify, and under which permission policy? That decision is undecided, so I preserved app.js and stopped before changing authorize.\nCompletion status: blocked\n",
+			"files": {}
+		}
+	],
+	"pairing": {
+		"note": "Synthetic baseline/candidate run records for offline pairing and cost checks. Each run's conditions are the shared conditions below with its own overrides; null conditions model a record written before conditions were recorded.",
+		"conditions": {
+			"protocol": 2,
+			"fixtureHash": "fixture-hash-shared",
+			"requestHash": "request-hash-shared",
+			"rubric": { "version": 1, "digest": "rubric-digest-shared" },
+			"settings": { "model": "gpt-test", "model_reasoning_effort": "medium", "model_provider": "openai" },
+			"cliVersion": "codex-cli 0.0.0-test",
+			"nodeVersion": "v22.0.0",
+			"adaptation": "inline-agents",
+			"limits": { "timeoutMs": 150000, "jobs": 1 }
+		},
+		"runs": [
+			{ "id": "bug-1-baseline", "variant": "baseline", "scenario": "bug", "repetition": 1, "order": 1, "status": "completed", "beganAt": "2026-10-01T10:00:00.000Z", "elapsedMs": 90000, "usage": [{ "input_tokens": 1200, "cached_input_tokens": 800, "output_tokens": 300 }] },
+			{ "id": "bug-1-candidate", "variant": "candidate", "scenario": "bug", "repetition": 1, "order": 2, "status": "completed", "beganAt": "2026-10-01T10:02:00.000Z", "elapsedMs": 60000, "usage": [{ "input_tokens": 900, "cached_input_tokens": 500, "output_tokens": 200, "reasoning_output_tokens": 40 }] },
+			{ "id": "docs-1-baseline", "variant": "baseline", "scenario": "docs", "repetition": 1, "order": 1, "status": "completed", "beganAt": "2026-10-01T11:00:00.000Z", "elapsedMs": 40000, "usage": [] },
+			{ "id": "docs-1-candidate", "variant": "candidate", "scenario": "docs", "repetition": 1, "order": 2, "status": "completed", "beganAt": "2026-10-01T11:01:00.000Z", "elapsedMs": 20000, "usage": [], "conditions": { "fixtureHash": "fixture-hash-other", "settings": { "model": "gpt-other" } } },
+			{ "id": "enhancement-1-baseline", "variant": "baseline", "scenario": "enhancement", "repetition": 1, "order": 1, "status": "completed", "beganAt": "2026-10-01T12:00:00.000Z", "elapsedMs": 70000, "usage": [], "conditions": { "settings": { "model": null } } },
+			{ "id": "enhancement-1-candidate", "variant": "candidate", "scenario": "enhancement", "repetition": 1, "order": 2, "status": "completed", "beganAt": "2026-10-01T12:02:00.000Z", "elapsedMs": 30000, "usage": [], "conditions": { "settings": { "model": null } } },
+			{ "id": "escalation-1-baseline", "variant": "baseline", "scenario": "escalation", "repetition": 1, "order": 1, "status": "completed", "beganAt": "2026-10-01T13:00:00.000Z", "elapsedMs": 80000, "usage": [] },
+			{ "id": "escalation-1-candidate", "variant": "candidate", "scenario": "escalation", "repetition": 1, "order": 2, "status": "interrupted", "timedOut": true, "beganAt": "2026-10-01T13:02:00.000Z", "elapsedMs": 150000, "usage": [] },
+			{ "id": "red-1-baseline", "variant": "baseline", "scenario": "red", "repetition": 1, "order": 1, "status": "completed", "beganAt": "2026-10-01T14:00:00.000Z", "elapsedMs": 50000, "usage": [] },
+			{ "id": "red-1-candidate", "variant": "candidate", "scenario": "red", "repetition": 1, "order": 2, "status": "blocked", "beganAt": "2026-10-01T14:01:00.000Z", "elapsedMs": 20000, "usage": [] },
+			{ "id": "two-step-1-baseline", "variant": "baseline", "scenario": "two-step", "repetition": 1, "order": 1, "status": "completed", "beganAt": "2026-10-01T15:00:00.000Z", "elapsedMs": 60000, "usage": [], "conditions": null },
+			{ "id": "two-step-1-candidate", "variant": "candidate", "scenario": "two-step", "repetition": 1, "order": 2, "status": "completed", "beganAt": "2026-10-01T15:01:00.000Z", "elapsedMs": 30000, "usage": [] },
+			{ "id": "review-1-baseline", "variant": "baseline", "scenario": "review", "repetition": 1, "order": 1, "status": "completed", "beganAt": "2026-10-01T16:00:00.000Z", "elapsedMs": 30000, "usage": [] }
+		],
+		"lifecycle": {
+			"schema": "t4-lifecycle-report",
+			"version": 1,
+			"generated_at": "2026-10-01T18:00:00.000Z",
+			"deliveries": [
+				{
+					"delivery_id": "bench-partial",
+					"runs": [{ "run_id": "r-partial", "session_id": "s-bug-baseline", "started_at": "2026-10-01T10:00:05.000Z", "ended_at": "2026-10-01T10:01:20.000Z" }],
+					"tokens": { "records": 2, "turns": 2, "input_tokens": 1100, "output_tokens": 280, "cache_read_tokens": 700, "cache_write_tokens": 0 },
+					"cost": { "known_usd": 0.42, "total_usd": null, "priced_records": 1, "zero_priced_records": 0, "unknown_records": 1, "provenance": { "estimated:models.yaml": 1, "unknown": 1 } }
+				},
+				{
+					"delivery_id": "bench-known",
+					"runs": [{ "run_id": "r-known", "session_id": "s-bug-candidate", "started_at": "2026-10-01T10:02:02.000Z", "ended_at": "2026-10-01T10:02:58.000Z" }],
+					"tokens": { "records": 1, "turns": 1, "input_tokens": 900, "output_tokens": 200, "cache_read_tokens": 500, "cache_write_tokens": 0 },
+					"cost": { "known_usd": 0.3, "total_usd": 0.3, "priced_records": 1, "zero_priced_records": 0, "unknown_records": 0, "provenance": { "host-reported": 1 } }
+				},
+				{
+					"delivery_id": "bench-shared",
+					"runs": [
+						{ "run_id": "r-shared-1", "session_id": "s-docs", "started_at": "2026-10-01T11:00:01.000Z", "ended_at": "2026-10-01T11:00:30.000Z" },
+						{ "run_id": "r-shared-2", "session_id": "s-docs", "started_at": "2026-10-01T11:01:01.000Z", "ended_at": "2026-10-01T11:01:15.000Z" }
+					],
+					"tokens": { "records": 2, "turns": 2, "input_tokens": 500, "output_tokens": 100, "cache_read_tokens": 0, "cache_write_tokens": 0 },
+					"cost": { "known_usd": 0.1, "total_usd": 0.1, "priced_records": 2, "zero_priced_records": 0, "unknown_records": 0, "provenance": { "estimated:built-in-rates": 2 } }
+				},
+				{
+					"delivery_id": "bench-session",
+					"runs": [{ "run_id": "r-session", "session_id": "s-red", "started_at": "2026-10-01T14:00:02.000Z", "ended_at": "2026-10-01T14:00:45.000Z" }],
+					"tokens": { "records": 1, "turns": 1, "input_tokens": 300, "output_tokens": 30, "cache_read_tokens": 0, "cache_write_tokens": 0 },
+					"cost": { "known_usd": 0.05, "total_usd": 0.05, "priced_records": 1, "zero_priced_records": 0, "unknown_records": 0, "provenance": { "estimated:models.yaml": 1 } }
+				},
+				{
+					"delivery_id": "bench-late",
+					"runs": [{ "run_id": "r-late", "session_id": "s-escalation", "started_at": "2026-10-01T17:00:00.000Z", "ended_at": "2026-10-01T17:01:00.000Z" }],
+					"tokens": { "records": 1, "turns": 1, "input_tokens": 100, "output_tokens": 10, "cache_read_tokens": 0, "cache_write_tokens": 0 },
+					"cost": { "known_usd": 0.01, "total_usd": 0.01, "priced_records": 1, "zero_priced_records": 0, "unknown_records": 0, "provenance": { "estimated:models.yaml": 1 } }
+				}
+			]
+		}
+	},
+	"report": {
+		"note": "A synthetic benchmark run directory for offline --summarize checks. Each run applies one synthetic final state above (result) over a fresh fixture and is evaluated by the harness; its conditions are the shared pairing conditions with its own overrides. The judgments are human-review examples, not text-pattern rules: asking about the unsettled escalation policy is necessary; re-asking the explicit docs spelling correction is unnecessary.",
+		"metadata": {
+			"startedAt": "2026-10-01T09:59:00.000Z",
+			"baselineCommit": "0000000000000000000000000000000000000000",
+			"promptProtocol": 2,
+			"settings": { "effective": { "model": "gpt-test", "model_reasoning_effort": "medium", "model_provider": "openai" } },
+			"codexVersion": "codex-cli 0.0.0-test\n",
+			"jobs": 1,
+			"timeoutMs": 150000,
+			"inlineAgents": true,
+			"phaseTimings": "unavailable",
+			"humanWaiting": "unavailable",
+			"cacheControl": "none"
+		},
+		"runs": [
+			{ "id": "bug-1-baseline", "variant": "baseline", "repetition": 1, "order": 1, "result": "bug-completed-clean", "beganAt": "2026-10-01T10:00:00.000Z", "elapsedMs": 90000, "usage": [{ "input_tokens": 1200, "cached_input_tokens": 800, "output_tokens": 300 }] },
+			{ "id": "bug-1-candidate", "variant": "candidate", "repetition": 1, "order": 2, "result": "bug-completed-clean", "beganAt": "2026-10-01T10:02:00.000Z", "elapsedMs": 60000, "usage": [{ "input_tokens": 900, "cached_input_tokens": 500, "output_tokens": 200, "reasoning_output_tokens": 40 }] },
+			{ "id": "bug-2-baseline", "variant": "baseline", "repetition": 2, "order": 2, "result": "bug-completed-clean", "beganAt": "2026-10-01T10:06:00.000Z", "elapsedMs": 80000, "usage": [] },
+			{ "id": "bug-2-candidate", "variant": "candidate", "repetition": 2, "order": 1, "result": "bug-completed-escape", "beganAt": "2026-10-01T10:04:00.000Z", "elapsedMs": 50000, "usage": [] },
+			{ "id": "docs-1-baseline", "variant": "baseline", "repetition": 1, "order": 1, "result": "docs-failed", "beganAt": "2026-10-01T11:00:00.000Z", "elapsedMs": 40000, "usage": [] },
+			{ "id": "docs-1-candidate", "variant": "candidate", "repetition": 1, "order": 2, "result": "docs-ambiguous-claim", "beganAt": "2026-10-01T11:01:00.000Z", "elapsedMs": 20000, "usage": [] },
+			{ "id": "docs-2-baseline", "variant": "baseline", "repetition": 2, "order": 2, "result": "docs-ambiguous-claim", "beganAt": "2026-10-01T11:03:00.000Z", "elapsedMs": 30000, "usage": [] },
+			{ "id": "docs-2-candidate", "variant": "candidate", "repetition": 2, "order": 1, "result": "docs-reasks-spelling", "beganAt": "2026-10-01T11:02:00.000Z", "elapsedMs": 25000, "usage": [] },
+			{ "id": "escalation-1-baseline", "variant": "baseline", "repetition": 1, "order": 1, "result": "escalation-asks-policy", "beganAt": "2026-10-01T13:00:00.000Z", "elapsedMs": 70000, "usage": [] },
+			{ "id": "escalation-1-candidate", "variant": "candidate", "repetition": 1, "order": 2, "result": "escalation-asks-policy", "beganAt": "2026-10-01T13:02:00.000Z", "elapsedMs": 45000, "usage": [] }
+		],
+		"costLinks": {
+			"schema": "t4-benchmark-cost-links",
+			"version": 1,
+			"links": [
+				{ "run": "bug-1-baseline", "lifecycleRun": "r-partial", "session": "s-bug-baseline" },
+				{ "run": "bug-1-candidate", "lifecycleRun": "r-known", "session": "s-bug-candidate" }
+			]
+		},
+		"judgments": {
+			"schema": "t4-workflow-judgments",
+			"version": 1,
+			"reviews": [
+				{ "run": "bug-1-candidate", "transcript": "bug-1-candidate/final.txt", "reviewer": "maintainer", "complete": true },
+				{ "run": "docs-2-candidate", "transcript": "docs-2-candidate/final.txt", "reviewer": "maintainer", "complete": true },
+				{ "run": "escalation-1-baseline", "transcript": "escalation-1-baseline/final.txt", "reviewer": "maintainer", "complete": true },
+				{ "run": "escalation-1-candidate", "transcript": "escalation-1-candidate/final.txt", "reviewer": "maintainer", "complete": false }
+			],
+			"questions": [
+				{ "run": "docs-2-candidate", "transcript": "docs-2-candidate/final.txt#L1", "question": "Should I change applciation to application in README.md?", "label": "unnecessary", "reviewer": "maintainer", "rationale": "The request already states exactly this spelling correction; re-asking it adds no information." },
+				{ "run": "escalation-1-baseline", "transcript": "escalation-1-baseline/final.txt#L1", "question": "Which admin resources may unauthenticated visitors modify, and under which permission policy?", "label": "necessary", "reviewer": "maintainer", "rationale": "The request leaves the authorization policy undecided; only its owner can settle it." },
+				{ "run": "escalation-1-candidate", "transcript": "escalation-1-candidate/final.txt#L1", "question": "Which admin resources may unauthenticated visitors modify, and under which permission policy?", "label": "necessary", "reviewer": "maintainer", "rationale": "The request leaves the authorization policy undecided; only its owner can settle it." }
+			],
+			"completion": [
+				{ "run": "docs-1-candidate", "status": "completed", "reviewer": "maintainer", "rationale": "The final message reports the spelling correction as done and the evaluator confirms the file." }
+			]
+		}
+	}
+}
