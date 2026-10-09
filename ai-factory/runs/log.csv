@@ -86,3 +86,7 @@ ts,session_id,source,user,branch,task,tool,agent,model,turns,input_tokens,output
 2026-10-06T20:03:13.816Z,2fcda2c6-b07c-457d-9ea4-79300d0a3bb4,session,Volodymyr Tanin,feat/workflow-evaluations,state,claude,,claude-opus-5-5,4,8,1571,499324,1179,1.00,0.1778,
 2026-10-06T20:09:37.080Z,2fcda2c6-b07c-457d-9ea4-79300d0a3bb4,session,Volodymyr Tanin,fix/state-read-only-turn,state,claude,,claude-opus-5-5,43,86,21619,5770419,40581,0.99,2.2078,
 2026-10-06T21:30:09.498Z,2fcda2c6-b07c-457d-9ea4-79300d0a3bb4,session,Volodymyr Tanin,feat/assurance-presets,state,claude,,claude-opus-5-5,5,10,1526,938584,3301,1.00,0.3169,
+2026-10-09T16:03:06.116Z,d12ad234-f840-4795-af66-58256feaa85d,session,tanin,main,adopt-sdlc,claude,,claude-opus-5-5,3,6,491,107863,48645,0.69,0.2222,
+2026-10-09T16:03:21.196Z,d12ad234-f840-4795-af66-58256feaa85d,session,tanin,main,sync-sdlc,claude,,claude-opus-5-5,7,16,2918,374247,3439,0.99,0.1690,
+2026-10-09T16:03:48.543Z,d12ad234-f840-4795-af66-58256feaa85d,session,tanin,main,doctor,claude,,claude-opus-5-5,6,14,1319,342254,7574,0.98,0.1509,
+2026-10-09T16:08:40.474Z,d12ad234-f840-4795-af66-58256feaa85d,session,tanin,main,doctor,claude,,claude-opus-5-5,12,26,3004,737422,8313,0.99,0.2975,
