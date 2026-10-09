@@ -386,7 +386,6 @@ Maintenance release; no workspace-layout, log-schema or prompt change for adopte
   longer declares an MIT license that contradicted `LICENSE` (internal use).
 - The local-development command is `claude --plugin-dir .` from the repo root, which works
   wherever the checkout lives.
-- `.gitignore` drops the `.serena/` entry left over from Serena's removal.
 
 
 ## 2.3.2 — 2026-09-29
