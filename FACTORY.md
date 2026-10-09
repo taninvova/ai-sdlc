@@ -187,7 +187,7 @@ governs arbitrary shell commands.
 
 ## Hosts
 
-Claude Code and Codex run the same procedures. The plugin ships all 20 `/t4:` commands
+Claude Code and Codex run the same procedures. The plugin ships all 22 `/t4:` commands
 natively for Claude Code and the matching `$t4-<task>` skills for Codex; each loads the
 repo's own `ai-factory/tasks/<name>.md`, so project customizations are kept. Built-in tasks
 need no project pointers — `/t4:sync-sdlc` generates them only for project-specific tasks

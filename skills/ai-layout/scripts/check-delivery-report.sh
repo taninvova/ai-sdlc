@@ -129,6 +129,11 @@ async function main() {
 		assert.deepEqual(value.criteria.map((row) => [row.id, row.steps, row.basis]), [["AC1", ["S1"], "automated"], ["AC2", ["S2"], "automated"], ["AC3", ["S3"], "automated"]]);
 		assert.equal(value.delivery.tracker_key, "DEMO-12");
 		assert.equal(value.review.verdict, "approve");
+		// Without an assurance selection the report is unchanged: no optional assurance field, and
+		// review provenance is reported as recorded (this helper is not the independent boundary).
+		assert.ok(!Object.hasOwn(value, "assurance"), "no preset, no assurance field");
+		assert.ok(!schema.required.includes("assurance") && schema.properties.assurance, "assurance stays optional in report v1");
+		assert.equal(value.review.independence, "unspecified");
 		assert.equal(value.mr_draft.draft, true);
 		assert.match(value.mr_draft.body, /Draft generated from local evidence/);
 		assert.equal(tree(dir, ["ai-factory/reports"]), before, "reporting changes nothing but ai-factory/reports/");

@@ -1,0 +1,106 @@
+[
+  {
+    "id": "bug-1-baseline",
+    "variant": "baseline",
+    "scenario": "bug",
+    "repetition": 1,
+    "beganAt": "2026-10-06T19:47:04.314Z",
+    "elapsedMs": 24407.475959,
+    "timedOut": false,
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "cliInvocations": 1,
+    "toolCalls": 6,
+    "commandCalls": 6,
+    "verificationCommandCalls": 2,
+    "usage": {
+      "input_tokens": 150020,
+      "cached_input_tokens": 135424,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1597,
+      "reasoning_output_tokens": 151
+    },
+    "commands": [
+      "/bin/zsh -lc \"cat ai-factory/AGENTS.md && cat ai-factory/docs/coding-standards.md && printf '\\\\n--- status ---\\\\n' && git status --short\"",
+      "/bin/zsh -lc 'cat ai-factory/docs/dont-touch.md && cat ai-factory/docs/workspace-boundary.md && rg --files | sort'",
+      "/bin/zsh -lc 'cat ai-factory/tasks/fix.md && cat ai-factory/specs/0000-scaffold.md && cat Makefile && cat app.js && cat test/app.test.js'",
+      "/bin/zsh -lc \"cat > test/app.test.js <<'EOF'\nconst {test}=require('node:test');const assert=require('node:assert/strict');const {sum}=require('../app');\ntest('sum of an empty array is zero',()=>assert.equal(sum([]),0));\ntest('sum of numeric values',()=>assert.equal(sum([1,2]),3));\nEOF\nnode --test test/app.test.js\"",
+      "/bin/zsh -lc \"python3 - <<'PY'\nfrom pathlib import Path\np=Path('app.js')\ns=p.read_text()\ns=s.replace('values.reduce((total,value)=>total+value)', 'values.reduce((total,value)=>total+value,0)')\np.write_text(s)\nPY\nmake lint typecheck test\"",
+      "/bin/zsh -lc 'git diff --check && git diff -- app.js test/app.test.js && git status --short'"
+    ],
+    "eventTypes": [
+      "thread.started",
+      "turn.started",
+      "item.completed",
+      "item.started",
+      "turn.completed"
+    ],
+    "quality": {
+      "assertions": {
+        "behavior": true,
+        "testsPass": true,
+        "regressionFailsWithoutFix": true
+      },
+      "pass": true,
+      "completed": true
+    },
+    "sourceHash": "576434ba5bd4026c85f5d8908a0f0fcfec023bec440336a72e791545e9e48737",
+    "promptHash": "f9817ea5a43e90a989b6bf62ca483e5ccb0359b3cf939943cf9063fc1a7a09a6",
+    "fixturePath": "/private/tmp/claude-501/-Users-Volodymyr-Tanin-code-ai-sdlc-t4-ai-sdlc-plugin/2fcda2c6-b07c-457d-9ea4-79300d0a3bb4/scratchpad/before-head/ai-factory/runs/tmp/run-Heg5Oi/bug-1-baseline",
+    "artifactPath": "/private/tmp/claude-501/-Users-Volodymyr-Tanin-code-ai-sdlc-t4-ai-sdlc-plugin/2fcda2c6-b07c-457d-9ea4-79300d0a3bb4/scratchpad/before-head/ai-factory/runs/small-task-benchmark-2026-10-06T19-47-03-682Z/bug-1-baseline"
+  },
+  {
+    "id": "bug-1-candidate",
+    "variant": "candidate",
+    "scenario": "bug",
+    "repetition": 1,
+    "beganAt": "2026-10-06T19:47:29.110Z",
+    "elapsedMs": 25469.440042,
+    "timedOut": false,
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "cliInvocations": 1,
+    "toolCalls": 6,
+    "commandCalls": 6,
+    "verificationCommandCalls": 2,
+    "usage": {
+      "input_tokens": 161935,
+      "cached_input_tokens": 143616,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1630,
+      "reasoning_output_tokens": 121
+    },
+    "commands": [
+      "/bin/zsh -lc \"cat ai-factory/AGENTS.md && printf '\\\\n--- coding standards ---\\\\n' && cat ai-factory/docs/coding-standards.md && printf '\\\\n--- status ---\\\\n' && git status --short\"",
+      "/bin/zsh -lc \"cat ai-factory/docs/dont-touch.md && printf '\\\\n--- boundary ---\\\\n' && cat ai-factory/docs/workspace-boundary.md && printf '\\\\n--- files ---\\\\n' && rg --files -g '\"'!node_modules'\"' | head -100 && printf '\\\\n--- sum refs ---\\\\n' && rg -n \\\"sum\\\\(|sum|array\\\" ai-factory . --glob '\"'!node_modules'\"' --glob '\"'!*.lock'\"'\"",
+      "/bin/zsh -lc \"cat ai-factory/tasks/fix.md && printf '\\\\n--- spec ---\\\\n' && cat ai-factory/specs/0000-scaffold.md && printf '\\\\n--- makefile ---\\\\n' && cat Makefile && printf '\\\\n--- implementation/test ---\\\\n' && cat app.js && cat test/app.test.js\"",
+      "/bin/zsh -lc \"cat > test/app.test.js <<'EOF'\nconst {test}=require('node:test');const assert=require('node:assert/strict');test('sum',()=>assert.equal(require('../app').sum([1,2]),3));test('sum of an empty array is zero',()=>assert.equal(require('../app').sum([]),0));\nEOF\nnode --test test/app.test.js\"",
+      "/bin/zsh -lc \"cat > app.js <<'EOF'\nexports.sum = values => values.reduce((total,value)=>total+value, 0);\nEOF\nmake lint typecheck test\"",
+      "/bin/zsh -lc 'git diff --check && git diff -- app.js test/app.test.js && git status --short'"
+    ],
+    "eventTypes": [
+      "thread.started",
+      "turn.started",
+      "item.completed",
+      "item.started",
+      "turn.completed"
+    ],
+    "quality": {
+      "assertions": {
+        "behavior": true,
+        "testsPass": true,
+        "regressionFailsWithoutFix": true
+      },
+      "pass": true,
+      "completed": true
+    },
+    "sourceHash": "576434ba5bd4026c85f5d8908a0f0fcfec023bec440336a72e791545e9e48737",
+    "promptHash": "f9817ea5a43e90a989b6bf62ca483e5ccb0359b3cf939943cf9063fc1a7a09a6",
+    "fixturePath": "/private/tmp/claude-501/-Users-Volodymyr-Tanin-code-ai-sdlc-t4-ai-sdlc-plugin/2fcda2c6-b07c-457d-9ea4-79300d0a3bb4/scratchpad/before-head/ai-factory/runs/tmp/run-Heg5Oi/bug-1-candidate",
+    "artifactPath": "/private/tmp/claude-501/-Users-Volodymyr-Tanin-code-ai-sdlc-t4-ai-sdlc-plugin/2fcda2c6-b07c-457d-9ea4-79300d0a3bb4/scratchpad/before-head/ai-factory/runs/small-task-benchmark-2026-10-06T19-47-03-682Z/bug-1-candidate"
+  }
+]

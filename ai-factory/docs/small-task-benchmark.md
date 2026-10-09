@@ -3,7 +3,8 @@
 Plan 0011 requires model evidence in addition to deterministic script fixtures. The harness
 is `skills/ai-layout/scripts/benchmark-small-tasks.js`; it is opt-in and is never invoked
 by adoption or the ordinary check suite. It uses the existing configured Codex CLI, Node,
-Git and Make, with no dependency installation.
+Git and Make, with no dependency installation. Plan 0020 adds the outcome report, offline
+`--summarize=<run-directory>` and human judgments: see *Workflow evaluations* in the README.
 
 Run from the plugin repository with `node skills/ai-layout/scripts/benchmark-small-tasks.js --real`.
 This performs 14 external model calls and consumes model usage. The user approved that

@@ -1,0 +1,238 @@
+{
+  "id": "bug-1-baseline",
+  "variant": "baseline",
+  "scenario": "bug",
+  "repetition": 1,
+  "beganAt": "2026-10-06T19:45:14.408Z",
+  "elapsedMs": 34213.077333,
+  "timedOut": false,
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "cliInvocations": 1,
+  "toolCalls": 8,
+  "commandCalls": 6,
+  "verificationCommandCalls": 2,
+  "usage": {
+    "input_tokens": 195341,
+    "cached_input_tokens": 178944,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 1128,
+    "reasoning_output_tokens": 175
+  },
+  "usageEvents": [
+    {
+      "input_tokens": 195341,
+      "cached_input_tokens": 178944,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1128,
+      "reasoning_output_tokens": 175
+    }
+  ],
+  "commands": [
+    "/bin/zsh -lc \"pwd && rg --files -g 'AGENTS.md' -g 'coding-standards.md' -g 'package.json' -g 'pyproject.toml' -g 'Cargo.toml' -g 'go.mod' -g '*test*' -g '*spec*' | head -200\"",
+    "/bin/zsh -lc 'cat ai-factory/AGENTS.md && cat ai-factory/docs/coding-standards.md && cat AGENTS.md && rg --files'",
+    "/bin/zsh -lc 'cat ai-factory/docs/dont-touch.md && cat ai-factory/docs/workspace-boundary.md && cat ai-factory/specs/0000-scaffold.md && cat Makefile && cat app.js && cat test/app.test.js && git status --short'",
+    "/bin/zsh -lc 'node --test test/app.test.js'",
+    "/bin/zsh -lc 'make lint typecheck test'",
+    "/bin/zsh -lc 'git diff -- app.js test/app.test.js && git status --short'"
+  ],
+  "eventTypes": [
+    "thread.started",
+    "turn.started",
+    "item.completed",
+    "item.started",
+    "turn.completed"
+  ],
+  "quality": {
+    "assertions": {
+      "behavior": true,
+      "testsPass": true,
+      "regressionFailsWithoutFix": true
+    },
+    "pass": true,
+    "processSucceeded": true
+  },
+  "evaluation": {
+    "rubric": {
+      "path": "skills/ai-layout/fixtures/workflow-evaluations/rubric.json",
+      "version": 1,
+      "digest": "04dbe6439a0f0955221c7331bc9d9efe1946845c4ea09b38fb3a807084077a00"
+    },
+    "items": [
+      {
+        "id": "bug-empty-sum",
+        "kind": "requirement",
+        "description": "sum([]) returns 0 instead of throwing.",
+        "outcome": "satisfied",
+        "evidence": {
+          "check": "node",
+          "command": [
+            "node",
+            "-e",
+            "process.exit(require('./app').sum([])===0?0:1)"
+          ],
+          "exitCode": 0,
+          "signal": null,
+          "output": ""
+        }
+      },
+      {
+        "id": "bug-nonempty-sums",
+        "kind": "requirement",
+        "description": "Sums of nonempty numeric arrays are preserved.",
+        "outcome": "satisfied",
+        "evidence": {
+          "check": "node",
+          "command": [
+            "node",
+            "-e",
+            "const {sum}=require('./app');process.exit(sum([1,2])===3&&sum([5])===5&&sum([-2,0.5])===-1.5?0:1)"
+          ],
+          "exitCode": 0,
+          "signal": null,
+          "output": ""
+        }
+      },
+      {
+        "id": "bug-regression-test",
+        "kind": "requirement",
+        "description": "The project tests fail when the original app.js is restored (a regression test exists).",
+        "outcome": "satisfied",
+        "evidence": {
+          "check": "failsWithInitial",
+          "command": [
+            "make",
+            "test"
+          ],
+          "exitCode": 2,
+          "signal": null,
+          "output": "cScope (node:async_hooks:214:14)\n      at Test.run (node:internal/test_runner/test:1106:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)\n      at Test.postRun (node:internal/test_runner/test:1235:19)\n      at Test.run (node:internal/test_runner/test:1163:12)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3)\nmake: *** [test] Error 1\n",
+          "restored": "app.js"
+        }
+      },
+      {
+        "id": "bug-input-not-mutated",
+        "kind": "defect",
+        "description": "sum leaves its input array unchanged.",
+        "outcome": "satisfied",
+        "evidence": {
+          "check": "node",
+          "command": [
+            "node",
+            "-e",
+            "const a=[1,2];require('./app').sum(a);const e=[];require('./app').sum(e);process.exit(a.length===2&&a[0]===1&&a[1]===2&&e.length===0?0:1)"
+          ],
+          "exitCode": 0,
+          "signal": null,
+          "output": ""
+        }
+      },
+      {
+        "id": "bug-tests-pass",
+        "kind": "defect",
+        "description": "The project test suite passes on the final code.",
+        "outcome": "satisfied",
+        "evidence": {
+          "check": "command",
+          "command": [
+            "make",
+            "test"
+          ],
+          "exitCode": 0,
+          "signal": null,
+          "output": "✔ sum (0.468417ms)\n✔ sum of an empty array is zero (0.049625ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 36.062083\n"
+        }
+      }
+    ],
+    "completion": {
+      "process": {
+        "exitCode": 0,
+        "signal": null,
+        "error": null,
+        "timedOut": false,
+        "ok": true
+      },
+      "reported": "completed",
+      "status": "completed",
+      "source": "marker",
+      "adjudication": null
+    },
+    "missedRequirements": {
+      "count": 0,
+      "unmet": [],
+      "unassessed": []
+    },
+    "escapedDefects": {
+      "count": 0,
+      "origin": "fixture-detected",
+      "items": [],
+      "unassessed": []
+    }
+  },
+  "conditions": {
+    "protocol": 2,
+    "fixtureHash": "2915258dcb465d1c2b1a9570d60955fa7c4091b2a7a7e34bca3617b6719271c4",
+    "requestHash": "88df50da767662777994c1855adacc1efff7b41578e210f4b50d484d103d4f27",
+    "rubric": {
+      "version": 1,
+      "digest": "04dbe6439a0f0955221c7331bc9d9efe1946845c4ea09b38fb3a807084077a00"
+    },
+    "settings": {
+      "model": "gpt-6-luna",
+      "model_reasoning_effort": "medium",
+      "model_provider": null
+    },
+    "cliVersion": "codex-cli 0.160.0",
+    "nodeVersion": "v24.7.0",
+    "adaptation": "inline-agents",
+    "limits": {
+      "timeoutMs": 150000,
+      "jobs": 1
+    }
+  },
+  "schedule": {
+    "pair": "bug-1",
+    "order": 1,
+    "repetitions": 1,
+    "concurrency": 1,
+    "concurrentAtStart": 1
+  },
+  "timing": {
+    "boundary": "codex exec process: spawn to close, including CLI startup and model scheduling; excludes fixture setup, evaluation and human waiting",
+    "elapsedMs": 34213.077333,
+    "completedDeliveryMs": 34213.077333
+  },
+  "tokens": {
+    "source": "codex exec turn.completed usage",
+    "events": 1,
+    "input_tokens": 195341,
+    "cached_input_tokens": 178944,
+    "output_tokens": 1128,
+    "reasoning_output_tokens": 175
+  },
+  "cost": {
+    "status": "unknown",
+    "totalUsd": null,
+    "knownSubtotalUsd": null,
+    "unknownRecords": null,
+    "basis": null,
+    "billed": false,
+    "source": null,
+    "tokens": {
+      "source": "codex exec turn.completed usage",
+      "events": 1,
+      "input_tokens": 195341,
+      "cached_input_tokens": 178944,
+      "output_tokens": 1128,
+      "reasoning_output_tokens": 175
+    },
+    "tokenSource": "benchmark",
+    "reason": "unknown: no linked monetary evidence; tokens are observed, not priced"
+  },
+  "sourceHash": "576434ba5bd4026c85f5d8908a0f0fcfec023bec440336a72e791545e9e48737",
+  "promptHash": "faf07b0e3bd757b77a9f81403cd5f41f682099579ba9e0968217ec3cc2abb1b9",
+  "fixturePath": "/Users/Volodymyr_Tanin/code/ai-sdlc/t4/ai-sdlc-plugin/ai-factory/runs/tmp/run-pMNzUS/bug-1-baseline",
+  "artifactPath": "/Users/Volodymyr_Tanin/code/ai-sdlc/t4/ai-sdlc-plugin/ai-factory/runs/small-task-benchmark-2026-10-06T19-45-13-186Z/bug-1-baseline"
+}

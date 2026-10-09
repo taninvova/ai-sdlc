@@ -43,6 +43,8 @@ const nativeClaudeCommands = new Set([
 	"setup-knowledge",
 	"setup-tracker",
 	"state",
+	"start",
+	"continue",
 	"sync-sdlc",
 	"adr",
 	"analyse",

@@ -1,0 +1,5 @@
+Fixed `sum([])` by giving `reduce` an initial value of `0`. The new empty-array regression failed before the fix with “Reduce of empty array with no initial value”; both it and the existing nonempty sum case pass now.
+
+Changed [app.js](/private/tmp/claude-501/-Users-Volodymyr-Tanin-code-ai-sdlc-t4-ai-sdlc-plugin/2fcda2c6-b07c-457d-9ea4-79300d0a3bb4/scratchpad/before-head/ai-factory/runs/tmp/run-Heg5Oi/bug-1-baseline/app.js) and [test/app.test.js](/private/tmp/claude-501/-Users-Volodymyr-Tanin-code-ai-sdlc-t4-ai-sdlc-plugin/2fcda2c6-b07c-457d-9ea4-79300d0a3bb4/scratchpad/before-head/ai-factory/runs/tmp/run-Heg5Oi/bug-1-baseline/test/app.test.js). `make lint typecheck test` and `git diff --check` pass.
+
+The only spec is the scaffold setup check, which marks application features out of scope; it does not specify `sum` behavior. So the spec is incomplete for this behavior.

@@ -1,0 +1,20 @@
+{
+  "startedAt": "2026-10-06T19:47:03.683Z",
+  "baselineCommit": "8c68cb20282ae897a9f2a3dccbcaa1d50ca5af1a",
+  "settings": {
+    "model": "gpt-6-luna",
+    "model_reasoning_effort": "medium",
+    "model_provider": "CLI default"
+  },
+  "nodeVersion": "v24.7.0",
+  "codexVersion": "codex-cli 0.160.0\n",
+  "jobs": 1,
+  "inlineAgents": true,
+  "scenarios": [
+    "bug"
+  ],
+  "timeoutMs": 150000,
+  "phaseTimings": "unavailable",
+  "humanWaiting": "unavailable",
+  "cacheControl": "none"
+}

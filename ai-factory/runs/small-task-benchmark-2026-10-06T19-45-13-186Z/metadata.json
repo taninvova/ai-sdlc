@@ -1,0 +1,40 @@
+{
+  "startedAt": "2026-10-06T19:45:13.187Z",
+  "rubric": {
+    "path": "skills/ai-layout/fixtures/workflow-evaluations/rubric.json",
+    "version": 1,
+    "digest": "04dbe6439a0f0955221c7331bc9d9efe1946845c4ea09b38fb3a807084077a00"
+  },
+  "promptProtocol": 2,
+  "baselineCommit": "8c68cb20282ae897a9f2a3dccbcaa1d50ca5af1a",
+  "settings": {
+    "configured": {
+      "model": "gpt-6-luna",
+      "model_reasoning_effort": "medium",
+      "model_provider": null
+    },
+    "effective": {
+      "model": "gpt-6-luna",
+      "model_reasoning_effort": "medium",
+      "model_provider": null
+    },
+    "pin": [
+      "-c",
+      "model=\"gpt-6-luna\"",
+      "-c",
+      "model_reasoning_effort=\"medium\""
+    ],
+    "source": "~/.codex/config.toml, pinned with -c for every run; an unset key falls back to the CLI's own unobserved default and is unknown (null)"
+  },
+  "nodeVersion": "v24.7.0",
+  "codexVersion": "codex-cli 0.160.0\n",
+  "jobs": 1,
+  "inlineAgents": true,
+  "scenarios": [
+    "bug"
+  ],
+  "timeoutMs": 150000,
+  "phaseTimings": "unavailable",
+  "humanWaiting": "unavailable",
+  "cacheControl": "none"
+}

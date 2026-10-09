@@ -40,6 +40,12 @@ Report every artifact that is not `valid` as a finding: missing, failed or unava
 for a ticked step or final verification is a blocker; other invalid or stale artifacts are major.
 A valid contract is structural only and never replaces checks 1–4.
 
+Only when `ai-factory/assurance.json` exists, also run the read-only
+`node ai-factory/make/assurance.js show` and name the preset and its review requirement inside
+`summary`. Never describe your verdict as independent approval: only the headless
+`make -f ai-factory/make/ai.mk review DELIVERY=<id>` run records independence. Never run
+`make -f ai-factory/make/ai.mk review` or `assurance.js complete` yourself.
+
 Do NOT comment on formatting or lint; the linter owns that.
 Do NOT edit any file. Report only.
 

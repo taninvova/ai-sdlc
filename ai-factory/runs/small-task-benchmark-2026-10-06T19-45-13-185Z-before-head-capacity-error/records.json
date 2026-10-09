@@ -1,0 +1,91 @@
+[
+  {
+    "id": "bug-1-baseline",
+    "variant": "baseline",
+    "scenario": "bug",
+    "repetition": 1,
+    "beganAt": "2026-10-06T19:45:14.462Z",
+    "elapsedMs": 3951.38525,
+    "timedOut": false,
+    "exit": {
+      "code": 1,
+      "signal": null
+    },
+    "cliInvocations": 1,
+    "toolCalls": 0,
+    "commandCalls": 0,
+    "verificationCommandCalls": 0,
+    "usage": {},
+    "commands": [],
+    "eventTypes": [
+      "thread.started",
+      "turn.started",
+      "error",
+      "turn.failed"
+    ],
+    "quality": {
+      "assertions": {
+        "behavior": false,
+        "testsPass": true,
+        "regressionFailsWithoutFix": false
+      },
+      "pass": false,
+      "completed": false
+    },
+    "sourceHash": "576434ba5bd4026c85f5d8908a0f0fcfec023bec440336a72e791545e9e48737",
+    "promptHash": "f9817ea5a43e90a989b6bf62ca483e5ccb0359b3cf939943cf9063fc1a7a09a6",
+    "fixturePath": "/private/tmp/claude-501/-Users-Volodymyr-Tanin-code-ai-sdlc-t4-ai-sdlc-plugin/2fcda2c6-b07c-457d-9ea4-79300d0a3bb4/scratchpad/before-head/ai-factory/runs/tmp/run-r6Y6PY/bug-1-baseline",
+    "artifactPath": "/private/tmp/claude-501/-Users-Volodymyr-Tanin-code-ai-sdlc-t4-ai-sdlc-plugin/2fcda2c6-b07c-457d-9ea4-79300d0a3bb4/scratchpad/before-head/ai-factory/runs/small-task-benchmark-2026-10-06T19-45-13-185Z/bug-1-baseline"
+  },
+  {
+    "id": "bug-1-candidate",
+    "variant": "candidate",
+    "scenario": "bug",
+    "repetition": 1,
+    "beganAt": "2026-10-06T19:45:18.872Z",
+    "elapsedMs": 20095.301667,
+    "timedOut": false,
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "cliInvocations": 1,
+    "toolCalls": 7,
+    "commandCalls": 5,
+    "verificationCommandCalls": 2,
+    "usage": {
+      "input_tokens": 129012,
+      "cached_input_tokens": 104960,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1132,
+      "reasoning_output_tokens": 191
+    },
+    "commands": [
+      "/bin/zsh -lc \"cat ai-factory/AGENTS.md && cat ai-factory/docs/coding-standards.md && rg --files -g '\"'!*node_modules*'\"' | head -120\"",
+      "/bin/zsh -lc 'cat ai-factory/docs/dont-touch.md && cat ai-factory/docs/workspace-boundary.md && cat ai-factory/tasks/fix.md && cat ai-factory/docs/definition-of-done.md && cat ai-factory/specs/0000-scaffold.md && git status --short && cat Makefile && cat app.js && cat test/app.test.js'",
+      "/bin/zsh -lc 'node --test test/app.test.js'",
+      "/bin/zsh -lc 'make lint typecheck test'",
+      "/bin/zsh -lc 'git status --short && git diff -- app.js test/app.test.js'"
+    ],
+    "eventTypes": [
+      "thread.started",
+      "turn.started",
+      "item.completed",
+      "item.started",
+      "turn.completed"
+    ],
+    "quality": {
+      "assertions": {
+        "behavior": true,
+        "testsPass": true,
+        "regressionFailsWithoutFix": true
+      },
+      "pass": true,
+      "completed": true
+    },
+    "sourceHash": "576434ba5bd4026c85f5d8908a0f0fcfec023bec440336a72e791545e9e48737",
+    "promptHash": "f9817ea5a43e90a989b6bf62ca483e5ccb0359b3cf939943cf9063fc1a7a09a6",
+    "fixturePath": "/private/tmp/claude-501/-Users-Volodymyr-Tanin-code-ai-sdlc-t4-ai-sdlc-plugin/2fcda2c6-b07c-457d-9ea4-79300d0a3bb4/scratchpad/before-head/ai-factory/runs/tmp/run-r6Y6PY/bug-1-candidate",
+    "artifactPath": "/private/tmp/claude-501/-Users-Volodymyr-Tanin-code-ai-sdlc-t4-ai-sdlc-plugin/2fcda2c6-b07c-457d-9ea4-79300d0a3bb4/scratchpad/before-head/ai-factory/runs/small-task-benchmark-2026-10-06T19-45-13-185Z/bug-1-candidate"
+  }
+]

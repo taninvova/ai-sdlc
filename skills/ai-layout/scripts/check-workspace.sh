@@ -45,6 +45,28 @@ try {
   }cases++;
   for(let i=0;i<2;i++){const result=sync(repo);assert.equal(result.status,0,result.stderr);assert.deepEqual(snapshot(repo),before);}cases++;
   assert.throws(()=>adopt(repo,root),'existing workspace must refuse');cases++;
+  assert(fs.existsSync(path.join(repo,'ai-factory/make/assurance.js'))&&manifest.files['ai-factory/make/assurance.js'],'adoption delivers and tracks the assurance helper');
+  assert(!fs.existsSync(path.join(repo,'ai-factory/assurance.json')),'adoption never selects an assurance preset');cases++;
+ }
+ // Assurance presets are opt-in and the selection is the adopter's: sync never creates, changes or
+ // tracks it, and keeps customized contracts configuration and recorded evidence byte for byte.
+ {
+  const repo=path.join(tmp,'python');
+  const kept={
+   'ai-factory/assurance.json':'{"schema":"t4-assurance","version":1,"preset":"strict"}\n',
+   'ai-factory/contracts/config.json':JSON.stringify({schema:'t4-contracts-config',version:1,code_scope:{include:['src/**'],exclude:['dist/**']},completion:{blocking_severities:['blocker','major']}})+'\n',
+   'ai-factory/evidence/d-20260101-abcdef/final.json':'{"recorded":true}\n',
+  };
+  for(const [file,body] of Object.entries(kept)){fs.mkdirSync(path.dirname(path.join(repo,file)),{recursive:true});fs.writeFileSync(path.join(repo,file),body);}
+  const manifestBefore=fs.readFileSync(path.join(repo,'ai-factory/.sdlc.json'),'utf8');
+  for(const args of [[],['--adapters=claude,codex'],['--adapters=claude,codex']]){
+   const result=sync(repo,...args);assert.equal(result.status,0,result.stderr);
+   for(const [file,body] of Object.entries(kept))assert.equal(fs.readFileSync(path.join(repo,file),'utf8'),body,`${file} changed by sync ${args.join(' ')}`);
+  }
+  assert.equal(fs.readFileSync(path.join(repo,'ai-factory/.sdlc.json'),'utf8'),manifestBefore,'sync does not rewrite the manifest');
+  const unselected=path.join(tmp,'node');
+  for(const args of [[],['--adapters=claude,codex']]){assert.equal(sync(unselected,...args).status,0);assert(!fs.existsSync(path.join(unselected,'ai-factory/assurance.json')),'sync never selects a preset');}
+  cases++;
  }
  const repo=path.join(tmp,'node');
  const selected=sync(repo,'--adapters=codex');assert.equal(selected.status,0,selected.stderr);

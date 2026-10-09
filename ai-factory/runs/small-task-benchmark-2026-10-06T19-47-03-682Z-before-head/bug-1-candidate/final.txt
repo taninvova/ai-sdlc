@@ -1,0 +1,5 @@
+Fixed `sum([])` by giving `reduce` an initial value of `0`. The regression test failed before the fix with “Reduce of empty array with no initial value”; afterward, both empty and nonempty sum tests pass.
+
+Changed [app.js](/private/tmp/claude-501/-Users-Volodymyr-Tanin-code-ai-sdlc-t4-ai-sdlc-plugin/2fcda2c6-b07c-457d-9ea4-79300d0a3bb4/scratchpad/before-head/ai-factory/runs/tmp/run-Heg5Oi/bug-1-candidate/app.js) and [test/app.test.js](/private/tmp/claude-501/-Users-Volodymyr-Tanin-code-ai-sdlc-t4-ai-sdlc-plugin/2fcda2c6-b07c-457d-9ea4-79300d0a3bb4/scratchpad/before-head/ai-factory/runs/tmp/run-Heg5Oi/bug-1-candidate/test/app.test.js). `make lint typecheck test` and `git diff --check` pass.
+
+The setup spec does not cover this behavior and lists application features as out of scope; the README already documents empty-list behavior. The spec is incomplete for this bug.

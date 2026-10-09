@@ -11,6 +11,12 @@ while expected future failures remain. Add meaningful coverage, preserve user wo
 the named step once its phase is satisfied. Missing commands or unexpected failures leave it
 unticked. Return files changed, phase/results, and any plan/spec problem. Do not start another step.
 
+Assurance, only when `ai-factory/assurance.json` exists: run the read-only
+`node ai-factory/make/assurance.js show` and show the developer the preset and effective requirements
+before delegating. They add to the phase rules and never relax them. A ticked final step is not a
+completed delivery: independent review and completion are decided afterwards, by
+`make -f ai-factory/make/ai.mk review DELIVERY=<id>` and `node ai-factory/make/assurance.js complete <id>`.
+
 If it stopped with an explanation instead of a ticked step, relay the explanation and ask the
 developer how to proceed. In a headless run there is nobody to ask: report it and stop.
 

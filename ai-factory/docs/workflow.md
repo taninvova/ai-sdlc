@@ -27,6 +27,51 @@ Host pointers are opt-in: `bash ai-factory/make/sync-adapters.sh --adapters=clau
 only those hosts. Default sync changes no external files and never overwrites a hand-authored
 adapter. Unsupported automatic discovery uses explicit invocation; do not invent host support.
 
+Use `/t4:start <request>` (Codex `$t4-start`) when you want T4 to choose the entry. It explains
+one choice among quick, fix, chore, analyse, design, explore and spec, then hands the original
+request to that existing procedure. Unsettled business needs precede service placement, which
+precedes implementation exploration; existing artifacts may settle those decisions. Authorization,
+public contracts, migrations, dependencies and ownership changes cannot take a shortcut based
+on size. Explicit incompatible workflow choices get clarification. No automatic continuation or
+whole-lifecycle chaining occurs. Empty input asks for the change and expected result; missing
+workspace/task reports adoption or drift guidance without repairs. Direct entries remain available.
+
+Use `/t4:continue <delivery id>` (Codex `$t4-continue`) to resume an interrupted planned delivery.
+It is interactive-only. It needs artifact contracts enabled and accepts one contract delivery ID
+(`d-YYYYMMDD-xxxxxx`, from the spec's `.contract.json`) for a planned delivery. Spec or plan paths,
+quick deliveries, unknown IDs and contracts-disabled repos stop with the reason. Empty input asks
+for the ID. `node ai-factory/make/continue.js <id>` inspects without writing or running checks,
+reusing contract validation and report evaluation. It returns `action`, `question`, `blocked` or
+`complete` with a reason, evidence references and a fingerprint. The earliest unsatisfied
+prerequisite wins:
+
+| Delivery state | Task | Destination input |
+|---|---|---|
+| spec with no plan | plan | `<spec>` |
+| first unfinished step declares red, no red evidence, not started | test | `<spec> <plan> red S<N>` |
+| first unfinished step, including interrupted, part-done or failed last run | run | `<plan> S<N>` |
+| all steps done, `gaps_tested=no` | test | `<spec> <plan> gaps` |
+| `gaps_tested=yes` and a required review missing, or the review stale | check | `working-tree <spec> <plan>` |
+| evaluation ready, no matching completion report | report | `<delivery>` |
+
+**Clarifications.** Evidence cannot show whether gaps testing ran (`clarify: gaps_tested`), or
+whether a started step's declared red run was skipped on purpose (`clarify: red:S<N>`). Continue asks,
+then re-inspects with `--answer gaps_tested=yes|no` or `--answer red:S<N>=proceed`, kept apart
+from the original input. Answers choose between tasks. They never create evidence or pass a failure.
+
+**Drift and blockers.** A spec changed after downstream work (`S_SPEC_CHANGED`) stops with the plan,
+acceptance tests, implementation and verification, and review named as possibly affected. Hashes show drift, not which
+criteria changed. Reconcile the spec and downstream work, then run continue again. It never
+regenerates plans, rewrites hashes or deletes evidence. Failed checks on finished work and
+invalid, stale or unverified evidence are `blocked` too. `complete` means ready for handoff, not
+merged, deployed or published.
+
+**Handoff.** `continue.js handoff` validates the result, rechecks the fingerprint and dispatches
+exactly one destination under that task's own model policy. A change, rejection, failure or
+cancellation stops with no fallback, and success stops at the destination's boundary. Continue runs in
+the invoking session. It ignores `routing.tasks.continue`, which `/t4:doctor` flags, and refuses a
+concrete `--task-model`. Headless `TASK=continue` rejects before launch or run artifacts.
+
 Use `/t4:quick` for a small, understood local change: short acceptance checklist, implementation,
 meaningful coverage, affected/final checks, and a labeled self-review. No spec/plan/agent is
 required solely because behavior changes. Authorization, public contracts, migrations,
@@ -60,7 +105,7 @@ disable host protections or grant broad permissions to make tests pass.
 
 Working on the plugin itself, from its repo root: `claude --plugin-dir .`.  <!-- path-scan-ok -->
 
-The installed plugin exposes 20 `/t4:*` commands in every repo, including all 14 project
+The installed plugin exposes 22 `/t4:*` commands in every repo, including all 16 project
 task entry points. No `.claude/commands/` pointers are needed for built-in workflows.
 The commands are visible before adoption; a project workflow reports a missing workspace
 or task instead of silently scaffolding it. Hooks stay silent outside an adopted repo.
@@ -92,7 +137,7 @@ that decides whether any of the rest is worth running:
 
 An agent with a placeholder `architecture.md` produces placeholder-quality work.
 
-Restart the session (or `/reload-plugins`) after a plugin update to load all 20 `/t4:*` commands.
+Restart the session (or `/reload-plugins`) after a plugin update to load all 22 `/t4:*` commands.
 
 ---
 
@@ -173,6 +218,8 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
   ticking it. `--done` labels plans resolved partly by withdrawal as `closed`, not `complete`;
   blocked or deferred steps without such a record stay pending. This reports recorded work,
   not proof of acceptance criteria. Quoted or fenced examples never withdraw a step.
+  With contracts enabled, `/t4:state --delivery <id>` shows one delivery's evidence instead; see
+  *Delivery status* below.
 - **Plan when risk or uncertainty warrants it.** File count alone does not determine the workflow.
 - **Steering in chat for 20+ minutes with code changed?** Stop. Write the decision into the
   plan, commit, and continue. Long chat threads lose the decision.
@@ -256,6 +303,151 @@ and rerun `init`. Migration never edits Markdown or invents IDs.
 The full walkthrough, the diagnostic table and the file formats are in
 `ai-factory/contracts/README.md` in any adopted repo.
 
+### Delivery status
+
+`/t4:state --delivery <id>` (Codex `$t4-state --delivery <id>`) shows one artifact-contract
+delivery — planned or quick — as a compact, read-only `field`/`value` table. It needs contracts
+enabled (`node ai-factory/make/contracts.js enable`) and exactly one delivery ID of the form
+`d-YYYYMMDD-xxxxxx`. The default listing, `--done` and `--next` are unchanged; `--delivery` is a
+separate mode that combines with neither.
+
+**How it reads.** `state.sh` hands the ID, as one literal argument, to the workspace's adopted
+`node ai-factory/make/delivery-status.js <id>`. The helper collects and evaluates the delivery
+once in memory through `delivery-report.js` — the same collector retries, guarded readers and
+readiness rules as `/t4:report` — and prints the table. It never generates or saves a report,
+never reads a saved report, runs no verification or review, starts no task or continuation,
+writes nothing and names no next action. The same files give the same table, interactively or
+headless. The command presents the rows as printed and adds no next step of its own.
+
+| Field | Shows |
+|---|---|
+| `delivery`, `kind` | the ID; `planned` or `quick` |
+| `progress` | evidence-derived progress (below), with its reason |
+| `readiness` | the existing report evaluation: `ready`, `incomplete`, `unverified` or `blocked`, plus `(contracts: …)`, the raw `contracts.js validate` result (see the note after the examples) |
+| `steps` / `checks` | ticked plan steps (part-done and withdrawn counted) or quick checklist items — recorded progress, not proof |
+| `verified` | criteria with current passing evidence |
+| `attested` | criteria covered by a human attestation the `completion` policy allows — not executable proof |
+| `remaining` | criteria `pending`, `failed` or `uncovered`, each written with its result, e.g. `AC2 (failed)` |
+| `unknown` | criteria with no current passing evidence |
+| `latest verification` | path, phase, expected outcome, status (and `interrupted` with its signal), freshness, `finished_at` |
+| `review` | verdict, status, freshness, blocking findings and evidence path, or `not recorded` and whether policy requires it |
+| `blockers` | evaluator reasons in state `blocked` as `CODE: message (evidence)`; otherwise "none recorded", which does not prove readiness |
+| `limitations` | every other reason: missing, stale, malformed or interrupted evidence, ignored or used attestations |
+| `source` | one row per spec, plan or quick checklist with its sidecar and state, and one for the evidence directory |
+
+Every declared criterion appears in exactly one of the four groups; an empty group reads `none`.
+
+**Progress labels** are the earliest phase the artifacts establish, never a claim that work is
+running:
+
+| Label | When |
+|---|---|
+| `planning` | a spec with no plan and no verification |
+| `implementation` | some active plan steps or checklist items are unticked (`N of M`) |
+| `verification-unproven` | everything is ticked but final verification is missing, failed, stale or invalid — or it passed while other evidence is missing, stale or blocking |
+| `review-pending` | final verification passed and only the review requirement is unmet: no current approval, whether the review is missing, stale, requests changes or carries blocking findings — `review`, `readiness` and `blockers` say which |
+| `ready` | the existing report evaluation is ready under project policy |
+| `unknown` | the facts are insufficient or contradict each other: an unreadable spec, plan or checklist, no spec sidecar, verification without a plan, no active steps or checklist items, plan steps that disagree with the sidecar, or a ready evaluation while items are unticked |
+
+**Chronology.** The latest verification is the non-review record with the latest valid
+RFC 3339 `finished_at`, ties broken by ascending evidence path. Expected-red evidence shows as
+`red · expects fail` and is never final verification. If any record's `finished_at` is missing or
+invalid, or an evidence file cannot be read, the row reads `unknown — chronology cannot be
+established` and names the records. File modification times, run logs and the current time are
+never used.
+
+**Refusals** are one line and exit 0, with nothing listed: no ID after `--delivery`, `--delivery`
+given twice, `--delivery` with `--done` or `--next`, a malformed ID or a path, contracts not
+enabled or an unreadable `ai-factory/contracts/config.json`, an unknown ID, an ID that only an evidence directory carries, and a duplicate identity
+(two sidecars of one kind, or quick and planned sidecars sharing the ID). A workspace missing
+`delivery-status.js` or the scripts it needs (`delivery-report.js`, `contracts.js`, `gate.js`,
+`safe-files.js`) is told to run `/t4:sync-sdlc` (or `/t4:adopt-sdlc`); nothing falls back to a
+listing. A helper that crashes — an outdated copy, for instance — exits non-zero with its error
+line and the same `/t4:sync-sdlc` hint, so it is never mistaken for a status.
+
+**Worked examples.** Each was produced by running `state.sh --delivery` against a disposable
+fixture built from `skills/ai-layout/fixtures/contracts/planned` with `check-delivery-status.sh`'s
+fixture builders. The tree was compared before and after each run, and nothing was executed. The
+real fixture IDs are replaced with `d-20261006-1a2b3c`.
+
+*Missing evidence* — all three steps ticked, nothing recorded:
+
+```
+field	value
+delivery	d-20261006-1a2b3c
+kind	planned
+progress	verification-unproven — every active step is ticked, but no final verification is recorded (evidence-derived, not a claim that work is running)
+readiness	unverified — existing report evaluation under project policy (contracts: invalid)
+steps	3 of 3 ticked — recorded progress, not proof
+verified	none
+attested	none
+remaining	none
+unknown	AC1, AC2, AC3 — no current passing evidence
+latest verification	none — no verification is recorded
+review	not recorded — required by policy
+blockers	none recorded — absence of a blocker does not prove readiness
+limitations	E_EVIDENCE_NOT_RUN: not_run: final verification is required but was not recorded (ai-factory/evidence/d-20261006-1a2b3c/final.json); E_EVIDENCE_NOT_RUN: not_run: an independent review was required but none was recorded (ai-factory/evidence/d-20261006-1a2b3c/review.json); E_EVIDENCE_NOT_RUN: not_run: Step 1 is ticked but has no recorded verification (ai-factory/evidence/d-20261006-1a2b3c/S1-step.json); E_EVIDENCE_NOT_RUN: not_run: Step 2 is ticked but has no recorded verification (ai-factory/evidence/d-20261006-1a2b3c/S2-step.json); E_EVIDENCE_NOT_RUN: not_run: Step 3 is ticked but has no recorded verification (ai-factory/evidence/d-20261006-1a2b3c/S3-step.json)
+source	plan ai-factory/plans/0001-csv-export.md · ai-factory/plans/0001-csv-export.contract.json (valid)
+source	spec ai-factory/specs/0001-csv-export.md · ai-factory/specs/0001-csv-export.contract.json (valid)
+source	evidence ai-factory/evidence/d-20261006-1a2b3c/ (none recorded)
+```
+
+*Stale review* — steps, final verification and review recorded, then `src/export.js` edited:
+
+```
+field	value
+delivery	d-20261006-1a2b3c
+kind	planned
+progress	verification-unproven — every active step is ticked, but final verification is stale (evidence-derived, not a claim that work is running)
+readiness	unverified — existing report evaluation under project policy (contracts: stale)
+steps	3 of 3 ticked — recorded progress, not proof
+verified	none
+attested	none
+remaining	none
+unknown	AC1, AC2, AC3 — no current passing evidence
+latest verification	ai-factory/evidence/d-20261006-1a2b3c/final.json · final · expects pass · passed · stale · finished 2026-10-06T17:35:49.174Z
+review	approve · status passed · stale · no blocking findings of 0 · ai-factory/evidence/d-20261006-1a2b3c/review.json
+blockers	none recorded — absence of a blocker does not prove readiness
+limitations	REVIEW_STALE: the code or artifacts changed after the review (ai-factory/evidence/d-20261006-1a2b3c/review.json); S_CODE_CHANGED: in-scope code changed after this evidence was recorded (ai-factory/evidence/d-20261006-1a2b3c/final.json)
+source	plan ai-factory/plans/0001-csv-export.md · ai-factory/plans/0001-csv-export.contract.json (valid)
+source	spec ai-factory/specs/0001-csv-export.md · ai-factory/specs/0001-csv-export.contract.json (valid)
+source	evidence ai-factory/evidence/d-20261006-1a2b3c/ (5 record(s))
+```
+
+*Attested criterion* — S2 recorded as not run, AC2 attested and `allow_attestation` enabled:
+
+```
+field	value
+delivery	d-20261006-1a2b3c
+kind	planned
+progress	ready — the existing report evaluation is ready under project policy (evidence-derived, not a claim that work is running)
+readiness	ready — existing report evaluation under project policy (contracts: invalid)
+steps	3 of 3 ticked — recorded progress, not proof
+verified	AC1, AC3
+attested	AC2 — human attestation, not executable proof
+remaining	none
+unknown	none
+latest verification	ai-factory/evidence/d-20261006-1a2b3c/final.json · final · expects pass · passed · valid · finished 2026-10-06T17:35:49.730Z
+review	approve · status passed · valid · no blocking findings of 0 · ai-factory/evidence/d-20261006-1a2b3c/review.json
+blockers	none recorded — absence of a blocker does not prove readiness
+limitations	ATTESTED: S2 did not run automatically; its criteria are covered by allowed attestations (ai-factory/evidence/d-20261006-1a2b3c/S2-step.json)
+source	plan ai-factory/plans/0001-csv-export.md · ai-factory/plans/0001-csv-export.contract.json (valid)
+source	spec ai-factory/specs/0001-csv-export.md · ai-factory/specs/0001-csv-export.contract.json (valid)
+source	evidence ai-factory/evidence/d-20261006-1a2b3c/ (6 record(s))
+```
+
+**Why `ready` can sit beside `contracts: invalid`.** The two values answer different questions.
+`(contracts: …)` is the raw result of `contracts.js validate`, the same as `make contracts`. That
+check is structural and knows nothing about completion policy, so any evidence file recorded as
+`not_run` or `unavailable` makes it `invalid`. Here that file is `S2-step.json`, written by
+`record --not-run`, which itself exits 1. The readiness word comes from the `/t4:report` evaluator
+(spec 0014). It applies the `completion` policy: with `allow_attestation` on, a step that could not
+run counts when allowed attestations cover every one of its criteria. It shows up as the `ATTESTED`
+limitation, and `/t4:report` gives `ready` for the same files. The status adds no rule of its own,
+in either direction. Without that attestation, or with `allow_attestation` off, the same files give
+`unverified`, as in the first example. If a `contracts: invalid` comes with no `ATTESTED` line,
+read `limitations` for the cause. Attested criteria stay in their own group, never under `verified`.
+
 ## 5. Every command
 
 ### Plugin-level — available in any repo
@@ -263,7 +455,7 @@ The full walkthrough, the diagnostic table and the file formats are in
 | Command | Use it when | Writes |
 |---|---|---|
 | `/t4:adopt-sdlc` | adding the layout to an existing repo | the whole `ai-factory/` layout + `ai-factory/.sdlc.json` |
-| `/t4:state` | coming back to a repo and asking what is left, before picking a step up | nothing — terminal output only |
+| `/t4:state` | coming back to a repo and asking what is left, before picking a step up; `--delivery <id>` for one contract delivery's evidence | nothing — terminal output only |
 | `/t4:sync-sdlc` | after pulling a new plugin version, or when `/t4:*` are missing | reports drift; generates selected host pointers only on explicit request |
 
 #### Taking the 1.0.0 rename
@@ -297,6 +489,8 @@ the three states a repo is in, and `/t4:sync-sdlc` stops and points here rather 
 | `/t4:run <plan> step N` | implementing, one step at a time | code + tests | start step N+1 |
 | `/t4:test gaps <spec>` | after the steps are done | test files | weaken an assertion to reach green |
 | `/t4:fix <bug>` | something is broken | a failing test first, then the fix | refactor anything unrelated |
+| `/t4:start <request>` | choose the appropriate existing entry | short explanation and one handoff with original input | implement in the classifier, resume or chain delivery phases |
+| `/t4:continue <delivery id>` | resume a contracts-enabled planned delivery | nothing itself — explains the next evidence-backed action and hands off to one existing task | write artifacts or evidence, run checks, reconcile a changed spec, or chain a second task |
 | `/t4:quick <change>` | a small understood local change | code, meaningful tests, checklist report | change public contracts or silently widen scope |
 | `/t4:chore <change>` | small maintenance, no behaviour change | code + tests | change behaviour beyond the request |
 | `/t4:check` | before committing | nothing — JSON verdict | fix anything it finds |
@@ -423,11 +617,26 @@ a typo such as `enabled: ture`, a duplicate key, flow syntax or bad indentation 
 with the line number before anything launches, and never selects another model. A rejected alias,
 a failed login or a refused request is returned as the failure; nothing retries on a different model.
 
-**Headless.** Every run prints its selection to stderr — `model: plan / codex: gateway/planning-codex
+**Headless.** `TASK=start` and `TASK=continue` are interactive-only and reject before provider launch or run artifacts; CI must name a destination task. Every run prints its selection to stderr — `model: plan / codex: gateway/planning-codex
 (task default)` — and writes `ai-factory/runs/<run>.json.model.json` (schema
 `t4.model-selection.v1`): task, tool, requested model, source, routing state, configuration digest,
 outcome, and any model identity the CLI output reported, kept separate. This is the *requested*
 model; a gateway alias can still resolve to something else behind the provider. `log.csv` is unchanged.
+
+**Start model scope.** A configured start worker classifies with read-only permissions. The session
+validates its bounded result, then dispatches the chosen task under its own model policy. Original
+request text remains verbatim, including retained flags, quotes and multiline content; clarification
+answers are separate context. Concrete start `--task-model=<id>` overrides are rejected before
+launch because generic workers cannot enforce that read-only profile. Configure
+`routing.tasks.start.<host>`, explicitly sync routing adapters and restart, or select
+`--task-model=inherit` for session classification. Other task overrides are unchanged. Failure,
+unavailable workers, stale adapters and invalid classification results stop without fallback.
+
+**Continue model scope.** Continuation never routes to a worker: selection and its one handoff run
+in the invoking session whatever `routing.tasks.continue` says, and doctor reports such a mapping
+as ignored. Its dispatch directive is `session` (or `legacy` with routing off). The one destination
+runs under its own mapping, so map `plan`, `test`, `run`, `check` or `report` instead. A concrete
+continue `--task-model=<id>` is blocked before inspection; `inherit` is accepted.
 
 **Interactive.** A routed task runs in a worker agent pinned to the selected model; the chat
 itself keeps its own model and only relays questions and results. Each `/t4:<task>` command and
@@ -438,6 +647,7 @@ itself keeps its own model and only relays questions and results. Each `/t4:<tas
 | `legacy` | routing is off: the task runs exactly as before |
 | `inherit` | routing is on, but no model is configured for this task: it runs on the session's model |
 | `route` | launch the named worker; do not read or do the task in the chat |
+| `session` | continue only, routing on: select and hand off in this session; no worker for continue itself |
 | `blocked` | stop and report; no task work, and never on another model |
 
 The workers are generated agent files, one per task, written only by an explicit sync:

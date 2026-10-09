@@ -421,6 +421,19 @@ does any — no file edited, no checkbox ticked, no plan moved between plans/ an
 started — and the prompt is the only place that can say so to the session reading it (AC8, AC9):
 $(cat "$ROOT/$PROMPT")"
 
+# Three — the prompt must forbid delegating and must end the turn after the table. "Change
+# nothing" alone did not stop a session deep in a run of /t4:run hand-offs from launching an
+# implementer straight after the listing: the edit was the subagent's, so the session read its
+# own call as not changing anything. Both sentences are pinned so neither can be trimmed away.
+sed 's/\*//g' "$ROOT/$PROMPT" | grep -qi -- 'launch no agent' \
+  || fail "$PROMPT does not say to launch no agent. A listing of outstanding steps invites the
+session to delegate the next one, and a subagent's edit is still /t4:state changing the repo (AC8, AC9):
+$(cat "$ROOT/$PROMPT")"
+grep -qi -- 'then end your turn' "$ROOT/$PROMPT" \
+  || fail "$PROMPT does not end the turn after the table. Nothing may follow the listing until the
+developer types again (AC8, AC9):
+$(cat "$ROOT/$PROMPT")"
+
 # --- 9. the command is named where a developer will find it (AC16, the docs half) -------------
 # A command nobody can find is not shipped. README.md is the plugin's own inventory of what it
 # provides, and ai-factory/docs/workflow.md is the document every repo is pointed at to learn what
@@ -1206,10 +1219,103 @@ out=$(run "$WITHDRAW")
 [ "$(row "$out" 'ai-factory/plans/0102-distinct-identifier.md' | cut -f5)" = 'Step 2a' ] \
   || fail "numeric sorting key was mistaken for the exact step identifier: $out"
 
-echo "state ok — 16 sections: empty answer, the default listing with [~] and done/, determinism, \
+# --- 17. Golden legacy output survives the delivery-status feature (plan 0019, AC6) ------------
+# Byte-for-byte snapshots of the default, --done and --next listings over one fixed tree, taken
+# before `--delivery` existed. The tree also carries what the new mode reads — a contract sidecar,
+# an evidence directory and an installed delivery-status helper — so a listing that started
+# consulting them, or executing the helper, changes these bytes or trips the sentinel. The tree is
+# not the root of a git repository, so --next's answer is fixed by the number tiebreak alone.
+#
+# Deliberately NOT pinned: the unknown-flag line and the --done --next refusal. Adding --delivery
+# may legitimately mention the new flag there; AC6 covers the three listings, not those lines.
+# Argument collisions involving --delivery live in check-delivery-status.sh's `cli` group, which
+# is red until plan 0019 Step 3 — this file stays green on its own.
+GOLD=$TMP/golden
+mkdir -p "$GOLD/ai-factory/specs" "$GOLD/ai-factory/plans/done" "$GOLD/ai-factory/make" \
+         "$GOLD/ai-factory/evidence/d-20260101-abcdef"
+printf '# 0001 — no plan yet\n'          > "$GOLD/ai-factory/specs/0001-no-plan-yet.md"
+printf '# 0002 — partly built\n'         > "$GOLD/ai-factory/specs/0002-partly-built.md"
+printf '# 0003 — all built\n'            > "$GOLD/ai-factory/specs/0003-all-built.md"
+printf '# 0004 — withdrawn remainder\n'  > "$GOLD/ai-factory/specs/0004-withdrawn-remainder.md"
+{ printf '# Plan 0002 — partly built\n\n**Spec:** `ai-factory/specs/0002-partly-built.md`\n\n## Steps\n\n'
+  printf -- '- [x] **Step 1 — the trial balance reconciled.** Proved.\n'
+  printf -- '- [~] **Step 2 — the ledger exported.** Partly.\n'
+  printf -- '- [ ] **Step 3 — the audit trail written.** Not yet.\n'
+} > "$GOLD/ai-factory/plans/0002-partly-built.md"
+{ printf '# Plan 0003 — all built\n\n**Spec:** `ai-factory/specs/0003-all-built.md`\n\n## Steps\n\n'
+  printf -- '- [x] **Step 1 — the meter installed.** Proved.\n'
+} > "$GOLD/ai-factory/plans/done/0003-all-built.md"
+{ printf '# Plan 0004 — withdrawn remainder\n\n**Spec:** `ai-factory/specs/0004-withdrawn-remainder.md`\n\n## Steps\n\n'
+  printf -- '- [x] **Step 1 — the kiln fired.** Proved.\n'
+  printf -- '- [ ] **Step 2 — the second firing.** Dropped.\n'
+  printf -- '  **Result — Step 2 withdrawn; not run.**\n'
+} > "$GOLD/ai-factory/plans/0004-withdrawn-remainder.md"
+{ printf '# Plan 0005 — no rule covers these\n\n## Steps\n\n'
+  printf -- '- [?] **Step 1 — the marker nothing defines.**\n'
+} > "$GOLD/ai-factory/plans/0005-no-rule.md"
+printf '{"schema":"t4-contract/spec","version":1,"delivery_id":"d-20260101-abcdef"}\n' \
+  > "$GOLD/ai-factory/specs/0002-partly-built.contract.json"
+printf '{"status":"passed"}\n' > "$GOLD/ai-factory/evidence/d-20260101-abcdef/final.json"
+GOLD_SENTINEL=$TMP/golden-helper-ran
+printf 'require("node:fs").writeFileSync(%s, "ran");\n' "'$GOLD_SENTINEL'" \
+  > "$GOLD/ai-factory/make/delivery-status.js"
+
+T=$'\t'
+expect_default="kind<T>number<T>state<T>path<T>step<T>detail
+plan<T>0002<T>part-done<T>ai-factory/plans/0002-partly-built.md<T>Step 2<T>the ledger exported.
+plan<T>0002<T>not-started<T>ai-factory/plans/0002-partly-built.md<T>Step 3<T>the audit trail written.
+plan<T>0005<T>unknown<T>ai-factory/plans/0005-no-rule.md<T>-<T>1 step line(s) carry a marker no rule covers — expected - [ ], - [x] or - [~]
+spec<T>0001<T>not-started<T>ai-factory/specs/0001-no-plan-yet.md<T>-<T>0001 — no plan yet
+spec<T>0002<T>part-done<T>ai-factory/specs/0002-partly-built.md<T>-<T>0002 — partly built"
+expect_done="kind<T>number<T>state<T>path<T>step<T>detail
+plan<T>0004<T>closed<T>ai-factory/plans/0004-withdrawn-remainder.md<T>-<T>Plan 0004 — withdrawn remainder — 1 withdrawn step(s); no pending steps
+plan<T>0003<T>complete<T>ai-factory/plans/done/0003-all-built.md<T>-<T>Plan 0003 — all built
+spec<T>0003<T>complete<T>ai-factory/specs/0003-all-built.md<T>-<T>0003 — all built
+spec<T>0004<T>closed<T>ai-factory/specs/0004-withdrawn-remainder.md<T>-<T>0004 — withdrawn remainder — its plans have no pending steps; includes withdrawn work"
+expect_next="kind<T>number<T>state<T>path<T>step<T>detail
+spec<T>0001<T>not-started<T>ai-factory/specs/0001-no-plan-yet.md<T>-<T>0001 — no plan yet
+next: ai-factory/specs/0001-no-plan-yet.md — no commit dates were available — this directory is not the root of a git repository, or git is not installed, so the lower number decided"
+expect_bare="nothing to list — this repo has no ai-factory/specs or ai-factory/plans directory"
+
+gold_before=$(content_snap "$GOLD"); gold_fs=$(fs_snap "$GOLD")
+for pair in "default|" "done|--done" "next|--next"; do
+  label=${pair%%|*}; flag=${pair#*|}
+  var="expect_$label"; want=${!var}; want=${want//<T>/$T}
+  # shellcheck disable=SC2086 # an empty $flag must vanish, not become an empty argument
+  got=$(run "$GOLD" $flag); st=$?
+  [ "$st" = 0 ] || fail "the $label listing exited $st over the golden fixture (AC6, plan 0019)"
+  [ "$got" = "$want" ] || fail "the $label listing is no longer byte-identical to its golden snapshot.
+Plan 0019 adds --delivery as a separate mode; existing listings keep their selection, order,
+withdrawal handling and bytes (spec 0019, AC6):
+$(diff <(printf '%s\n' "$want") <(printf '%s\n' "$got"))"
+done
+[ "$(run "$TMP/bare")" = "$expect_bare" ] \
+  || fail "the empty-repo answer changed (spec 0019, AC6): $(run "$TMP/bare")"
+[ ! -e "$GOLD_SENTINEL" ] \
+  || fail "a legacy listing executed ai-factory/make/delivery-status.js; only --delivery may consult it"
+[ "$(content_snap "$GOLD")" = "$gold_before" ] && [ "$(fs_snap "$GOLD")" = "$gold_fs" ] \
+  || fail "a legacy listing changed the golden fixture tree (AC8, AC9)"
+
+# --- 18. --delivery never collapses into a listing (plan 0019, AC6) ---------------------------
+# The mode-agnostic half of the argument collisions: whatever `--delivery` grows into, combining
+# it with a listing flag, or giving it no ID, is answered in one line with no table and no
+# listing — never by silently running one of the listings. These hold before and after plan 0019
+# Step 3. What the line must SAY (that the modes do not combine, that an ID is missing) is the
+# new mode's wording and is pinned in check-delivery-status.sh's `cli` group instead.
+DID=d-20260101-abcdef
+refused "--delivery $DID --done" --delivery "$DID" --done
+refused "--done --delivery $DID" --done --delivery "$DID"
+refused "--next --delivery $DID" --next --delivery "$DID"
+refused "--delivery $DID --next" --delivery "$DID" --next
+refused '--delivery with no ID' --delivery
+refused '--delivery followed by a flag' --delivery --done
+
+echo "state ok — 18 sections: empty answer, the default listing with [~] and done/, determinism, \
 the read-only snapshots, unknown-with-a-reason, the three **Spec:** link forms, sibling isolation, \
 the prompt's two invariants, the command named in README.md and the workflow doc, --done as the \
 default listing's mirror image, checkboxes over directory under the filter, --done's empty answer, \
 the prompt's hand-off with \$ARGUMENTS still last, --next by commit date with its untracked, \
 non-repository and same-instant cases, and the refusal of --done --next in either order beside the \
-unknown flag's own answer, and explicit withdrawals without false completion"
+unknown flag's own answer, explicit withdrawals without false completion, and golden legacy \
+listings that ignore contract artefacts and the delivery-status helper, and --delivery collisions \
+that never fall back to a listing"

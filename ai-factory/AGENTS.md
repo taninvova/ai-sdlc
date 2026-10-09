@@ -14,7 +14,7 @@ Adapter sync (this repo): `bash ai-factory/make/sync-adapters.sh`
 Checks (all of them): `for f in skills/ai-layout/scripts/check-*.sh skills/ai-hooks/fixtures/check-*.sh; do bash "$f" || echo "FAIL $f"; done`
   — never pipe one to `tail`: the pipeline's status is `tail`'s, and a failure reads as a pass
 Hook fixtures: `node skills/ai-hooks/scripts/session-stop.js < skills/ai-hooks/fixtures/stop.json`
-Slash commands: /t4:fleet /t4:design /t4:adr /t4:analyse /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:quick /t4:check /t4:report
+Slash commands: /t4:start /t4:continue /t4:fleet /t4:design /t4:adr /t4:analyse /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:quick /t4:check /t4:report
 Headless (CI only): make ai TASK=<name> INPUT="…"
 
 ## This repo is its own template
@@ -36,6 +36,13 @@ Read architecture when placement is uncertain; fleet for cross-service work; the
 when the selected workflow requires them. Reuse unchanged context already in this session.
 
 ## Workflow
+Use /t4:start <request> to choose one existing workflow interactively; direct commands remain available.
+Start only classifies, preserves original input and dispatches the destination independently.
+Resume a contracts-enabled planned delivery with /t4:continue <delivery id>: it inspects evidence
+read-only, asks when phases are uncertain, stops on spec drift for you to reconcile, and hands off
+to at most one plan, test, run, check or report task in this session. Paths, quick deliveries and
+contracts-disabled repos are unsupported. Headless TASK=start and TASK=continue are unsupported;
+CI must name a destination task.
 Small, understood local change: /t4:quick. Bug: /t4:fix. Maintenance: /t4:chore.
 Uncertain requirements, authorization, public contracts, migrations, dependencies or service
 boundaries: /t4:explore → /t4:spec → /t4:plan → /t4:test red → /t4:run → /t4:test gaps → /t4:check (→ /t4:report with contracts).

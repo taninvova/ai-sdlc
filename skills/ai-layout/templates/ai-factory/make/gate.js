@@ -4,6 +4,9 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
+// Preserve the invoked workspace when its entry point is a source-repo symlink (see runner.js).
+const ENTRY_DIRECTORY =
+	require.main === module ? path.dirname(process.argv[1]) : __dirname;
 
 const digest = (bytes) =>
 	crypto.createHash("sha256").update(bytes).digest("hex");
@@ -83,23 +86,56 @@ function readReview(options) {
 	return parseVerdict(JSON.stringify(result));
 }
 
-function evaluate(options, enforce = process.env.GATE_ENFORCE) {
-	if (
-		enforce !== undefined &&
-		enforce !== "" &&
-		enforce !== "0" &&
-		enforce !== "1"
-	) {
-		return { code: 2, message: "gate: GATE_ENFORCE must be 0, 1, or unset" };
+// The assurance helper ships beside this file. Where it is absent (a partial copy) behavior is
+// legacy, but a selection it cannot read is never silently ignored.
+function assuranceModule(root) {
+	const file = path.join(__dirname, "assurance.js");
+	if (fs.existsSync(file)) return require(file);
+	const selection = path.join(root, "ai-factory", "assurance.json");
+	let present = false;
+	try {
+		fs.lstatSync(selection);
+		present = true;
+	} catch {}
+	if (present)
+		throw new Error("ai-factory/assurance.json selects a preset, but make/assurance.js is missing; run /t4:sync-sdlc to receive it");
+	return null;
+}
+// The selected preset, or null when none is selected. A malformed selection throws.
+function selectedPreset(root) {
+	const assurance = assuranceModule(root);
+	return assurance ? assurance.readSelection(root).preset : null;
+}
+// Shared with runner.js through assurance.enforcement(): one rule decides advisory or enforced.
+function gateMode(enforce, preset = null) {
+	if (preset === null) {
+		if (enforce !== undefined && enforce !== "" && enforce !== "0" && enforce !== "1")
+			return { error: "GATE_ENFORCE must be 0, 1, or unset" };
+		return { mode: enforce === "1" ? "enforced" : "advisory", preset };
 	}
-	const strict = enforce === "1";
+	const resolved = require("./assurance.js").enforcement({ preset, env: { GATE_ENFORCE: enforce } });
+	if (resolved.conflicts.length)
+		return { error: resolved.conflicts.map((item) => `${item.code} ${item.message}. ${item.hint}`).join("\n") };
+	return { mode: resolved.mode, preset };
+}
+
+function evaluate(options, enforce = process.env.GATE_ENFORCE, preset = null) {
+	const resolved = gateMode(enforce, preset);
+	if (resolved.error) return { code: 2, message: `gate: ${resolved.error}` };
+	const strict = resolved.mode === "enforced";
+	const label = `${strict ? "enforced" : "advisory"}${preset ? ` (preset ${preset})` : ""}`;
+	// Under a preset an advisory exit is never mistaken for approval.
+	const advisoryNote =
+		preset && !strict && require("./assurance.js").PRESETS[preset].review_required
+			? "; an advisory exit is not approval, and completion stays non-ready until an approving independent review is recorded"
+			: "";
 	let verdict;
 	try {
 		verdict = readReview(options);
 	} catch (error) {
 		return {
 			code: strict ? 1 : 0,
-			message: `gate: ${strict ? "enforced" : "advisory"} — invalid review, no approval: ${error.message}`,
+			message: `gate: ${label} — invalid review, no approval: ${error.message}${advisoryNote}`,
 		};
 	}
 	const blockers = verdict.findings.filter(
@@ -112,7 +148,7 @@ function evaluate(options, enforce = process.env.GATE_ENFORCE) {
 	);
 	details.push(`verdict: ${verdict.verdict} — ${verdict.summary}`);
 	details.push(
-		`gate: ${strict ? "enforced" : "advisory"} — ${approved ? "valid approval" : "approval requirements not met"}`,
+		`gate: ${label} — ${approved ? "valid approval" : `approval requirements not met${advisoryNote}`}`,
 	);
 	return {
 		code: strict && !approved ? 1 : 0,
@@ -138,11 +174,18 @@ function main(argv = process.argv.slice(2)) {
 		}
 		options[key] = args[index + 1];
 	}
-	const result = evaluate(options);
+	let preset;
+	try {
+		preset = selectedPreset(fs.realpathSync(path.resolve(ENTRY_DIRECTORY, "../..")));
+	} catch (error) {
+		process.stderr.write(`gate: ${error.message}\n`);
+		return 2;
+	}
+	const result = evaluate(options, process.env.GATE_ENFORCE, preset);
 	(result.code || !result.verdict ? process.stderr : process.stdout).write(
 		`${result.message}\n`,
 	);
 	return result.code;
 }
 if (require.main === module) process.exitCode = main();
-module.exports = { digest, parseVerdict, readReview, evaluate, main };
+module.exports = { digest, parseVerdict, readReview, evaluate, gateMode, assuranceModule, selectedPreset, main };

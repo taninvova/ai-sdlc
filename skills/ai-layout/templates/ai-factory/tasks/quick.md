@@ -7,6 +7,11 @@ If nothing follows the command name, ask for the change and expected result, the
 Read ai-factory/AGENTS.md, the applicable protection rules and coding conventions, then the
 affected code and its nearby tests. Reuse unchanged context already read in this session.
 
+Assurance, only when `ai-factory/assurance.json` exists: first run `node ai-factory/make/assurance.js show`
+and show the developer the preset and effective requirements it prints, with any conflict or unmet
+requirement. A preset only adds requirements: it never makes a request eligible for this route, and
+never weakens project rules. Under `standard` or `strict` record the checklist with contracts (step 2).
+
 1. Check scope. Use this route for a local change with an understood result. If requirements
    are uncertain, or the change affects authorization, public contracts, migrations, dependencies
    or service ownership, preserve current work and name the decision needing the normal workflow.
@@ -28,6 +33,14 @@ affected code and its nearby tests. Reuse unchanged context already read in this
    writes the optional completion report.
 5. Self-review the actual local diff, including relevant untracked files. Clearly call this a
    self-review. Use independent review if the user or project requires it; never imply independence.
+   When the effective `review_independence` is `independent` (standard, strict), self-review never
+   satisfies review: only `make -f ai-factory/make/ai.mk review DELIVERY=<id>` records independent
+   review. Run it only in a session the developer invoked directly. A routed worker or a headless run
+   never runs it: it reports review as an unmet requirement naming that command, as does a session
+   where it fails. Never record review evidence another way.
+6. With a preset, claim completion only when `node ai-factory/make/assurance.js complete <id>` exits 0;
+   otherwise report each reason it lists. Under strict it writes the fresh report, which must be
+   `ready`; an earlier report never counts.
 
 Report the acceptance result, files changed, verification actually performed and any unresolved
 concern. A failed or unavailable required check remains unverified; do not claim completion.
