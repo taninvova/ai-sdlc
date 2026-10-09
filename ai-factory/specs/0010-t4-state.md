@@ -35,10 +35,10 @@ Facts, established by reading the repo:
   `ai-factory/plans/done/`, and every one of their 48 checkboxes is `[x]` or `[~]`; not one `- [ ]`
   remains anywhere in the repo. So on today's tree the only incomplete plan steps are the two `- [~]`
   ones, both inside filed plans.
-- **Two specs have no plan.** `ai-factory/specs/0008-make-cost-report-and-export.md` and
-  `0009-remove-serena.md` exist (both untracked on `main` as of this spec) with no counterpart in
-  `ai-factory/plans/`, and both carry unanswered Open questions, which `ai-factory/docs/workflow.md`
-  says makes a spec unbuildable. Spec numbers run 0001–0006 then 0008–0010; **0007 is absent**, so
+- **A spec can have no plan.** `ai-factory/specs/0008-make-cost-report-and-export.md` exists
+  (untracked on `main` as of this spec) with no counterpart in `ai-factory/plans/`, and carries
+  unanswered Open questions, which `ai-factory/docs/workflow.md`
+  says makes a spec unbuildable. Spec numbers run 0001–0006, 0008 and 0010; **0007 and 0009 are absent**, so
   the spec/plan number is not a dense sequence and no scan may assume it is.
 - **`/t4:doctor` is the read-only reporting precedent.** `commands/doctor.md` drives
   `skills/ai-layout/scripts/doctor.sh`; spec 0002 fixes that it writes nothing (AC1), reports
@@ -121,9 +121,8 @@ the next step up without opening every file under `ai-factory/` to reconstruct i
 
 - **AC17 — withdrawal correction (2026-09-29).** Given an unchecked or partly done numbered
   step and an explicit `**Result — Step N withdrawn; …**`, `**Result — Step N withdrawn.**`,
-  or `**Result — Step N withdrawn**` record in that plan (optionally `is withdrawn`, as in
-  plan 0009), When the listing runs, Then that
-  step is resolved without changing its checkbox and is omitted from default and `--next`.
+  or `**Result — Step N withdrawn**` record in that plan (optionally `is withdrawn`), When the listing runs,
+  Then that step is resolved without changing its checkbox and is omitted from default and `--next`.
   The record must be an ordinary line with at most three leading spaces, outside fenced code;
   quoted examples, indented code, conditional prose and different step numbers do not qualify.
   If every other step is ticked or withdrawn, `--done` lists the plan as `closed`, with a

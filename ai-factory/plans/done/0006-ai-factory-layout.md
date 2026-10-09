@@ -145,7 +145,7 @@ that also delivered new prompt text would be `/t4:sync-sdlc` wearing a disguise.
   writes into `ai-factory/runs/`.
   **Migrate (AC14, AC18):** a repo adopted at 0.27.1 — the full template set wound back to the old
   layout, two specs, an ADR, a plan, its own history, and `ai/tasks/spec.md` edited by hand. First
-  run **refused**: Serena's MCP server had created `.serena/` during the session, so the tree was
+  run **refused**: an MCP server had created an untracked directory during the session, so the tree was
   dirty. The session reported the refusal, diagnosed the cause and stopped rather than working
   around it — the prompt's "do not work around it" rule holding under a real agent. With the tree
   clean it moved 4 paths, rewrote 36 files, committed nothing, left the moves staged and the
@@ -174,7 +174,7 @@ nothing after it should be committed until they are settled.
 
 - [x] **Step 10 — Settle the two open decisions.** Both are yours, both change shipped files.
   (a) **The dirty-tree refusal.** It fired in step 8's live run because an MCP server created
-  `.serena/` mid-session — a reason unrelated to the repo. Untracked files cannot affect `git mv`
+  an untracked directory mid-session — a reason unrelated to the repo. Untracked files cannot affect `git mv`
   or the rewrite; they matter only because the developer's own `git add -A` for the second commit
   would sweep them in. Options: leave strict; or refuse on tracked modifications and warn about
   untracked ones. Changing it touches `migrate-layout.sh`, `check-migrate.sh`'s `dirty` case and
