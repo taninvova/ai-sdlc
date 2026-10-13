@@ -45,6 +45,18 @@
   `contracts/config.json` and evidence. Until a repo selects a preset its behavior is unchanged. A repo that has
   `ai-factory/assurance.json` without the helper stops headless runs and the gate with `/t4:sync-sdlc` guidance.
 
+**Unreleased — `/t4:state` filters by kind and by spec (no version bump)**
+
+- `/t4:state --specs` lists only specs and `--plans` only plans. Both combine with `--done` and
+  `--next`; together they are refused in one line.
+- `/t4:state --spec <number>` lists one spec with the plans whose `**Spec:**` line names it. On
+  its own it shows them whatever their state; `--done`, `--next`, `--specs` and `--plans` narrow
+  it. The number may be bare (`10`), zero-padded, or the spec's file name or path. A number that
+  names no spec, a missing number and a second `--spec` are answered in one line.
+- None of the three combines with `--delivery`. Rows, header and order are unchanged: a filtered
+  row is byte-identical to the unfiltered one. `check-state.sh` pins this in a new section.
+  Codex `$t4-state` reads the same file.
+
 **Unreleased — `/t4:state` ends its turn (no version bump)**
 
 - `commands/state.md` now says to launch no agent, background task, workflow, command or skill,

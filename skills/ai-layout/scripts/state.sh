@@ -20,6 +20,13 @@
 #               --done or --next, takes exactly one ID, and a missing helper is answered with
 #               /t4:sync-sdlc guidance — all one-line refusals with exit 0. The helper's own
 #               refusals pass through the same way; a helper runtime failure exits non-zero.
+#               --specs and --plans narrow a listing to one kind of row, and --spec <number>
+#               narrows it to one spec and the plans paired to it. They choose WHICH artefacts are
+#               listed, so each composes with --done and --next, and --spec composes with either
+#               kind. --spec on its own shows that spec whatever its state — finished rows beside
+#               outstanding ones — because naming one spec asks what became of it. --specs with
+#               --plans, a second --spec, a --spec with no number and any of them beside
+#               --delivery are one-line refusals with exit 0.
 #
 # Output: a tab-separated table — a header row, then one row per listed thing:
 #
@@ -27,7 +34,8 @@
 #
 # One row builder, one sort and one header serve both listings: every artefact becomes a row
 # carrying its state, and the flag chooses which states are printed. The two listings are
-# therefore the same rows filtered two ways and cannot drift apart (plan 0010, Step 5).
+# therefore the same rows filtered two ways and cannot drift apart (plan 0010, Step 5). --specs,
+# --plans and --spec are further filters over those same rows, applied in that same place.
 #
 # WHICH of those become table columns, in what order, and whether the table is sectioned by
 # kind, is plan 0010's Ambiguity B and belongs to commands/state.md, not here. This script's
@@ -50,6 +58,9 @@ REPO=""; PLUGIN=""; EXTRA=""; HAS_DONE=0; HAS_NEXT=0; UNKNOWN=""
 # delivery ID — unless that argument is missing or is itself a flag, which leaves the ID missing
 # rather than swallowing the flag. Nothing here interprets the ID: the adopted helper validates it.
 HAS_DELIVERY=0; DELIVERY_ID=""; DELIVERY_MISSING=0
+# --specs and --plans pick one kind of row; --spec <number> picks one spec and its plans. --spec
+# consumes its number the way --delivery consumes its ID, and leaves a flag where it stands.
+HAS_SPECS=0; HAS_PLANS=0; HAS_SPEC=0; SPEC_ARG=""; SPEC_MISSING=0
 while [ "$#" -gt 0 ]; do
   arg=$1; shift
   case "$arg" in
@@ -63,12 +74,23 @@ while [ "$#" -gt 0 ]; do
         # An empty argument is a missing ID too; consume it so it is not read as a repo root.
         if [ "$#" -gt 0 ] && [ -z "$1" ]; then shift; fi
       fi ;;
+    --spec)
+      HAS_SPEC=$((HAS_SPEC + 1))
+      EXTRA="${EXTRA:+$EXTRA }$arg"
+      if [ "$#" -gt 0 ] && [ -n "$1" ] && [ "${1#-}" = "$1" ]; then
+        SPEC_ARG=$1; shift
+      else
+        SPEC_MISSING=1
+        if [ "$#" -gt 0 ] && [ -z "$1" ]; then shift; fi
+      fi ;;
     -*)
       EXTRA="${EXTRA:+$EXTRA }$arg"
       case "$arg" in
-        --done) HAS_DONE=1 ;;
-        --next) HAS_NEXT=1 ;;
-        *)      UNKNOWN="${UNKNOWN:+$UNKNOWN }$arg" ;;
+        --done)  HAS_DONE=1 ;;
+        --next)  HAS_NEXT=1 ;;
+        --specs) HAS_SPECS=1 ;;
+        --plans) HAS_PLANS=1 ;;
+        *)       UNKNOWN="${UNKNOWN:+$UNKNOWN }$arg" ;;
       esac ;;
     *)
       if   [ -z "$REPO" ];   then REPO=$arg
@@ -100,10 +122,17 @@ PLUGIN=${PLUGIN:-${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../../.." && pwd)}}
 # The fix differs too — drop one flag, as against correct a misspelt one — so the line that names
 # the problem names the right one.
 MODE=default
+# The spec number --spec was given, as the four digits an artefact's name leads with. A bare
+# number, a zero-padded one, a spec's basename and its path all name the same spec.
+SPEC_NUM=""
+if [ "$HAS_SPEC" = 1 ] && [ "$SPEC_MISSING" = 0 ]; then
+  SPEC_NUM=$(printf '%s' "${SPEC_ARG##*/}" | sed -n 's/^\([0-9][0-9]*\)\(-.*\)\{0,1\}$/\1/p' | sed 's/^0*\([0-9]\)/\1/')
+  [ -z "$SPEC_NUM" ] || SPEC_NUM=$(printf '%04d' "$SPEC_NUM")
+fi
 if [ -n "$UNKNOWN" ]; then
   # An unrecognised token: say what it is, and what this command does take. The rules for --done
   # and --next are settled and implemented, so this line no longer claims anything is undecided.
-  echo "'$UNKNOWN' is not a flag /t4:state takes — it takes --done, which lists what is finished instead of what is outstanding, or --next, which names the single item to pick up next, or --delivery <id>, which shows one contract delivery's status; with no flag at all it lists everything outstanding. Nothing was listed."
+  echo "'$UNKNOWN' is not a flag /t4:state takes — it takes --done, which lists what is finished instead of what is outstanding, or --next, which names the single item to pick up next, or --specs or --plans, which list only that kind, or --spec <number>, which lists one spec with its plans, or --delivery <id>, which shows one contract delivery's status; with no flag at all it lists everything outstanding. Nothing was listed."
   exit 0
 elif [ "$HAS_DELIVERY" -gt 0 ] && [ "$DELIVERY_MISSING" = 1 ]; then
   # --delivery with nothing after it, or with a flag where its ID belongs. The flag exists, so this
@@ -121,6 +150,23 @@ elif [ "$HAS_DELIVERY" = 1 ] && { [ "$HAS_DONE" = 1 ] || [ "$HAS_NEXT" = 1 ]; };
   [ "$HAS_NEXT" = 1 ] && listing="${listing:+$listing and }--next"
   echo "--delivery does not combine with $listing — --delivery shows one contract delivery's status, while --done and --next are listings, so ask one at a time. Nothing was listed or shown."
   exit 0
+elif [ "$HAS_DELIVERY" = 1 ] && { [ "$HAS_SPECS" = 1 ] || [ "$HAS_PLANS" = 1 ] || [ "$HAS_SPEC" -gt 0 ]; }; then
+  # The same collision with the filters: they narrow a listing, and --delivery is not one.
+  echo "--delivery does not combine with --specs, --plans or --spec — --delivery shows one contract delivery's status, while those narrow a listing of specs and plans, so ask one at a time. Nothing was listed or shown."
+  exit 0
+elif [ "$HAS_SPEC" -gt 0 ] && [ "$SPEC_MISSING" = 1 ]; then
+  echo "--spec needs a spec number after it — name one spec, as in --spec 0010. Nothing was listed."
+  exit 0
+elif [ "$HAS_SPEC" -gt 1 ]; then
+  echo "--spec was given more than once — it lists one spec with its plans, so ask about one spec number at a time. Nothing was listed."
+  exit 0
+elif [ "$HAS_SPEC" = 1 ] && [ -z "$SPEC_NUM" ]; then
+  echo "'$SPEC_ARG' is not a spec number — --spec takes the number a spec's file name starts with, as in --spec 0010. Nothing was listed."
+  exit 0
+elif [ "$HAS_SPECS" = 1 ] && [ "$HAS_PLANS" = 1 ]; then
+  # Both kinds is the unfiltered listing under another name; refused rather than guessed at.
+  echo "--specs and --plans do not combine — each narrows the listing to one kind, and with neither it lists both. Nothing was listed."
+  exit 0
 elif [ "$HAS_DONE" = 1 ] && [ "$HAS_NEXT" = 1 ]; then
   # Both flags, in either order. Neither wins: the combination is refused outright.
   echo "--done and --next do not combine — asking for both at once is not a meaningful question, so ask one at a time: --done lists what is finished instead of what is outstanding, and --next names the single item to pick up next. Nothing was listed."
@@ -130,6 +176,14 @@ elif [ "$HAS_DONE" = 1 ]; then
 elif [ "$HAS_NEXT" = 1 ]; then
   MODE=next
 fi
+
+# KIND is the one kind of row the listing keeps, or empty for both. WHAT names the listed things in
+# the one-line answers below; with no filter it reads as it always has.
+KIND=""; WHAT="spec and plan"; AMONG="anything outstanding"
+[ "$HAS_SPECS" = 0 ] || { KIND=spec; WHAT="spec"; AMONG="any outstanding spec"; }
+[ "$HAS_PLANS" = 0 ] || { KIND=plan; WHAT="plan"; AMONG="any outstanding plan"; }
+WHERE="in this repo"
+[ -z "$SPEC_NUM" ] || { WHERE="under spec $SPEC_NUM"; AMONG="$AMONG under spec $SPEC_NUM"; }
 
 [ -d "$REPO" ] || { echo "nothing to list — no such directory: $REPO"; exit 0; }
 # Everything below is read relative to the repo root and nothing resolves above it, so a run in
@@ -277,6 +331,7 @@ withdrawn_steps_of() {
 # plan filed under done/ with one `- [~]` step is outstanding (AC10), unless that step has an
 # explicit withdrawal result (AC17). Filing a plan never resolves its work.
 PLAN_SPEC=(); PLAN_STATE=(); NP=0
+SCOPE=""          # under --spec: the paths of that spec and of the plans paired to it, one a line
 
 plan_list=$( { for f in ai-factory/plans/*.md ai-factory/plans/*/*.md; do
                  printf '%s\n' "$f"
@@ -370,6 +425,12 @@ while IFS= read -r plan; do
   fi
 
   PLAN_SPEC[$NP]=$specref; PLAN_STATE[$NP]=$state; NP=$((NP + 1))
+  # The pairing --spec follows is the one the spec rows below are built from: the plan's **Spec:**
+  # line, never the plan's own number.
+  if [ -n "$SPEC_NUM" ] && [ -n "$specref" ] && [ "$(number_of "$specref")" = "$SPEC_NUM" ]; then
+    SCOPE="$SCOPE$plan
+"
+  fi
 
   case "$state" in
     unknown)
@@ -404,6 +465,10 @@ spec_list=$( { for f in ai-factory/specs/*.md; do printf '%s\n' "$f"; done; } | 
 while IFS= read -r spec; do
   [ -n "$spec" ] || continue
   snum=$(number_of "$spec")
+  if [ -n "$SPEC_NUM" ] && [ "$snum" = "$SPEC_NUM" ]; then
+    SCOPE="$SCOPE$spec
+"
+  fi
   if [ ! -r "$spec" ]; then
     add "$spec" 0 spec "$snum" unknown "-" "the file could not be read — check its permissions"
     continue
@@ -447,17 +512,36 @@ EOF_SPECS
 # not shown with a done marker" is this one comparison — and --done shows what is, which is the
 # mirror image over any tree (AC5). `unknown` is neither, so it appears in the default listing and
 # never under --done: an artefact that could not be read or interpreted is never complete (AC12).
+#
+# --specs, --plans and --spec narrow that same selection by kind and by path, so a filtered row is
+# byte-identical to the row the unfiltered listing prints. --spec with neither --done nor --next
+# keeps both halves: one named spec is shown whole, its finished plans beside its open steps.
+STATES=$MODE
+[ -z "$SPEC_NUM" ] || [ "$MODE" != default ] || STATES=all
 SELECTED=$(printf '%s' "$ROWS" | grep -v '^$' | LC_ALL=C sort \
-  | awk -F'\t' -v mode="$MODE" '{ done_row = ($5 == "complete" || $5 == "closed"); if ((mode == "done") == done_row) print }')
+  | SCOPE=$SCOPE awk -F'\t' -v states="$STATES" -v kind="$KIND" -v scoped="${SPEC_NUM:+1}" '
+      BEGIN { n = split(ENVIRON["SCOPE"], paths, "\n"); for (i = 1; i <= n; i++) if (paths[i] != "") in_scope[paths[i]] = 1 }
+      {
+        done_row = ($5 == "complete" || $5 == "closed")
+        if (states != "all" && (states == "done") != done_row) next
+        if (kind != "" && $3 != kind) next
+        if (scoped != "" && !($1 in in_scope)) next
+        print
+      }')
 
 # An empty result is an answer, not an error and not silence: one line, exit 0 (AC11).
 if [ -z "$SELECTED" ]; then
   if [ ! -d ai-factory/specs ] && [ ! -d ai-factory/plans ]; then
     echo "nothing to list — this repo has no ai-factory/specs or ai-factory/plans directory"
+  elif [ -n "$SPEC_NUM" ] && [ -z "$SCOPE" ]; then
+    # Not the same answer as a spec with nothing left: this one does not exist.
+    echo "no spec numbered $SPEC_NUM — ai-factory/specs holds no spec with that number, and no plan names one. Nothing was listed."
+  elif [ "$STATES" = all ]; then
+    echo "nothing to list — no $WHAT $WHERE"
   elif [ "$MODE" = done ]; then
-    echo "nothing finished yet — no spec or plan in this repo is complete or closed"
+    echo "nothing finished yet — no ${WHAT/ and / or } $WHERE is complete or closed"
   else
-    echo "nothing outstanding — every spec and plan in this repo is complete or closed"
+    echo "nothing outstanding — every $WHAT $WHERE is complete or closed"
   fi
   exit 0
 fi
@@ -555,7 +639,7 @@ EOF_NEXT
     why="it is uncommitted or untracked, which sorts newest"
     [ -z "$tiebreak" ] || why="$why, and $tiebreak decided between those tied there"
   else
-    why="it carries the newest commit date of anything outstanding"
+    why="it carries the newest commit date of $AMONG"
     [ -z "$tiebreak" ] || why="$why, and $tiebreak decided between those tied on it"
   fi
 

@@ -218,6 +218,10 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
   ticking it. `--done` labels plans resolved partly by withdrawal as `closed`, not `complete`;
   blocked or deferred steps without such a record stay pending. This reports recorded work,
   not proof of acceptance criteria. Quoted or fenced examples never withdraw a step.
+  `--specs` or `--plans` narrows the listing to one kind, and either combines with `--done` or
+  `--next`. `--spec <number>` lists one spec and the plans whose `**Spec:**` line names it — on
+  its own whatever their state, so a finished spec is shown rather than answered with "nothing
+  outstanding"; add `--done`, `--next`, `--specs` or `--plans` to narrow that further.
   With contracts enabled, `/t4:state --delivery <id>` shows one delivery's evidence instead; see
   *Delivery status* below.
 - **Plan when risk or uncertainty warrants it.** File count alone does not determine the workflow.

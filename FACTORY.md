@@ -91,7 +91,7 @@ unverified).
 | Kind | Artifacts |
 | --- | --- |
 | Skills | `ai-layout` (where an AI-related file belongs), `ai-hooks` (run logging, dont-touch guard) |
-| Setup commands | `/t4:adopt-sdlc`, `/t4:doctor`, `/t4:state` (`--done`, `--next`), `/t4:setup-tracker`, `/t4:setup-knowledge`, `/t4:sync-sdlc` |
+| Setup commands | `/t4:adopt-sdlc`, `/t4:doctor`, `/t4:state` (`--done`, `--next`, `--specs`, `--plans`, `--spec <number>`), `/t4:setup-tracker`, `/t4:setup-knowledge`, `/t4:sync-sdlc` |
 | Other loop commands | `/t4:quick`, `/t4:fleet`, `/t4:fix`, `/t4:chore`, `/t4:report` |
 | Hooks | session / edit / test-command / usage logging to `ai-factory/runs/`, one row per concluded subagent; dont-touch guard — for Claude Code (`hooks/hooks.json`) and Codex (`hooks/codex.json`) |
 | Headless runner | `make -f ai-factory/make/ai.mk ai TASK=<task> INPUT="…"`, no root Makefile needed |
@@ -106,6 +106,8 @@ unverified).
 is read-only and deterministic, so two people on the same commit get the same answer.
 `--done` lists only finished items. `--next` names the one item to pick up, chosen by git
 commit date. Steps a plan explicitly withdraws are not counted as pending.
+`--specs` and `--plans` narrow a listing to one kind, and combine with `--done` and `--next`.
+`--spec <number>` lists one spec with the plans paired to it, finished or not.
 
 ## Headless runs and the review gate
 
