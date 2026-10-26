@@ -10,7 +10,14 @@ require("./_common").runHook(() => {
 	//
 	// A commit made outside a session does not pass through this hook; `make log-flush` does the
 	// same move from a terminal, and rows never flushed simply wait for the next commit.
-	const { readEvent, aiDir, git, fs, path } = require("./_common");
+	const {
+		readEvent,
+		aiDir,
+		loopWorktree,
+		git,
+		fs,
+		path,
+	} = require("./_common");
 	const {
 		HEADER,
 		COLS,
@@ -22,6 +29,10 @@ require("./_common").runHook(() => {
 	const ev = readEvent();
 	const ai = aiDir(ev);
 	if (!ai) return;
+	// Inside a /t4:loop worktree the pending rows belong to the main repository, and a commit there
+	// is the loop's own temporary one: flushing would edit and stage the developer's log.csv from
+	// another checkout. The rows wait for the developer's next commit in the main tree.
+	if (loopWorktree(ev)) return;
 	const cmd = String(ev.tool_input?.command || "");
 	// `git commit`, allowing global options between the two words (`git -C dir commit`,
 	// `git -c user.name=x commit`). A dry run commits nothing, so it flushes nothing.

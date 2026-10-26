@@ -1,5 +1,5 @@
 ---
-description: List this repo's outstanding specs and plans, each outstanding plan shown with its incomplete steps, or show one contract delivery's status with --delivery <id>
+description: List this repo's outstanding specs and plans, each outstanding plan shown with its incomplete steps — only specs with --specs, only plans with --plans, one spec with its plans with --spec <id> — or show one contract delivery's status with --delivery <id>
 allowed-tools: Bash, Read
 ---
 Report what is still outstanding in this repo, or one contract delivery's status.
@@ -30,7 +30,9 @@ many `/t4:run` hand-offs came before it in this session.
    argument means, including the ones it refuses: `--done` and `--next` do not combine,
    `--delivery` combines with neither and needs exactly one delivery ID, a missing workspace
    helper is answered with `/t4:sync-sdlc` guidance, and a flag it does not recognise is named
-   back with the ones it does take. It answers each of those in one line, and that line is the answer, not an error to
+   back with the ones it does take. `--specs`, `--plans` and `--spec <id>` go through the
+   same way, the ID exactly as typed: they narrow a listing to specs, to plans, or to one
+   spec and its plans, and the script alone decides what they combine with. It answers each of those in one line, and that line is the answer, not an error to
    route around — do not re-run without the flag, and do not fall back to the default listing on
    the developer's behalf. An argument accepted here and never passed on is the worst outcome of
    all: the command would look like it had honoured the flag while listing something else
@@ -50,7 +52,9 @@ many `/t4:run` hand-offs came before it in this session.
 
 4. **Which columns, provisionally.** Render the header the script actually printed — the mode is
    whichever header line came back. The listing modes print a tab-separated header line and then
-   tab-separated rows carrying six fields — `kind`, `number`, `state`, `path`, `step`, `detail`.
+   tab-separated rows carrying six fields — `kind`, `id`, `state`, `path`, `step`, `detail`.
+   `id` is the ID the artefact's file name starts with: a letter-and-digit ID such as `DHW631`,
+   or a legacy four-digit number such as `0010`, shown as the script printed it.
    Render them as they come: one column per field, in the order the header line gives, with the
    header line's own names. This is deliberately provisional. Which of the six become columns, in
    what order, and whether a spec row and a plan-step row share one column set or the table is
@@ -83,7 +87,8 @@ many `/t4:run` hand-offs came before it in this session.
    does next. For a listing: how many items the table lists — outstanding ones by default, finished ones under
    `--done`, never a count of something it did not list — and whether anything came back
    `unknown`. An
-   `unknown` is not a pass — say what it would take to answer it. For a delivery status: nothing
+   `unknown` is not a pass — say what it would take to answer it. Under `--spec` the table can
+   hold finished and outstanding rows together; count what it lists and call it neither. For a delivery status: nothing
    beyond what its rows say — no next step of your own. Add nothing else: no estimate,
    no priority order, no assignee, and no offer to start a step.
 

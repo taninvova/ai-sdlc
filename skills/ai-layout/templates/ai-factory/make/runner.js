@@ -26,7 +26,7 @@ function resolveModel(tool, review, env = process.env, task) {
 	return models.selectModel({
 		root: ROOT,
 		tool,
-		task: review ? "check" : task,
+		task: review ? "review" : task,
 		env,
 	}).model;
 }
@@ -208,14 +208,89 @@ function assurancePreflight(env = process.env) {
 		);
 	return policy;
 }
+// TASK=loop (spec 0022, plan 0022 Step 8). Before anything launches, `loop.js start` runs here,
+// in-process, on INPUT (or INPUT_FILE) split at whitespace (data, never a shell, so no quoting: a
+// plan path with a space cannot be named): a usage error exits 2 and an invalid plan exits 3, with
+// no host launched and no run file written; a candidate listing is printed and exits 0. A started
+// loop hands its ID and T4_LOOP_RESULT to the host, and the exit code comes from the outcome record
+// `loop.js end` writes there, never from the host's prose; a valid record wins over a host that
+// exits non-zero after writing it.
+class LoopExit extends Error {
+	constructor(message, exitCode) {
+		super(message);
+		this.exitCode = exitCode;
+	}
+}
+const LOOP_HOST = { claude: "headless", codex: "codex" };
+function loopPreflight(tool, input) {
+	const loop = require("./loop.js");
+	const argv = Buffer.from(input).toString("utf8").split(/\s+/).filter(Boolean);
+	if (argv.some((arg) => arg === "--host" || arg.startsWith("--host=")))
+		throw new LoopExit(`TASK=loop: --host is set by the runner from TOOL (${tool}); remove it from INPUT\n${loop.USAGE}`, 2);
+	const { code, result } = loop.start([...argv, "--host", LOOP_HOST[tool]], { root: ROOT });
+	if (result.action === "usage") throw new LoopExit(`TASK=loop: ${result.message}\n${result.usage}`, 2);
+	if (result.action === "invalid")
+		throw new LoopExit(
+			`TASK=loop: ${result.plan} cannot run until the plan is reconciled; no step ran:\n${result.problems.map((problem) => `  - ${problem.message}`).join("\n")}`,
+			3,
+		);
+	if (result.action === "list") return { listing: result };
+	if (code !== 0 || result.action !== "started") throw new Error(`TASK=loop: loop.js start answered ${result.action}`);
+	return { started: result };
+}
+function loopInstructions(started, record) {
+	return [
+		"",
+		"## Headless loop",
+		`The runner has already run \`node ai-factory/make/loop.js start\` on the input above: do not run start again. Loop ID: ${started.loop_id} (also in T4_LOOP_ID). Plan: ${started.plan}.`,
+		"This is a headless run: ask no question and wait for no answer. Where the loop would ask, record the problem and stop as the loop procedure says.",
+		`Continue with \`node ai-factory/make/loop.js next ${started.loop_id}\` and always finish with \`node ai-factory/make/loop.js end ${started.loop_id}\`: it writes the outcome record named by T4_LOOP_RESULT (${record}), and the runner's exit code comes from that record alone.`,
+		"",
+	].join("\n");
+}
+// The outcome record of this loop, checked before its code is used: a missing, unreadable or
+// inconsistent record is exit 1, said on stderr.
+function loopOutcome(file, loopId) {
+	const loop = require("./loop.js");
+	let record;
+	try {
+		safe.assertPath(file, { allowMissing: false });
+		record = JSON.parse(fs.readFileSync(file, "utf8"));
+	} catch (error) {
+		return { code: 1, error: `no readable outcome record at ${path.relative(ROOT, file)} (${error.code || error.message}); the loop did not end with loop.js end` };
+	}
+	const problem =
+		record?.schema !== "t4-loop-outcome" ? "it is not a t4-loop-outcome record"
+		: record.loop_id !== loopId ? `it names loop ${record.loop_id}, not ${loopId}`
+		: !Array.isArray(record.causes) ? "it carries no causes"
+		: ![0, 1, 4, 5].includes(record.code) ? `its code ${JSON.stringify(record.code)} is not 0, 1, 4 or 5`
+		: loop.exitCode(record.causes) !== record.code ? `its code ${record.code} does not follow from its causes (${loop.exitCode(record.causes)})`
+		: null;
+	if (problem) return { code: 1, error: `the outcome record is unusable: ${problem}` };
+	return { code: record.code, record };
+}
+function removeLoopState(started) {
+	if (!started) return;
+	try {
+		const dir = safe.assertPath(path.join(RUNS, "tmp", "loop", started.loop_id), { allowMissing: false });
+		fs.rmSync(dir, { recursive: true, force: true });
+	} catch (error) {
+		process.stderr.write(`runner: loop state ${started.loop_id} not removed — ${error.message}\n`);
+	}
+}
+
 async function run(options = {}) {
 	const env = options.env || process.env;
 	const tool = options.tool || env.TOOL || "claude";
-	const task = options.task || env.TASK || "chore";
+	const requested = options.task || env.TASK || "chore";
+	// A deprecated task name runs the task it now names, and says so.
+	const task = models.canonicalTask(requested);
+	if (task !== requested)
+		process.stderr.write(`runner: TASK=${requested} is deprecated; running TASK=${task}\n`);
 	if (task === "start")
 		throw new Error("TASK=start requires an interactive session in v1; CI must name a destination task such as quick, fix, chore, analyse, design, explore or spec");
 	if (task === "continue")
-		throw new Error("TASK=continue requires an interactive session in v1: it may need answers from a developer and never waits for or guesses them. Run /t4:continue <delivery> interactively, or have CI name the destination task directly: plan, test, run, check or report");
+		throw new Error("TASK=continue requires an interactive session in v1: it may need answers from a developer and never waits for or guesses them. Run /t4:continue <delivery> interactively, or have CI name the destination task directly: plan, test, run, review or report");
 	if (!["claude", "codex"].includes(tool))
 		throw new Error(`Unsupported tool: ${tool}`);
 	if (!/^[a-z][a-z0-9-]*$/.test(task))
@@ -240,26 +315,42 @@ async function run(options = {}) {
 			input = fs.readFileSync(inputFile);
 		} else input = Buffer.from(env.INPUT || "", "utf8");
 	}
-	// Resolved once, before anything launches; a configuration error stops the run here.
-	assurancePreflight(env);
-	const selection = models.selectModel({
-		root: ROOT,
-		tool,
-		task: options.review ? "check" : task,
-		env,
-	});
-	const model = selection.model;
-	if (selection.routing_enabled && model && tool === "claude" && env.CLAUDE_CODE_SUBAGENT_MODEL)
-		throw new Error(
-			`CLAUDE_CODE_SUBAGENT_MODEL overrides the subagents of this ${selection.task} run, so ${model} would not apply to them; unset it or disable routing`,
-		);
-	const command = executable(tool, env);
-	process.stderr.write(`model: ${models.describe(selection)}\n`);
-	safe.mkdir(RUNS);
-	for (const name of ["log.csv", "log.previous.csv"])
-		safe.assertPath(path.join(RUNS, name));
-	const scratch = safe.scratch(path.join(RUNS, "tmp"));
+	let loopRun = null;
+	if (task === "loop" && !options.review) {
+		const preflight = loopPreflight(tool, input);
+		if (preflight.listing) return { task, tool, loopListing: preflight.listing };
+		loopRun = preflight.started;
+	}
+	let selection, model, command, scratch;
+	try {
+		// Resolved once, before anything launches; a configuration error stops the run here.
+		assurancePreflight(env);
+		selection = models.selectModel({
+			root: ROOT,
+			tool,
+			task: options.review ? "review" : task,
+			env,
+		});
+		model = selection.model;
+		if (selection.routing_enabled && model && tool === "claude" && env.CLAUDE_CODE_SUBAGENT_MODEL)
+			throw new Error(
+				`CLAUDE_CODE_SUBAGENT_MODEL overrides the subagents of this ${selection.task} run, so ${model} would not apply to them; unset it or disable routing`,
+			);
+		command = executable(tool, env);
+		process.stderr.write(`model: ${models.describe(selection)}\n`);
+		safe.mkdir(RUNS);
+		for (const name of ["log.csv", "log.previous.csv"])
+			safe.assertPath(path.join(RUNS, name));
+		scratch = safe.scratch(path.join(RUNS, "tmp"));
+	} catch (error) {
+		// Nothing launched: a loop started by the preflight leaves no state behind.
+		removeLoopState(loopRun);
+		throw error;
+	}
 	const lifecycle = lifecycleRun(env, task, tool, model);
+	// The loop's outcome record: in this run's private scratch, written by `loop.js end`.
+	const loopRecord = loopRun ? path.join(scratch, "loop-outcome.json") : null;
+	let loopResult = null;
 	const identity = `${new Date().toISOString().replace(/[:.]/g, "-")}-${crypto.randomUUID()}-${tool}-${task}`;
 	const output = path.join(RUNS, `${identity}.json`);
 	const sidecar = `${output}.last.txt`;
@@ -271,6 +362,7 @@ async function run(options = {}) {
 			fs.readFileSync(taskFile),
 			Buffer.from("\n## Input\n"),
 			Buffer.from(input),
+			...(loopRun ? [Buffer.from(loopInstructions(loopRun, path.relative(ROOT, loopRecord)))] : []),
 		]);
 		safe.write(path.join(scratch, "prompt.txt"), prompt, { exclusive: true });
 		fd = safe.open(
@@ -287,9 +379,13 @@ async function run(options = {}) {
 		// The child's hooks read T4_LIFECYCLE_RUN, so its usage links name this run explicitly.
 		// One launch only: a rejected model, failed login or refused request is the result.
 		launched = true;
-		await launch(command, args, prompt, fd, lifecycle ? { ...process.env, T4_LIFECYCLE_RUN: lifecycle.id } : process.env);
+		const childEnv = lifecycle || loopRun ? { ...process.env } : process.env;
+		if (lifecycle) childEnv.T4_LIFECYCLE_RUN = lifecycle.id;
+		if (loopRun) Object.assign(childEnv, { T4_LOOP_ID: loopRun.loop_id, T4_LOOP_RESULT: loopRecord });
+		await launch(command, args, prompt, fd, childEnv);
 		fs.closeSync(fd);
 		fd = undefined;
+		if (loopRun) loopResult = loopOutcome(loopRecord, loopRun.loop_id);
 		safe.assertPath(output, { allowMissing: false });
 		if (!fs.statSync(output).size)
 			throw new Error("CLI produced empty output; no successful run logged");
@@ -331,8 +427,15 @@ async function run(options = {}) {
 			tool,
 			task,
 			scope: options.scope,
+			loop: loopRun ? { loop_id: loopRun.loop_id, ...loopResult } : undefined,
 		};
 	} catch (error) {
+		// A host that fails after `loop.js end` wrote a valid outcome record: the record's code is
+		// the result, and the host's failure is still reported.
+		if (launched && loopRun) {
+			const recorded = loopResult || loopOutcome(loopRecord, loopRun.loop_id);
+			if (recorded.record) error.loop = { loop_id: loopRun.loop_id, ...recorded };
+		}
 		if (launched) {
 			try {
 				selectionRecord(output, selection, { command, args, outcome: "failed", reason: error.message });
@@ -370,6 +473,11 @@ function reviewInput(env = process.env) {
 		"--no-renames",
 		"--binary",
 	];
+	// /t4:loop's temporary worktrees are never part of the change under review, ignored or not.
+	const excluded = [
+		"--",
+		`:(exclude)${path.relative(ROOT, path.join(RUNS, "tmp", "worktrees")).split(path.sep).join("/")}`,
+	];
 	let input;
 	let paths;
 	let scope = requested;
@@ -400,22 +508,22 @@ function reviewInput(env = process.env) {
 			base = git(["merge-base", "HEAD", "develop"]).trim();
 		}
 		const range = `${base}...HEAD`;
-		input = git(["diff", ...diffFlags, range, "--"]);
+		input = git(["diff", ...diffFlags, range, ...excluded]);
 		paths = splitPaths(
-			git(["diff", "--no-renames", "--name-only", "-z", range, "--"]),
+			git(["diff", "--no-renames", "--name-only", "-z", range, ...excluded]),
 		);
 	} else {
-		const staged = git(["diff", ...diffFlags, "--cached", "--"]);
-		const unstaged = git(["diff", ...diffFlags, "--"]);
+		const staged = git(["diff", ...diffFlags, "--cached", ...excluded]);
+		const unstaged = git(["diff", ...diffFlags, ...excluded]);
 		const untracked = splitPaths(
-			git(["ls-files", "--others", "--exclude-standard", "-z", "--"]),
+			git(["ls-files", "--others", "--exclude-standard", "-z", ...excluded]),
 		);
 		paths = [
 			...new Set([
 				...splitPaths(
-					git(["diff", "--no-renames", "--name-only", "-z", "--cached", "--"]),
+					git(["diff", "--no-renames", "--name-only", "-z", "--cached", ...excluded]),
 				),
-				...splitPaths(git(["diff", "--no-renames", "--name-only", "-z", "--"])),
+				...splitPaths(git(["diff", "--no-renames", "--name-only", "-z", ...excluded])),
 				...untracked,
 			]),
 		];
@@ -453,7 +561,7 @@ async function review() {
 		Buffer.from(selected.input),
 	]);
 	const result = await run({
-		task: "check",
+		task: "review",
 		review: true,
 		input,
 		scope: selected.selection,
@@ -518,7 +626,7 @@ function reviewEvidence(result) {
 		tool: result.tool,
 		outputHash: result.outputHash,
 		reason,
-		// A separate headless check run that saw only the selected diff: the independent boundary.
+		// A separate headless review run that saw only the selected diff: the independent boundary.
 		independence: "independent",
 		boundary: "make review",
 	});
@@ -566,20 +674,39 @@ function cleanLocked() {
 async function main(action = process.argv[2]) {
 	if (action === "ai" || action === "review") {
 		const result = await (action === "review" ? review() : run());
+		if (result.loopListing) {
+			const listed = result.loopListing;
+			process.stderr.write(
+				listed.reason === "no-argument"
+					? "TASK=loop: no plan named; the candidate plans are listed, and nothing was launched\n"
+					: `TASK=loop: '${listed.argument}' ${listed.reason === "ambiguous" ? "matches more than one plan" : "names no plan"}; the candidates are listed, and nothing was launched\n`,
+			);
+			process.stdout.write(listed.listing);
+			return;
+		}
 		process.stdout.write(
 			result.empty
 				? "No selected changes; no review model invoked.\n"
 				: `run saved: ${path.relative(ROOT, result.output)}\n`,
 		);
+		if (result.loop) reportLoop(result.loop);
 	} else if (action === "log-flush") flush();
 	else if (action === "clean-runs") clean();
 	else throw new Error(`Unknown runner action: ${action}`);
 }
 
+function reportLoop(loop) {
+	if (loop.record) process.stdout.write(loop.record.report);
+	if (loop.error) process.stderr.write(`runner: TASK=loop: ${loop.error}\n`);
+	process.stderr.write(`runner: TASK=loop ${loop.loop_id} exit code ${loop.code}\n`);
+	process.exitCode = loop.code;
+}
+
 if (require.main === module)
 	main().catch((error) => {
 		process.stderr.write(`runner: ${error.message}\n`);
-		process.exitCode = 1;
+		process.exitCode = error instanceof LoopExit ? error.exitCode : 1;
+		if (error.loop) reportLoop(error.loop);
 	});
 module.exports = {
 	run,

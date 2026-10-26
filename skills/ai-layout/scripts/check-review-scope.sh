@@ -15,7 +15,7 @@ const root=path.join(scratch,"project with spaces");
 const payload=path.join(root,"ai-factory");
 fs.mkdirSync(path.join(payload,"tasks"),{recursive:true});
 fs.cpSync(path.join(repo,"skills/ai-layout/templates/ai-factory/make"),path.join(payload,"make"),{recursive:true});
-fs.writeFileSync(path.join(payload,"tasks/check.md"),"Return exactly one review JSON object.");
+fs.writeFileSync(path.join(payload,"tasks/review.md"),"Return exactly one review JSON object.");
 fs.writeFileSync(path.join(payload,"models.yaml"),"claude:\ncodex:\nreview:\n");
 fs.writeFileSync(path.join(payload,".gitignore"),"/runs/\n");
 fs.writeFileSync(path.join(root,".gitignore"),".env\n");
@@ -72,19 +72,57 @@ async function asyncReview(extra){return new Promise((resolve,reject)=>{const ch
  const concurrent=await Promise.all([asyncReview({TOOL:"codex",FAKE_VERDICT:"approve",DELAY:"150"}),asyncReview({TOOL:"codex",FAKE_VERDICT:"request_changes",DELAY:"30"})]);
  ok(concurrent[0]);assert.notEqual(concurrent[1].status,0,"concurrent review used another invocation's approval");
  assert.deepEqual(fs.readdirSync(path.join(payload,"runs/tmp")),[]);
- // make review and make ai TASK=check resolve the same task model; scope and gate are unchanged.
- fs.writeFileSync(path.join(payload,"models.yaml"),"claude:\ncodex:\nreview: review/default\nrouting:\n  enabled: true\n  tasks:\n    check:\n      codex: gateway/review-codex\n");
+ // make review and make ai TASK=review run the same review task under the same model, and stay
+ // distinct: only the make target selects the change and gates the verdict. TASK=check, the
+ // deprecated name, runs TASK=review and says so; a models.yaml that still maps check: is read as review.
  const modelArg=(args,flag)=>args.flatMap((arg,i)=>arg===flag?[args[i+1]]:[]);
- const direct=extra=>spawnSync("make",["-f","ai-factory/make/ai.mk","ai","TASK=check"],{cwd:root,env:{...env,INPUT:"direct check",...extra},encoding:"utf8"});
- for(const [tool,flag,expected] of [["codex","-m","gateway/review-codex"],["claude","--model","review/default"]]){
-  const reviewed=review({TOOL:tool});ok(reviewed);
-  assert.deepEqual(modelArg(capture().at(-1).args,flag),[expected],`make review ${tool}`);
-  assert.match(capture().at(-1).input,/Review scope: working-tree/);
-  const checked=direct({TOOL:tool});ok(checked);
-  assert.deepEqual(modelArg(capture().at(-1).args,flag),[expected],`make ai TASK=check ${tool}`);
-  assert.equal(reviewed.stderr.match(/model: .*\n/)[0],checked.stderr.match(/model: .*\n/)[0]);
+ const direct=(task,extra)=>spawnSync("make",["-f","ai-factory/make/ai.mk","ai",`TASK=${task}`],{cwd:root,env:{...env,INPUT:"direct review input",...extra},encoding:"utf8"});
+ const logTasks=()=>fs.readFileSync(path.join(payload,"runs/log.csv"),"utf8").trim().split("\n").slice(1).map(row=>row.split(",")[5]);
+ for(const key of ["review","check"]){
+  fs.writeFileSync(path.join(payload,"models.yaml"),`claude:\ncodex:\nreview: review/default\nrouting:\n  enabled: true\n  tasks:\n    ${key}:\n      codex: gateway/review-codex\n`);
+  for(const [tool,flag,expected] of [["codex","-m","gateway/review-codex"],["claude","--model","review/default"]]){
+   const reviewed=review({TOOL:tool});ok(reviewed);
+   assert.deepEqual(modelArg(capture().at(-1).args,flag),[expected],`make review ${tool} (${key}:)`);
+   assert.match(capture().at(-1).input,/Review scope: working-tree/);
+   assert.match(reviewed.stdout+reviewed.stderr,/gate: /,"make review gates the verdict");
+   const prompt=capture().at(-1).input;
+   for(const task of ["review","check"]){
+    const ran=direct(task,{TOOL:tool});ok(ran);
+    assert.deepEqual(modelArg(capture().at(-1).args,flag),[expected],`make ai TASK=${task} ${tool} (${key}:)`);
+    assert.equal(reviewed.stderr.match(/model: .*\n/)[0],ran.stderr.match(/model: .*\n/)[0]);
+    assert.match(ran.stderr,/model: review \//,`TASK=${task} selects the review task`);
+    const taskPrompt=capture().at(-1).input;
+    assert.ok(taskPrompt.startsWith("Return exactly one review JSON object.")&&taskPrompt.endsWith("direct review input"),`TASK=${task} runs tasks/review.md on the supplied input`);
+    assert.ok(!/Review scope:/.test(taskPrompt)&&/Review scope:/.test(prompt),"TASK=review selects no change: that is the make review target's job");
+    assert.doesNotMatch(ran.stdout+ran.stderr,/gate: /,`TASK=${task} is not gated`);
+    if(task==="check")assert.match(ran.stderr,/runner: TASK=check is deprecated; running TASK=review/);
+    else assert.doesNotMatch(ran.stderr,/deprecated/);
+    assert.equal(logTasks().at(-1),"review",`TASK=${task} logs the review task`);
+   }
+  }
  }
  assert.notEqual(review({TOOL:"codex",FAKE_VERDICT:"request_changes"}).status,0,"routing must not change gate enforcement");
- console.log("PASS: empty, staged, unstaged, untracked, mixed, branch, supplied, Codex, failed and concurrent review scopes; index/worktree preserved; make review and make ai TASK=check share the routed check model");
+ // worktree-excluded (spec 0022 AC38): /t4:loop's kept worktrees under ai-factory/runs/tmp/worktrees/
+ // add no selected path and no content, under the template's ignore rules and with that subtree un-ignored.
+ const selectedPaths=input=>/Selected paths: (.*)/.exec(input)[1];
+ const worktrees=path.join(payload,"runs/tmp/worktrees");
+ fs.rmSync(input,{force:true});
+ for(const [label,ignore] of [["template ignore",fs.readFileSync(path.join(repo,"skills/ai-layout/templates/ai-factory/.gitignore"),"utf8")],["subtree not ignored","/runs/*\n!/runs/tmp/\n/runs/tmp/*\n!/runs/tmp/worktrees/\n"]]){
+  fs.writeFileSync(path.join(payload,".gitignore"),ignore);
+  ok(review());const before=capture().at(-1).input;
+  const name=`L1-S${label.length}`;const tree=path.join(worktrees,name);
+  git(["worktree","add","-q","-b",`t4-loop/L1/${name}`,tree,"HEAD"]);
+  fs.writeFileSync(path.join(tree,"committed.txt"),"worktree tracked marker\n");
+  fs.writeFileSync(path.join(tree,"worktree only.txt"),"worktree untracked marker\n");
+  fs.mkdirSync(path.join(worktrees,"plain"),{recursive:true});fs.writeFileSync(path.join(worktrees,"plain/left.txt"),"worktree leftover marker\n");
+  try{
+   ok(review());const after=capture().at(-1).input;
+   assert.equal(selectedPaths(after),selectedPaths(before),`${label}: a populated worktree subtree changed the selected paths`);
+   assert.ok(!/runs\/tmp\/worktrees/.test(selectedPaths(after)),`${label}: a worktree path was selected`);
+   for(const marker of ["worktree tracked marker","worktree untracked marker","worktree leftover marker"])assert.ok(!after.includes(marker),`${label}: review read ${marker}`);
+  }finally{git(["worktree","remove","--force",tree]);git(["branch","-D",`t4-loop/L1/${name}`]);fs.rmSync(worktrees,{recursive:true,force:true});}
+ }
+ assert.equal(git(["worktree","list","--porcelain"]).match(/^worktree /gm).length,1,"no fixture worktree left");
+ console.log("PASS: empty, staged, unstaged, untracked, mixed, branch, supplied, Codex, failed and concurrent review scopes; index/worktree preserved; make review and make ai TASK=review (and deprecated TASK=check) share the routed review model and stay distinct; loop worktrees under ai-factory/runs/tmp/worktrees/ excluded");
 }finally{fs.rmSync(scratch,{recursive:true,force:true});}})().catch(error=>{console.error(error);process.exitCode=1;});
 NODE

@@ -1,6 +1,226 @@
 # Changelog
 
-**Unreleased — plan 0021 assurance presets (no version bump)**
+## 3.0.0 — 2026-10-26
+
+Releases the work merged since 2.9.0. `/t4:loop` runs every unticked step of a plan (plan 0022);
+the `risk` agent and `/t4:risk` assess security and delivery risk (0023); new artefacts get
+letter-and-digit IDs from `make/ids.js` (0024); the `check` task is renamed `review`.
+**Breaking for adopted repos:** templates, hooks, the runner and agent procedures change. Old names
+(`/t4:check`, `$t4-check`, `TASK=check`) remain as deprecated aliases, legacy `NNNN` files stay
+valid and old `check` data is still read. Take the changes with `/t4:sync-sdlc` and preserve local
+changes. Host runs for plans 0022, 0023 and 0024 were waived; each plan records the acceptance
+criteria left unverified by transcripts.
+
+**Plan 0023 the `risk` agent and `/t4:risk`**
+
+**Breaking for adopted repos.** The templates gain a task, an agent and a workspace directory,
+and the `planner`, `specifier`, `reviewer` and `start` procedures and the shipped `models.yaml`
+change. A repo that never runs `/t4:risk` behaves as before: with no risk file, no procedure
+does anything different. Whether this ships as 3.0.0 is a release decision.
+
+- **New `risk` agent and `/t4:risk <spec, plan or change>`** (task `tasks/risk.md`, agent
+  `agents/risk.md`, the `/t4:risk` command, the Codex `$t4-risk` skill and headless `TASK=risk`).
+  It assesses one spec, plan, working tree, branch or diff for security threats and delivery risk
+  across eight categories (authorization, data exposure, secrets, injection, dependency/supply
+  chain, migrations, rollback, blast radius), each marked assessed or not assessed with a reason.
+  Each finding records its category, severity (`blocker|major|minor`), status
+  (`open|mitigated|accepted`), evidence path and mitigation. An unclear target is a question,
+  never a guess, and nothing is written; headless, the question is reported. The agent writes
+  only under `ai-factory/risks/` and changes no code, spec, plan or evidence. It sets `mitigated`
+  only with cited evidence and never sets `accepted`: that is your hand edit, which it carries
+  forward. An assessment gates nothing.
+- **`ai-factory/risks/` and its file names.** Files are created by the existing `make/ids.js`
+  (`ids.js new risk <slug>`), which is unchanged. A spec or plan assessment takes the spec's ID
+  with `--id`, so a spec and its plan share one file; a change assessment takes a fresh ID and is
+  found again by its `Target:` line. A rerun appends a dated `## Reassessment` section and leaves
+  every earlier byte unchanged. The directory is committed by default and the template does not
+  gitignore it; a repo that prefers to keep threat detail out of git may ignore it, and sync
+  keeps that choice. New adoptions get the directory from the template's `risks/.gitkeep`. For a
+  repo adopted earlier, `/t4:sync-sdlc` stays read-only and does not create it; `ids.js` creates
+  it on the first `/t4:risk`.
+- **The consumers.** The `specifier` puts each `open` blocker or major finding of the spec's
+  risk file under Open questions and cites the file. The `planner` turns each mitigation into a
+  step or a risk check. The `reviewer` gains check 8: for an applicable assessment (same spec or
+  plan ID, or a `Target:` line that matches the change) it reports every `open` or `mitigated`
+  finding whose mitigation is not implemented, in the existing verdict shape, and skips
+  `accepted` ones; checks 1–7 and the verdict schema are unchanged. Each reads only the latest
+  `## Reassessment` section, or the initial body. `tasks/plan.md` is unchanged.
+- **`start`.** Rule 3 of `tasks/start.md` names `/t4:risk` in `reason` as an optional next step,
+  only when a risk trigger is present. `risk` is not a `/t4:start` destination, and the start
+  result's JSON contract is unchanged.
+- **Routing.** The shipped `models.yaml` carries a `routing.tasks.risk` entry (`claude:
+  claude-opus-5-5`, blank `codex:`) under `routing.enabled: false`, so it has no effect until you
+  enable routing. The parser and the resolution order are unchanged.
+- **Knowledge.** `docs/knowledge.md` lists the `risk` agent and `/t4:risk` among the executors
+  that may consult a declared read-only source.
+- **The network exception.** ADR DJX496 (`ai-factory/adr/DJX496-risk-agent-network-audit.md`)
+  records the one exception to spec 0012 AC10: the `risk` agent alone may run network
+  dependency-audit tools (`npm audit`, `pip-audit`, `osv-scanner`) while it assesses the
+  dependency/supply-chain category, interactively and in CI where the network is available. A
+  missing tool or unreachable service records the category as not assessed and falls back to
+  local lockfile inspection. Lockfile contents reach the advisory service; a repo with strict
+  data-residency rules should block it. No other agent, hook, runner check or gate check gains
+  network access.
+- **Fix: `materialize-agents.js` and a new agent.** Materializing a canonical agent with no
+  template copy yet no longer crashes; the copy is created (with `--check`, reported stale).
+- **Migration.** Run `/t4:sync-sdlc` to take `tasks/risk.md`, `agents/risk.md` and the changed
+  `agents/planner.md`, `agents/specifier.md`, `agents/reviewer.md`, `tasks/start.md`,
+  `models.yaml`, `docs/knowledge.md`, `make/sync-adapters.js` and `AGENTS.md`, keeping your local
+  changes. With explicit Claude adapters, a resync drops nothing new: `risk` is a native plugin
+  agent and command, so no project pointer is generated for it.
+
+**The `check` task is renamed `review`**
+
+**Breaking for adopted repos.** The task file, its commands, its routing key and its lifecycle
+phase change name. Behaviour is unchanged apart from the name. Whether this ships as 3.0.0 is a
+release decision.
+
+- **The rename.** `tasks/check.md` is now `tasks/review.md`: `/t4:check` → `/t4:review`,
+  `$t4-check` → `$t4-review`, `make -f ai-factory/make/ai.mk ai TASK=check` → `TASK=review`, the
+  `routing.tasks.check` key in `models.yaml` → `routing.tasks.review`, the lifecycle phase
+  `--phase check` → `--phase review`, `/t4:continue`'s destination `check` → `review`, and
+  `/t4:loop`'s `loop.js next` answer `{"action":"check"}` → `{"action":"review"}` (its report and
+  stop causes now say `/t4:review`). The `reviewer` agent keeps its name. `make review` is
+  unchanged and stays distinct: it selects the change, runs the review task headless, gates the
+  verdict and, with `DELIVERY=<id>`, records review evidence; `TASK=review` runs the same task on
+  the input you give it, ungated. Contract evidence never used `check` (`review.json` is
+  unchanged), so no evidence is renamed.
+- **Deprecated alias.** `/t4:check` and `$t4-check` remain as thin generated wrappers: they say
+  they are deprecated in favour of `/t4:review` (`$t4-review`) and run the review task, with its
+  routing and input. `TASK=check` still runs `TASK=review` and says so on stderr. One table,
+  `TASK_ALIASES` in `make/models.js`, drives the command and skill generators, project adapter
+  sync and every reader below. Remove the alias in a later major release.
+- **Old data is read as `review`.** Nothing recorded is rewritten. A `routing.tasks.check` entry
+  in an adopted `models.yaml` is read as `routing.tasks.review` (the route agent is the same, so
+  no resync is needed), and `/t4:doctor` suggests renaming the key; mapping both is an error.
+  Lifecycle events and run-log rows that say `check` aggregate under `review` in `make lifecycle`
+  and `make cost`, and `--phase check` is recorded as `review`. Typed `/t4:check` and `$t4-check`
+  attribute their run-log rows to `review`. A `/t4:loop` state written before the rename is read
+  unchanged, its recorded cause messages relayed as written.
+- **Migration.** Run `/t4:sync-sdlc` to take `tasks/review.md` (and drop `tasks/check.md`),
+  `tasks/loop.md`, `tasks/continue.md`, `make/models.js`, `make/runner.js`, `make/continue.js`,
+  `make/lifecycle.js`, `make/cost.js`, `make/loop.js`, `make/sync-adapters.js`, `models.yaml` and
+  `AGENTS.md`, keeping your local changes; carry any local edits of `tasks/check.md` over to
+  `tasks/review.md`. Until then the plugin's `/t4:review` and `/t4:check` report the missing
+  `tasks/review.md` as template drift. Rename `routing.tasks.check` to `review`, and update CI that
+  runs `TASK=check` or scripts that read `loop.js next`'s `check` answer or `--phase check` events.
+
+**Plan 0024 letter-and-digit artefact IDs**
+
+**Breaking for adopted repos.** The templates change how every new artefact is named, and the
+`/t4:state` listing renames a column. Whether this ships as 3.0.0 is a release decision.
+
+- **New ID format.** A new spec, plan, exploration, analysis, design, ADR or risk assessment is
+  named `ai-factory/<dir>/<ID>-<slug>.md`, where `<ID>` is three letters and three digits
+  (`[A-Z]{3}[0-9]{3}`, for example `DHW631`). The ID is drawn at random and never counted, so two
+  clones no longer pick the same next number. The new `make/ids.js` owns the format in one place:
+  `node ai-factory/make/ids.js new <kind> <slug> [--id <ID>] [--title "…"]` creates the file with
+  the heading `# <ID> — <Title>` and a `Created:` line, and prints its path. A plan or risk
+  assessment reuses its spec's ID with `--id`; a spec reuses its new-style exploration's or
+  analysis's. The agents and tasks call the helper and no longer count numbers, and the ADR
+  template's heading is `# <ID> — Title`.
+- **Legacy files stay valid.** No existing four-digit artefact (`0010-…`) is renamed, renumbered
+  or re-headed, and nothing needs to be migrated. Every reader accepts both forms. A plan for a
+  legacy spec passes the four-digit number (`--id 0010`). A spec's `Created:` line is left out of
+  its contract content digest, so a legacy spec's sidecar is unchanged after the upgrade.
+- **`/t4:state`: `number` → `id`.** The listing header's `number` field is now `id`. It holds the
+  letter-and-digit ID, or the legacy number as before. `--spec <number>` becomes `--spec <id>`,
+  matched case-insensitively. Legacy files list first by number, then new-style files by their
+  `Created:` instant and then by ID. A tree holding only legacy files lists the same rows in the
+  same order. A script that reads the header by name must read `id`.
+- **The clash check.** Random IDs can still clash after two branches merge.
+  `make -f ai-factory/make/ai.mk ids-check` (`node ai-factory/make/ids.js check`) fails on a
+  new-style ID shared within one kind, or by kinds other than one spec with at most one
+  exploration or analysis, one plan and one risk assessment. For a legacy number it fails only on
+  a same-kind duplicate. It names every path involved. `ids.js check` exits 1 on a failure and
+  make reports that as exit 2, so test the pass or fail outcome, not the exit code. Adoption adds
+  no CI configuration; wire the target into CI yourself if you want it there.
+- **Optional `ai-factory/ids-deny.txt`.** One three-letter triple per line, matched
+  case-insensitively, adds to the built-in list of triples never drawn. Blank and `#` lines are
+  ignored. Adoption does not create the file.
+- **Migration.** Run `/t4:sync-sdlc` to take the new `make/ids.js`, `make/ai.mk`, agents, tasks and
+  ADR template, and keep your local changes. Update anything that parses `/t4:state` output by the
+  `number` column name.
+
+**Plan 0022 `/t4:loop`**
+
+**Breaking for adopted repos.** The templates gain a task and a helper, and the hooks, the runner,
+the model router and four procedures change. ADR ETT683 records the loop as the one opt-in
+exception to "one step per `/t4:run`" and to "the factory never commits". Whether this ships as
+3.0.0 is a release decision.
+
+- **New `/t4:loop <plan number or path>`** (task `tasks/loop.md`, the `/t4:loop` command and the
+  Codex `$t4-loop` skill). One invocation implements every unticked step of one plan, then runs
+  `/t4:check` once. Ready steps run concurrently on Claude Code, up to `--max-parallel` (1–8,
+  default 3), each in a temporary git worktree under `ai-factory/runs/tmp/worktrees/`. A step
+  running alone runs in the main tree. Each worktree step's change is applied back to your tree
+  uncommitted and then ticked; `--3way` is the fallback, and it is the only path that stages.
+  The loop halts on a failure, a conflict or a timeout (`--step-timeout`, 1–240 minutes, default
+  30). On Codex the steps run one at a time and the timeout is not enforced. Nothing is committed
+  on your branch, pushed or opened as an MR: the only commits are a baseline and a step commit on
+  each worktree's own `t4-loop/…` branch. Worktrees kept after a stop are yours to remove.
+  `/t4:run` is unchanged.
+- **New `make/loop.js`** owns every deterministic decision: option parsing, plan selection,
+  validation, scheduling, worktree snapshots, apply-back, ticking, stop causes, the report and the
+  exit code. Adoption delivers it, and the manifest tracks it.
+- **Headless `TASK=loop`.** `runner.js` starts the loop before launching a host, so a usage
+  error or an invalid plan launches nothing. The run's exit codes come from the loop's outcome
+  record: 0 success, 1 step failure or timeout, 2 usage, 3 plan validation, 4 conflict, refused
+  apply or failed snapshot, and 5 a rejected review under `GATE_ENFORCE=1`. Several causes pick
+  4, then 1, then 5. GNU make reports every failure as 2, so only
+  `TASK=loop INPUT="…" node ai-factory/make/runner.js ai` returns the distinct codes. The review
+  scope (`make review`, `TASK=check`) now always excludes `ai-factory/runs/tmp/worktrees/`.
+- **The guard exception.** Inside a loop worktree, the dont-touch guard judges every edit against
+  the main repository's `dont-touch.md`. A path in a registered worktree under
+  `ai-factory/runs/tmp/worktrees/<name>/` is matched relative to that worktree's root. Everything
+  else under `ai-factory/runs/` stays blocked, including `..` and symlink escapes.
+- **Logs through the git common dir.** Inside a loop worktree, the hooks write their run-log rows,
+  task markers and lifecycle events to the main repository's `ai-factory/runs/`, found with
+  `git rev-parse --git-common-dir`. The commit-time log flush does nothing there. Outside a
+  worktree nothing changes.
+- **The `Depends on:` grammar.** The planner and the plan template gain an optional
+  `Depends on: N, M` line in a step's indented body. It lists existing earlier step numbers only
+  and never forms a cycle. A step without it waits for every earlier step. Only `/t4:loop` reads
+  it; to every other reader it is plain text.
+- **The implementer line.** `agents/implementer.md` gains one line: in worktree mode, work only
+  under the named worktree root, do not tick the step, record no contract evidence, and report
+  the phase result. The loop ticks and records the evidence in the main tree after the apply.
+- **Review and routing.** `tasks/check.md` and the reviewer never collect or read
+  `ai-factory/runs/tmp/worktrees/`. `loop` is session-owned in `models.js`, like `continue`: it
+  never routes to a worker, a concrete `--task-model` is refused, `routing.tasks.loop` is a doctor
+  finding, and each step runs under the `run` task's model policy.
+- **Your tools.** Test, lint and typecheck tools must exclude `ai-factory/runs/tmp/worktrees/`: a
+  worktree holds a full copy of the repository. The template's `ai-factory/.gitignore` already
+  ignores `runs/tmp/`; this repository's root `.gitignore` now ignores `ai-factory/runs/tmp/` too.
+- **Post-review fixes.**
+  - A worktree step's two commits are built with plumbing (`commit-tree` from a scratch index,
+    then a compare-and-swap `update-ref` of the step's own `t4-loop/…` branch only). Before any
+    commit the helper verifies that the worktree still uses its own git dir and is still on that
+    branch at the head recorded at prepare, so a switched worktree can never commit on your branch.
+  - `state.json` is guarded by an exclusive lock (`state.lock`) from each subcommand's read to its
+    write, apply-back and ticking included; a stale lock is reclaimed. `tasks/loop.md` runs the
+    `loop.js` subcommands one at a time, never as parallel tool calls.
+  - The apply-back refuses, applying nothing, when a path the step's delta touches is already
+    unmerged in the main tree, so an earlier conflict is never mistaken for this step's.
+  - Headless `TASK=loop` takes the exit code of a valid outcome record even when the host CLI
+    fails after `loop.js end` wrote it; the host's failure is still reported.
+  - `INPUT` (and `INPUT_FILE`) for `TASK=loop` is split at whitespace with no quoting, so a plan
+    whose path holds a space must be named by its number; the docs say so.
+- **Migration.** Run `/t4:sync-sdlc` to take `make/loop.js`, `make/runner.js`, `make/models.js`,
+  `make/sync-adapters.js`, `tasks/loop.md`, `tasks/plan.md`, `tasks/check.md`, the planner,
+  implementer and reviewer agents and `AGENTS.md`, and keep your local changes. Then exclude the
+  worktree subtree from your test, lint and typecheck configuration.
+
+## 2.9.0 — 2026-10-21
+
+Releases the work merged since 2.8.0. Opt-in assurance presets (plan 0021); `/t4:state` filters
+`--specs`, `--plans` and `--spec <number>`, and a read-only turn that launches nothing; workflow
+outcome evaluations (plan 0020); `/t4:state --delivery` status (0019); a simpler scaffold spec;
+`/t4:continue` (0018) and `/t4:start` (0017). **Everything new is opt-in or additive: a repo that
+selects no preset and enables no contracts behaves as on 2.8.0.** Adopted repositories see changed
+templates; inspect them with `/t4:sync-sdlc` and preserve local changes.
+
+**Plan 0021 assurance presets**
 
 - Add opt-in assurance presets `light`, `standard` and `strict`, managed by the new
   `make/assurance.js`. `show [--json]` is read-only and prints the preset, each effective requirement
@@ -45,14 +265,26 @@
   `contracts/config.json` and evidence. Until a repo selects a preset its behavior is unchanged. A repo that has
   `ai-factory/assurance.json` without the helper stops headless runs and the gate with `/t4:sync-sdlc` guidance.
 
-**Unreleased — `/t4:state` ends its turn (no version bump)**
+**`/t4:state` filters by kind and by spec**
+
+- `/t4:state --specs` lists only specs and `--plans` only plans. Both combine with `--done` and
+  `--next`; together they are refused in one line.
+- `/t4:state --spec <number>` lists one spec with the plans whose `**Spec:**` line names it. On
+  its own it shows them whatever their state; `--done`, `--next`, `--specs` and `--plans` narrow
+  it. The number may be bare (`10`), zero-padded, or the spec's file name or path. A number that
+  names no spec, a missing number and a second `--spec` are answered in one line.
+- None of the three combines with `--delivery`. Rows, header and order are unchanged: a filtered
+  row is byte-identical to the unfiltered one. `check-state.sh` pins this in a new section.
+  Codex `$t4-state` reads the same file.
+
+**`/t4:state` ends its turn**
 
 - `commands/state.md` now says to launch no agent, background task, workflow, command or skill,
   and to end the turn after the table. "Change nothing" alone did not stop a session that had just
   run several `/t4:run` hand-offs from delegating the next step straight after the listing.
   `check-state.sh` pins both sentences. Codex `$t4-state` reads the same file.
 
-**Unreleased — plan 0020 workflow evaluations (no version bump)**
+**Plan 0020 workflow evaluations**
 
 - The opt-in benchmark (`skills/ai-layout/scripts/benchmark-small-tasks.js --real`) now reports five
   outcomes per run: missed requirements, escaped defects, unnecessary questions, completion time and
@@ -79,7 +311,7 @@
   timeout and concurrency bounds, fixture isolation and report regeneration. No templates or prompts shipped to adopted
   repositories change. The benchmark's own replay prompt adds the completion line, and no real before/after model run was made.
 
-**Unreleased — delivery 0019 (no version bump)**
+**Delivery 0019**
 
 - Add `/t4:state --delivery <id>` (Codex `$t4-state --delivery <id>`): one contract delivery's
   status — planned or quick — as a read-only `field`/`value` table. It needs artifact contracts
@@ -101,14 +333,14 @@
   `check-state.sh`. Live host status:
   [delivery 0019 report](ai-factory/reports/0019-delivery-status.md).
 
-**Unreleased — scaffold spec simplification**
+**Scaffold spec simplification**
 
 - Simplify `0000-scaffold.md` to four plain-language setup checks. Replace the API feature
   example with a small quick change and describe pending logs accurately.
 - **Template upgrade impact:** adopted repositories will see this spec as changed upstream;
   review it through `/t4:sync-sdlc` and preserve local acceptance criteria. Runtime behavior is unchanged.
 
-**Unreleased — delivery 0018 (no version bump)**
+**Delivery 0018**
 
 - Add interactive `/t4:continue <delivery id>` and `$t4-continue`. It accepts one artifact-contract
   delivery ID for a contracts-enabled planned delivery. A read-only selector (`make/continue.js`)
@@ -133,6 +365,7 @@
   `skills/ai-layout/fixtures/continuation/cases.md`. Live host status:
   [delivery 0018 report](ai-factory/reports/0018-reliable-continuation.md).
 
+**Delivery 0017**
 
 - Add interactive `/t4:start` and `$t4-start`: bounded read-only classification, one validated
   session-owned handoff, original request preservation, and independent destination model selection.

@@ -19,14 +19,14 @@ The file-edit guard is defense in depth; arbitrary shell commands remain governe
 - `/t4:quick` — complete a small, well-understood change with focused checks and a labeled self-review
 - `/t4:adopt-sdlc` — add the `ai-factory/` layout to an existing repo (any stack)
 - `/t4:doctor` — report what is wrong with this repo's setup and the command that fixes each thing. Read-only; run it first
-- `/t4:state` — list the specs and plans still outstanding here, each outstanding plan shown with its incomplete steps. `--done` lists only finished items; `--next` names the one to pick up, by git commit date; `--delivery <id>` shows one contract delivery's evidence-derived status instead (see [Delivery status](#delivery-status)). Read-only; it lists the work and never starts any
+- `/t4:state` — list the specs and plans still outstanding here, each outstanding plan shown with its incomplete steps. `--done` lists only finished items; `--next` names the one to pick up, by git commit date; `--specs` or `--plans` narrows any of those to one kind, and `--spec <id>` to one spec with its plans (a letter-and-digit ID such as `DHW631` or a legacy number such as `0010`); `--delivery <id>` shows one contract delivery's evidence-derived status instead (see [Delivery status](#delivery-status)). Read-only; it lists the work and never starts any
 - `/t4:setup-tracker` — point this repo at a tracker so `/t4:spec ABC-12` works, and prove it by resolving a key. Optional; skip it and nothing changes
 - `/t4:setup-knowledge` — declare an external documentation source (an MCP server already attached to your session) for the agents to consult, and prove it answers. Optional; `/t4:adopt-sdlc` offers it once, and the repo's own `ai-factory/docs/` stays the primary knowledge base
 - `/t4:sync-sdlc` — inspect workspace drift; generate selected host pointers only when explicitly requested
 
 `/t4:migrate-layout`, which moved a repo adopted before 1.0.0 onto `ai-factory/`, was **removed in 2.1.0**. A repo that never ran it runs it from an ai-sdlc checkout at 2.0.0 or earlier; its hooks keep working until then, because the fallback to the old directory name stays until 3.0.0.
 
-Claude Code and Codex use the same canonical task files. The plugin ships all 22 Claude
+Claude Code and Codex use the same canonical task files. The plugin ships all 25 Claude
 slash commands and the matching Codex workflow skills; strict mode needs no project
 pointers for built-in tasks. Explicit `--adapters=claude` sync removes old generated
 pointers for native commands and creates pointers only for project-specific tasks.
@@ -37,11 +37,11 @@ committed `ai-factory/jira.yaml`. Off by default: without that file nothing chan
 
 A repo can also declare a read-only knowledge source — an MCP server the developer's tool has
 attached, or a knowledge base — in `ai-factory/knowledge_base.md`. The explorer, specifier, planner,
-analyst, architect and reviewer agents then read it and cite what they used as external and
+analyst, architect, reviewer and risk agents then read it and cite what they used as external and
 unverified; an unreachable source is one report line, never a halt. `ai-factory/docs/knowledge.md` is the
 only file that knows how; a repo that declares nothing sees nothing.
 
-Native project-workflow commands: `/t4:fleet /t4:design /t4:adr /t4:analyse /t4:explore /t4:spec /t4:plan /t4:test /t4:run /t4:fix /t4:chore /t4:check /t4:report`, plus `/t4:quick` listed above. Each loads the matching `ai-factory/tasks/<name>.md` from the user's repo, preserving project customizations. The commands are discoverable immediately after plugin installation; executing a project task requires an adopted workspace.
+Native project-workflow commands: `/t4:fleet /t4:design /t4:adr /t4:analyse /t4:explore /t4:spec /t4:plan /t4:risk /t4:test /t4:run /t4:loop /t4:fix /t4:chore /t4:review /t4:report`, plus `/t4:quick` listed above. Each loads the matching `ai-factory/tasks/<name>.md` from the user's repo, preserving project customizations. `/t4:check` (`$t4-check` on Codex) is the deprecated name of `/t4:review`: it says so and runs the review task. The commands are discoverable immediately after plugin installation; executing a project task requires an adopted workspace.
 
 ### Start with a request
 
@@ -87,7 +87,7 @@ each receives:
 | first unfinished step declares red and has no red evidence | test | `<spec> <plan> red S<N>` |
 | first unfinished step (also when interrupted or part-done) | run | `<plan> S<N>` |
 | all steps done, gaps testing answered not run | test | `<spec> <plan> gaps` |
-| gaps testing answered run and a required review is missing, or the recorded review is stale | check | `working-tree <spec> <plan>` |
+| gaps testing answered run and a required review is missing, or the recorded review is stale | review | `working-tree <spec> <plan>` |
 | evidence ready, no matching completion report | report | `<delivery>` |
 
 Evidence cannot show whether `/t4:test gaps` ran, or whether a started step's declared red run was
@@ -153,6 +153,7 @@ Worked examples: [workflow, *Delivery status*](ai-factory/docs/workflow.md#deliv
 - `tester` — writes acceptance tests from the spec's ACs, blind to the implementation; test files only
 - `architect` — decides where a capability belongs across the services in `ai-factory/docs/fleet.md`; writes design docs and ADRs
 - `analyst` — turns a feature description into a requirements pack in `ai-factory/analyses/`, with supplied facts kept apart from assumptions, proposals and open questions; never specs, plans or code
+- `risk` — `/t4:risk`: assesses one spec, plan or change for security threats and delivery risk and records each finding, with its severity, status, evidence and mitigation, in `ai-factory/risks/`; the only agent that may run network dependency-audit tools (ADR DJX496); the specifier, planner and reviewer act on its latest section. Never code
 - `explorer`, `specifier`, `planner`, `implementer` — the four loop steps, `/t4:explore` `/t4:spec` `/t4:plan` `/t4:run`, each run in its own agent from its artefacts alone; the session keeps the questions and the report
 
 ## Hooks
@@ -167,8 +168,10 @@ Claude Code uses `hooks/hooks.json`. Codex uses `hooks/codex.json`, once you hav
 All targets run as `make -f ai-factory/make/ai.mk <target>`; adopted repos need no root Makefile.
 
 - `ai TASK=<task> INPUT="…"` — run any task without an interactive session. `TOOL=claude|codex` picks the CLI.
-- `review` — the reviewer, headless. By default it reads staged, unstaged and nonignored untracked changes; `REVIEW_SCOPE=branch` reviews the committed branch instead. The gate is advisory unless `GATE_ENFORCE=1` or the `strict` assurance preset. It then passes only a valid `approve` with no blockers.
+- `ai TASK=loop INPUT="<plan>"` — `/t4:loop` headless. It asks nothing, launches nothing on a usage error (2) or an invalid plan (3), and takes its exit code from the loop's outcome record: 0 success, 1 step failure or timeout, 4 conflict or failed snapshot, 5 a rejected review under `GATE_ENFORCE=1`. make reports every failure as 2; only `TASK=loop INPUT="…" node ai-factory/make/runner.js ai` returns the distinct codes 1 to 5. `INPUT` (and `INPUT_FILE`) is split at whitespace with no quoting, so name a plan whose path holds a space by its number.
+- `review` — the independent review: it selects the change, runs the review task headless and gates the verdict. Distinct from `ai TASK=review INPUT=…`, which runs the same task on the input you give it with no gate; `TASK=check`, the deprecated name, still runs it. By default it reads staged, unstaged and nonignored untracked changes; `REVIEW_SCOPE=branch` reviews the committed branch instead. The gate is advisory unless `GATE_ENFORCE=1` or the `strict` assurance preset. It then passes only a valid `approve` with no blockers.
 - `contracts` — opt-in artifact contracts: validate the spec → plan → evidence chain read-only (`DELIVERY=…`, `REQUIRE=final,review`, `JSON=1`). `verify DELIVERY=… STEP=S<N> PHASE=red|step|final` runs the declared checks without a shell and records the outcome as evidence. Enable with `node ai-factory/make/contracts.js enable`. The step-by-step guide is *Artifact contracts* in `ai-factory/docs/workflow.md`; the full walkthrough and diagnostic table are in the adopted repo's `ai-factory/contracts/README.md`.
+- `ids-check` — the artefact ID clash check (`node ai-factory/make/ids.js check`), for after a merge. New artefacts are named `<ID>-<slug>.md` with a random three-letter, three-digit ID that `ai-factory/make/ids.js new <kind> <slug>` draws and creates; the ID format is owned there alone, and legacy four-digit files stay valid. It fails when a new-style ID is shared within one kind, or by anything other than one spec with at most one exploration or analysis, one plan and one risk assessment, and when a legacy number repeats within one kind, naming every path. `ids.js check` exits 1 on a failure and make reports exit 2, so CI should test pass or fail, not the code. An optional `ai-factory/ids-deny.txt` (one three-letter triple per line) adds triples that are never drawn. Adoption adds no CI configuration.
 - `delivery-report DELIVERY=<id>` — the completion report behind `/t4:report`: `ai-factory/reports/<id>/completion.md` and `.json`, with status `ready`, `incomplete`, `blocked` or `unverified` and every reason tied to its evidence. It only reads; it runs no check and publishes nothing, and its MR description is a draft. Exits 0 only when ready.
 - `lifecycle [DELIVERY=<id>] [JSON=1]` — opt-in lifecycle telemetry (`"lifecycle": {"enabled": true}` in `ai-factory/contracts/config.json`). It reports elapsed, waiting and active time, agent effort, retries, outcomes, attributed tokens and priced/unpriced cost per delivery, plus unattributed activity. Missing measurements show as unknown, never zero. `lifecycle-export DELIVERY=<id>` writes the per-delivery export that `/t4:report` reads. `log.csv` and `cost` are unchanged.
 - `cost` — token spend from the run log, grouped by task, agent, branch and day. `JSON=1` or `TSV=1` prints the same numbers for other tools.
@@ -206,7 +209,7 @@ These are reviewable defaults, not settled policy.
   stops `make ai` and `make review` before any host launches.
 - **Independent review.** Only `make -f ai-factory/make/ai.mk review DELIVERY=<id>` records an `independent` review, run
   headless or from a session you invoked. Routed workers, headless task runs, the reviewer and an interactive
-  `/t4:check` report the review as unmet with that command. Review evidence recorded before provenance existed must
+  `/t4:review` report the review as unmet with that command. Review evidence recorded before provenance existed must
   be recorded again.
 - **Completion.** `complete` evaluates current evidence and never trusts a saved report. Under `strict` it writes the
   fresh report itself.
@@ -298,7 +301,9 @@ Full walkthrough with a worked example: [ai-factory/docs/workflow.md](ai-factory
 
 `/t4:analyse` when the request is still a business description — several actors, rules, permissions, a lifecycle, policy nobody has decided — and needs a requirements pack before a spec can be written without guessing. `/t4:spec` reads the pack.
 
-`/t4:explore` (options) → `/t4:spec` (Given/When/Then) → `/t4:plan` (checklist) → `/t4:test red` (ACs fail first) → `/t4:run` one step at a time → `/t4:test gaps` → `/t4:check` → `/t4:report` (with artifact contracts) → commit `ai(<task>): …` → MR labelled `ai-assisted`.
+`/t4:explore` (options) → `/t4:spec` (Given/When/Then) → `/t4:plan` (checklist) → `/t4:test red` (ACs fail first) → `/t4:run` one step at a time → `/t4:test gaps` → `/t4:review` → `/t4:report` (with artifact contracts) → commit `ai(<task>): …` → MR labelled `ai-assisted`.
+
+`/t4:loop <plan>` is the opt-in exception to one step per `/t4:run`: one invocation implements every unticked step of a plan, independent steps (`Depends on: N, M`) concurrently in temporary git worktrees under `ai-factory/runs/tmp/worktrees/` on Claude Code and one at a time on Codex, then runs `/t4:review` once. Each step's change comes back to your tree uncommitted; the loop never commits on your branch, and it halts on a failure, a conflict or a timeout. Test, lint and typecheck tools must exclude `ai-factory/runs/tmp/worktrees/`. ADR ETT683 records the exception; *The rules that make it work* in [ai-factory/docs/workflow.md](ai-factory/docs/workflow.md) has the detail.
 
 Opt-in layers, all off until a repo enables them (the first three in `ai-factory/contracts/config.json`):
 - **Artifact contracts** — checked handoffs and recorded evidence. Enable with `node ai-factory/make/contracts.js enable`.

@@ -12,8 +12,9 @@ Delegate to the `architect` subagent.
 - Input starting with `review` — run the architect's `review` mode against the plan named
   after it. Return its JSON verdict unchanged, then add one line: which findings you agree
   with and which you would dispute, with a reason. Change nothing.
-- Anything else — run the architect's `design` mode on it. Output goes to
-  `ai-factory/designs/<NNNN>-<slug>.md` (create the directory if missing).
+- Anything else — run the architect's `design` mode on it. The architect creates the file
+  with `node ai-factory/make/ids.js new design <slug>` and writes into the path it prints,
+  keeping its first two lines unchanged.
 
 Do not change any code, spec or plan in this task, and do not edit any file yourself.
 If ai-factory/docs/fleet.md is missing or still the shipped default, say so first and suggest

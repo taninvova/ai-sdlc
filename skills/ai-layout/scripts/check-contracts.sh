@@ -463,12 +463,72 @@ async function main() {
 		ok("migration: explicit, idempotent, prose-preserving, never valid by itself");
 	}
 
+	// --- spec 0024 AC26: the helper's Created: line is outside the spec digest --------------
+	{
+		const { contentDigest } = require(CONTRACTS);
+		const { digest } = require(path.join(MAKE, "gate.js"));
+		// A legacy spec (no Created: on line 2) keeps the pre-change digest: raw SHA-256 of its bytes.
+		for (const file of [path.join(FIXTURES, "planned", SPEC), path.join(FIXTURES, "legacy/ai-factory/specs/0001-old-feature.md")]) {
+			const bytes = fs.readFileSync(file);
+			assert.equal(contentDigest(bytes, "spec"), digest(bytes), `created-outside-digest: legacy digest changed for ${file}`);
+		}
+		// A Created: line anywhere but line 2 is ordinary content.
+		const elsewhere = Buffer.from("# Spec\n\nCreated: 2026-01-01T00:00:00.000Z\n");
+		assert.equal(contentDigest(elsewhere, "spec"), digest(elsewhere), "created-outside-digest: only line 2 is normalised");
+		const dir = project("planned");
+		expect(run(dir, ["enable"]), 0, "enable");
+		const dated = (value) => read(dir, SPEC).replace(/^(# [^\n]*\n)(Created:[^\n]*\n)?/, `$1Created: ${value}\n`);
+		write(dir, SPEC, dated("2026-10-25T10:00:00.000Z"));
+		expect(run(dir, ["init", "spec", SPEC]), 0, "init dated spec");
+		expect(run(dir, ["init", "plan", PLAN, "--spec", SPEC]), 0, "init plan");
+		const original = read(dir, SPEC);
+		const drift = (value) => has(value, "S_ARTIFACT_CHANGED", "ai-factory/specs/") || has(value, "S_SPEC_CHANGED");
+		assert.ok(!drift(doc(dir, ["--all"])), "created-outside-digest: baseline already drifted");
+		write(dir, SPEC, dated("2027-03-04T05:06:07Z"));
+		let value = doc(dir, ["--all"]);
+		assert.ok(!drift(value), `created-outside-digest: a changed Created: value was reported as drift\n${JSON.stringify(codes(value))}`);
+		write(dir, SPEC, original.replace(/^Created:[^\n]*\n/m, ""));
+		assert.ok(has(doc(dir, ["--all"]), "S_ARTIFACT_CHANGED", "ai-factory/specs/"), "created-outside-digest: deleting the Created: line must be drift");
+		write(dir, SPEC, original.replace("Export the report table as CSV.", "Export the report table as TSV."));
+		assert.ok(has(doc(dir, ["--all"]), "S_ARTIFACT_CHANGED", "ai-factory/specs/"), "created-outside-digest: an edited body line must be drift");
+		write(dir, SPEC, original.replace("# Spec 0001 — CSV export", "# Spec 0001 — CSV exports"));
+		assert.ok(has(doc(dir, ["--all"]), "S_ARTIFACT_CHANGED", "ai-factory/specs/"), "created-outside-digest: an edited heading must be drift");
+		ok("created-outside-digest");
+	}
+
+	// --- spec 0024 AC32: migrate pairs a plan with its spec by a new-style ID ---------------
+	{
+		const dir = project("planned");
+		expect(run(dir, ["enable"]), 0, "enable");
+		const specText = read(dir, SPEC);
+		const planText = read(dir, PLAN).replace(/^\*\*Spec:\*\*[^\n]*\n/m, "");
+		assert.ok(!/\*\*Spec:\*\*/.test(planText), "fixture plan still links its spec");
+		for (const file of [SPEC, PLAN]) fs.unlinkSync(path.join(dir, file));
+		write(dir, "ai-factory/specs/DHW631-foo.md", specText);
+		write(dir, "ai-factory/plans/DHW631-foo.md", planText);
+		// The ID compares case-insensitively; a near-miss ID is never paired.
+		write(dir, "ai-factory/specs/KXT204-bar.md", specText);
+		write(dir, "ai-factory/plans/kxt204-bar.md", planText);
+		write(dir, "ai-factory/specs/MRB518-baz.md", specText);
+		write(dir, "ai-factory/plans/MRB517-baz.md", planText);
+		for (const file of ["DHW631-foo.md", "KXT204-bar.md", "MRB518-baz.md"])
+			expect(run(dir, ["init", "spec", `ai-factory/specs/${file}`]), 0, `init ${file}`);
+		const human = expect(run(dir, ["migrate", "--write"]), 0, "migrate");
+		const sidecar = (file) => json(dir, file);
+		assert.ok(fs.existsSync(path.join(dir, "ai-factory/plans/DHW631-foo.contract.json")), `migrate-pairs-new-id: no plan sidecar written\n${human.stdout}`);
+		assert.equal(sidecar("ai-factory/plans/DHW631-foo.contract.json").delivery_id, sidecar("ai-factory/specs/DHW631-foo.contract.json").delivery_id, "migrate-pairs-new-id: plan joins its spec's delivery");
+		assert.equal(sidecar("ai-factory/plans/kxt204-bar.contract.json").delivery_id, sidecar("ai-factory/specs/KXT204-bar.contract.json").delivery_id, "migrate-pairs-new-id: IDs compare case-insensitively");
+		assert.ok(!fs.existsSync(path.join(dir, "ai-factory/plans/MRB517-baz.contract.json")), "migrate-pairs-new-id: a plan was paired with a different ID");
+		assert.match(human.stdout, /skipped: ai-factory\/plans\/MRB517-baz\.md/);
+		ok("migrate-pairs-new-id");
+	}
+
 	// --- make entry points and review evidence ---------------------------------------------
 	{
 		const { dir, id } = planned();
 		fs.cpSync(MAKE, path.join(dir, "ai-factory/make"), { recursive: true });
 		fs.mkdirSync(path.join(dir, "ai-factory/tasks"));
-		write(dir, "ai-factory/tasks/check.md", "Return exactly one review JSON object.");
+		write(dir, "ai-factory/tasks/review.md", "Return exactly one review JSON object.");
 		write(dir, "ai-factory/models.yaml", "claude:\ncodex:\nreview:\n");
 		write(dir, "ai-factory/.gitignore", "/runs/\n");
 		const fake = path.join(dir, "ai-factory/fake-cli");
@@ -529,8 +589,10 @@ let input='';process.stdin.on('data',c=>input+=c);process.stdin.on('end',()=>{
 			assert.match(text, /ai-factory\/contracts\/config\.json/, `${file} gates contracts on adoption`);
 			for (const needle of needles) assert.ok(text.includes(needle), `${file} names ${needle}`);
 		}
-		for (const [task, agent] of [["spec", "specifier"], ["plan", "planner"], ["test", "tester"], ["run", "implementer"], ["check", "reviewer"]]) {
-			assert.match(fs.readFileSync(path.join(plugin, "commands", `${task}.md`), "utf8"), new RegExp(`ai-factory/tasks/${task}\\.md`), `Claude ${task} reads the shared task`);
+		for (const [task, agent] of [["spec", "specifier"], ["plan", "planner"], ["test", "tester"], ["run", "implementer"], ["review", "reviewer"], ["check", "reviewer"]]) {
+			// check is the deprecated name of review: its command reads the review task.
+			const shared = task === "check" ? "review" : task;
+			assert.match(fs.readFileSync(path.join(plugin, "commands", `${task}.md`), "utf8"), new RegExp(`ai-factory/tasks/${shared}\\.md`), `Claude ${task} reads the shared task`);
 			assert.match(fs.readFileSync(path.join(plugin, "codex-skills", `t4-${task}`, "SKILL.md"), "utf8"), new RegExp(`ai-factory/agents/${agent}\\.md`), `Codex ${task} reads the shared procedure`);
 		}
 		assert.ok(fs.existsSync(path.join(ai, "make/contracts.js")) && fs.existsSync(path.join(ai, "contracts/README.md")));

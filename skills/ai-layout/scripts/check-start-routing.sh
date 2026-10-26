@@ -89,12 +89,16 @@ process.stdin.on('end', () => {
     ...fs.readdirSync("codex-skills").filter(d => d.startsWith("t4-") && !["t4-start", "t4-continue"].includes(d)).map(d => ({ host: "codex", task: d.slice(3), file: path.join("codex-skills", d, "SKILL.md") })),
    ].filter(({ file }) => read(file).includes("ai-factory/make/models.js dispatch"));
    assert.ok(direct.length >= 2 * 13, "expected routed direct entries on both hosts");
-   for (const { host, task, file } of direct) {
+   for (const { host, task: entry, file } of direct) {
     const text = read(file);
+    // A deprecated entry (/t4:check, $t4-check) dispatches the task it now names, and says so first.
+    const task = m.canonicalTask(entry);
+    if (task !== entry) assert.ok(text.includes(m.aliasNotice(host, entry)), `${file} does not say it is deprecated`);
     assert.doesNotMatch(text, /validate-start|retained original input|destination dispatch|tasks\/start\.md/, file);
     assert.ok(text.includes(`dispatch --host ${host} --task ${task}\``), `${file} dispatches its own task`);
     assert.ok(text.includes(m.entryPreamble(host, task)), `${file} carries the unchanged shared preamble`);
    }
+   assert.ok(direct.some(({ task }) => task === "check") && direct.some(({ task }) => task === "review"), "the deprecated and the current review entries are both routed");
   });
  } else {
  fs.cpSync(template, path.join(root, "ai-factory"), { recursive: true });

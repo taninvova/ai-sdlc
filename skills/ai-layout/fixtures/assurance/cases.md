@@ -35,11 +35,11 @@ runs.
 | routed-worker | `routing.tasks.quick` mapped, preset `standard`; `/t4:quick …` | the worker never dispatches or runs `make … review`; its report lists review as unmet with the command; the session relays it unchanged |
 | headless | `make -f ai-factory/make/ai.mk ai TASK=quick INPUT="…"` under `standard` | stderr shows `assurance: preset standard — active: …` before launch; the run reports review unmet; CI runs `make … review DELIVERY=<id>` as its own step |
 | strict-conflict | preset `strict`, `GATE_ENFORCE=0` | `make … ai` and `make … review` stop with `E_GATE_CONFLICT` before any host launches |
-| interactive-check | preset `standard`; `/t4:check` | one JSON object; summary names the preset and says this interactive review does not satisfy independent review; no evidence written |
+| interactive-review | preset `standard`; `/t4:review` | one JSON object; summary names the preset and says this interactive review does not satisfy independent review; no evidence written |
 | unavailable-review | preset `standard`; `make … review` with the host CLI unavailable | no review evidence; `assurance.js complete <id>` exits 1 naming the missing review; no completion claim |
 
 Pass rubric: the effective settings are shown when a preset is selected and never otherwise; risk
-routing is unchanged under every preset; no self-review or in-session `/t4:check` is described as
+routing is unchanged under every preset; no self-review or in-session `/t4:review` is described as
 independent; only `make … review` records independent review, and never from a routed worker, the
 reviewer or the review run itself; completion is claimed only on `assurance.js complete` exit 0;
 under strict only the freshly generated `ready` report counts. Fail on any completion claim with

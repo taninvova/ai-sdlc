@@ -49,9 +49,9 @@ future ADR, not to configuration.
 ## Who consults a source
 
 Only in a configured repo, and only these executors: the `explorer`, `specifier`, `planner`,
-`analyst`, `architect` and `reviewer` agents — so `/t4:explore`, `/t4:spec`, `/t4:plan`,
-`/t4:analyse`, `/t4:design`, `/t4:adr` and `/t4:check` reach a source through the agent they
-delegate to.
+`analyst`, `architect`, `reviewer` and `risk` agents — so `/t4:explore`, `/t4:spec`,
+`/t4:plan`, `/t4:analyse`, `/t4:design`, `/t4:adr`, `/t4:review` and `/t4:risk` reach a source
+through the agent they delegate to.
 
 **The `tester` never does.** Its independence rule forbids input that may describe the
 implementation, and a knowledge base may. **The `implementer` never does either:** a source

@@ -32,6 +32,18 @@ Owns the artifact contract formats (`templates/ai-factory/contracts/`, validated
 everything else. `make/lifecycle.js` (spec 0015) aggregates opt-in lifecycle events that the
 runner and the hooks write through `make/lifecycle-events.js`, mirrored byte-for-byte as
 `skills/ai-hooks/scripts/_lifecycle-events.js`; the run log and `make cost` are unchanged.
+Owns the artefact ID format: `make/ids.js` (spec 0024) is the only place that draws the
+`[A-Z]{3}[0-9]{3}` ID, creates each new spec, plan, exploration, analysis, design, ADR and risk
+assessment, and runs the clash check (`make ids-check`). Prompts call it and never count. Readers
+(`state.sh`, `contracts.js`) accept the new IDs and legacy four-digit numbers alike; adopted repos
+own the optional `ai-factory/ids-deny.txt`.
+Owns `/t4:loop`'s decisions: `make/loop.js` (spec 0022) selects and validates the plan
+(`Depends on:`), schedules steps, creates the temporary worktrees under
+`ai-factory/runs/tmp/worktrees/`, applies each step's delta back uncommitted, ticks it, and
+decides the stop causes and the `TASK=loop` exit code; `tasks/loop.md` only delegates.
+Commits exist only on the worktrees' own `t4-loop/…` branches (ADR ETT683). Inside a worktree
+the hooks log to the main repository through the git common dir, and the guard applies the
+main repository's dont-touch rules relative to the worktree root.
 Each adopted repo owns its own
 manifest and is the source of truth for its layout version; this plugin keeps no registry of
 adopter versions.
@@ -40,6 +52,10 @@ there means the tool's own configured model, so no provider is assumed. `make/mo
 (spec 0016) is its only parser and resolver: the headless runner, interactive dispatch, adapter
 sync and doctor all call it. Opt-in routing reaches interactive tasks only through generated,
 content-addressed worker agents (`.claude/agents/`, `.codex/agents/`) written by an explicit sync.
+Owns the deprecated task names: `TASK_ALIASES` in `make/models.js` (`check` → `review`) is the one
+table. The command and skill generators emit a thin deprecated `/t4:check` / `$t4-check` from it;
+the runner, routing, lifecycle and `make cost` read the old name as `review`, so recorded data is
+never rewritten. The `log-task.js` hook carries a pinned copy because a hook cannot load templates.
 
 ## Environments
 Developer machines and CI. `make ai` / `make review` are the headless path; developers use

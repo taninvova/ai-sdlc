@@ -327,8 +327,16 @@ function draftVerify(text) {
 	return { verify, skipped };
 }
 // A ticked box is progress, not a content change: marks are normalized before hashing.
+// A spec's `Created:` value on line 2 (written by ids.js) is metadata, not content: the value is
+// dropped and the token kept, so deleting the line is still drift. Legacy specs hash unchanged.
+function specBytes(bytes) {
+	const first = bytes.indexOf(0x0a);
+	if (first < 0 || !bytes.subarray(first + 1, first + 9).equals(Buffer.from("Created:"))) return bytes;
+	const end = bytes.indexOf(0x0a, first + 1);
+	return Buffer.concat([bytes.subarray(0, first + 9), end < 0 ? Buffer.alloc(0) : bytes.subarray(end)]);
+}
 function contentDigest(bytes, kind) {
-	if (kind === "spec") return digest(bytes);
+	if (kind === "spec") return digest(specBytes(bytes));
 	return digest(
 		Buffer.from(
 			bytes.toString("utf8").replace(/^(\s*[-*+] )\[[xX~]\]/gm, "$1[ ]"),
@@ -1330,10 +1338,12 @@ function migrate(options = {}) {
 		if (!read.bytes) continue;
 		const text = read.bytes.toString("utf8");
 		const link = text.match(/\*\*Spec:\*\*\s*`?(ai-factory\/specs\/[^`\s)]+\.md)/);
-		const number = path.basename(md.file).match(/^(\d{4})-/)?.[1];
+		// Legacy four-digit numbers and spec 0024 letter-digit IDs, compared case-insensitively.
+		const idOf = (file) => path.basename(file).match(/^([0-9]{4}|[A-Za-z]{3}[0-9]{3})-/)?.[1].toUpperCase();
+		const number = idOf(md.file);
 		let specFile = link && path.resolve(ctx.root, link[1]);
 		if (!specFile || !specs.has(specFile))
-			specFile = [...specs.keys()].find((file) => number && path.basename(file).startsWith(`${number}-`));
+			specFile = [...specs.keys()].find((file) => number && idOf(file) === number);
 		if (!specFile || !specs.has(specFile)) {
 			actions.push({ path: ctx.rel(md.file), action: "skipped", reason: "its spec has no sidecar to link to" });
 			continue;

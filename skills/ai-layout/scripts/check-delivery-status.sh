@@ -617,9 +617,57 @@ test("helper", "helper-deterministic", async () => {
 	table(first.stdout, "deterministic read");
 });
 
+// --- spec 0024 AC33: a delivery whose spec and plan carry letter-digit IDs ------------------
+const NEW_SPEC = "ai-factory/specs/DHW631-csv-export.md";
+const NEW_PLAN = "ai-factory/plans/DHW631-csv-export.md";
+const NEW_SOURCES = [NEW_SPEC, NEW_PLAN, "ai-factory/specs/DHW631-csv-export.contract.json", "ai-factory/plans/DHW631-csv-export.contract.json"];
+// The `planned` fixture renamed to DHW631-csv-export.* with its **Spec:** link updated, driven to
+// the same point as a legacy twin so the two status tables can be compared field by field.
+async function newStyle({ red = true, steps = 3, final = true, reviewed = true } = {}) {
+	const dir = project("planned");
+	const planText = read(dir, PLAN);
+	assert.ok(planText.includes(`\`${SPEC}\``), "fixture plan does not link its spec");
+	fs.renameSync(path.join(dir, SPEC), path.join(dir, NEW_SPEC));
+	fs.unlinkSync(path.join(dir, PLAN));
+	write(dir, NEW_PLAN, planText.replace(`\`${SPEC}\``, `\`${NEW_SPEC}\``));
+	git(dir, "add", "-A");
+	git(dir, "commit", "-q", "-m", "new-style ids");
+	contracts.init("spec", NEW_SPEC, { ctx: contracts.context(dir) });
+	contracts.init("plan", NEW_PLAN, { ctx: contracts.context(dir), spec: NEW_SPEC });
+	const id = json(dir, "ai-factory/specs/DHW631-csv-export.contract.json").delivery_id;
+	if (red) await record(dir, id, { step: "S1", phase: "red" });
+	for (let step = 1; step <= steps; step++) await record(dir, id, { step: `S${step}` });
+	for (let step = 1; step <= steps; step++)
+		write(dir, NEW_PLAN, read(dir, NEW_PLAN).replace(new RegExp(`^- \\[.\\] \\*\\*Step ${step} `, "m"), `- [x] **Step ${step} `));
+	if (final) await record(dir, id, { phase: "final" });
+	if (reviewed) review(dir, id);
+	return { dir, id };
+}
+// Rows that do not depend on file names or the delivery ID, which must match the legacy twin.
+const comparable = (t) => FIELDS.filter((name) => !["delivery", "latest verification", "review"].includes(name)).map((name) => `${name}\t${t.get(name)}`);
+async function newStyleCase(read, label) {
+	for (const shape of [{ red: true, steps: 3, final: true, reviewed: true }, { red: true, steps: 1, final: false, reviewed: false }]) {
+		const fresh = await newStyle(shape);
+		const legacy = await planned({ ...shape, ticks: shape.steps });
+		const t = read(fresh.dir, fresh.id, `${label} ${JSON.stringify(shape)}`);
+		const twin = read(legacy.dir, legacy.id, `${label} legacy twin`);
+		assert.equal(t.get("kind"), "planned");
+		// File names are the only expected difference: compare with them mapped back to the twin's.
+		const [mine, theirs] = [comparable(t).map((row) => row.replaceAll("DHW631-csv-export", "0001-csv-export")), comparable(twin)];
+		const differ = mine.flatMap((row, i) => (row === theirs[i] ? [] : [`new:    ${row}`, `legacy: ${theirs[i]}`]));
+		assert.ok(!differ.length, `${label}: a new-style delivery reads differently from its legacy twin\n${differ.join("\n")}`);
+		const sources = t.all("source").join("\n");
+		for (const file of NEW_SOURCES) assert.ok(sources.includes(file), `${label}: source rows do not name ${file}:\n${sources}`);
+		assert.ok(!sources.includes("0001-csv-export"), `${label}: a legacy path leaked into the sources:\n${sources}`);
+	}
+}
+test("helper", "helper-new-style-ids", async () => {
+	await newStyleCase((dir, id, label) => detail(dir, id, label), "helper");
+});
+
 // ================================ cli group (plan 0019 Step 3) ================================
 const NOT_A_FLAG = /is not a flag/;
-const LISTING_HEADER = "kind\tnumber\tstate\tpath\tstep\tdetail";
+const LISTING_HEADER = "kind\tid\tstate\tpath\tstep\tdetail";
 function cliTable(dir, id, label, options) {
 	const result = state(dir, ["--delivery", id], options);
 	assert.equal(result.status, 0, `${label}: state --delivery exited ${result.status}\n${both(result)}`);
@@ -642,6 +690,13 @@ test("cli", "cli-detail-planned", async () => {
 	assert.equal(t.readiness, "ready", t.text);
 	assert.equal(result.stderr, "", result.stderr);
 	assert.equal(result.stdout, helper(dir, [id]).stdout, "state shows the helper's table byte for byte");
+});
+test("cli", "cli-new-style-ids", async () => {
+	await newStyleCase((dir, id, label) => {
+		const { t, result } = cliTable(dir, id, label);
+		assert.equal(result.stdout, helper(dir, [id]).stdout, `${label}: state shows the helper's table byte for byte`);
+		return t;
+	}, "state --delivery");
 });
 test("cli", "cli-detail-quick", async () => {
 	const { dir, id } = quick();

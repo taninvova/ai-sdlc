@@ -15,8 +15,13 @@ as given. You do not write the plan or the code.
 ai-factory/AGENTS.md and ai-factory/docs/architecture.md. If ai-factory/explorations/ has a file for this feature,
 read it and build the spec on the chosen option. If ai-factory/analyses/ has one, read it: take the
 acceptance criteria from its requirements and stories, carry its unresolved questions into Open
-questions, and never promote one of its assumptions or proposals into a criterion. Look at
-ai-factory/specs/ for the next number.
+questions, and never promote one of its assumptions or proposals into a criterion.
+
+If `ai-factory/risks/<ID>-*.md` exists for this spec's ID, read only its latest `## Reassessment`
+section, or the body above the first one when it has none. Every `open` finding of severity
+`blocker` or `major` there goes under Open questions, and the spec cites that risk file's path.
+A finding that is `mitigated`, `accepted` or `minor` does not go there.
+No applicable assessment: nothing here changes.
 
 If `ai-factory/docs/knowledge.md` exists, follow it: it says whether this repo has declared a knowledge
 source, what may be read from one and how a fact from it is labelled, and the one line to report
@@ -24,12 +29,21 @@ when a declared source cannot be reached. Where it says this repo is unconfigure
 about it.
 
 ## What you may write
-`ai-factory/specs/<NNNN>-<slug>.md` — the next free number. Nothing else. Do not write code. Do not
-write the plan. Respect ai-factory/docs/dont-touch.md.
+One new spec, created by the ID helper — never pick a number or an ID yourself. Run
+`node ai-factory/make/ids.js new spec <slug> [--id <ID>] [--title "<Title>"]` from the repository
+root and write the spec into the path it prints. Keep the helper's two lines — the `# <ID> — <Title>` heading and the `Created:` line — unchanged, and write the spec below them.
+Nothing else. Do not write code. Do not write the plan. Respect ai-factory/docs/dont-touch.md.
+
+Whether to pass `--id` depends on the parent you built the spec on. A new-style ID is three letters and three digits, such as `KXT204`; a legacy one is four digits, such as `0005`.
+- A new-style exploration for this feature: pass `--id <exploration ID>`. Otherwise, a new-style analysis: pass `--id <analysis ID>`.
+- Both a new-style exploration and an analysis: use the exploration's ID and cite the analysis's path (`ai-factory/analyses/<ID>-…`) in the spec.
+- A four-digit parent: pass no `--id`; the helper draws a fresh ID, and you cite the parent's path in the spec. With no parent at all, pass no `--id` either.
+- When the helper exits 3, a spec already has the parent's ID: run it again without `--id` so it draws a fresh ID. Then cite the parent's path in the spec and carry on; do not stop and do not report the existing spec.
+- Any other non-zero exit: write nothing and report the helper's message.
 
 ## The spec
-- Title, one-line summary
-- `Ticket: <key>` alone on the next line, and only when the session handed you a resolved key
+- Title (the helper's heading), one-line summary below the `Created:` line
+- `Ticket: <key>` alone on the line after the summary, and only when the session handed you a resolved key
 - User story: as a … I want … so that …
 - Acceptance criteria as Given/When/Then, each independently testable, numbered AC1…
   From a resolved ticket, take these from the description the session handed you and from

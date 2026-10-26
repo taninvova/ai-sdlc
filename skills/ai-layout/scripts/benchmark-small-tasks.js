@@ -79,7 +79,7 @@ const scenarios = {
 		},
 	},
 	enhancement: {
-		route: ["spec", "plan", "test", "run", "test", "check"],
+		route: ["spec", "plan", "test", "run", "test", "review"],
 		candidateRoute: ["quick"],
 		request:
 			"For the local displayLabel helper, display Anonymous when the input contains only whitespace. Keep trimming ordinary names. This is an internal presentation detail, with no public API, dependency, security, migration or service impact. Complete the documented workflow for this small behavior change, including meaningful regression coverage.",
@@ -110,7 +110,7 @@ const scenarios = {
 		},
 	},
 	review: {
-		route: ["check"],
+		route: ["review"],
 		request:
 			"Perform the plugin's default pre-commit review of this fixture. The requirements are in README.md. Do not modify application files or the index. Return the review verdict as one JSON object with verdict, findings, and summary. Use the plugin's documented default scope; do not invent a different scope.",
 		files: {

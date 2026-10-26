@@ -47,6 +47,19 @@ try {
   assert.throws(()=>adopt(repo,root),'existing workspace must refuse');cases++;
   assert(fs.existsSync(path.join(repo,'ai-factory/make/assurance.js'))&&manifest.files['ai-factory/make/assurance.js'],'adoption delivers and tracks the assurance helper');
   assert(!fs.existsSync(path.join(repo,'ai-factory/assurance.json')),'adoption never selects an assurance preset');cases++;
+  // The ID helper ships with adoption, and its clash check is a make target, never a CI file.
+  assert(fs.existsSync(path.join(repo,'ai-factory/make/ids.js'))&&manifest.files['ai-factory/make/ids.js'],'adoption delivers and tracks the ID helper');
+  // /t4:loop: its task and helper ship with adoption and are tracked (plan 0022 Step 9).
+  for(const file of ['ai-factory/tasks/loop.md','ai-factory/make/loop.js'])
+   assert(fs.existsSync(path.join(repo,file))&&manifest.files[file],`adoption delivers and tracks ${file}`);
+  // /t4:risk: its task and the risk agent ship with adoption and are tracked (plan 0023 Step 3).
+  for(const file of ['ai-factory/tasks/risk.md','ai-factory/agents/risk.md'])
+   assert(fs.existsSync(path.join(repo,file))&&manifest.files[file],`adoption delivers and tracks ${file}`);
+  for(const ci of ['.github','.gitlab-ci.yml','.circleci','azure-pipelines.yml','Jenkinsfile','bitbucket-pipelines.yml','.buildkite'])
+   assert(!fs.existsSync(path.join(repo,ci)),`adoption adds no CI configuration (${ci})`);
+  const idsCheck=spawnSync('make',['-s','-f','ai-factory/make/ai.mk','ids-check'],{cwd:repo,env:{...process.env,MAKEFLAGS:'',MAKEOVERRIDES:'',MFLAGS:''},encoding:'utf8'});
+  assert.equal(idsCheck.status,0,`make ids-check passes on a fresh adoption:\n${idsCheck.stdout}${idsCheck.stderr}`);
+  assert.equal(idsCheck.stderr,'','a fresh adoption has no undated new-style artefact');cases++;
  }
  // Assurance presets are opt-in and the selection is the adopter's: sync never creates, changes or
  // tracks it, and keeps customized contracts configuration and recorded evidence byte for byte.

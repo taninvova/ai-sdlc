@@ -302,7 +302,7 @@ async function main() {
 	{
 		const { dir, ai } = workspace("binding2");
 		fs.mkdirSync(path.join(ai, "make"), { recursive: true });
-		for (const file of ["lifecycle.js", "lifecycle-events.js", "safe-files.js"]) fs.copyFileSync(path.join(MAKE, file), path.join(ai, "make", file));
+		for (const file of ["lifecycle.js", "lifecycle-events.js", "safe-files.js", "models.js"]) fs.copyFileSync(path.join(MAKE, file), path.join(ai, "make", file));
 		const cli = (...args) => spawnSync(process.execPath, [path.join(ai, "make/lifecycle.js"), ...args], { cwd: dir, env: clean, encoding: "utf8" });
 		const started = cli("start", "--phase", "run", "--delivery", D1, "--step", "S1");
 		assert.equal(started.status, 0, started.stderr);
@@ -337,6 +337,85 @@ async function main() {
 		assert.equal(json.status, 0);
 		assert.equal(JSON.parse(json.stdout).schema, "t4-lifecycle-report");
 		ok("interactive binding via the command hook; CLI best effort, disabled no-op, JSON stdout");
+	}
+
+	// --- loop-parent-linkage (spec 0022 AC58): /t4:loop brackets itself, each step and its one review
+	{
+		const { dir, ai } = workspace("loop");
+		fs.mkdirSync(path.join(ai, "make"), { recursive: true });
+		for (const file of ["lifecycle.js", "lifecycle-events.js", "safe-files.js", "models.js"]) fs.copyFileSync(path.join(MAKE, file), path.join(ai, "make", file));
+		// The commands are taken from tasks/loop.md itself, so the procedure and the CLI cannot drift.
+		const procedure = fs.readFileSync(path.resolve("skills/ai-layout/templates/ai-factory/tasks/loop.md"), "utf8");
+		const commands = [...procedure.matchAll(/`node ai-factory\/make\/lifecycle\.js start ([^`]+)`/g)].map((m) => m[1].match(/<[^>]+>|\S+/g));
+		const phaseOf = (args) => args[args.indexOf("--phase") + 1];
+		assert.deepEqual(commands.map(phaseOf), ["loop", "run", "review"], "tasks/loop.md must bracket the loop, each step and the review");
+		const [loopArgs, stepArgs, checkArgs] = commands;
+		assert.ok(!loopArgs.includes("--parent-run"), "the loop run is the root of its tree");
+		for (const args of [stepArgs, checkArgs]) assert.equal(args[args.indexOf("--parent-run") + 1], "<loop run>", `${args.join(" ")} must name the loop run as its parent`);
+		assert.equal(stepArgs[stepArgs.indexOf("--step") + 1], "S<N>");
+		const fill = (args, values) => ["start", ...args.map((arg) => values[arg] ?? arg)];
+		// A headless TASK=loop child inherits T4_LIFECYCLE_RUN; an explicit --parent-run must still win.
+		const headlessRun = store.newId("r");
+		const cli = (args, env = {}) => {
+			const result = spawnSync(process.execPath, [path.join(ai, "make/lifecycle.js"), ...args], { cwd: dir, env: { ...clean, ...env }, encoding: "utf8" });
+			assert.equal(result.status, 0, `${args.join(" ")}\n${result.stderr}`);
+			assert.equal(result.stderr, "", `${args.join(" ")} was not recorded: ${result.stderr}`);
+			return result.stdout;
+		};
+		const started = (stdout) => /started run (r-[0-9a-f]{16})/.exec(stdout)[1];
+		const env = { T4_LIFECYCLE_RUN: headlessRun };
+		const loopRun = started(cli(fill(loopArgs, { "<id>": D1 }), env));
+		const steps = ["S1", "S2"].map((step) => started(cli(fill(stepArgs, { "<id>": D1, "S<N>": step, "<loop run>": loopRun }), env)));
+		cli(["end", "--run", steps[1], "--outcome", "succeeded"]); // concurrent steps may end in any order
+		cli(["end", "--run", steps[0], "--outcome", "failed"]);
+		const checkRun = started(cli(fill(checkArgs, { "<id>": D1, "<loop run>": loopRun }), env));
+		cli(["end", "--run", checkRun, "--outcome", "succeeded"]);
+		cli(["end", "--run", loopRun, "--outcome", "failed"]);
+		const d = lifecycle.aggregate({ ai, delivery: D1 }).deliveries[0];
+		const byId = new Map(d.runs.map((r) => [r.run_id, r]));
+		assert.equal(d.runs.length, 4, "one loop run, one run per step and one review run");
+		assert.deepEqual([byId.get(loopRun).phase, byId.get(loopRun).parent_run_id], ["loop", headlessRun], "the loop run hangs off the headless run when there is one");
+		for (const [index, id] of steps.entries())
+			assert.deepEqual([byId.get(id).phase, byId.get(id).step, byId.get(id).parent_run_id, byId.get(id).delivery_id], ["run", `S${index + 1}`, loopRun, D1]);
+		assert.deepEqual([byId.get(checkRun).phase, byId.get(checkRun).step, byId.get(checkRun).parent_run_id], ["review", null, loopRun]);
+		assert.ok(d.runs.every((r) => r.status === "closed"), "every bracket is closed");
+		assert.deepEqual(d.outcomes, { failed: 2, succeeded: 2 });
+		assert.deepEqual([d.metrics.retries, d.metrics.resumed, d.metrics.reruns], [0, 0, 0], "distinct steps are not retries of each other");
+		// The children reach the loop's delivery through their parent even when a host drops --delivery.
+		const orphan = started(cli(fill(stepArgs, { "<id>": D1, "S<N>": "S3", "<loop run>": loopRun }).filter((arg, i, all) => arg !== "--delivery" && all[i - 1] !== "--delivery")));
+		cli(["end", "--run", orphan, "--outcome", "succeeded"]);
+		const again = lifecycle.aggregate({ ai, delivery: D1 });
+		assert.equal(again.deliveries[0].runs.find((r) => r.run_id === orphan)?.delivery_id, D1, "a step run without --delivery is aggregated under the loop's delivery");
+		assert.deepEqual(again.unattributed.runs, []);
+		ok("loop-parent-linkage: loop run, step runs and the review run aggregate under the loop (AC58)");
+	}
+
+	// --- deprecated phase name: `check` was renamed `review` -------------------------------------
+	// Events on disk are immutable; one recorded as phase/task `check` before the rename is read as
+	// `review`, so an old and a new attempt of the same review group together. `--phase check` from
+	// a workspace whose task file has not been updated yet is recorded under the new name.
+	{
+		const { dir, ai } = workspace("renamed-phase");
+		fs.mkdirSync(path.join(ai, "make"), { recursive: true });
+		for (const file of ["lifecycle.js", "lifecycle-events.js", "safe-files.js", "models.js"]) fs.copyFileSync(path.join(MAKE, file), path.join(ai, "make", file));
+		const old = run(ai, { phase: "check", start: 0, end: 60, outcome: "failed" });
+		emit(ai, { type: "run_started", run_id: store.newId("r"), delivery_id: D2, phase: "check", task: "check", at: at(0) });
+		const cli = (...args) => spawnSync(process.execPath, [path.join(ai, "make/lifecycle.js"), ...args], { cwd: dir, env: clean, encoding: "utf8" });
+		const started = cli("start", "--phase", "check", "--task", "check", "--delivery", D1);
+		assert.equal(started.status, 0, started.stderr);
+		assert.equal(started.stderr, "", "a deprecated phase name is recorded, not refused");
+		const fresh = /started run (r-[0-9a-f]{16})/.exec(started.stdout)[1];
+		assert.equal(cli("end", "--run", fresh, "--outcome", "succeeded").status, 0);
+		const written = store.read(ai).events.filter((event) => event.run_id === fresh && event.type === "run_started");
+		assert.deepEqual(written.map((event) => [event.phase, event.task]), [["review", "review"]], "--phase check is written as review");
+		const raw = store.read(ai).events.filter((event) => event.run_id === old);
+		assert.ok(raw.length && raw.every((event) => event.phase == null || event.phase === "check") && raw.some((event) => event.phase === "check"), "the old events on disk are untouched");
+		const d = lifecycle.aggregate({ ai, delivery: D1 }).deliveries[0];
+		assert.deepEqual(d.runs.map((r) => r.phase).sort(), ["review", "review"], "an old check run reads as review");
+		assert.deepEqual([d.metrics.retries, d.metrics.reruns], [1, 0], "the old failed check and the new review are one phase: a retry");
+		const other = lifecycle.aggregate({ ai, delivery: D2 }).deliveries[0];
+		assert.deepEqual([other.runs[0].phase, other.runs[0].task], ["review", "review"], "an old task name reads as review");
+		ok("deprecated phase: old check events read as review, --phase check recorded as review");
 	}
 
 	// --- headless runner: explicit run identity, outcomes, no prompt content ---------------
@@ -403,7 +482,7 @@ const fs=require('node:fs');let input='';process.stdin.on('data',c=>input+=c);pr
 	{
 		const { dir, ai } = workspace("export");
 		fs.mkdirSync(path.join(ai, "make"), { recursive: true });
-		for (const file of ["lifecycle.js", "lifecycle-events.js", "safe-files.js"]) fs.copyFileSync(path.join(MAKE, file), path.join(ai, "make", file));
+		for (const file of ["lifecycle.js", "lifecycle-events.js", "safe-files.js", "models.js"]) fs.copyFileSync(path.join(MAKE, file), path.join(ai, "make", file));
 		const r = run(ai, { start: 0, end: 30 });
 		usage(ai, { run: r, time: 10, cost: null });
 		const exported = spawnSync(process.execPath, [path.join(ai, "make/lifecycle.js"), "export", "--json"], { cwd: dir, env: { ...clean, DELIVERY: D1 }, encoding: "utf8" });

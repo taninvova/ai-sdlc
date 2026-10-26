@@ -1261,18 +1261,18 @@ printf 'require("node:fs").writeFileSync(%s, "ran");\n' "'$GOLD_SENTINEL'" \
   > "$GOLD/ai-factory/make/delivery-status.js"
 
 T=$'\t'
-expect_default="kind<T>number<T>state<T>path<T>step<T>detail
+expect_default="kind<T>id<T>state<T>path<T>step<T>detail
 plan<T>0002<T>part-done<T>ai-factory/plans/0002-partly-built.md<T>Step 2<T>the ledger exported.
 plan<T>0002<T>not-started<T>ai-factory/plans/0002-partly-built.md<T>Step 3<T>the audit trail written.
 plan<T>0005<T>unknown<T>ai-factory/plans/0005-no-rule.md<T>-<T>1 step line(s) carry a marker no rule covers — expected - [ ], - [x] or - [~]
 spec<T>0001<T>not-started<T>ai-factory/specs/0001-no-plan-yet.md<T>-<T>0001 — no plan yet
 spec<T>0002<T>part-done<T>ai-factory/specs/0002-partly-built.md<T>-<T>0002 — partly built"
-expect_done="kind<T>number<T>state<T>path<T>step<T>detail
+expect_done="kind<T>id<T>state<T>path<T>step<T>detail
 plan<T>0004<T>closed<T>ai-factory/plans/0004-withdrawn-remainder.md<T>-<T>Plan 0004 — withdrawn remainder — 1 withdrawn step(s); no pending steps
 plan<T>0003<T>complete<T>ai-factory/plans/done/0003-all-built.md<T>-<T>Plan 0003 — all built
 spec<T>0003<T>complete<T>ai-factory/specs/0003-all-built.md<T>-<T>0003 — all built
 spec<T>0004<T>closed<T>ai-factory/specs/0004-withdrawn-remainder.md<T>-<T>0004 — withdrawn remainder — its plans have no pending steps; includes withdrawn work"
-expect_next="kind<T>number<T>state<T>path<T>step<T>detail
+expect_next="kind<T>id<T>state<T>path<T>step<T>detail
 spec<T>0001<T>not-started<T>ai-factory/specs/0001-no-plan-yet.md<T>-<T>0001 — no plan yet
 next: ai-factory/specs/0001-no-plan-yet.md — no commit dates were available — this directory is not the root of a git repository, or git is not installed, so the lower number decided"
 expect_bare="nothing to list — this repo has no ai-factory/specs or ai-factory/plans directory"
@@ -1310,7 +1310,98 @@ refused "--delivery $DID --next" --delivery "$DID" --next
 refused '--delivery with no ID' --delivery
 refused '--delivery followed by a flag' --delivery --done
 
-echo "state ok — 18 sections: empty answer, the default listing with [~] and done/, determinism, \
+# --- 19. --specs, --plans and --spec narrow a listing, and change no row --------------------
+# Three filters over the rows the listings already build. What is pinned is that they are FILTERS:
+# every row they print is byte-identical to a row of the unfiltered listing over the same tree, the
+# header is the same line, and nothing outside the asked-for kind or spec gets through. The golden
+# fixture is reused because it holds every state — a spec with no plan, one part built, one
+# complete, one closed, and a plan no spec is paired to.
+gold_default=$(run "$GOLD"); gold_done=$(run "$GOLD" --done)
+kind_rows() { awk -F'\t' -v k="$2" 'NR == 1 || $1 == k' <<<"$1"; }
+for k in spec plan; do
+  [ "$(run "$GOLD" "--${k}s")" = "$(kind_rows "$gold_default" "$k")" ] \
+    || fail "--${k}s is not the default listing's $k rows under the same header, byte for byte:
+$(run "$GOLD" "--${k}s")"
+  [ "$(run "$GOLD" "--${k}s" --done)" = "$(kind_rows "$gold_done" "$k")" ] \
+    || fail "--${k}s --done is not --done's $k rows under the same header, byte for byte:
+$(run "$GOLD" "--${k}s" --done)"
+done
+[ "$(run "$GOLD" --done --plans)" = "$(run "$GOLD" --plans --done)" ] \
+  || fail "--plans and --done answered differently in the other order; order carries no meaning"
+want=${expect_next//<T>/$T}
+[ "$(run "$GOLD" --specs --next)" = "$want" ] \
+  || fail "--specs --next did not name the one outstanding spec to pick up:
+$(run "$GOLD" --specs --next)"
+out=$(run "$GOLD" --plans --next)
+[ "$(lines "$out")" = 3 ] && [ "$(sed -n 2p <<<"$out")" = "$(sed -n 2p <<<"$gold_default")" ] \
+  || fail "--plans --next did not answer with the header, one plan row of the default listing and
+its reason line:
+$out"
+grep -q '^spec' <<<"$out" && fail "--plans --next named a spec:
+$out"
+
+# --spec <id>: that spec and the plans whose **Spec:** line names it — nothing else, and
+# whatever their state, because naming one spec asks what became of it.
+want="kind<T>id<T>state<T>path<T>step<T>detail
+plan<T>0002<T>part-done<T>ai-factory/plans/0002-partly-built.md<T>Step 2<T>the ledger exported.
+plan<T>0002<T>not-started<T>ai-factory/plans/0002-partly-built.md<T>Step 3<T>the audit trail written.
+spec<T>0002<T>part-done<T>ai-factory/specs/0002-partly-built.md<T>-<T>0002 — partly built"
+want=${want//<T>/$T}
+for spelling in 2 0002 0002-partly-built.md ai-factory/specs/0002-partly-built.md; do
+  [ "$(run "$GOLD" --spec "$spelling")" = "$want" ] \
+    || fail "--spec $spelling did not list spec 0002 with its plan's incomplete steps and nothing else:
+$(run "$GOLD" --spec "$spelling")"
+done
+[ "$(run "$GOLD" --spec 2 --plans)" = "$(kind_rows "$want" plan)" ] \
+  || fail "--spec 2 --plans did not list only the plans paired to spec 0002:
+$(run "$GOLD" --spec 2 --plans)"
+[ "$(run "$GOLD" --spec 2 --specs)" = "$(kind_rows "$want" spec)" ] \
+  || fail "--spec 2 --specs did not list only spec 0002's own row:
+$(run "$GOLD" --spec 2 --specs)"
+want="kind<T>id<T>state<T>path<T>step<T>detail
+plan<T>0003<T>complete<T>ai-factory/plans/done/0003-all-built.md<T>-<T>Plan 0003 — all built
+spec<T>0003<T>complete<T>ai-factory/specs/0003-all-built.md<T>-<T>0003 — all built"
+want=${want//<T>/$T}
+[ "$(run "$GOLD" --spec 3)" = "$want" ] \
+  || fail "--spec 3 did not show a finished spec with its finished plan. One named spec is shown
+whole; answering it with 'nothing outstanding' would hide the thing that was asked for:
+$(run "$GOLD" --spec 3)"
+[ "$(run "$GOLD" --spec 3 --done)" = "$want" ] \
+  || fail "--spec 3 --done did not list spec 0003's finished rows:
+$(run "$GOLD" --spec 3 --done)"
+# One line each, and never another spec's rows: the filter narrows --done and --next too.
+for args in "--spec 3 --next" "--spec 2 --done" "--spec 77" "--spec 77 --done"; do
+  # shellcheck disable=SC2086 # the words of $args are separate arguments
+  out=$(run "$GOLD" $args); st=$?
+  [ "$st" = 0 ] && [ "$(lines "$out")" = 1 ] \
+    || fail "$args should be answered in one line with exit 0, got exit $st:
+$out"
+  grep -qF -- "$T" <<<"$out" && fail "$args printed a table row where a one-line answer was owed:
+$out"
+done
+[ "$(run "$GOLD" --spec 77)" != "$(run "$GOLD" --spec 3 --next)" ] \
+  || fail "a spec ID that names no spec was answered like a spec with nothing outstanding"
+[ "$(hits "$(run "$GOLD" --spec 77)" 0077)" = 1 ] \
+  || fail "the answer to a spec ID that names no spec does not name the ID it looked for:
+$(run "$GOLD" --spec 77)"
+
+[ ! -e "$GOLD_SENTINEL" ] \
+  || fail "a filtered listing executed ai-factory/make/delivery-status.js; only --delivery may"
+[ "$(content_snap "$GOLD")" = "$gold_before" ] && [ "$(fs_snap "$GOLD")" = "$gold_fs" ] \
+  || fail "a filtered listing changed the golden fixture tree (AC8, AC9)"
+
+# The collisions: one line, no table, never a quiet fall-back to a listing.
+refused '--specs --plans' --specs --plans
+refused '--plans --specs' --plans --specs
+refused '--spec with no ID' --spec
+refused '--spec followed by a flag' --spec --done
+refused '--spec given twice' --spec 97 --spec 98
+refused '--spec with a word, not an ID' --spec weir
+refused "--delivery $DID --specs" --delivery "$DID" --specs
+refused "--plans --delivery $DID" --plans --delivery "$DID"
+refused "--spec 97 --delivery $DID" --spec 97 --delivery "$DID"
+
+echo "state ok — 19 sections: empty answer, the default listing with [~] and done/, determinism, \
 the read-only snapshots, unknown-with-a-reason, the three **Spec:** link forms, sibling isolation, \
 the prompt's two invariants, the command named in README.md and the workflow doc, --done as the \
 default listing's mirror image, checkboxes over directory under the filter, --done's empty answer, \
@@ -1318,4 +1409,4 @@ the prompt's hand-off with \$ARGUMENTS still last, --next by commit date with it
 non-repository and same-instant cases, and the refusal of --done --next in either order beside the \
 unknown flag's own answer, explicit withdrawals without false completion, and golden legacy \
 listings that ignore contract artefacts and the delivery-status helper, and --delivery collisions \
-that never fall back to a listing"
+that never fall back to a listing, and --specs, --plans and --spec as filters that change no row"

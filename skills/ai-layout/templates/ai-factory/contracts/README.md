@@ -15,7 +15,7 @@ node ai-factory/make/contracts.js enable
 git add ai-factory/contracts/config.json ai-factory/.sdlc.json
 ```
 
-From then on, `/t4:spec`, `/t4:plan`, `/t4:test`, `/t4:run`, `/t4:check` and `/t4:quick` maintain the contracts themselves. You rarely run the commands below by hand, except to see where a delivery stands or to fix what a diagnostic points at.
+From then on, `/t4:spec`, `/t4:plan`, `/t4:test`, `/t4:run`, `/t4:review` and `/t4:quick` maintain the contracts themselves. You rarely run the commands below by hand, except to see where a delivery stands or to fix what a diagnostic points at.
 
 **Choose the code scope.** Before the first delivery, pick the files that count as code in `ai-factory/contracts/config.json`. The default `include: ["**"]` covers every tracked and untracked file that Git does not ignore. Add the output your tests generate to `exclude`, such as coverage or snapshots that are not gitignored:
 
@@ -29,7 +29,7 @@ From then on, `/t4:spec`, `/t4:plan`, `/t4:test`, `/t4:run`, `/t4:check` and `/t
 
 If a verification run changes an in-scope file, the validator reports `E_EVIDENCE_UNSTABLE`, and that is the sign something belongs in `exclude`.
 
-### 2. A planned feature: spec → plan → test → run → check
+### 2. A planned feature: spec → plan → test → run → review
 
 **Spec.** `/t4:spec <request>` writes the spec as usual, then runs `contracts.js init spec`. Criteria must be numbered so the validator can find them:
 
@@ -75,7 +75,7 @@ make contracts DELIVERY=<id>
 
 The last step also records final verification with `make verify DELIVERY=<id> PHASE=final`. Once every step is ticked, final evidence is required.
 
-**Check.** `/t4:check` runs the read-only validator and reports anything that is not valid as a review finding. Headless, `make review DELIVERY=<id>` also records review evidence. Before merging, require both final and review evidence:
+**Review.** `/t4:review` runs the read-only validator and reports anything that is not valid as a review finding. Headless, `make review DELIVERY=<id>` also records review evidence. Before merging, require both final and review evidence:
 
 ```
 make contracts DELIVERY=<id> REQUIRE=final,review
@@ -325,7 +325,7 @@ git add ai-factory/assurance.json ai-factory/contracts/config.json
 
 **Review provenance.** Review evidence now records `independence` (`independent`, `self` or `unspecified`) and the `boundary` that recorded it.
 - Only `make review DELIVERY=<id>` records `independent`, with boundary `make review`. A task procedure runs it only from a session the developer invoked directly.
-- Routed workers, headless task runs, the reviewer and an interactive `/t4:check` never run it. They report the review as an unmet requirement and name that command.
+- Routed workers, headless task runs, the reviewer and an interactive `/t4:review` never run it. They report the review as an unmet requirement and name that command.
 - Under `standard` and `strict`, quick, fix and chore work needs independent review too. Self-review never satisfies it, and a review whose provenance is not `independent` is reported as `REVIEW_NOT_INDEPENDENT`.
 - Review evidence recorded before this release has no provenance. It does not count under these presets until `make review DELIVERY=<id>` is run again.
 

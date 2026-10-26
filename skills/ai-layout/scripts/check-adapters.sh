@@ -38,7 +38,21 @@ cmds=${#command_files[@]}
 skills=$(ls -d .codex/skills/t4-*/ 2>/dev/null | wc -l | tr -d ' ')
 [ "$((tasks - ${#native[@]}))" = "$cmds" ] \
   || fail "$tasks tasks, ${#native[@]} of them already native plugin commands, but $cmds claude commands"
-[ "$tasks" = "$skills" ] || fail "$tasks tasks but $skills codex skills"
+# A deprecated task name (models.js TASK_ALIASES) adds one thin Codex skill that runs the task it now
+# names; Claude gets none, because the plugin ships that command natively.
+aliases=()
+while IFS= read -r a; do [ -n "$a" ] && aliases+=("$a"); done < <(node -e 'const m=require("./ai-factory/make/models.js");for(const [a,t] of Object.entries(m.TASK_ALIASES))if(require("fs").existsSync(`ai-factory/tasks/${t}.md`))console.log(a)')
+[ "$((tasks + ${#aliases[@]}))" = "$skills" ] || fail "$tasks tasks and ${#aliases[@]} deprecated names but $skills codex skills"
+for a in ${aliases[@]+"${aliases[@]}"}; do
+  t=$(node -e 'console.log(require("./ai-factory/make/models.js").TASK_ALIASES[process.argv[1]])' "$a")
+  s=".codex/skills/t4-$a/SKILL.md"
+  [ -f "$s" ] || fail "missing $s for the deprecated name of $t"
+  grep -q "^name: t4-$a$" "$s" || fail "$s has the wrong name in its frontmatter"
+  grep -qF "is deprecated in favour of \$t4-$t" "$s" || fail "$s does not say it is deprecated in favour of \$t4-$t"
+  grep -qF "dispatch --host codex --task $t\`" "$s" || fail "$s does not dispatch the $t task"
+  grep -q "ai-factory/tasks/$t.md" "$s" || fail "$s does not point at ai-factory/tasks/$t.md"
+  [ ! -f ".claude/commands/t4/$a.md" ] || fail ".claude/commands/t4/$a.md repeats the plugin's deprecated /t4:$a"
+done
 for n in ${native[@]+"${native[@]}"}; do
   [ -f ".claude/commands/t4/$n.md" ] \
     && fail ".claude/commands/t4/$n.md repeats the plugin's own /t4:$n — the menu would list it twice"
@@ -200,4 +214,4 @@ done
 body=$(sed -n '/^---$/,/^---$/!p' .codex/skills/t4-spec/SKILL.md | wc -l | tr -d ' ')
 [ "$body" -lt 15 ] || fail "codex skills look like copies of the task, not pointers ($body lines)"
 
-echo "adapters ok — $tasks tasks → $cmds claude commands (${#native[@]} left to the plugin) + $skills codex skills, idempotent, agent notes correct"
+echo "adapters ok — $tasks tasks → $cmds claude commands (${#native[@]} left to the plugin) + $skills codex skills (${#aliases[@]} deprecated), idempotent, agent notes correct"

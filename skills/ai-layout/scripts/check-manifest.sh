@@ -46,7 +46,7 @@ const [fresh, plugin, tmp, manifest] = process.argv.slice(2);
 const task = 'ai-factory/tasks/start.md';
 assert.ok(fs.existsSync(path.join(fresh, task)), 'fresh adoption includes start');
 assert.ok(JSON.parse(fs.readFileSync(path.join(fresh,'ai-factory/.sdlc.json'))).files[task], 'manifest discovers start');
-for (const file of ['ai-factory/tasks/continue.md', 'ai-factory/make/continue.js', 'ai-factory/make/delivery-status.js', 'ai-factory/make/assurance.js']) {
+for (const file of ['ai-factory/tasks/continue.md', 'ai-factory/make/continue.js', 'ai-factory/make/delivery-status.js', 'ai-factory/make/assurance.js', 'ai-factory/make/ids.js', 'ai-factory/tasks/loop.md', 'ai-factory/make/loop.js', 'ai-factory/tasks/risk.md', 'ai-factory/agents/risk.md']) {
  assert.ok(fs.existsSync(path.join(fresh, file)), `fresh adoption includes ${file}`);
  assert.ok(JSON.parse(fs.readFileSync(path.join(fresh,'ai-factory/.sdlc.json'))).files[file], `manifest discovers ${file}`);
 }
@@ -98,6 +98,9 @@ node "$M" write "$SEL" "$PLUG" > /dev/null
 node -e 'const m=require(process.argv[1]);
   for(const k of Object.keys(m.files))if(k==="ai-factory/assurance.json"||k.startsWith("ai-factory/evidence/")||k==="ai-factory/contracts/config.json")throw new Error(`manifest tracks adopter-owned ${k}`);
   if(!m.files["ai-factory/make/assurance.js"])throw new Error("manifest does not track the assurance helper");
+  if(!m.files["ai-factory/make/ids.js"])throw new Error("manifest does not track the ID helper");
+  if(!m.files["ai-factory/make/loop.js"]||!m.files["ai-factory/tasks/loop.md"])throw new Error("manifest does not track the loop helper and task");
+  for(const k of ["ai-factory/tasks/risk.md","ai-factory/agents/risk.md"])if(!m.files[k])throw new Error(`manifest does not track ${k}`);
 ' "$SEL/ai-factory/.sdlc.json"
 
 echo "== locally modified =="

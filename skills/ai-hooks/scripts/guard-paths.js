@@ -1,5 +1,13 @@
 #!/usr/bin/env node
-const { readEvent, aiDir, canonicalTarget, fs, path } = require("./_common");
+const {
+	readEvent,
+	aiDir,
+	loopWorktree,
+	WORKTREES,
+	canonicalTarget,
+	fs,
+	path,
+} = require("./_common");
 
 const EMPTY_POLICY = "<!-- t4:allow-empty-policy -->";
 const hasControl = (value) =>
@@ -48,7 +56,10 @@ function matches(target, rule) {
 
 try {
 	const ev = readEvent();
-	const ai = aiDir(ev);
+	// Inside a /t4:loop worktree, paths are judged against the main repository and its policy:
+	// the worktree's own dont-touch.md is a copy an implementer could edit.
+	const loop = loopWorktree(ev);
+	const ai = loop ? loop.ai : aiDir(ev);
 	if (!ai) process.exit(0);
 	const policy = `${path.basename(ai)}/docs/dont-touch.md`;
 	const targets = require("./_edit-targets").editTargets(ev);
@@ -72,18 +83,38 @@ try {
 			`${policy}: ${error.code || error.message}; restore a readable, valid policy`,
 		);
 	}
-	const root = path.dirname(ai);
+	const root = loop ? loop.root : path.dirname(ai);
 	const cwd = fs.realpathSync(ev.cwd || process.cwd());
+	// A path inside <layout>/runs/tmp/worktrees/<name>/, where <name> is a registered worktree
+	// (its .git is a file), is judged relative to that worktree's root (AC35). Anything else under
+	// runs/, including the worktrees directory itself and a stray directory there, keeps the main
+	// rules (AC36). The lexical and the canonical path are scoped separately, so `..` and symlinks
+	// that leave the worktree are judged where they really land.
+	const prefix = [path.basename(ai), ...WORKTREES].join("/") + "/";
+	function scope(absolute) {
+		const relative = path.relative(root, absolute).split(path.sep).join("/");
+		if (!relative.startsWith(prefix)) return { base: root, relative };
+		const rest = relative.slice(prefix.length);
+		const slash = rest.indexOf("/");
+		if (slash <= 0 || slash === rest.length - 1) return { base: root, relative };
+		const base = path.join(root, ...prefix.split("/").filter(Boolean), rest.slice(0, slash));
+		try {
+			if (!fs.lstatSync(path.join(base, ".git")).isFile())
+				return { base: root, relative };
+		} catch (error) {
+			if (error.code !== "ENOENT") throw error;
+			return { base: root, relative };
+		}
+		return { base, relative: rest.slice(slash + 1) };
+	}
 	for (const target of targets) {
 		const canonical = canonicalTarget(cwd, target);
-		const lexical = path
-			.relative(root, path.resolve(cwd, target))
-			.split(path.sep)
-			.join("/");
-		const relative = path.relative(root, canonical).split(path.sep).join("/");
+		const lexical = scope(path.resolve(cwd, target));
+		const real = scope(canonical);
 		const hit = rules.find((rule) => {
-			if (matches(lexical, rule) || matches(relative, rule)) return true;
-			const rulePath = canonicalTarget(root, rule);
+			if (matches(lexical.relative, rule) || matches(real.relative, rule))
+				return true;
+			const rulePath = canonicalTarget(real.base, rule);
 			return (
 				canonical === rulePath ||
 				canonical.startsWith(rulePath + (rule.endsWith("/") ? path.sep : ""))

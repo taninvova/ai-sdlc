@@ -17,7 +17,7 @@ use_cases:
 
 # T4 AI SDLC
 
-A curated collection of agents, skills, rules and conventions that stitches eight agents
+A curated collection of agents, skills, rules and conventions that stitches nine agents
 into one cross-role, cross-phase workflow. Each agent is a separate role with its own
 tool permissions; they hand off through **files on disk**, not through a shared chat
 context, so every step is reviewable, re-runnable and diffable on its own.
@@ -39,9 +39,10 @@ both the developer and, independently, QA.
 | Options | Explorer | `explorer` | `/t4:explore` | code, `ai-factory/analyses/` | `ai-factory/explorations/` |
 | Specification | Specifier | `specifier` | `/t4:spec` | `ai-factory/analyses/`, `ai-factory/explorations/` | `ai-factory/specs/` |
 | Planning | Planner | `planner` | `/t4:plan` | `ai-factory/specs/` | `ai-factory/plans/` |
+| Risk | Security and risk | `risk` | `/t4:risk` | one spec, plan or change | `ai-factory/risks/` — the specifier, planner and reviewer act on it |
 | QA | Tester | `tester` | `/t4:test` | `ai-factory/specs/` (ACs only) | test files |
-| Development | Implementer | `implementer` | `/t4:run` | `ai-factory/plans/` one step | source |
-| Review | Reviewer | `reviewer` | `/t4:check` | branch diff vs `ai-factory/specs/`, `ai-factory/plans/` | JSON verdict |
+| Development | Implementer | `implementer` | `/t4:run`, `/t4:loop` | `ai-factory/plans/` one step (`/t4:loop`: every unticked step) | source |
+| Review | Reviewer | `reviewer` | `/t4:review` | branch diff vs `ai-factory/specs/`, `ai-factory/plans/` | JSON verdict |
 | Handoff | Developer | none | `/t4:report` | contract sidecars and evidence of one delivery | `ai-factory/reports/<id>/` completion report |
 
 Two properties the file handoff buys:
@@ -91,11 +92,12 @@ unverified).
 | Kind | Artifacts |
 | --- | --- |
 | Skills | `ai-layout` (where an AI-related file belongs), `ai-hooks` (run logging, dont-touch guard) |
-| Setup commands | `/t4:adopt-sdlc`, `/t4:doctor`, `/t4:state` (`--done`, `--next`), `/t4:setup-tracker`, `/t4:setup-knowledge`, `/t4:sync-sdlc` |
+| Setup commands | `/t4:adopt-sdlc`, `/t4:doctor`, `/t4:state` (`--done`, `--next`, `--specs`, `--plans`, `--spec <id>`), `/t4:setup-tracker`, `/t4:setup-knowledge`, `/t4:sync-sdlc` |
 | Other loop commands | `/t4:quick`, `/t4:fleet`, `/t4:fix`, `/t4:chore`, `/t4:report` |
 | Hooks | session / edit / test-command / usage logging to `ai-factory/runs/`, one row per concluded subagent; dont-touch guard — for Claude Code (`hooks/hooks.json`) and Codex (`hooks/codex.json`) |
 | Headless runner | `make -f ai-factory/make/ai.mk ai TASK=<task> INPUT="…"`, no root Makefile needed |
 | Review gate | `make -f ai-factory/make/ai.mk review`, advisory by default, `GATE_ENFORCE=1` to block |
+| Artefact IDs | `ai-factory/make/ids.js new <kind> <slug>` names each new artefact `<ID>-<slug>.md` with a random `[A-Z]{3}[0-9]{3}` ID; `make -f ai-factory/make/ai.mk ids-check` finds clashes after a merge (exit 1 from `ids.js`, which make reports as 2); optional `ai-factory/ids-deny.txt` |
 | Cost report | `make -f ai-factory/make/ai.mk cost`, token spend by task, agent, branch and day |
 | Model selection | `ai-factory/models.yaml`: optional model per tool and for review, plus pricing; opt-in per-task routing for headless and interactive tasks |
 | Conventions | commit `ai(<task>): …`, MR labelled `ai-assisted` |
@@ -106,6 +108,10 @@ unverified).
 is read-only and deterministic, so two people on the same commit get the same answer.
 `--done` lists only finished items. `--next` names the one item to pick up, chosen by git
 commit date. Steps a plan explicitly withdraws are not counted as pending.
+`--specs` and `--plans` narrow a listing to one kind, and combine with `--done` and `--next`.
+`--spec <id>` lists one spec with the plans paired to it, finished or not. The `id` field is the
+ID a file name starts with: a random letter-and-digit ID such as `DHW631` for new artefacts, or a
+legacy four-digit number, which stays valid and is never renamed.
 
 ## Headless runs and the review gate
 
@@ -120,6 +126,17 @@ make -f ai-factory/make/ai.mk review                    # the reviewer, headless
 `REVIEW_SCOPE=branch` reviews the committed branch instead, and supplied input is reviewed
 as given. The gate is advisory unless `GATE_ENFORCE=1`. It then passes only a schema-valid
 `approve` with no blockers; `request_changes`, a malformed verdict or a missing one fails.
+
+`/t4:loop <plan>` is the opt-in exception to one step per `/t4:run`, recorded in ADR ETT683.
+One invocation implements every unticked step of one plan. Independent steps run concurrently
+on Claude Code, each in a temporary git worktree under `ai-factory/runs/tmp/worktrees/`. Each
+step's change is applied back uncommitted, and the loop ends with one `/t4:review`. It never
+commits on the developer's branch. Test, lint and typecheck tools must exclude the worktree
+subtree. Headless, `make -f ai-factory/make/ai.mk ai TASK=loop INPUT="<plan>"` exits 0 on
+success and 2 on any failure. `TASK=loop INPUT="…" node ai-factory/make/runner.js ai` returns the
+distinct codes: 1 step failure or timeout, 2 usage, 3 invalid plan, 4 conflict or failed
+snapshot, and 5 a rejected review under `GATE_ENFORCE=1`. `INPUT` (and `INPUT_FILE`) is split at
+whitespace with no quoting, so a plan whose path holds a space is named by its number.
 
 With contracts enabled, `make -f ai-factory/make/ai.mk contracts [DELIVERY=…] [JSON=1]` validates
 the handoff chain read-only, and `make -f ai-factory/make/ai.mk verify DELIVERY=… [STEP=S<N>]
@@ -187,7 +204,7 @@ governs arbitrary shell commands.
 
 ## Hosts
 
-Claude Code and Codex run the same procedures. The plugin ships all 22 `/t4:` commands
+Claude Code and Codex run the same procedures. The plugin ships all 23 `/t4:` commands
 natively for Claude Code and the matching `$t4-<task>` skills for Codex; each loads the
 repo's own `ai-factory/tasks/<name>.md`, so project customizations are kept. Built-in tasks
 need no project pointers — `/t4:sync-sdlc` generates them only for project-specific tasks

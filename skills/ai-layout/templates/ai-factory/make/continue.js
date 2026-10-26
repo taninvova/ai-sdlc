@@ -5,7 +5,7 @@ const crypto = require("node:crypto");
 const contracts = require("./contracts.js");
 const reports = require("./delivery-report.js");
 
-const ACTIONS = new Set(["plan", "test", "run", "check", "report"]);
+const ACTIONS = new Set(["plan", "test", "run", "review", "report"]);
 const digest = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const reference = (artifact) => ({ path: artifact.path, kind: artifact.kind, state: artifact.state, diagnostics: artifact.diagnostics.map(({ code, message }) => ({ code, message })) });
 
@@ -59,8 +59,8 @@ function reviewJudgedLater(ref) {
 //   3. every step done, no review recorded:
 //      gaps testing not established              -> question gaps_tested
 //      answered not tested                       -> test gaps
-//      answered tested, review required          -> check
-//   4. report evaluation not ready               -> check when only the review is stale, else blocked
+//      answered tested, review required          -> review
+//   4. report evaluation not ready               -> review when only the review is stale, else blocked
 //   5. ready, no current completion report       -> report <delivery>
 //   6. ready, current completion report          -> complete
 // Validation diagnostics (failures, missing or stale evidence, drift) have already stopped earlier;
@@ -104,14 +104,14 @@ function select({ ctx, input, refs, collected, answers }) {
 		if (answers.gaps_tested === false) return result("action", "Every step is done and gaps testing has not run; run it before review.", input, refs, fp, { task: "test", args: { spec, plan, mode: "gaps" } });
 		if (answers.gaps_tested !== true)
 			return result("question", "Every step is done and final verification is recorded, but no evidence shows whether gaps testing ran. Has /t4:test gaps been run for this delivery?", input, refs, fp, { clarify: "gaps_tested" });
-		if (review.required) return result("action", "Gaps testing is reported done and no review is recorded; review the change.", input, refs, fp, { task: "check", args: { scope: "working-tree", spec, plan } });
+		if (review.required) return result("action", "Gaps testing is reported done and no review is recorded; review the change.", input, refs, fp, { task: "review", args: { scope: "working-tree", spec, plan } });
 	}
 	const readiness = reports.evaluate(collected);
 	if (readiness.status !== "ready") {
 		const open = readiness.reasons.filter((item) => item.state !== "ready");
 		const codes = open.map((item) => `${item.code}${item.evidence_ref ? ` (${item.evidence_ref})` : ""}`).join(", ");
 		if (open.length && open.every((item) => item.code === "REVIEW_STALE"))
-			return result("action", `The recorded review is stale (${codes}); review the current change again.`, input, refs, fp, { task: "check", args: { scope: "working-tree", spec, plan } });
+			return result("action", `The recorded review is stale (${codes}); review the current change again.`, input, refs, fp, { task: "review", args: { scope: "working-tree", spec, plan } });
 		return result("blocked", `Report evaluation is ${readiness.status}: ${codes}. No continuation task addresses this; resolve it and continue again.`, input, refs, fp);
 	}
 	const reportRef = `ai-factory/reports/${input}/completion.json`;
@@ -157,7 +157,7 @@ function argsProblem(task, args, delivery) {
 				? exactKeys(args, ["spec", "plan", "mode", "step"]) && SPEC.test(args.spec) && PLAN.test(args.plan) && STEP.test(args.step)
 				: args.mode === "gaps" && exactKeys(args, ["spec", "plan", "mode"]) && SPEC.test(args.spec) && PLAN.test(args.plan),
 		run: () => exactKeys(args, ["plan", "step"]) && PLAN.test(args.plan) && STEP.test(args.step),
-		check: () => exactKeys(args, ["scope", "spec", "plan"]) && args.scope === "working-tree" && SPEC.test(args.spec) && PLAN.test(args.plan),
+		review: () => exactKeys(args, ["scope", "spec", "plan"]) && args.scope === "working-tree" && SPEC.test(args.spec) && PLAN.test(args.plan),
 		report: () => exactKeys(args, ["delivery"]) && args.delivery === delivery,
 	}[task];
 	return shape() ? null : `args do not match the ${task} task's arguments`;
@@ -233,7 +233,7 @@ function destinationInput(task, args) {
 			return args.mode === "red" ? `${args.spec} ${args.plan} red ${args.step}` : `${args.spec} ${args.plan} gaps`;
 		case "run":
 			return `${args.plan} ${args.step}`;
-		case "check":
+		case "review":
 			return `working-tree ${args.spec} ${args.plan}`;
 		case "report":
 			return args.delivery;

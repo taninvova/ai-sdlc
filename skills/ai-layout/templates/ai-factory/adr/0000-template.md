@@ -1,4 +1,4 @@
-# NNNN — Title
+# <ID> — Title
 
 Date: {{date}} · Status: accepted
 

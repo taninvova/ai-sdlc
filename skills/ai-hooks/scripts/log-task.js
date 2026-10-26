@@ -17,20 +17,25 @@ require("./_common").runHook(() => {
 	// previous task, which this cannot see).
 	const {
 		readEvent,
-		aiDir,
+		logDir,
 		withLogLock,
 		identifier,
 		path,
 	} = require("./_common");
 	const ev = readEvent();
-	const ai = aiDir(ev);
+	const ai = logDir(ev);
 	if (!ai) return;
 	const m = /(?:\/t4:|\$(?:t4:)?t4-)([a-z][a-z0-9-]*)/.exec(
 		String(ev.prompt || ""),
 	);
 	if (!m) return;
+	// A deprecated command runs the task it now names, so its rows carry that name: /t4:check and
+	// $t4-check are the old names of review. The same table as TASK_ALIASES in the template's
+	// make/models.js, which a hook cannot load; check-codex.sh pins the two together.
+	const ALIASES = { check: "review" };
+	const name = Object.hasOwn(ALIASES, m[1]) ? ALIASES[m[1]] : m[1];
 	const file = path.join(ai, "runs", ".task." + identifier(ev.session_id));
 	withLogLock(ai, (safe) => {
-		safe.write(file, m[1] + "\n");
+		safe.write(file, name + "\n");
 	});
 });

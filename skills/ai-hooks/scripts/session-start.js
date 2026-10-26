@@ -3,6 +3,7 @@ require("./_common").runHook(() => {
 	const {
 		readEvent,
 		aiDir,
+		logDir,
 		user,
 		branch,
 		appendJsonl,
@@ -10,19 +11,21 @@ require("./_common").runHook(() => {
 		path,
 	} = require("./_common");
 	const ev = readEvent();
+	// The plan in flight is this checkout's; the row goes to the main repository's run log.
 	const ai = aiDir(ev);
-	if (!ai) return;
+	const logs = logDir(ev);
+	if (!logs) return;
 	const cwd = ev.cwd || process.cwd();
 	let plan = null;
 	try {
 		plan =
 			fs
-				.readdirSync(path.join(ai, "plans"))
+				.readdirSync(path.join(ai || logs, "plans"))
 				.filter((f) => f.endsWith(".md"))
 				.sort()
 				.pop() || null;
 	} catch {}
-	appendJsonl(path.join(ai, "runs", "sessions.jsonl"), {
+	appendJsonl(path.join(logs, "runs", "sessions.jsonl"), {
 		session_id: ev.session_id,
 		ts: new Date().toISOString(),
 		user: user(cwd),

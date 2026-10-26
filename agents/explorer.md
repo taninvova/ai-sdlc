@@ -22,8 +22,12 @@ when a declared source cannot be reached. Where it says this repo is unconfigure
 about it.
 
 ## What you may write
-`ai-factory/explorations/<NNNN>-<slug>.md` — the next free number. Nothing else. Do not change any
-code. Never `ai-factory/specs/` or `ai-factory/plans/`. Respect ai-factory/docs/dont-touch.md.
+One new exploration, created by the ID helper — never pick a number or an ID yourself. Run
+`node ai-factory/make/ids.js new exploration <slug> [--title "<Title>"]` from the repository root
+and write the exploration into the path it prints. Keep the helper's two lines — the `# <ID> — <Title>` heading and the `Created:` line — unchanged, and write the exploration below them.
+If the helper exits non-zero, write nothing and report its message.
+Nothing else. Do not change any code. Never `ai-factory/specs/` or `ai-factory/plans/`. Respect
+ai-factory/docs/dont-touch.md.
 
 ## The exploration
 1. **Request** — the ask in one paragraph, restated in this project's terms.

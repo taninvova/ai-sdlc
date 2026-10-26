@@ -60,7 +60,7 @@ if grep -q 'pnpm' "$T/Makefile"; then fail "generic optional Makefile assumes pn
 # that no longer exists is simply never missed. Named here so deleting one has to be deliberate.
 T=skills/ai-layout/templates/ai-factory
 for entry in AGENTS.md models.yaml docs tasks agents make plans/done runs/log.csv \
-             designs analyses explorations specs adr contracts/README.md; do
+             designs analyses explorations specs adr risks contracts/README.md; do
   [ -e "$T/$entry" ] \
     || fail "the templates no longer carry $entry — every repo adopting from here on would be missing it, and no drift check would notice"
 done

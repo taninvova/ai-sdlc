@@ -1,7 +1,7 @@
 ---
 name: ai-layout
 user-invocable: false
-description: The ai-factory/ directory every t4 repo carries — AGENTS.md contract, context docs, task prompts (fleet, design, adr, analyse, explore, spec, plan, test, run, fix, chore, quick, check, report — exposed as /t4:<name>), reviewer, tester, architect, analyst, explorer, specifier, planner and implementer agents, plans, explorations, run log, Makefile include, tool adapters. Use when adding the layout to a repo, adding or changing a task prompt or context doc, or when a session asks where an AI-related file belongs.
+description: The ai-factory/ directory every t4 repo carries — AGENTS.md contract, context docs, task prompts (fleet, design, adr, analyse, explore, spec, plan, risk, test, run, loop, fix, chore, quick, review, report — exposed as /t4:<name>), reviewer, tester, architect, analyst, risk, explorer, specifier, planner and implementer agents, plans, explorations, risk files, run log, Makefile include, tool adapters. Use when adding the layout to a repo, adding or changing a task prompt or context doc, or when a session asks where an AI-related file belongs.
 ---
 
 # ai-layout
@@ -9,7 +9,8 @@ description: The ai-factory/ directory every t4 repo carries — AGENTS.md contr
 Use `node <installed-plugin>/skills/ai-layout/scripts/adopt.js .` for new adoption. It
 creates only `ai-factory/`, fills project placeholders, detects declared commands without
 running them, and refuses an existing workspace. Existing root and host files are preserved.
-The installed plugin supplies hooks and all 20 native Claude commands; the workspace carries complete
+The installed plugin supplies hooks and all 25 native Claude commands (one of them the deprecated
+/t4:check, which runs the review task); the workspace carries complete
 local task and agent procedures, runner scripts and project additions.
 
 Never write into `.claude/`, `.cursor/` or `.codex/` by hand. Default sync writes no external
@@ -27,12 +28,13 @@ ai-factory/docs/knowledge.md          knowledge seam: the only file that names h
 ai-factory/docs/coding-standards.md   rules that hold in every repo; overlays add framework rules
 ai-factory/docs/definition-of-done.md
 ai-factory/docs/dont-touch.md         guard-paths.js reads the backticked prefixes
-ai-factory/tasks/*.md                 fleet design adr analyse explore spec plan test run fix chore quick check report  → /t4:<name>
+ai-factory/tasks/*.md                 fleet design adr analyse explore spec plan risk test run loop fix chore quick review report  → /t4:<name>
 ai-factory/skills/                    empty here; overlays add framework skills
 ai-factory/agents/reviewer.md         project copy of the plugin reviewer (may add project checks)
 ai-factory/agents/tester.md           project copy of the plugin tester (test conventions go here)
 ai-factory/agents/architect.md        project copy of the plugin architect (boundaries, settled ADRs)
 ai-factory/agents/analyst.md          project copy of the plugin analyst (domain terms, decision owners)
+ai-factory/agents/risk.md             project copy of the plugin risk agent — /t4:risk runs in it
 ai-factory/agents/explorer.md         project copy of the plugin explorer — /t4:explore runs in it
 ai-factory/agents/specifier.md        project copy of the plugin specifier — /t4:spec runs in it
 ai-factory/agents/planner.md          project copy of the plugin planner — /t4:plan runs in it
@@ -40,20 +42,25 @@ ai-factory/agents/implementer.md      project copy of the plugin implementer —
 ai-factory/designs/                   /t4:design output: where a capability lives, contracts, data ownership
 ai-factory/analyses/                  /t4:analyse output: requirements pack — facts, assumptions, proposals, questions apart
 ai-factory/explorations/            /t4:explore output: options + recommendation per request
+ai-factory/risks/                     /t4:risk output: one file per spec (its plan shares it) or change; committed by default
 ai-factory/plans/  ai-factory/plans/done/     plans in flight / merged
 ai-factory/runs/log.csv               header only; the Stop hook and ai-factory/make/log.js append the same 17 columns
-ai-factory/make/ai.mk                 headless runner for CI (make ai / review / contracts / verify)
-ai-factory/make/runner.js  models.js  gate.js  contracts.js  delivery-report.js  delivery-status.js  continue.js  assurance.js  lifecycle.js  lifecycle-events.js  safe-files.js  log.js  cost.js  sync-adapters.js  sync-adapters.sh
+ai-factory/make/ai.mk                 headless runner for CI (make ai / review / contracts / verify / ids-check)
+ai-factory/make/runner.js  models.js  gate.js  contracts.js  delivery-report.js  delivery-status.js  continue.js  assurance.js  ids.js  loop.js  lifecycle.js  lifecycle-events.js  safe-files.js  log.js  cost.js  sync-adapters.js  sync-adapters.sh
                                       models.js parses models.yaml and resolves each task's model — runner, routed dispatch, sync and doctor share it
                                       cost.js reads log.csv for `make cost` — read-only, 17 columns by name
                                       contracts.js validates spec/plan/quick sidecars and records evidence (opt-in)
                                       delivery-status.js prints one delivery's read-only status for `/t4:state --delivery <id>`
                                       continue.js inspects a planned delivery read-only and hands off one task for /t4:continue
                                       assurance.js shows, selects (`set <preset> --apply`) and checks completion for an opt-in assurance preset
+                                      ids.js draws a random `[A-Z]{3}[0-9]{3}` ID and creates each new artefact (`ids.js new <kind> <slug>`); the format is owned there alone, legacy four-digit names stay valid, `ids.js check` (make ids-check) finds clashes
+                                      loop.js owns /t4:loop's decisions: plan selection, `Depends on:` validation, scheduling, worktrees, apply-back, ticks, stop causes and the TASK=loop exit code
 ai-factory/contracts/                 README + v1 schemas; config.json (created by `contracts.js enable`) opts in
+ai-factory/ids-deny.txt               optional: extra three-letter triples ids.js never draws, one per line; adoption never creates it
 ai-factory/assurance.json             opt-in preset selection (light|standard|strict), written only by `assurance.js set <preset> --apply`; adoption and sync never create it
 ai-factory/quick/  ai-factory/evidence/   with contracts only: quick checklists; committed verification evidence
 ai-factory/reports/<id>/              make delivery-report (/t4:report): completion.md + completion.json snapshots
+ai-factory/runs/tmp/worktrees/        /t4:loop's temporary git worktrees; /t4:review, make review and hooks skip it, and test, lint and typecheck tools must exclude it
 ai-factory/runs/lifecycle/            opt-in lifecycle events, one immutable file each (gitignored); make lifecycle reads them
 ai-factory/.sdlc.json                 which ai-sdlc version this repo holds + a hash per received file;
                               written by /t4:adopt-sdlc, read by /t4:sync-sdlc, never by hand
@@ -92,7 +99,9 @@ ai-factory/docs/workspace-boundary.md for ownership and host limitations.
 ## The loop
 
 For a local, understood small enhancement, use `/t4:quick`: acceptance checklist, implementation, relevant checks, and labeled self-review. Use `/t4:fix` for a bug and `/t4:chore` for maintenance. Escalate uncertain or high-risk work to the planned loop.
-/t4:explore → /t4:spec → /t4:plan → /t4:test red → /t4:run (one step) → /t4:test gaps → /t4:check → commit → MR.
+/t4:explore → /t4:spec → /t4:plan → /t4:test red → /t4:run (one step) → /t4:test gaps → /t4:review → commit → MR.
+/t4:loop <plan> is the opt-in exception to one step per /t4:run: every unticked step, independent
+ones in parallel worktrees, then one /t4:review, and never a commit on the developer's branch.
 /t4:explore is optional for small, obvious changes; mandatory when the request could be
 built more than one way or touches an RMQ contract, a schema, or a public API.
 

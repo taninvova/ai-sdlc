@@ -19,7 +19,7 @@ const capture = path.join(root, "capture.jsonl");
 fs.mkdirSync(path.join(payload, "tasks"), { recursive: true });
 fs.cpSync(path.join(repo, "skills/ai-layout/templates/ai-factory/make"), path.join(payload, "make"), { recursive: true });
 fs.writeFileSync(path.join(payload, "tasks/chore.md"), "fixture task");
-fs.writeFileSync(path.join(payload, "tasks/check.md"), "fixture check");
+fs.writeFileSync(path.join(payload, "tasks/review.md"), "fixture review");
 fs.writeFileSync(path.join(payload, "tasks/start.md"), "fixture classifier");
 fs.writeFileSync(path.join(payload, "tasks/continue.md"), "fixture continuation");
 const fake = path.join(root, "fake cli");
@@ -84,7 +84,7 @@ async function asyncRun(extra = {}) {
   for (const tool of ["claude", "codex"]) {
    const result = invoke({ TOOL: tool, TASK: "continue", INPUT: "d-20260101-abcdef" });
    assert.notEqual(result.status, 0);
-   assert.match(result.stderr, /TASK=continue requires an interactive session.*plan, test, run, check or report/s);
+   assert.match(result.stderr, /TASK=continue requires an interactive session.*plan, test, run, review or report/s);
    assert.equal(captures().length, 0, "continue rejection reaches no CLI");
    assert.equal(fs.existsSync(runs), false, "continue rejection creates no run artifacts");
   }
@@ -108,11 +108,15 @@ async function asyncRun(extra = {}) {
    }
   }
   modelFile("claude: provider/alias\ncodex:\nreview: reviewer\npricing:\n  default: { input: 3, output: 15 }\n");
-  ok(invoke({TASK:"check"})); assert.equal(last().args[2], "reviewer");
-  ok(invoke({MODEL:"explicit",TASK:"check"})); assert.equal(last().args[2], "explicit");
-  ok(invoke({TASK:"check"}, ["MODEL="])); assert.equal(last().args.includes("--model"), false);
-  modelFile("claude: provider/alias\nreview:\n");
-  ok(invoke({TASK:"check"})); assert.equal(last().args[2], "provider/alias");
+  // TASK=check is the deprecated name of TASK=review: the same model rules apply to both.
+  for (const TASK of ["review", "check"]) {
+   modelFile("claude: provider/alias\ncodex:\nreview: reviewer\npricing:\n  default: { input: 3, output: 15 }\n");
+   ok(invoke({TASK})); assert.equal(last().args[2], "reviewer");
+   ok(invoke({MODEL:"explicit",TASK})); assert.equal(last().args[2], "explicit");
+   ok(invoke({TASK}, ["MODEL="])); assert.equal(last().args.includes("--model"), false);
+   modelFile("claude: provider/alias\nreview:\n");
+   ok(invoke({TASK})); assert.equal(last().args[2], "provider/alias");
+  }
   modelFile("claude:\ncodex:\n");
   ok(invoke()); assert.equal(last().args.includes("--model"), false);
   const literal = "$(shell touch '" + marker + "')";
@@ -228,6 +232,22 @@ async function asyncRun(extra = {}) {
   modelFile(routed("true"));
   rejected({TASK:"plan",CLAUDE_CODE_SUBAGENT_MODEL:"other/model"});
   ok(invoke({TASK:"plan",TOOL:"codex",CLAUDE_CODE_SUBAGENT_MODEL:"other/model"}));
+  noScratch();
+  // --- TASK=loop: INPUT is split into loop.js start arguments as data, never run by a shell ----
+  fs.writeFileSync(path.join(payload,"tasks/loop.md"),"fixture loop");
+  const loopBefore=captures().length;
+  for (const tool of ["claude","codex"]) {
+   const listed=invoke({TOOL:tool,TASK:"loop",INPUT:`0001;touch${"$"}{IFS}injected`});
+   ok(listed); assert.match(listed.stderr,/nothing was launched/);
+   const literalLoop=spawnSync(process.execPath,["ai-factory/make/runner.js","ai"],{cwd:root,env:{...env,TOOL:tool,TASK:"loop",INPUT:`$(touch '${marker}') \`touch '${marker}'\``},encoding:"utf8"});
+   assert.equal(literalLoop.status,2,literalLoop.stderr);
+   assert.equal(fs.existsSync(marker),false,"TASK=loop input executed a command");
+   const viaMake=invoke({TOOL:tool,TASK:"loop"},[`INPUT=$(shell touch '${marker}')`]);
+   assert.notEqual(viaMake.status,0); assert.match(viaMake.stderr,/more than one plan/);
+   assert.equal(fs.existsSync(marker),false,"TASK=loop input executed a command through make");
+  }
+  assert.equal(captures().length,loopBefore,"a refused or listing TASK=loop reached the CLI");
+  assert.equal(fs.existsSync(path.join(runs,"tmp","loop")),false,"a refused TASK=loop left loop state");
   noScratch();
   console.log("PASS: safe runner arguments, selection, input bytes, model precedence, private concurrent scratch, interruption, and symlink rejection; routed plan/test argv per tool through make, stderr and sidecar agree, reported identity kept apart, fallback disclosed, overrides win, one launch on failure, disabled and invalid routing");
  } finally { fs.rmSync(scratch,{recursive:true,force:true}); }

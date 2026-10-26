@@ -9,8 +9,9 @@
 #   plugin-root defaults to $CLAUDE_PLUGIN_ROOT, else the plugin this script lives in.
 #               Accepted for symmetry with doctor.sh's signature; nothing under it is read.
 #   flag        --done lists what is finished INSTEAD of what is outstanding. --next names the
-#               one artefact to pick up — the most recently modified, by git commit date — as a
-#               single row of the default listing plus one line saying why it was chosen. The
+#               one artefact to pick up — the most recently modified, by git commit date, with
+#               ties broken as section 4 describes — as a single row of the default listing
+#               plus one line saying why it was chosen. The
 #               two do not compose: --done --next, in either order, is refused in one line.
 #               A flag that is neither is named back in one line with the flags that exist.
 #               Both answers exit 0 and print no rows — a refused result is an answer.
@@ -20,14 +21,25 @@
 #               --done or --next, takes exactly one ID, and a missing helper is answered with
 #               /t4:sync-sdlc guidance — all one-line refusals with exit 0. The helper's own
 #               refusals pass through the same way; a helper runtime failure exits non-zero.
+#               --specs and --plans narrow a listing to one kind of row, and --spec <id>
+#               narrows it to one spec and the plans paired to it. They choose WHICH artefacts are
+#               listed, so each composes with --done and --next, and --spec composes with either
+#               kind. --spec on its own shows that spec whatever its state — finished rows beside
+#               outstanding ones — because naming one spec asks what became of it. --specs with
+#               --plans, a second --spec, a --spec with no ID and any of them beside
+#               --delivery are one-line refusals with exit 0.
 #
 # Output: a tab-separated table — a header row, then one row per listed thing:
 #
-#   kind  number  state  path  step  detail
+#   kind  id  state  path  step  detail
+#
+# `id` is the ID an artefact's file name starts with (spec 0024): a legacy four-digit number as it
+# stands, or a letter-and-digit ID such as DHW631, written uppercase whatever the file's case.
 #
 # One row builder, one sort and one header serve both listings: every artefact becomes a row
 # carrying its state, and the flag chooses which states are printed. The two listings are
-# therefore the same rows filtered two ways and cannot drift apart (plan 0010, Step 5).
+# therefore the same rows filtered two ways and cannot drift apart (plan 0010, Step 5). --specs,
+# --plans and --spec are further filters over those same rows, applied in that same place.
 #
 # WHICH of those become table columns, in what order, and whether the table is sectioned by
 # kind, is plan 0010's Ambiguity B and belongs to commands/state.md, not here. This script's
@@ -50,6 +62,9 @@ REPO=""; PLUGIN=""; EXTRA=""; HAS_DONE=0; HAS_NEXT=0; UNKNOWN=""
 # delivery ID — unless that argument is missing or is itself a flag, which leaves the ID missing
 # rather than swallowing the flag. Nothing here interprets the ID: the adopted helper validates it.
 HAS_DELIVERY=0; DELIVERY_ID=""; DELIVERY_MISSING=0
+# --specs and --plans pick one kind of row; --spec <id> picks one spec and its plans. --spec
+# consumes its ID the way --delivery consumes its ID, and leaves a flag where it stands.
+HAS_SPECS=0; HAS_PLANS=0; HAS_SPEC=0; SPEC_ARG=""; SPEC_MISSING=0
 while [ "$#" -gt 0 ]; do
   arg=$1; shift
   case "$arg" in
@@ -63,12 +78,23 @@ while [ "$#" -gt 0 ]; do
         # An empty argument is a missing ID too; consume it so it is not read as a repo root.
         if [ "$#" -gt 0 ] && [ -z "$1" ]; then shift; fi
       fi ;;
+    --spec)
+      HAS_SPEC=$((HAS_SPEC + 1))
+      EXTRA="${EXTRA:+$EXTRA }$arg"
+      if [ "$#" -gt 0 ] && [ -n "$1" ] && [ "${1#-}" = "$1" ]; then
+        SPEC_ARG=$1; shift
+      else
+        SPEC_MISSING=1
+        if [ "$#" -gt 0 ] && [ -z "$1" ]; then shift; fi
+      fi ;;
     -*)
       EXTRA="${EXTRA:+$EXTRA }$arg"
       case "$arg" in
-        --done) HAS_DONE=1 ;;
-        --next) HAS_NEXT=1 ;;
-        *)      UNKNOWN="${UNKNOWN:+$UNKNOWN }$arg" ;;
+        --done)  HAS_DONE=1 ;;
+        --next)  HAS_NEXT=1 ;;
+        --specs) HAS_SPECS=1 ;;
+        --plans) HAS_PLANS=1 ;;
+        *)       UNKNOWN="${UNKNOWN:+$UNKNOWN }$arg" ;;
       esac ;;
     *)
       if   [ -z "$REPO" ];   then REPO=$arg
@@ -100,10 +126,25 @@ PLUGIN=${PLUGIN:-${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../../.." && pwd)}}
 # The fix differs too — drop one flag, as against correct a misspelt one — so the line that names
 # the problem names the right one.
 MODE=default
+# The spec ID --spec was given, in the form id_of below reads off an artefact's name. Two forms
+# exist (spec 0024). A legacy number may be bare, zero-padded, a spec's basename or its path, and
+# all of them name the same four-digit spec. A letter-and-digit ID may be the ID, a basename or a
+# path, in any case, and is compared uppercase.
+SPEC_ID=""
+if [ "$HAS_SPEC" = 1 ] && [ "$SPEC_MISSING" = 0 ]; then
+  spec_base=${SPEC_ARG##*/}
+  SPEC_ID=$(printf '%s' "$spec_base" | sed -n 's/^\([0-9][0-9]*\)\(-.*\)\{0,1\}$/\1/p' | sed 's/^0*\([0-9]\)/\1/')
+  if [ -n "$SPEC_ID" ]; then
+    SPEC_ID=$(printf '%04d' "$SPEC_ID")
+  else
+    SPEC_ID=$(printf '%s' "$spec_base" | sed -n 's/^\([A-Za-z][A-Za-z][A-Za-z][0-9][0-9][0-9]\)\(-.*\)\{0,1\}$/\1/p' \
+               | tr '[:lower:]' '[:upper:]')
+  fi
+fi
 if [ -n "$UNKNOWN" ]; then
   # An unrecognised token: say what it is, and what this command does take. The rules for --done
   # and --next are settled and implemented, so this line no longer claims anything is undecided.
-  echo "'$UNKNOWN' is not a flag /t4:state takes — it takes --done, which lists what is finished instead of what is outstanding, or --next, which names the single item to pick up next, or --delivery <id>, which shows one contract delivery's status; with no flag at all it lists everything outstanding. Nothing was listed."
+  echo "'$UNKNOWN' is not a flag /t4:state takes — it takes --done, which lists what is finished instead of what is outstanding, or --next, which names the single item to pick up next, or --specs or --plans, which list only that kind, or --spec <id>, which lists one spec with its plans, or --delivery <id>, which shows one contract delivery's status; with no flag at all it lists everything outstanding. Nothing was listed."
   exit 0
 elif [ "$HAS_DELIVERY" -gt 0 ] && [ "$DELIVERY_MISSING" = 1 ]; then
   # --delivery with nothing after it, or with a flag where its ID belongs. The flag exists, so this
@@ -121,6 +162,23 @@ elif [ "$HAS_DELIVERY" = 1 ] && { [ "$HAS_DONE" = 1 ] || [ "$HAS_NEXT" = 1 ]; };
   [ "$HAS_NEXT" = 1 ] && listing="${listing:+$listing and }--next"
   echo "--delivery does not combine with $listing — --delivery shows one contract delivery's status, while --done and --next are listings, so ask one at a time. Nothing was listed or shown."
   exit 0
+elif [ "$HAS_DELIVERY" = 1 ] && { [ "$HAS_SPECS" = 1 ] || [ "$HAS_PLANS" = 1 ] || [ "$HAS_SPEC" -gt 0 ]; }; then
+  # The same collision with the filters: they narrow a listing, and --delivery is not one.
+  echo "--delivery does not combine with --specs, --plans or --spec — --delivery shows one contract delivery's status, while those narrow a listing of specs and plans, so ask one at a time. Nothing was listed or shown."
+  exit 0
+elif [ "$HAS_SPEC" -gt 0 ] && [ "$SPEC_MISSING" = 1 ]; then
+  echo "--spec needs a spec ID after it — name one spec, as in --spec DHW631. Nothing was listed."
+  exit 0
+elif [ "$HAS_SPEC" -gt 1 ]; then
+  echo "--spec was given more than once — it lists one spec with its plans, so ask about one spec ID at a time, as in --spec DHW631. Nothing was listed."
+  exit 0
+elif [ "$HAS_SPEC" = 1 ] && [ -z "$SPEC_ID" ]; then
+  echo "'$SPEC_ARG' is not a spec ID — --spec takes the ID a spec's file name starts with, as in --spec DHW631, or a legacy four-digit number. Nothing was listed."
+  exit 0
+elif [ "$HAS_SPECS" = 1 ] && [ "$HAS_PLANS" = 1 ]; then
+  # Both kinds is the unfiltered listing under another name; refused rather than guessed at.
+  echo "--specs and --plans do not combine — each narrows the listing to one kind, and with neither it lists both. Nothing was listed."
+  exit 0
 elif [ "$HAS_DONE" = 1 ] && [ "$HAS_NEXT" = 1 ]; then
   # Both flags, in either order. Neither wins: the combination is refused outright.
   echo "--done and --next do not combine — asking for both at once is not a meaningful question, so ask one at a time: --done lists what is finished instead of what is outstanding, and --next names the single item to pick up next. Nothing was listed."
@@ -130,6 +188,14 @@ elif [ "$HAS_DONE" = 1 ]; then
 elif [ "$HAS_NEXT" = 1 ]; then
   MODE=next
 fi
+
+# KIND is the one kind of row the listing keeps, or empty for both. WHAT names the listed things in
+# the one-line answers below; with no filter it reads as it always has.
+KIND=""; WHAT="spec and plan"; AMONG="anything outstanding"
+[ "$HAS_SPECS" = 0 ] || { KIND=spec; WHAT="spec"; AMONG="any outstanding spec"; }
+[ "$HAS_PLANS" = 0 ] || { KIND=plan; WHAT="plan"; AMONG="any outstanding plan"; }
+WHERE="in this repo"
+[ -z "$SPEC_ID" ] || { WHERE="under spec $SPEC_ID"; AMONG="$AMONG under spec $SPEC_ID"; }
 
 [ -d "$REPO" ] || { echo "nothing to list — no such directory: $REPO"; exit 0; }
 # Everything below is read relative to the repo root and nothing resolves above it, so a run in
@@ -182,15 +248,47 @@ if [ "$HAS_DELIVERY" = 1 ]; then
 fi
 
 TAB=$'\t'
-ROWS=""           # sort key, tab, sort key, tab, the row itself — sorted and cut below
+ROWS=""           # five sort keys, then the row itself — sorted and cut below
 
-# add <path> <stepnum> <kind> <number> <state> <step> <detail>
-# The first two fields are the sort key: path, then step number. Nothing but the bytes on disk
-# feeds it, so two runs over an unchanged tree agree (AC13).
+# created_of <path> — the instant on the artefact's line 2, when that line is exactly the
+# `Created: YYYY-MM-DDTHH:MM:SS(.fff)?Z` ids.js writes (spec 0024; the same rule `ids.js check`
+# applies), else "". Whole seconds gain `.000` so the instants compare as text: `07Z` and
+# `07.000Z` are one instant, and `07Z` must sort before `07.500Z`. Line 2 only — a `Created:`
+# further down is prose, not the stamp.
+created_of() {
+  local line
+  line=$(sed -n '2{p;q;}' "$1" 2>/dev/null | tr -d '\r')
+  printf '%s' "$line" \
+    | sed -n 's/^Created: \([0-9]\{4\}-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\)\(\.[0-9]\{3\}\)\{0,1\}Z$/\1\2/p' \
+    | sed 's/T\([0-9:]*\)$/T\1.000/'
+}
+
+# order_of <path> <id> — "<band><TAB><key>", where an artefact sits in its directory's listing
+# (spec 0024, AC36). Band 0 holds every file whose name carries no letter-and-digit ID — the legacy
+# numbers, and anything else — keyed by its name, so a tree with no new-style ID lists exactly as
+# it did before. Band 1 holds new-style IDs with a valid Created: line, by that instant and then the
+# ID; band 2 holds the rest of the new-style IDs, by ID.
+order_of() {
+  local c
+  case "$2" in
+    [A-Z][A-Z][A-Z][0-9][0-9][0-9]) ;;
+    *) printf '0%s%s' "$TAB" "${1##*/}"; return 0 ;;
+  esac
+  c=$(created_of "$1")
+  if [ -n "$c" ]; then printf '1%s%s %s' "$TAB" "$c" "$2"
+  else                 printf '2%s%s' "$TAB" "$2"
+  fi
+}
+
+# add <path> <stepnum> <kind> <id> <state> <step> <detail>
+# The first five fields are the sort key: the directory, the band and key order_of gives, the path,
+# then the step number. Grouping by directory keeps the plans, the filed plans and the specs apart
+# as they always were (plan 0024, Ambiguity 2). Nothing but the bytes on disk feeds the key, so
+# two runs over an unchanged tree agree (AC13).
 add() {
   local n=$2
   n=$(printf '%s' "$n" | sed -e 's/[^0-9]//g' -e 's/^0*\([0-9]\)/\1/')
-  ROWS="$ROWS$1$TAB$(printf '%04d' "${n:-0}")$TAB$3$TAB$4$TAB$5$TAB$1$TAB$6$TAB$7
+  ROWS="$ROWS${1%/*}$TAB$(order_of "$1" "$4")$TAB$1$TAB$(printf '%04d' "${n:-0}")$TAB$3$TAB$4$TAB$5$TAB$1$TAB$6$TAB$7
 "
 }
 
@@ -201,12 +299,29 @@ clean() {
                          -e 's/^ //' -e 's/ $//'
 }
 
-# number_of <path> — the leading four-digit number of an artefact's basename, or "-". Never
-# assume the numbers are dense: this is read off the name, never counted.
-number_of() {
+# id_of <path> — the ID an artefact's basename starts with, or "-". A legacy four-digit number is
+# returned as it stands. A letter-and-digit ID (three letters, three digits, then `-`, `.` or the
+# end of the name) is returned uppercase, so a lowercase file name and an uppercase one agree.
+# Never assume IDs are dense or ordered: this is read off the name, never counted.
+id_of() {
   local b=${1##*/} n
   n=$(printf '%s' "$b" | sed -n 's/^\([0-9][0-9][0-9][0-9]\).*/\1/p')
+  [ -n "$n" ] || n=$(printf '%s' "$b" \
+    | sed -n 's/^\([A-Za-z][A-Za-z][A-Za-z][0-9][0-9][0-9]\)\([-.].*\)\{0,1\}$/\1/p' \
+    | tr '[:lower:]' '[:upper:]')
   printf '%s' "${n:--}"
+}
+
+# spec_by_id <id> — the first spec, in glob order, whose basename starts with `<id>-`, compared
+# case-insensitively; or "". The plan→spec fallback below, for a plan with no **Spec:** line.
+spec_by_id() {
+  local cand b
+  [ "$1" != "-" ] || return 0
+  for cand in ai-factory/specs/*.md; do
+    b=${cand##*/}
+    [ "$(printf '%s' "${b:0:$((${#1} + 1))}" | tr '[:lower:]' '[:upper:]')" = "$1-" ] || continue
+    printf '%s' "$cand"; return 0
+  done
 }
 
 # norm_spec <ref> — the repository-relative spec path a plan's **Spec:** line points at.
@@ -277,6 +392,7 @@ withdrawn_steps_of() {
 # plan filed under done/ with one `- [~]` step is outstanding (AC10), unless that step has an
 # explicit withdrawal result (AC17). Filing a plan never resolves its work.
 PLAN_SPEC=(); PLAN_STATE=(); NP=0
+SCOPE=""          # under --spec: the paths of that spec and of the plans paired to it, one a line
 
 plan_list=$( { for f in ai-factory/plans/*.md ai-factory/plans/*/*.md; do
                  printf '%s\n' "$f"
@@ -284,7 +400,7 @@ plan_list=$( { for f in ai-factory/plans/*.md ai-factory/plans/*/*.md; do
 
 while IFS= read -r plan; do
   [ -n "$plan" ] || continue
-  pnum=$(number_of "$plan")
+  pnum=$(id_of "$plan")
   state=""; reason=""; specref=""
   open_rows=""        # the incomplete steps, held back until the plan's own state is known
 
@@ -294,9 +410,9 @@ while IFS= read -r plan; do
   else
     specref=$(spec_ref_of "$plan")
     [ -n "$specref" ] || {
-      # Fall back to the leading four-digit number, and only then: the **Spec:** line is the
-      # pairing, the number is the guess (plan 0010, Ambiguity E).
-      for cand in ai-factory/specs/"$pnum"-*.md; do specref=$cand; break; done
+      # Fall back to the leading ID, and only then: the **Spec:** line is the pairing, the ID is
+      # the guess (plan 0010, Ambiguity E). Matched case-insensitively (spec 0024, AC31).
+      specref=$(spec_by_id "$pnum")
     }
 
     withdrawn_steps=$(withdrawn_steps_of "$plan")
@@ -370,6 +486,12 @@ while IFS= read -r plan; do
   fi
 
   PLAN_SPEC[$NP]=$specref; PLAN_STATE[$NP]=$state; NP=$((NP + 1))
+  # The pairing --spec follows is the one the spec rows below are built from: the plan's **Spec:**
+  # line, never the plan's own ID.
+  if [ -n "$SPEC_ID" ] && [ -n "$specref" ] && [ "$(id_of "$specref")" = "$SPEC_ID" ]; then
+    SCOPE="$SCOPE$plan
+"
+  fi
 
   case "$state" in
     unknown)
@@ -403,7 +525,11 @@ EOF_PLANS
 spec_list=$( { for f in ai-factory/specs/*.md; do printf '%s\n' "$f"; done; } | LC_ALL=C sort -u )
 while IFS= read -r spec; do
   [ -n "$spec" ] || continue
-  snum=$(number_of "$spec")
+  snum=$(id_of "$spec")
+  if [ -n "$SPEC_ID" ] && [ "$snum" = "$SPEC_ID" ]; then
+    SCOPE="$SCOPE$spec
+"
+  fi
   if [ ! -r "$spec" ]; then
     add "$spec" 0 spec "$snum" unknown "-" "the file could not be read — check its permissions"
     continue
@@ -447,22 +573,41 @@ EOF_SPECS
 # not shown with a done marker" is this one comparison — and --done shows what is, which is the
 # mirror image over any tree (AC5). `unknown` is neither, so it appears in the default listing and
 # never under --done: an artefact that could not be read or interpreted is never complete (AC12).
-SELECTED=$(printf '%s' "$ROWS" | grep -v '^$' | LC_ALL=C sort \
-  | awk -F'\t' -v mode="$MODE" '{ done_row = ($5 == "complete" || $5 == "closed"); if ((mode == "done") == done_row) print }')
+#
+# --specs, --plans and --spec narrow that same selection by kind and by path, so a filtered row is
+# byte-identical to the row the unfiltered listing prints. --spec with neither --done nor --next
+# keeps both halves: one named spec is shown whole, its finished plans beside its open steps.
+STATES=$MODE
+[ -z "$SPEC_ID" ] || [ "$MODE" != default ] || STATES=all
+SELECTED=$(printf '%s' "$ROWS" | grep -v '^$' | LC_ALL=C sort -t"$TAB" -k1,1 -k2,2 -k3,3 -k4,4 -k5,5 \
+  | cut -f4- | SCOPE=$SCOPE awk -F'\t' -v states="$STATES" -v kind="$KIND" -v scoped="${SPEC_ID:+1}" '
+      BEGIN { n = split(ENVIRON["SCOPE"], paths, "\n"); for (i = 1; i <= n; i++) if (paths[i] != "") in_scope[paths[i]] = 1 }
+      {
+        done_row = ($5 == "complete" || $5 == "closed")
+        if (states != "all" && (states == "done") != done_row) next
+        if (kind != "" && $3 != kind) next
+        if (scoped != "" && !($1 in in_scope)) next
+        print
+      }')
 
 # An empty result is an answer, not an error and not silence: one line, exit 0 (AC11).
 if [ -z "$SELECTED" ]; then
   if [ ! -d ai-factory/specs ] && [ ! -d ai-factory/plans ]; then
     echo "nothing to list — this repo has no ai-factory/specs or ai-factory/plans directory"
+  elif [ -n "$SPEC_ID" ] && [ -z "$SCOPE" ]; then
+    # Not the same answer as a spec with nothing left: this one does not exist.
+    echo "no spec with the ID $SPEC_ID — ai-factory/specs holds no spec with that ID, and no plan names one. Nothing was listed."
+  elif [ "$STATES" = all ]; then
+    echo "nothing to list — no $WHAT $WHERE"
   elif [ "$MODE" = done ]; then
-    echo "nothing finished yet — no spec or plan in this repo is complete or closed"
+    echo "nothing finished yet — no ${WHAT/ and / or } $WHERE is complete or closed"
   else
-    echo "nothing outstanding — every spec and plan in this repo is complete or closed"
+    echo "nothing outstanding — every $WHAT $WHERE is complete or closed"
   fi
   exit 0
 fi
 
-HEADER=$'kind\tnumber\tstate\tpath\tstep\tdetail'
+HEADER=$'kind\tid\tstate\tpath\tstep\tdetail'
 
 # --- 4. --next: the one artefact to pick up -----------------------------------------------
 # Plan 0010's Ambiguity A, answered 2026-09-29. The key is the artefact's last commit date,
@@ -473,9 +618,10 @@ HEADER=$'kind\tnumber\tstate\tpath\tstep\tdetail'
 # between — holds under either measure, so this is cross-clone agreement and not an AC13 fix.
 #
 # An artefact the command answers with an empty string — uncommitted, or untracked — sorts as the
-# NEWEST thing in the tree. Highest key wins; ties break on the artefact's leading four-digit
-# number lowest first, then on path, then on step number, so the order is total and exactly one
-# row can win. The row itself is byte-identical to the row the default listing produces for the
+# NEWEST thing in the tree. Highest key wins. Ties break on a rank (spec 0024, AC38–AC41): first
+# the letter-and-digit IDs with a valid Created: line, earliest instant first and then by ID; then
+# the new-style IDs without one, by ID; then the legacy four-digit numbers, lowest first. Path and
+# then step number break what is left, so the order is total and exactly one row can win. The row itself is byte-identical to the row the default listing produces for the
 # same artefact, which is what makes the answer a strict subset of it (AC6).
 if [ "$MODE" = next ]; then
 
@@ -502,9 +648,23 @@ if [ "$MODE" = next ]; then
   # tree, so it sorts above every real timestamp; ten digits of 9s is past the year 2286.
   UNCOMMITTED=9999999999
 
-  # One `git log` per artefact, memoised on the previous path: SELECTED is sorted by path, so a
-  # plan's several step rows are adjacent and ask the same question once.
-  keyed=""; cache_p=""; cache_ct=""
+  # rank_of <path> <id> — the tie rank, compared as text: "0 <instant> <ID>" for a new-style ID
+  # with a valid Created: line, "1 <ID>" for one without, "2 <id>" for everything else — a legacy
+  # number, or the "-" of a name with no ID, which sorts as it always did beside the numbers.
+  rank_of() {
+    local c
+    case "$2" in
+      [A-Z][A-Z][A-Z][0-9][0-9][0-9]) ;;
+      *) printf '2 %s' "$2"; return 0 ;;
+    esac
+    c=$(created_of "$1")
+    if [ -n "$c" ]; then printf '0 %s %s' "$c" "$2"; else printf '1 %s' "$2"; fi
+  }
+
+  # One `git log` per artefact, memoised on the previous path: a plan's several step rows are
+  # adjacent in SELECTED, because they share every sort key before the step number, and so ask
+  # the same question once.
+  keyed=""; cache_p=""; cache_ct=""; cache_rank=""
   while IFS= read -r line; do
     [ -n "$line" ] || continue
     p=${line%%"$TAB"*}
@@ -515,25 +675,26 @@ if [ "$MODE" = next ]; then
       [ "$NOCOMMITS" = 1 ] || ct=$(git_q log -1 --format=%ct -- "$p" 2>/dev/null)
       # Empty, or anything that is not a plain number, is treated as no commit date at all.
       case "$ct" in ''|*[!0-9]*) ct=$UNCOMMITTED ;; esac
-      cache_p=$p; cache_ct=$ct
+      id=$(printf '%s' "$line" | cut -f4)
+      cache_p=$p; cache_ct=$ct; cache_rank=$(rank_of "$p" "$id")
     fi
-    keyed="$keyed$ct$TAB$line
+    keyed="$keyed$ct$TAB$cache_rank$TAB$line
 "
   done <<EOF_NEXT
 $SELECTED
 EOF_NEXT
 
-  # Fields, once the key is in front: 1 key · 2 path · 3 step number · 4 kind · 5 number ·
-  # 6 state · 7 path · 8 step · 9 detail. Highest key first, then the three tiebreaks in the
-  # order the rule fixes — number lowest first, then path, then step number.
+  # Fields, once the key and rank are in front: 1 key · 2 rank · 3 path · 4 step number · 5 kind ·
+  # 6 id · 7 state · 8 path · 9 step · 10 detail. Highest key first, then the three tiebreaks in
+  # the order the rule fixes — the rank, then path, then step number.
   ranked=$(printf '%s' "$keyed" | grep -v '^$' \
-           | LC_ALL=C sort -t"$TAB" -k1,1nr -k5,5 -k2,2 -k3,3)
+           | LC_ALL=C sort -t"$TAB" -k1,1nr -k2,2 -k3,3 -k4,4)
   win=$(printf '%s\n' "$ranked" | head -1)
 
   wkey=$(printf '%s' "$win" | cut -f1)
-  wpath=$(printf '%s' "$win" | cut -f2)
-  wnum=$(printf '%s' "$win" | cut -f5)
-  wstep=$(printf '%s' "$win" | cut -f8)
+  wrank=$(printf '%s' "$win" | cut -f2)
+  wpath=$(printf '%s' "$win" | cut -f3)
+  wstep=$(printf '%s' "$win" | cut -f9)
   label=$wpath
   case "$wstep" in ''|'-') ;; *) label="$wpath $wstep" ;; esac
 
@@ -541,10 +702,24 @@ EOF_NEXT
   # commit date alone did not settle it.
   runner=$(printf '%s\n' "$ranked" | sed -n '2p')
   tiebreak=""
+  # The rank's first character is its band (0 dated ID, 1 undated ID, 2 legacy number), and the
+  # wording names the comparison that actually separated the winner from the runner-up. Two legacy
+  # numbers still read "the lower number", as they did before spec 0024.
   if [ -n "$runner" ] && [ "$(printf '%s' "$runner" | cut -f1)" = "$wkey" ]; then
-    if   [ "$wnum"  != "$(printf '%s' "$runner" | cut -f5)" ]; then tiebreak="the lower number"
-    elif [ "$wpath" != "$(printf '%s' "$runner" | cut -f2)" ]; then tiebreak="the earlier path"
-    else                                                            tiebreak="the lower step number"
+    rrank=$(printf '%s' "$runner" | cut -f2)
+    if [ "$wrank" != "$rrank" ]; then
+      case "${wrank%% *}${rrank%% *}" in
+        02|12) tiebreak="the letter-and-digit ID before the legacy number" ;;
+        01)    tiebreak="the valid Created: line before the ID without one" ;;
+        00)    if [ "$(printf '%s' "$wrank" | cut -d' ' -f2)" != "$(printf '%s' "$rrank" | cut -d' ' -f2)" ]
+               then tiebreak="the earlier Created: date"
+               else tiebreak="the ID that sorts first alphabetically, at the same Created: instant"
+               fi ;;
+        11)    tiebreak="the ID that sorts first alphabetically" ;;
+        *)     tiebreak="the lower number" ;;
+      esac
+    elif [ "$wpath" != "$(printf '%s' "$runner" | cut -f3)" ]; then tiebreak="the earlier path"
+    else                                                             tiebreak="the lower step number"
     fi
   fi
 
@@ -555,12 +730,12 @@ EOF_NEXT
     why="it is uncommitted or untracked, which sorts newest"
     [ -z "$tiebreak" ] || why="$why, and $tiebreak decided between those tied there"
   else
-    why="it carries the newest commit date of anything outstanding"
+    why="it carries the newest commit date of $AMONG"
     [ -z "$tiebreak" ] || why="$why, and $tiebreak decided between those tied on it"
   fi
 
   printf '%s\n' "$HEADER"
-  printf '%s\n' "$win" | cut -f4-
+  printf '%s\n' "$win" | cut -f5-
   printf 'next: %s — %s\n' "$label" "$why"
   exit 0
 fi

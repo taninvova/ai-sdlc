@@ -8,7 +8,7 @@
       "name": "t4",
       "source": ".",
       "description": "T4 AI SDLC core plugin (ai-sdlc)",
-      "version": "2.8.0"
+      "version": "3.0.0"
     }
   ]
 }

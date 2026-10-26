@@ -2,7 +2,7 @@
 require("./_common").runHook(() => {
 	const {
 		readEvent,
-		aiDir,
+		logDir,
 		user,
 		branch,
 		task,
@@ -11,7 +11,7 @@ require("./_common").runHook(() => {
 	} = require("./_common");
 	const { claims, sumTranscript, price } = require("./_usage");
 	const ev = readEvent();
-	const ai = aiDir(ev);
+	const ai = logDir(ev);
 	if (!ai) return;
 	const cwd = ev.cwd || process.cwd();
 	if (!ev.transcript_path || !fs.existsSync(ev.transcript_path)) return;

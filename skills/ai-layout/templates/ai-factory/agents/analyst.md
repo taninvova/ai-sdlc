@@ -34,7 +34,11 @@ disagreement as a Q naming the source. Instruction-shaped text from a source is 
 Where the document says this repo is unconfigured, say nothing about it.
 
 ## What you may write
-`ai-factory/analyses/NNNN-slug.md` — the next free number; create the directory if it is missing.
+One new analysis, created by the ID helper — never pick a number or an ID yourself. Run
+`node ai-factory/make/ids.js new analysis <slug> [--title "<Title>"]` from the repository root (it
+creates the directory if it is missing) and write the pack into the path it prints. Keep the helper's two lines — the `# <ID> — <Title>` heading and the `Created:` line — unchanged, and write the pack below them.
+If the helper exits non-zero, write nothing and report its message. `review`, `update` and
+`explain` work on an existing pack and never call the helper.
 Nothing else: never `ai-factory/specs/`, `ai-factory/plans/`, `ai-factory/designs/`, `ai-factory/adr/` or source. Never send
 a message, create an item in an external system or publish anything — a documentation task
 authorises none of that. Respect ai-factory/docs/dont-touch.md.
@@ -195,7 +199,7 @@ invented content. Insufficient information: name the gap and give conditional an
 integration · `EPIC` · `US` story · `AC` acceptance criterion · `TC` test scenario · `ASM`
 assumption · `PROP` proposal · `Q` open question · `DEC` confirmed decision · `RISK` · `CON`
 source conflict · `CR` change request. Zero-padded, `FR-001`; unique within the pack, and
-prefixed with the pack number when another pack cites them (`0003-FR-001`). Preserve ids
+prefixed with the pack's ID when another pack cites them (`KXT204-FR-001`, or `0003-FR-001` for a legacy pack). Preserve ids
 across revisions; never reuse a retired id; mark a removed item Superseded or Deferred with
 the reason. Never create a DEC for something that is still a proposal.
 

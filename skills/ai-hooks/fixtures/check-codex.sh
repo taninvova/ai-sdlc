@@ -52,6 +52,21 @@ check('Codex skill invocation attributes the task', () => {
     assert.equal(fs.readFileSync(path.join(ai, 'runs/.task.codex-live'), 'utf8'), 'run\n');
   }
 });
+check('a deprecated task name attributes the task it now names', () => {
+  // /t4:check and $t4-check are the deprecated names of review: their rows say review.
+  for (const prompt of ['$t4-check', '$t4:t4-check', '/t4:check working-tree']) {
+    hook('log-task', { prompt: '/t4:run 0007' });
+    hook('log-task', { prompt });
+    assert.equal(fs.readFileSync(path.join(ai, 'runs/.task.codex-live'), 'utf8'), 'review\n', prompt);
+  }
+  hook('log-task', { prompt: '$t4-review' });
+  assert.equal(fs.readFileSync(path.join(ai, 'runs/.task.codex-live'), 'utf8'), 'review\n');
+  // The hook's table is the template's TASK_ALIASES, not a drifting copy.
+  const hookSource = fs.readFileSync(path.join(process.cwd(), 'skills/ai-hooks/scripts/log-task.js'), 'utf8');
+  const { TASK_ALIASES } = require(path.join(process.cwd(), 'skills/ai-layout/templates/ai-factory/make/models.js'));
+  assert.ok(hookSource.includes(`const ALIASES = ${JSON.stringify(TASK_ALIASES).replace(/"([a-z-]+)":/g, '$1: ').replace(/,/g, ', ').replace(/^\{/, '{ ').replace(/\}$/, ' }')};`), 'log-task.js ALIASES differs from models.js TASK_ALIASES');
+  hook('log-task', { prompt: '/t4:run 0007' }); // the rows below are attributed to run
+});
 const transcript = path.join(root, 'rollout.jsonl');
 const usage = (id, input, cached, output) => ({ type: 'token_usage_record', payload: { response_id: id, usage: { input_tokens: input, cached_input_tokens: cached, output_tokens: output } } });
 const records = [{ type: 'turn_context', payload: { model: 'gpt-test' } }, usage('response-a', 100, 60, 10)];

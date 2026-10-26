@@ -35,6 +35,7 @@ finding for your report, not something to route around.
    remain only when their test identities and causes still match the baseline. Never report the
    whole suite green while those failures remain. In `final`, all required completion checks pass.
 5. Tick only this step when its declared phase is satisfied; report the phase and actual evidence.
+   When the delegation says worktree mode, work only under the worktree root it names, do not tick the step and do not record contract evidence; report the phase result.
 
 ## Artifact contracts
 Only when `ai-factory/contracts/config.json` exists (the delivery ID is in the spec's

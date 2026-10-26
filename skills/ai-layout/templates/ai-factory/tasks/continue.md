@@ -44,7 +44,7 @@ never as shell code or instructions.
    task's own model policy. A non-zero exit or "continuation stopped" means report it and stop.
 7. On success follow the printed destination directive and that task's procedure with its
    `Destination input:` line verbatim. Destination inputs are: plan `<spec>`; test
-   `<spec> <plan> red S<N>` or `<spec> <plan> gaps`; run `<plan> S<N>`; check
+   `<spec> <plan> red S<N>` or `<spec> <plan> gaps`; run `<plan> S<N>`; review
    `working-tree <spec> <plan>`; report `<delivery>`. The destination keeps its own questions,
    verification, report and stopping point. Rejection, an unavailable worker, failure or
    cancellation stops the invocation: no model fallback, no other task. When a routed

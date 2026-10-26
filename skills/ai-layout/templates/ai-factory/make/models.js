@@ -14,6 +14,31 @@ const crypto = require("node:crypto");
 const TOOLS = ["claude", "codex"];
 const START_TASKS = ["quick", "fix", "chore", "analyse", "design", "explore", "spec"];
 const TASK_NAME = /^[a-z][a-z0-9-]*$/;
+// Deprecated task names and the task each now names. `check` was renamed `review`: the plugin keeps
+// a thin /t4:check command and $t4-check skill that run the review task, TASK=check still runs it
+// headless, and old data that says `check` (routing keys, lifecycle phases, run-log rows) is read
+// as `review`. The command and skill generators read this table; nothing else lists the aliases.
+const TASK_ALIASES = Object.freeze({ check: "review" });
+// The task a name stands for: an alias resolves to its task, any other name is itself.
+function canonicalTask(task) {
+	return Object.hasOwn(TASK_ALIASES, task || "") ? TASK_ALIASES[task] : task;
+}
+// Tasks that always run in the invoking session and are never routed to a worker: continue
+// performs the one destination dispatch, and loop delegates every step to its own implementer,
+// concurrently on Claude Code. A routed worker may do neither.
+const SESSION_TASKS = new Set(["continue", "loop"]);
+const SESSION_OWNERSHIP = {
+	continue: {
+		override: "continue does not take a model override: it selects in this session and its one destination runs under that destination task's own model policy. Drop --task-model, or configure routing.tasks.<destination> instead",
+		directive: "continuation selects and hands off in this session; its own routing never launches a worker, and its one destination runs under that task's own model policy",
+		doctor: "routing.tasks.continue is ignored — continue selects in the session and never routes to a worker; its one destination uses that task's own mapping, so map plan, test, run, review or report instead",
+	},
+	loop: {
+		override: "loop does not take a model override: it orchestrates in this session and delegates each step under the run task's own model policy. Drop --task-model, or configure routing.tasks.run instead",
+		directive: "the loop orchestrates in this session; its own routing never launches a worker, and each step it delegates runs under the run task's own model policy",
+		doctor: "routing.tasks.loop is ignored — loop orchestrates in the session and never routes to a worker; each step uses the run task's mapping, so map run (and review) instead",
+	},
+};
 // An interactive override travels through one shell word the session writes, so it is limited
 // to the characters model ids and gateway aliases use. models.yaml itself accepts any literal.
 const OVERRIDE = /^[A-Za-z0-9._:/@+-]{1,200}$/;
@@ -62,7 +87,7 @@ function model(raw, line) {
 // naming its line, so a typo can never quietly select a different model.
 function parseModels(content) {
 	const result = {
-		routing: { present: false, enabled: false, tasks: {} },
+		routing: { present: false, enabled: false, tasks: {}, aliased: [] },
 		digest: digest(content),
 	};
 	const seen = new Set();
@@ -125,14 +150,21 @@ function parseModels(content) {
 			if (!match) fail(n, "expected `<task>:` under routing.tasks");
 			const [, name, raw = ""] = match;
 			if (!TASK_NAME.test(name)) fail(n, `invalid task name \`${name}\``);
-			if (name === "review")
-				fail(n, "map `check`, not `review`: make review runs the check task");
-			if (taskKeys.has(name)) fail(n, `duplicate task \`${name}\``);
+			// A deprecated name maps the task it now names; mapping both is ambiguous.
+			const canonical = canonicalTask(name);
+			if (taskKeys.has(canonical))
+				fail(
+					n,
+					canonical === name
+						? `duplicate task \`${name}\``
+						: `duplicate task \`${canonical}\`: \`${name}\` is its deprecated name, so map only \`${canonical}\``,
+				);
 			if (raw.trim() && !raw.trim().startsWith("#"))
 				fail(n, `routing.tasks.${name} must be an indented mapping of tool: model`);
-			taskKeys.add(name);
-			task = name;
-			result.routing.tasks[name] = {};
+			taskKeys.add(canonical);
+			if (canonical !== name) result.routing.aliased.push(name);
+			task = canonical;
+			result.routing.tasks[canonical] = {};
 		} else if (indent.length === 6) {
 			if (!task) fail(n, "unexpected indentation");
 			const match = line.match(/^ {6}([^\s:#]+):(?:\s+(.*))?$/);
@@ -158,17 +190,17 @@ function readModels(file) {
 		content = fs.readFileSync(file, "utf8");
 	} catch (error) {
 		if (error.code === "ENOENT")
-			return { routing: { present: false, enabled: false, tasks: {} }, digest: null, missing: true };
+			return { routing: { present: false, enabled: false, tasks: {}, aliased: [] }, digest: null, missing: true };
 		throw error;
 	}
 	return parseModels(content);
 }
 
 // The whole contract, in order: explicit value, explicit blank, task mapping (routing on),
-// review default (check only), tool default, the CLI's own configuration.
+// review default (review only), tool default, the CLI's own configuration.
 function selectModel({ root, tool, task, env = process.env }) {
 	if (!TOOLS.includes(tool)) throw new Error(`Unsupported tool: ${tool}`);
-	const canonical = task === "review" ? "check" : task || null;
+	const canonical = canonicalTask(task) || null;
 	const base = { schema: SELECTION_SCHEMA, task: canonical, tool };
 	if (env.MODEL || env.SDLC_MODEL_EXPLICIT === "1") {
 		if (/[\r\n\0]/.test(env.MODEL || ""))
@@ -191,7 +223,7 @@ function selectModel({ root, tool, task, env = process.env }) {
 		if (mapping?.[tool]) return { ...common, model: mapping[tool], source: "task", fallback };
 		fallback = mapping ? `no ${tool} model for ${canonical}` : `no ${canonical} mapping`;
 	}
-	if (canonical === "check" && config.review)
+	if (canonical === "review" && config.review)
 		return { ...common, model: config.review, source: "review-default", fallback };
 	if (config[tool]) return { ...common, model: config[tool], source: "tool-default", fallback };
 	return { ...common, model: "", source: "cli-default", fallback };
@@ -303,8 +335,8 @@ function listTasks(root) {
 function expectedAdapters(root, host) {
 	const out = [];
 	for (const task of listTasks(root)) {
-		// Continuation always runs in the session (see dispatch), so it never has a route agent.
-		if (task === "continue") continue;
+		// Session-owned tasks always run in the session (see dispatch), so they have no route agent.
+		if (SESSION_TASKS.has(task)) continue;
 		const selection = selectModel({ root, tool: host, task, env: {} });
 		if (!selection.routing_enabled || !selection.model) continue;
 		out.push({ ...adapter(root, host, task, selection.model), task, selection });
@@ -356,6 +388,15 @@ function entryPreamble(host, task) {
 		"For start, the option handling above refers to the same single parse, never a second parse of retained task data. Legacy/inherit runs classification in this session; routed start runs only classification in its worker. Unless the directive routed the task to a worker, read ai-factory/tasks/start.md for classification only.",
 		startHandoff(host),
 	].join("\n\n");
+}
+
+// The line a deprecated entry point (/t4:check, $t4-check) adds before the task it now runs. Shared
+// by the plugin's command and skill generators and project adapter sync.
+function aliasNotice(host, alias) {
+	const task = TASK_ALIASES[alias];
+	if (!task) throw new Error(`${alias} is not a deprecated task name`);
+	const [old, current] = host === "claude" ? [`/t4:${alias}`, `/t4:${task}`] : [`$t4-${alias}`, `$t4-${task}`];
+	return `${old} is deprecated: it is the old name of ${current} and runs the same ${task} task. Tell the developer once, in one line, that ${old} is deprecated in favour of ${current}; then run the ${task} task exactly as ${current} would, with the same input.`;
 }
 
 // Classifier output is data, never executable instructions. No task input is accepted here.
@@ -430,6 +471,8 @@ class Blocked extends Error {}
 function dispatch({ root, host, task, override, env = process.env }) {
 	if (!TOOLS.includes(host)) throw new Blocked(`unsupported host \`${host}\`; use claude or codex`);
 	if (!TASK_NAME.test(task || "")) throw new Blocked("--task must name a workspace task");
+	// A deprecated name runs the task it now names, under that task's model policy.
+	task = canonicalTask(task);
 	try {
 		workspaceTask(root, task);
 	} catch (error) {
@@ -466,16 +509,16 @@ function dispatch({ root, host, task, override, env = process.env }) {
 	};
 	if (override === undefined && !selection.routing_enabled)
 		return { ...base, strategy: "legacy", status: "ready" };
-	if (task === "continue") {
+	if (SESSION_TASKS.has(task)) {
 		if (override !== undefined && override !== "inherit")
 			return {
 				...base,
 				strategy: "blocked",
 				status: "blocked",
-				reason: "continue does not take a model override: it selects in this session and its one destination runs under that destination task's own model policy. Drop --task-model, or configure routing.tasks.<destination> instead",
+				reason: SESSION_OWNERSHIP[task].override,
 			};
-		// Never a worker, whatever routing.tasks.continue or a tool default says: the session owns
-		// the one destination dispatch, and routed workers are forbidden to dispatch.
+		// Never a worker, whatever routing.tasks.<task> or a tool default says: continue owns the
+		// one destination dispatch and loop its step delegations, and routed workers may do neither.
 		return { ...base, requested_model: null, strategy: "session", status: "ready", ignored_model: selection.model || null };
 	}
 	if (!selection.model) return { ...base, strategy: "inherit", status: "ready" };
@@ -573,7 +616,7 @@ function directiveText(result) {
 			);
 			break;
 		case "session":
-			lines.push("directive: session — continuation selects and hands off in this session; its own routing never launches a worker, and its one destination runs under that task's own model policy. Continue with the procedure below.");
+			lines.push(`directive: session — ${SESSION_OWNERSHIP[result.task].directive}. Continue with the procedure below.`);
 			break;
 		case "blocked":
 			lines.push(`directive: blocked — ${result.reason}.`);
@@ -664,6 +707,8 @@ function doctor(root, env = process.env) {
 		out.push(["ok", "models", "no ai-factory/models.yaml — every tool uses its own configured model"]);
 		return out;
 	}
+	for (const name of config.routing.aliased)
+		out.push(["finding", "routing", `routing.tasks.${name} uses the deprecated name of ${canonicalTask(name)} and is read as routing.tasks.${canonicalTask(name)} — rename the key to ${canonicalTask(name)}`]);
 	if (!config.routing.enabled) {
 		out.push(["ok", "routing", `model routing is off${config.routing.present ? " (routing.enabled is false; mappings kept)" : ""}`]);
 		return out;
@@ -674,8 +719,7 @@ function doctor(root, env = process.env) {
 	const orphans = mapped.filter((task) => !tasks.has(task));
 	if (orphans.length)
 		out.push(["finding", "routing", `mapped task(s) with no ai-factory/tasks/<task>.md: ${orphans.join(", ")} — the mapping is never used`]);
-	if (mapped.includes("continue"))
-		out.push(["finding", "routing", "routing.tasks.continue is ignored — continue selects in the session and never routes to a worker; its one destination uses that task's own mapping, so map plan, test, run, check or report instead"]);
+	for (const task of SESSION_TASKS) if (mapped.includes(task)) out.push(["finding", "routing", SESSION_OWNERSHIP[task].doctor]);
 	for (const host of TOOLS) {
 		let expected;
 		try {
@@ -785,6 +829,8 @@ if (require.main === module) {
 
 module.exports = {
 	TOOLS,
+	TASK_ALIASES,
+	canonicalTask,
 	MARKER,
 	TOML_MARKER,
 	ADAPTER_DIRS,
@@ -800,6 +846,7 @@ module.exports = {
 	expectedAdapters,
 	presentAdapters,
 	entryPreamble,
+	aliasNotice,
 	validateStartResult,
 	startHandoff,
 	continueHandoff,

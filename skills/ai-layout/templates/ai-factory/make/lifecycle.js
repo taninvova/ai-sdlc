@@ -9,6 +9,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const { boundary } = require("./safe-files.js");
 const store = require("./lifecycle-events.js")({ boundary });
+const { canonicalTask } = require("./models.js");
 // Preserve the invoked workspace when its entry point is a source-repo symlink (see runner.js).
 const ENTRY_DIRECTORY =
 	require.main === module ? path.dirname(process.argv[1]) : __dirname;
@@ -71,7 +72,14 @@ function aggregate(options = {}) {
 	const ai = options.ai || workspace(options.root);
 	const now = options.now ?? Date.now();
 	const read = store.read(ai);
-	const ordered = read.events.slice().sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || (a.event_id < b.event_id ? -1 : 1));
+	// Events are immutable on disk: one recorded under a deprecated task name (phase `check`, before
+	// it was renamed `review`) is read under the name it has now, so both group as one phase.
+	const renamed = (event) => {
+		const out = { ...event };
+		for (const key of ["phase", "task"]) if (typeof out[key] === "string") out[key] = canonicalTask(out[key]);
+		return out;
+	};
+	const ordered = read.events.map(renamed).sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || (a.event_id < b.event_id ? -1 : 1));
 	const runs = new Map();
 	const anomalies = [];
 	const run = (id) => {
@@ -368,6 +376,8 @@ const DELIVERY = /^d-\d{8}-[0-9a-f]{6}$/;
 function start(options) {
 	const ai = options.ai || workspace(options.root);
 	requireEnabled(ai);
+	// A deprecated name (`--phase check`) is recorded under the task's current name.
+	options = { ...options, phase: canonicalTask(options.phase), task: options.task ? canonicalTask(options.task) : options.task };
 	const parent = options.parentRun || (store.PATTERNS.run_id.test(process.env.T4_LIFECYCLE_RUN || "") ? process.env.T4_LIFECYCLE_RUN : null);
 	const runId = store.newId("r");
 	const attemptId = store.newId("a");

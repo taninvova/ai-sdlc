@@ -6,13 +6,15 @@ Every rule that says "no new dependency without an ADR" is served by this task. 
 decision that outlives the change that prompted it: a dependency, a boundary, a protocol, a
 storage choice, a convention the whole repo must follow.
 
-Delegate to the `architect` subagent in its `adr` mode. It writes
-`ai-factory/adr/<NNNN>-<slug>.md` from `ai-factory/adr/0000-template.md` — Context, Decision,
+Delegate to the `architect` subagent in its `adr` mode. It creates the ADR with
+`node ai-factory/make/ids.js new adr <slug>`, which copies `ai-factory/adr/0000-template.md`, and
+writes into the path it prints, keeping its first two lines unchanged — Context, Decision,
 Consequences, with the date and a Status.
 
 If the decision came from a design document, name that file so the ADR links to it. If the
 input carries more than one decision, the architect writes one ADR per decision and says so.
-If it supersedes an earlier ADR, the architect names it and updates that file's Status line.
+If it supersedes an earlier ADR, the architect names it and sets that file's Status line to
+`superseded by <ID>`, the new ADR's ID.
 
 Do not change any code in this task. Report the file path, the decision in one sentence, and
 the cost it names in Consequences.

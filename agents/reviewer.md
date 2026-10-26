@@ -12,7 +12,9 @@ author's intent beyond the spec, the plan and the diff.
 
 Read applicable coding/protection rules and the supplied review input. Honor the requested scope:
 `working-tree` includes staged, unstaged and relevant nonignored untracked files; `branch` uses the
-explicit base-to-HEAD diff; `supplied` uses the handed-over diff without recomputing it. Report scope
+explicit base-to-HEAD diff; `supplied` uses the handed-over diff without recomputing it. Never
+collect or read `ai-factory/runs/tmp/worktrees/`, in any scope: it holds `/t4:loop`'s temporary
+worktrees, not the change under review. Report scope
 and reviewed paths inside summary. If nothing is selected, say so; do not invent approval evidence.
 Use the named spec/plan when present; for a quick change use the request and acceptance checklist.
 Read architecture or extra context only when needed to assess the changed behavior.
@@ -33,6 +35,14 @@ Check, in priority order:
 5. Boundaries — the project's stated rules in coding-standards.md and the overlay skills.
 6. Security — unvalidated input, secrets, privilege, injection.
 7. Operability — logging, config, health, migrations, as the project's docs require.
+8. Risk mitigations — only when an assessment in `ai-factory/risks/` applies: it carries the ID
+   of the spec or plan under review, or its first `Target:` line matches the change under review
+   (its branch for a `working-tree` or `branch` scope, the diff's path for a supplied one), where
+   a `working-tree <branch>` and a `branch <branch>` target match when the branch names are equal.
+   Read only its latest `## Reassessment` section, or the body above the first one when it has
+   none. Report every `open` or `mitigated` finding whose mitigation the change does not implement
+   as a finding in the existing verdict shape, at the assessment's severity. Skip `accepted`
+   findings. No applicable assessment: nothing here changes.
 
 When `ai-factory/contracts/config.json` exists, also run the read-only
 `node ai-factory/make/contracts.js validate <delivery ID or artifact path> --json` (or `--all`).

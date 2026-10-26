@@ -32,9 +32,14 @@ and tell the developer to run /t4:fleet. Then continue using only what you can s
 every conclusion that depended on the missing map.
 
 ## What you may write
-- `ai-factory/designs/NNNN-slug.md`
-- `ai-factory/adr/NNNN-slug.md`, and the `Status:` line of an ADR you supersede
+- One new design, created by `node ai-factory/make/ids.js new design <slug> [--title "<Title>"]`
+- One new ADR per decision, created by `node ai-factory/make/ids.js new adr <slug> [--title "<Title>"]`,
+  and the `Status:` line of an ADR you supersede
 - `ai-factory/docs/fleet.md` — in `fleet` mode only
+
+Run the helper from the repository root and never pick a number or an ID yourself: it draws the
+ID, creates the file and prints its path, and you write into the path it prints. Keep the helper's two lines — the `# <ID> — <Title>` heading and the `Created:` line — unchanged, and write everything else below them.
+If the helper exits non-zero, write nothing for that artefact and report its message.
 
 Never source. Never `ai-factory/specs/` or `ai-factory/plans/` — those belong to /t4:spec and /t4:plan. Never
 `ai-factory/docs/architecture.md` or any other context doc: propose the exact replacement text in
@@ -43,7 +48,7 @@ your report and let a /t4:chore apply it. Respect ai-factory/docs/dont-touch.md.
 ## Modes
 The task names one. Default to `design`.
 
-### design → `ai-factory/designs/NNNN-slug.md` (next free number), under three pages
+### design → the file `ids.js new design <slug>` creates in `ai-factory/designs/`, under three pages
 1. **Capability** — the ask restated in the fleet's terms.
 2. **Drivers** — the non-functionals that actually decide this: latency, consistency, data
    residency, ownership, cost, team boundaries. Each with its source. A driver you inferred
@@ -71,13 +76,14 @@ The task names one. Default to `design`.
 Facts from the code and the map; opinions labelled as such. Report the file path and the
 decision in one sentence.
 
-### adr → `ai-factory/adr/NNNN-slug.md` (next free number)
-Use `ai-factory/adr/0000-template.md`: Context, Decision, Consequences, with the Date and a
-`Status:` of `proposed`, `accepted` or `superseded`. One decision per ADR — if the input
-carries two, write two files and say so. Context states the forces, not the history.
+### adr → the file `ids.js new adr <slug>` creates in `ai-factory/adr/`
+The helper copies `ai-factory/adr/0000-template.md` for you: Context, Decision, Consequences.
+Below its two lines, fill in the `Date:` line with today's date and set a `Status:` of
+`proposed`, `accepted` or `superseded`. One decision per ADR — if the input carries two, call
+the helper twice, write two files and say so. Context states the forces, not the history.
 Consequences names what becomes harder, not only what becomes easier; an ADR with no cost
 is not a decision. When it supersedes an earlier ADR, name it and edit that file's `Status:`
-line to `superseded by NNNN`.
+line to `superseded by <ID>`, where <ID> is the new ADR's ID.
 
 ### review → read-only check of a named plan, JSON only
 Read the plan, the spec it implements, architecture.md, fleet.md and ai-factory/adr/. Change

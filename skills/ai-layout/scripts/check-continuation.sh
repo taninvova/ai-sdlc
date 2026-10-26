@@ -159,7 +159,7 @@ async function phases() {
 		}
 		await record(dir, id, { phase: "final" });
 		assert.deepEqual(action(continuation.inspect({ root: dir, delivery: id, answers: { gaps_tested: false } }), "test"), { spec, plan, mode: "gaps" });
-		assert.equal(action(continuation.inspect({ root: dir, delivery: id, answers: { gaps_tested: true } }), "check").scope, "working-tree");
+		assert.equal(action(continuation.inspect({ root: dir, delivery: id, answers: { gaps_tested: true } }), "review").scope, "working-tree");
 		// An unexpected failure blocks; it is never passed over.
 		const failing = project();
 		await record(failing.dir, failing.id, { step: "S1", phase: "red" });
@@ -207,6 +207,76 @@ async function phases() {
 		const unsure = continuation.inspect({ root: started.dir, delivery: started.id });
 		assert.equal(unsure.outcome, "question", JSON.stringify(unsure));
 		assert.equal(unsure.clarify, "red:S1");
+	});
+	// Spec 0022 AC61: a /t4:loop that stopped after Steps 1–2 leaves its state and a kept worktree
+	// under ai-factory/runs/tmp/; /t4:continue offers exactly one /t4:run handoff, for Step 3.
+	await checkAsync("stopped-loop-resumes-one-step", async () => {
+		const { dir, id } = project();
+		await record(dir, id, { step: "S1", phase: "red" });
+		for (const step of [1, 2]) {
+			await record(dir, id, { step: `S${step}` });
+			mark(dir, step);
+		}
+		const tmp = path.join(dir, "ai-factory/runs/tmp");
+		const kept = path.join(tmp, "worktrees/L1-S3");
+		fs.mkdirSync(kept, { recursive: true });
+		for (const sub of ["ai-factory/specs", "ai-factory/plans", "src"]) fs.cpSync(path.join(dir, sub), path.join(kept, sub), { recursive: true });
+		fs.appendFileSync(path.join(kept, "src/export.js"), "\n// conflicting half of Step 3\n");
+		fs.appendFileSync(path.join(kept, spec), "\nA worktree copy of the spec.\n");
+		fs.mkdirSync(path.join(tmp, "loop/L1"), { recursive: true });
+		fs.writeFileSync(path.join(tmp, "loop/L1/state.json"), JSON.stringify({ loop_id: "L1", plan, stopped: true, causes: [{ kind: "conflict", step: 3 }] }));
+		const before = tree(dir);
+		const value = continuation.inspect({ root: dir, delivery: id });
+		assert.deepEqual(action(value, "run"), { plan, step: "S3" });
+		assert.equal(tree(dir), before, "inspection is read-only");
+		const fake = spy();
+		const handed = continuation.handoff({ root: dir, delivery: id, result: value, host: "claude", dispatch: fake });
+		assert.equal(handed.status, "dispatched", JSON.stringify(handed));
+		assert.deepEqual(fake.calls, [{ root: dir, host: "claude", task: "run" }], "exactly one run dispatch, never the loop again");
+		assert.equal(handed.destination_input, `${plan} S3`);
+		assert.match(fs.readFileSync(path.join(dir, plan), "utf8"), /^- \[ \] \*\*Step 3 /m, "continuation never ticks");
+	});
+	// Spec 0024 AC33: a delivery whose files carry letter-digit IDs resolves exactly as a legacy one.
+	await checkAsync("selector-new-style-ids", async () => {
+		const { dir, id } = project({ plan: false });
+		const newSpec = "ai-factory/specs/DHW631-csv-export.md";
+		const newPlan = "ai-factory/plans/DHW631-csv-export.md";
+		fs.rmSync(path.join(dir, SPEC_SIDE));
+		fs.renameSync(path.join(dir, spec), path.join(dir, newSpec));
+		const planText = fs.readFileSync(path.join(dir, plan), "utf8");
+		assert.ok(planText.includes(`\`${spec}\``), "fixture plan does not link its spec");
+		fs.rmSync(path.join(dir, plan));
+		fs.writeFileSync(path.join(dir, newPlan), planText.replace(`\`${spec}\``, `\`${newSpec}\``));
+		const c = contracts.context(dir);
+		contracts.init("spec", newSpec, { ctx: c });
+		const delivery = JSON.parse(fs.readFileSync(path.join(dir, "ai-factory/specs/DHW631-csv-export.contract.json"))).delivery_id;
+		assert.notEqual(delivery, id);
+		assert.deepEqual(action(continuation.inspect({ root: dir, delivery }), "plan"), { spec: newSpec });
+		contracts.init("plan", newPlan, { ctx: c, spec: newSpec });
+		assert.deepEqual(action(continuation.inspect({ root: dir, delivery }), "test"), { spec: newSpec, plan: newPlan, mode: "red", step: "S1" });
+		await record(dir, delivery, { step: "S1", phase: "red" });
+		assert.deepEqual(action(continuation.inspect({ root: dir, delivery }), "run"), { plan: newPlan, step: "S1" });
+		const tickNew = (step) => {
+			const file = path.join(dir, newPlan);
+			fs.writeFileSync(file, fs.readFileSync(file, "utf8").replace(new RegExp(`^- \\[.\\] \\*\\*Step ${step} `, "m"), `- [x] **Step ${step} `));
+		};
+		for (const step of [1, 2, 3]) {
+			await record(dir, delivery, { step: `S${step}` });
+			tickNew(step);
+		}
+		await record(dir, delivery, { phase: "final" });
+		assert.deepEqual(action(continuation.inspect({ root: dir, delivery, answers: { gaps_tested: false } }), "test"), { spec: newSpec, plan: newPlan, mode: "gaps" });
+		contracts.recordReview({ root: dir, delivery, approved: true, verdict: "approve", findings: [], tool: "claude", outputHash: "0".repeat(64) });
+		assert.deepEqual(action(continuation.inspect({ root: dir, delivery }), "report"), { delivery });
+		reports.generate({ root: dir, delivery });
+		const done = continuation.inspect({ root: dir, delivery });
+		assert.equal(done.outcome, "complete", JSON.stringify(done));
+		assert.ok(done.evidence.some((item) => item.path === newPlan || item.path.includes("DHW631-csv-export")), JSON.stringify(done.evidence));
+		// Drift on the new-style spec stops for reconciliation, as for a legacy one.
+		fs.appendFileSync(path.join(dir, newSpec), "\nChanged after plan.\n");
+		const drifted = continuation.inspect({ root: dir, delivery });
+		assert.equal(drifted.outcome, "blocked");
+		assert.ok(drifted.evidence.some((item) => item.diagnostics.some((d) => d.code === "S_SPEC_CHANGED")));
 	});
 	await checkAsync("selector-complete-from-report", async () => {
 		const { dir, id } = await finished();
@@ -316,7 +386,7 @@ async function handoffs() {
 		const as = (task, args) => ({ ...good, task, args });
 		for (const value of [
 			as("plan", { spec }), as("test", { spec, plan, mode: "red", step: "S1" }), as("test", { spec, plan, mode: "gaps" }),
-			as("run", { plan, step: "S12" }), as("check", { scope: "working-tree", spec, plan }), as("report", { delivery: id }),
+			as("run", { plan, step: "S12" }), as("review", { scope: "working-tree", spec, plan }), as("report", { delivery: id }),
 		])
 			assert.equal(continuation.validateResult(value), true, JSON.stringify(value.args));
 		for (const value of [
@@ -324,7 +394,9 @@ async function handoffs() {
 			as("plan", { spec, extra: "x" }), as("plan", { spec: "../outside.md" }), as("plan", { spec: plan }), as("plan", { spec: "ai-factory/specs/a b.md" }), as("plan", {}),
 			as("test", { spec, plan, mode: "red" }), as("test", { spec, plan, mode: "gaps", step: "S1" }), as("test", { spec, plan, mode: "full" }), as("test", { spec: plan, plan, mode: "gaps" }),
 			as("run", { plan, step: "S0" }), as("run", { plan, step: "1" }), as("run", { plan: spec, step: "S1" }), as("run", { plan, step: "S1", mode: "red" }),
-			as("check", { scope: "branch", spec, plan }), as("check", { scope: "working-tree", spec }),
+			as("review", { scope: "branch", spec, plan }), as("review", { scope: "working-tree", spec }),
+			// continue.js names the review task by its current name; the deprecated name is no destination.
+			as("check", { scope: "working-tree", spec, plan }),
 			as("report", { delivery: "d-20260101-000001" }), as("report", { delivery: id, extra: 1 }), as("run", [plan, "S1"]),
 		]) {
 			assert.equal(continuation.validateResult(value), false, `accepted ${value.task} ${JSON.stringify(value.args)}`);
@@ -510,7 +582,7 @@ function entry(host) {
 		["test", { spec: "<spec>", plan: "<plan>", mode: "red", step: "S<N>" }],
 		["test", { spec: "<spec>", plan: "<plan>", mode: "gaps" }],
 		["run", { plan: "<plan>", step: "S<N>" }],
-		["check", { scope: "working-tree", spec: "<spec>", plan: "<plan>" }],
+		["review", { scope: "working-tree", spec: "<spec>", plan: "<plan>" }],
 		["report", { delivery: "<delivery>" }],
 	])
 		assert.ok(task.includes(`\`${continuation.destinationInput(taskName, args)}\``), `task does not state the ${taskName} input ${continuation.destinationInput(taskName, args)}`);
@@ -584,7 +656,7 @@ async function integrations() {
 				const result = invoke(host, "continue", input);
 				assert.notEqual(result.status, 0, result.stdout);
 				assert.match(result.stderr, /TASK=continue.*interactive/s, result.stderr);
-				assert.match(result.stderr, /plan, test, run, check or report/, "the rejection names the destination tasks CI can run");
+				assert.match(result.stderr, /plan, test, run, review or report/, "the rejection names the destination tasks CI can run");
 				assert.equal(fs.existsSync(path.join(dir, "launched")), false, "no CLI is launched");
 				assert.equal(fs.existsSync(path.join(dir, "ai-factory/runs")), false, "no run artifacts are created");
 			}
@@ -628,7 +700,7 @@ async function docs() {
 				["test", { spec: "<spec>", plan: "<plan>", mode: "red", step: "S<N>" }],
 				["test", { spec: "<spec>", plan: "<plan>", mode: "gaps" }],
 				["run", { plan: "<plan>", step: "S<N>" }],
-				["check", { scope: "working-tree", spec: "<spec>", plan: "<plan>" }],
+				["review", { scope: "working-tree", spec: "<spec>", plan: "<plan>" }],
 				["report", { delivery: "<delivery>" }],
 			])
 				assert.ok(text.includes(`\`${continuation.destinationInput(task, args)}\``), `${name} does not state the ${task} destination input`);
@@ -641,8 +713,8 @@ async function docs() {
 			assert.ok(text.includes("/t4:continue") && text.includes("TASK=continue"), `${file} does not document continue and its headless limit`);
 		}
 		const changelog = readIf("CHANGELOG.md");
-		const entry = changelog.split("**Unreleased — delivery 0018")[1]?.split(/\n\*\*Unreleased|\n## /)[0] || "";
-		assert.ok(entry, "CHANGELOG.md has no Unreleased — delivery 0018 entry");
+		const entry = changelog.split("**Delivery 0018**")[1]?.split(/\n\*\*|\n## /)[0] || "";
+		assert.ok(entry, "CHANGELOG.md has no delivery 0018 entry");
 		assert.match(entry, /Template upgrade impact/, "the 0018 entry does not state the template upgrade impact");
 		for (const file of ["tasks/continue.md", "make/continue.js", "models.js", "runner.js", "sync-adapters.js", "AGENTS.md"]) assert.ok(entry.includes(file), `the 0018 upgrade impact does not name ${file}`);
 	});

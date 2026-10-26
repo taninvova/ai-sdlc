@@ -22,7 +22,13 @@ for (const name of fs
 		"skills/ai-layout/templates/ai-factory/agents",
 		name,
 	);
-	if (fs.readFileSync(target, "utf8") === expected) continue;
+	let current = null;
+	try {
+		current = fs.readFileSync(target, "utf8");
+	} catch (error) {
+		if (error.code !== "ENOENT") throw error; // a new agent has no payload yet
+	}
+	if (current === expected) continue;
 	changed = true;
 	if (process.argv.includes("--check"))
 		console.error(`Agent payload is stale: ${name}`);

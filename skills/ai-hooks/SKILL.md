@@ -32,7 +32,7 @@ The plugin registers these hooks globally (hooks/hooks.json). Every script:
 | Event | Script | Writes |
 |---|---|---|
 | SessionStart | session-start.js | ai-factory/runs/sessions.jsonl: session_id, ts, user, branch, plan_in_flight |
-| UserPromptSubmit | log-task.js | ai-factory/runs/.task.&lt;session_id&gt;: the bare name of the `/t4:` command the prompt carried (`spec`, not `/t4:spec`), for the rows written later; nothing at all when it carried none |
+| UserPromptSubmit | log-task.js | ai-factory/runs/.task.&lt;session_id&gt;: the bare name of the `/t4:` command the prompt carried (`spec`, not `/t4:spec`; a deprecated name is written as the task it now names, so `/t4:check` writes `review`), for the rows written later; nothing at all when it carried none |
 | PreToolUse Edit/Write | guard-paths.js | nothing; exit 2 + stderr reason when the target matches ai-factory/docs/dont-touch.md |
 | PreToolUse Bash | log-flush.js | on `git commit` only: moves the rows in ai-factory/runs/log.pending.csv into ai-factory/runs/log.csv and stages it |
 | PostToolUse Edit/Write | log-edit.js | ai-factory/runs/edits.jsonl: session_id, ts, file |

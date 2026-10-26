@@ -27,7 +27,7 @@ export TSV
 export REVIEW_SCOPE GATE_ENFORCE
 export DELIVERY STEP PHASE REQUIRE
 
-.PHONY: ai review ai-sync log-flush clean-runs cost contracts verify delivery-report lifecycle lifecycle-export
+.PHONY: ai review ai-sync log-flush clean-runs cost contracts verify delivery-report lifecycle lifecycle-export ids-check
 ai:
 	@node ai-factory/make/runner.js ai
 review:
@@ -50,3 +50,5 @@ lifecycle:
 	@node ai-factory/make/lifecycle.js report
 lifecycle-export:
 	@node ai-factory/make/lifecycle.js export
+ids-check:
+	@node ai-factory/make/ids.js check

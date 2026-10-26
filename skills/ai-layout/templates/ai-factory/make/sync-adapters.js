@@ -54,8 +54,11 @@ const nativeClaudeCommands = new Set([
 	"explore",
 	"fix",
 	"fleet",
+	"loop",
 	"plan",
 	"report",
+	"review",
+	"risk",
 	"run",
 	"spec",
 	"test",
@@ -72,6 +75,7 @@ const nativeClaudeAgents = new Set([
 	"implementer",
 	"planner",
 	"reviewer",
+	"risk",
 	"specifier",
 	"tester",
 ]);
@@ -210,6 +214,20 @@ try {
 			);
 		}
 	}
+	// A deprecated task name (models.js TASK_ALIASES) keeps a thin Codex skill that runs the task it
+	// now names, while that task exists and no task file still carries the old name. Claude needs no
+	// pointer: the plugin ships the deprecated command natively.
+	if (selected.has("codex"))
+		for (const [alias, name] of Object.entries(models.TASK_ALIASES)) {
+			const file = path.join(tasksDir, `${name}.md`);
+			if (!fs.existsSync(file) || fs.existsSync(path.join(tasksDir, `${alias}.md`))) continue;
+			const body = fs.readFileSync(file, "utf8");
+			const agent = /Delegate to the `([a-z]+)` subagent/.exec(body)?.[1];
+			put(
+				`.codex/skills/t4-${alias}/SKILL.md`,
+				`---\nname: t4-${alias}\ndescription: Deprecated — use $t4-${name}. Runs the ${name} task under its old name\n---\n${models.aliasNotice("codex", alias)}\n\n${models.entryPreamble("codex", name)}\n\nUnless the directive routed the task to a worker, read \`ai-factory/tasks/${name}.md\` and use the user's request as its input.\n${agent ? `Read the complete procedure in \`ai-factory/agents/${agent}.md\`. When native delegation is available, pass that procedure and task input to a delegate. Otherwise run it in this session and label review as a self-check rather than an independent review. This fallback applies only to the legacy and inherit directives.\n` : ""}`,
+			);
+		}
 	if (selected.has("claude")) {
 		for (const name of fs
 			.readdirSync(path.join(root, "ai-factory/agents"))

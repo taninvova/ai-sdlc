@@ -3,7 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const root = path.resolve(__dirname, "../../..");
-const { entryPreamble } = require(path.join(
+const { entryPreamble, aliasNotice, TASK_ALIASES } = require(path.join(
 	root,
 	"skills/ai-layout/templates/ai-factory/make/models.js",
 ));
@@ -29,19 +29,38 @@ for (const name of ["ai-layout", "ai-hooks"]) {
 	);
 }
 const tasks = "skills/ai-layout/templates/ai-factory/tasks";
+function taskBody(name, text, preamble) {
+	const agent = /Delegate to the `([a-z]+)` subagent/.exec(text)?.[1];
+	return (
+		`${preamble}\n\nUnless the directive routed the task to a worker, read \`ai-factory/tasks/${name}.md\` in the user's repository and follow it with the user's request as input. If the workspace is absent, report that it needs the t4-adopt-sdlc skill. If the task is missing from an existing workspace, report it and use t4-sync-sdlc to inspect drift. Do not generate project adapters to run this skill.\n` +
+		(agent
+			? `\nRead the complete procedure in \`ai-factory/agents/${agent}.md\`. When native delegation is available, give that procedure and the task input to a delegate. Otherwise run it in this session and label any review as a self-check, not an independent review. This same-session fallback applies only to the legacy and inherit directives; a routed task never falls back to this session.\n`
+			: "")
+	);
+}
 for (const file of fs
 	.readdirSync(path.join(root, tasks))
 	.filter((f) => f.endsWith(".md"))) {
 	const name = path.basename(file, ".md");
+	if (Object.hasOwn(TASK_ALIASES, name))
+		throw new Error(
+			`Task ${file} uses the deprecated name of ${TASK_ALIASES[name]}; rename the task file`,
+		);
 	const text = fs.readFileSync(path.join(root, tasks, file), "utf8");
-	const agent = /Delegate to the `([a-z]+)` subagent/.exec(text)?.[1];
 	add(
 		`t4-${name}`,
 		/^description: (.+)$/m.exec(text)?.[1] || name,
-		`${entryPreamble("codex", name)}\n\nUnless the directive routed the task to a worker, read \`ai-factory/tasks/${name}.md\` in the user's repository and follow it with the user's request as input. If the workspace is absent, report that it needs the t4-adopt-sdlc skill. If the task is missing from an existing workspace, report it and use t4-sync-sdlc to inspect drift. Do not generate project adapters to run this skill.\n` +
-			(agent
-				? `\nRead the complete procedure in \`ai-factory/agents/${agent}.md\`. When native delegation is available, give that procedure and the task input to a delegate. Otherwise run it in this session and label any review as a self-check, not an independent review. This same-session fallback applies only to the legacy and inherit directives; a routed task never falls back to this session.\n`
-				: ""),
+		taskBody(name, text, entryPreamble("codex", name)),
+	);
+}
+// A deprecated task name (models.js TASK_ALIASES) keeps a thin skill that says it is deprecated and
+// runs the task it now names. Added before the command loop, so commands/<alias>.md adds no second one.
+for (const [alias, name] of Object.entries(TASK_ALIASES)) {
+	const text = fs.readFileSync(path.join(root, tasks, `${name}.md`), "utf8");
+	add(
+		`t4-${alias}`,
+		`Deprecated — use $t4-${name}. Runs the ${name} task under its old name`,
+		taskBody(name, text, `${aliasNotice("codex", alias)}\n\n${entryPreamble("codex", name)}`),
 	);
 }
 for (const file of fs

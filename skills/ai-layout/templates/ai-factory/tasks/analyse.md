@@ -13,8 +13,9 @@ Delegate to the `analyst` subagent.
 - First word `lean` or `questions` — run that mode on the rest of the input.
 - First word `review`, `update` or `explain` — run that mode on the `ai-factory/analyses/` file
   named next; for `update`, everything after the path is the change.
-- Anything else — run `document` mode on the whole input. Output goes to
-  `ai-factory/analyses/<NNNN>-<slug>.md` (create the directory if missing).
+- Anything else — run `document` mode on the whole input. The analyst creates the file with
+  `node ai-factory/make/ids.js new analysis <slug>` and writes into the path it prints, keeping
+  its first two lines unchanged.
 
 Do not change any code, spec or plan in this task, and do not edit any file yourself. Do not
 create anything in an external system or send anything anywhere — documentation authorises

@@ -41,17 +41,28 @@ try {
  // --- AC1: the shipped template, and every value form ----------------------------------------
  const template=fs.readFileSync("skills/ai-layout/templates/ai-factory/models.yaml","utf8");
  const shipped=models.parseModels(template);
- assert.deepEqual(shipped.routing,{present:true,enabled:false,tasks:{}},"the template must ship routing disabled");
- const routed=(enabled,extra="")=>`claude: tool/claude\ncodex: tool/codex\nreview: tool/review\n\nrouting:\n  enabled: ${enabled}   # opt-in\n  tasks:\n    plan:\n      claude: gateway/planning-claude\n      codex: "gateway/planning codex"\n    test:\n      claude: 'gateway/testing ''claude'''\n      codex: gateway/testing-codex # trailing comment\n    check:\n      claude: gateway/review-claude\n      codex:\n    my-custom-task:\n      codex: custom/model\n    fix:\n${extra}\npricing:\n  default: { input: 3, output: 15 }\n  gateway/planning-claude: { input: 1, output: 2 }\n`;
+ assert.deepEqual(shipped.routing,{present:true,enabled:false,tasks:{risk:{claude:"claude-opus-5-5",codex:""}},aliased:[]},"the template must ship routing disabled, with only the risk entry (spec 0023 AC32)");
+ // Spec 0023 AC33: the shipped risk entry has no effect while routing is disabled.
+ configure(template);
+ for(const tool of ["claude","codex"]) {
+  const s=select(tool,"risk");
+  assert.deepEqual([s.model,s.source,s.fallback,s.routing_enabled],["","cli-default",null,false],`${tool} risk under the shipped template`);
+ }
+ // Turned on, it routes Claude and the blank codex entry falls back, disclosed.
+ configure(template.replace(/^  enabled: false$/m,"  enabled: true"));
+ assert.deepEqual([select("claude","risk").model,select("claude","risk").source],["claude-opus-5-5","task"]);
+ assert.deepEqual([select("codex","risk").model,select("codex","risk").source,select("codex","risk").fallback],["","cli-default","no codex model for risk"]);
+ const routed=(enabled,extra="")=>`claude: tool/claude\ncodex: tool/codex\nreview: tool/review\n\nrouting:\n  enabled: ${enabled}   # opt-in\n  tasks:\n    plan:\n      claude: gateway/planning-claude\n      codex: "gateway/planning codex"\n    test:\n      claude: 'gateway/testing ''claude'''\n      codex: gateway/testing-codex # trailing comment\n    review:\n      claude: gateway/review-claude\n      codex:\n    my-custom-task:\n      codex: custom/model\n    fix:\n${extra}\npricing:\n  default: { input: 3, output: 15 }\n  gateway/planning-claude: { input: 1, output: 2 }\n`;
  const parsed=models.parseModels(routed("true"));
  assert.deepEqual(parsed.routing.tasks,{
   plan:{claude:"gateway/planning-claude",codex:"gateway/planning codex"},
   test:{claude:"gateway/testing 'claude'",codex:"gateway/testing-codex"},
-  check:{claude:"gateway/review-claude",codex:""},
+  review:{claude:"gateway/review-claude",codex:""},
   "my-custom-task":{codex:"custom/model"},
   fix:{},
  });
  assert.equal(parsed.routing.enabled,true);
+ assert.deepEqual(parsed.routing.aliased,[],"a current task name is no alias");
  assert.equal(parsed.claude,"tool/claude");
 
  // --- AC3/AC5: enabled resolution and its sources -------------------------------------------
@@ -61,9 +72,11 @@ try {
   ["codex","plan","gateway/planning codex","task",null],
   ["claude","test","gateway/testing 'claude'","task",null],
   ["codex","test","gateway/testing-codex","task",null],
-  ["claude","check","gateway/review-claude","task",null],
-  ["codex","check","tool/review","review-default","no codex model for check"],
   ["claude","review","gateway/review-claude","task",null],
+  ["codex","review","tool/review","review-default","no codex model for review"],
+  // check is the deprecated name of review: it selects review's mapping and records review.
+  ["claude","check","gateway/review-claude","task",null],
+  ["codex","check","tool/review","review-default","no codex model for review"],
   ["claude","my-custom-task","tool/claude","tool-default","no claude model for my-custom-task"],
   ["codex","my-custom-task","custom/model","task",null],
   ["claude","fix","tool/claude","tool-default","no claude model for fix"],
@@ -75,7 +88,7 @@ try {
   assert.equal(s.source,source,`${tool} ${task} source`);
   assert.equal(s.fallback,fallback,`${tool} ${task} fallback`);
   assert.equal(s.routing_enabled,true);
-  assert.equal(s.task,task==="review"?"check":task);
+  assert.equal(s.task,task==="check"?"review":task);
   assert.match(s.config_digest,/^[0-9a-f]{12}$/);
   assert.equal(s.schema,"t4.model-selection.v1");
  }
@@ -108,7 +121,32 @@ try {
   const s=select(tool,task);
   assert.deepEqual([s.model,s.source,s.fallback,s.routing_enabled],[`tool/${tool}`,"tool-default",null,false]);
  }
+ assert.deepEqual([select("codex","review").model,select("codex","review").source],["tool/review","review-default"]);
  assert.deepEqual([select("codex","check").model,select("codex","check").source],["tool/review","review-default"]);
+
+ // --- deprecated routing key: an adopted repo's routing.tasks.check is read as review ----------
+ const legacy=`claude: tool/claude\ncodex: tool/codex\nreview: tool/review\nrouting:\n  enabled: true\n  tasks:\n    check:\n      claude: gateway/legacy-review\n    plan:\n      claude: gateway/planning-claude\n`;
+ configure(legacy);
+ const legacyParsed=models.parseModels(legacy);
+ assert.deepEqual(legacyParsed.routing.tasks,{review:{claude:"gateway/legacy-review"},plan:{claude:"gateway/planning-claude"}},"check: is stored as review");
+ assert.deepEqual(legacyParsed.routing.aliased,["check"]);
+ for(const task of ["review","check"]) {
+  const s=select("claude",task);
+  assert.deepEqual([s.task,s.model,s.source],["review","gateway/legacy-review","task"],`${task} under a legacy check: key`);
+ }
+ assert.deepEqual([select("codex","review").model,select("codex","review").source,select("codex","review").fallback],["tool/review","review-default","no codex model for review"]);
+ fs.mkdirSync(path.join(payload,"tasks"),{recursive:true});
+ fs.writeFileSync(path.join(payload,"tasks/review.md"),"Delegate to the `reviewer` subagent.\n");
+ fs.writeFileSync(path.join(payload,"tasks/plan.md"),"Plan.\n");
+ const findings=models.doctor(scratch,{}).filter(([level])=>level==="finding").map(([, ,text])=>text);
+ assert.ok(findings.some(text=>/routing\.tasks\.check uses the deprecated name of review and is read as routing\.tasks\.review — rename the key to review/.test(text)),`doctor suggests the rename: ${JSON.stringify(findings)}`);
+ assert.ok(!findings.some(text=>/no ai-factory\/tasks\/<task>\.md/.test(text)),"a legacy key is no orphan mapping once review.md exists");
+ // The finding stands while routing is off too: the key is still read when it is turned on.
+ configure(legacy.replace("enabled: true","enabled: false"));
+ assert.ok(models.doctor(scratch,{}).some(([level,,text])=>level==="finding"&&/deprecated name of review/.test(text)));
+ configure(routed("true"));
+ assert.ok(!models.doctor(scratch,{}).some(([,,text])=>/deprecated name/.test(text)),"no finding for a current key");
+ fs.rmSync(path.join(payload,"tasks"),{recursive:true});
 
  // --- AC7: invalid configuration names its line and never selects a model -------------------
  const invalid=[
@@ -125,7 +163,8 @@ try {
   ["routing:\n  tasks:\n    plan: { claude: x }\n",/line 3/],
   ["routing:\n  tasks: { plan: x }\n",/line 2: routing.tasks must be an indented mapping/],
   ["routing: { enabled: true }\n",/line 1: routing must be an indented mapping/],
-  ["routing:\n  tasks:\n    review:\n      claude: x\n",/line 3: map `check`, not `review`/],
+  ["routing:\n  tasks:\n    review:\n      claude: x\n    check:\n      codex: y\n",/line 5: duplicate task `review`: `check` is its deprecated name, so map only `review`/],
+  ["routing:\n  tasks:\n    check:\n      claude: x\n    review:\n      codex: y\n",/line 5: duplicate task `review`/],
   ["routing:\n  tasks:\n    Plan:\n      claude: x\n",/line 3: invalid task name/],
   ["routing:\n  tasks:\n    plan:\n      claude: [a, b]\n",/Unsupported model syntax on line 4/],
   ["routing:\n  tasks:\n    plan:\n      claude: |\n",/Unsupported model syntax on line 4/],
@@ -151,6 +190,6 @@ try {
  // Missing is not invalid: a task mapping that is absent falls back; a missing file inherits.
  fs.unlinkSync(path.join(payload,"models.yaml"));
  assert.deepEqual([select("codex","plan").model,select("codex","plan").source,select("codex","plan").routing_enabled],["","cli-default",false]);
- console.log("PASS: parser (template, quoting, comments, custom tasks, pricing kept), 11-row enabled matrix with fallback sources, overrides, disabled and absent routing unchanged, 28 invalid configurations rejected by line");
+ console.log("PASS: parser (template with the risk entry, quoting, comments, custom tasks, pricing kept), 13-row enabled matrix with fallback sources, deprecated check key read as review with a doctor finding, overrides, disabled and absent routing unchanged, 29 invalid configurations rejected by line");
 } finally {fs.rmSync(scratch,{recursive:true,force:true});}
 NODE

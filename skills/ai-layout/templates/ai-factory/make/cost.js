@@ -184,10 +184,15 @@ function day(ts) {
 	return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : UNATTRIBUTED;
 }
 
+// Rows are never rewritten, so a row logged under a deprecated task name (`check`, renamed `review`)
+// is grouped under the task's current name; the alias table is models.js's, never a copy.
+const { canonicalTask } = require("./models.js");
+
 function keyOf(r, dim) {
 	if (dim === "day") return day(field(r, "ts"));
 	const v = String(field(r, dim === "session" ? "session_id" : dim) ?? "");
-	return v === "" ? UNATTRIBUTED : v;
+	if (v === "") return UNATTRIBUTED;
+	return dim === "task" ? canonicalTask(v) : v;
 }
 
 // Recomputed from the summed tokens, NEVER averaged across rows. `hit_rate` is a ratio, and the

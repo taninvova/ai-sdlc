@@ -3,7 +3,7 @@
 How to install it, what each command is for, and the order to run them in.
 
 The plugin gives you three things: an `ai-factory/` directory in your repo that holds the project's
-context and prompts, native slash commands that read its procedures, and eight agents. Everything a command
+context and prompts, native slash commands that read its procedures, and nine agents. Everything a command
 does is written in a file you can read and change — `ai-factory/tasks/<name>.md`. If a command keeps
 needing steering in chat, the prompt is missing a line; fix the prompt, don't repeat yourself.
 
@@ -51,7 +51,7 @@ prerequisite wins:
 | first unfinished step declares red, no red evidence, not started | test | `<spec> <plan> red S<N>` |
 | first unfinished step, including interrupted, part-done or failed last run | run | `<plan> S<N>` |
 | all steps done, `gaps_tested=no` | test | `<spec> <plan> gaps` |
-| `gaps_tested=yes` and a required review missing, or the review stale | check | `working-tree <spec> <plan>` |
+| `gaps_tested=yes` and a required review missing, or the review stale | review | `working-tree <spec> <plan>` |
 | evaluation ready, no matching completion report | report | `<delivery>` |
 
 **Clarifications.** Evidence cannot show whether gaps testing ran (`clarify: gaps_tested`), or
@@ -137,7 +137,7 @@ that decides whether any of the rest is worth running:
 
 An agent with a placeholder `architecture.md` produces placeholder-quality work.
 
-Restart the session (or `/reload-plugins`) after a plugin update to load all 22 `/t4:*` commands.
+Restart the session (or `/reload-plugins`) after a plugin update to load all 25 `/t4:*` commands.
 
 ---
 
@@ -167,7 +167,7 @@ it exposes, explore decides **how** to build it in one repo whose home is alread
 ## 4. The main loop
 
 ```
-/t4:spec  →  /t4:plan  →  /t4:test red  →  /t4:run ×N  →  /t4:test gaps  →  /t4:check  (→ /t4:report)
+/t4:spec  →  /t4:plan  →  /t4:test red  →  /t4:run ×N  →  /t4:test gaps  →  /t4:review  (→ /t4:report)
 ```
 
 A worked example — adding CSV export to a reports page:
@@ -193,11 +193,12 @@ A worked example — adding CSV export to a reports page:
     → implements step 1 only, verifies the declared phase, ticks the verified checkbox
 
     …repeat per step, one at a time…
+      (or /t4:loop ai-factory/plans/0007-csv-export.md: every remaining step, then one /t4:review)
 
 /t4:test gaps ai-factory/specs/0007-csv-export.md
     → covers any AC that ended up with no test
 
-/t4:check
+/t4:review
     → the reviewer agent on the selected diff; JSON verdict
 
 /t4:report d-20260930-1a2b3c          (artifact contracts enabled)
@@ -210,6 +211,24 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
 ### The rules that make it work
 
 - **One named step per `/t4:run`.** It is told not to start the next one. Let it stop.
+- **`/t4:loop <plan>` is the one exception.** `/t4:loop` is the opt-in exception to one step per
+  `/t4:run`, recorded in [ADR ETT683](../adr/ETT683-loop-halt-and-commit-exceptions.md):
+  one invocation implements every unticked step of one plan, then runs `/t4:review` once.
+  `/t4:run` is unchanged and still stops after one step. The loop halts only on a failure, a
+  conflict or a timeout, and never commits on your branch. Its only commits sit on temporary
+  branches in its own worktrees, and each step's change comes back to your tree uncommitted.
+  - **Steps and dependencies.** A plan step may carry `Depends on: N, M`. A step without that
+    line waits for every earlier step. The whole plan is validated before any step starts.
+  - **Worktrees.** Ready steps run concurrently, up to `--max-parallel` (1–8, default 3), each in
+    a git worktree under `ai-factory/runs/tmp/worktrees/`. A step running alone runs in the main
+    tree. On Codex the steps run one at a time, and `--step-timeout` (1–240 minutes, default 30)
+    is not enforced there.
+  - **Keep tools out of the worktrees.** Test, lint and typecheck tools must exclude
+    `ai-factory/runs/tmp/worktrees/`, because a worktree holds a full copy of the repository.
+    `/t4:review`, the review scope and the hooks already skip it.
+  - **After a stop.** Worktrees kept after a failure, conflict or timeout are yours to inspect
+    and remove (`git worktree remove <path>`, then `git branch -D` its `t4-loop/…` branch). Resume
+    the plan one step at a time with `/t4:run`, or with `/t4:continue <delivery id>`.
 - **Back after time away? `/t4:state` before `/t4:run`.** It lists the specs and plans still
   outstanding, each outstanding plan with its incomplete steps, so you pick the next step up from
   the artefacts on disk rather than from what you remember of the last session. Read-only — it
@@ -218,6 +237,10 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
   ticking it. `--done` labels plans resolved partly by withdrawal as `closed`, not `complete`;
   blocked or deferred steps without such a record stay pending. This reports recorded work,
   not proof of acceptance criteria. Quoted or fenced examples never withdraw a step.
+  `--specs` or `--plans` narrows the listing to one kind, and either combines with `--done` or
+  `--next`. `--spec <id>` lists one spec and the plans whose `**Spec:**` line names it — on
+  its own whatever their state, so a finished spec is shown rather than answered with "nothing
+  outstanding"; add `--done`, `--next`, `--specs` or `--plans` to narrow that further.
   With contracts enabled, `/t4:state --delivery <id>` shows one delivery's evidence instead; see
   *Delivery status* below.
 - **Plan when risk or uncertainty warrants it.** File count alone does not determine the workflow.
@@ -250,7 +273,7 @@ and exclude generated test output. `/t4:sync-sdlc` offers the same opt-in.
 | `/t4:plan` | each step names its ACs and ``Verify (red\|step\|final): `command` `` checks; `init plan` rejects uncovered ACs or missing checks |
 | `/t4:test … red` | `make verify DELIVERY=<id> STEP=S1 PHASE=red` proves the new tests fail |
 | `/t4:run … step N` | `make verify DELIVERY=<id> STEP=SN`; the box is ticked only on passing evidence; the last step adds `PHASE=final` |
-| `/t4:check` | reports every artifact that is not valid as a finding; headless `make review DELIVERY=<id>` records review evidence |
+| `/t4:review` | reports every artifact that is not valid as a finding; headless `make review DELIVERY=<id>` records review evidence |
 | `/t4:quick` | the checklist goes to `ai-factory/quick/<slug>.md` as `QC1…` items, finished by `make verify DELIVERY=<id>` |
 
 (`make` here is `make -f ai-factory/make/ai.mk`.)
@@ -478,27 +501,30 @@ the three states a repo is in, and `/t4:sync-sdlc` stops and points here rather 
 | Command | Use it when | Writes | Never does |
 |---|---|---|---|
 | `/t4:fleet` | once per repo, then when a service or contract changes | `ai-factory/docs/fleet.md` | ask anything in CI — it fills what it can and marks the rest TBD |
-| `/t4:design <capability>` | the capability spans services or changes a contract | `ai-factory/designs/NNNN-*.md` | write specs, plans or code |
-| `/t4:design review <plan>` | a plan crosses a boundary or adds a dependency | nothing — JSON verdict | review correctness or style; that is `/t4:check` |
-| `/t4:adr <decision>` | any decision that outlives the change, **every new dependency** | `ai-factory/adr/NNNN-*.md` | reopen a decision an accepted ADR settled |
-| `/t4:analyse <feature description>` | the request is a business description — actors, rules, permissions, a lifecycle, undecided policy | `ai-factory/analyses/NNNN-*.md` | write specs, plans or code; invent policy, estimates or approvals; create anything outside the repo |
-| `/t4:explore <request>` | the request could be built more than one way | `ai-factory/explorations/NNNN-*.md` | change code |
-| `/t4:spec <feature>` | you know what to build, not yet how | `ai-factory/specs/NNNN-*.md` | write the plan or the code |
-| `/t4:plan <spec>` | the spec's open questions are answered | `ai-factory/plans/NNNN-*.md` | change code |
+| `/t4:design <capability>` | the capability spans services or changes a contract | `ai-factory/designs/<ID>-*.md` | write specs, plans or code |
+| `/t4:design review <plan>` | a plan crosses a boundary or adds a dependency | nothing — JSON verdict | review correctness or style; that is `/t4:review` |
+| `/t4:adr <decision>` | any decision that outlives the change, **every new dependency** | `ai-factory/adr/<ID>-*.md` | reopen a decision an accepted ADR settled |
+| `/t4:analyse <feature description>` | the request is a business description — actors, rules, permissions, a lifecycle, undecided policy | `ai-factory/analyses/<ID>-*.md` | write specs, plans or code; invent policy, estimates or approvals; create anything outside the repo |
+| `/t4:explore <request>` | the request could be built more than one way | `ai-factory/explorations/<ID>-*.md` | change code |
+| `/t4:spec <feature>` | you know what to build, not yet how | `ai-factory/specs/<ID>-*.md` | write the plan or the code |
+| `/t4:plan <spec>` | the spec's open questions are answered | `ai-factory/plans/<ID>-*.md` | change code |
+| `/t4:risk <spec, plan or change>` | a spec, plan or change touches authorization, data, secrets, dependencies, migrations or rollback and you want its threats and delivery risks on record | `ai-factory/risks/<ID>-*.md` — a spec and its plan share the spec's ID; a later run appends a dated Reassessment | change code, accept a finding for you, or gate anything |
 | `/t4:test red <spec>` | before implementing | test files | touch production code — if a test needs a change there, it stops and says so |
 | `/t4:run <plan> step N` | implementing, one step at a time | code + tests | start step N+1 |
+| `/t4:loop <plan>` | every remaining step of one plan in one go, independent steps in parallel, then one `/t4:review` | code + tests, each step's change applied back uncommitted and ticked | commit on your branch, push, reset your tree, run `/t4:test` or remove a kept worktree |
 | `/t4:test gaps <spec>` | after the steps are done | test files | weaken an assertion to reach green |
 | `/t4:fix <bug>` | something is broken | a failing test first, then the fix | refactor anything unrelated |
 | `/t4:start <request>` | choose the appropriate existing entry | short explanation and one handoff with original input | implement in the classifier, resume or chain delivery phases |
 | `/t4:continue <delivery id>` | resume a contracts-enabled planned delivery | nothing itself — explains the next evidence-backed action and hands off to one existing task | write artifacts or evidence, run checks, reconcile a changed spec, or chain a second task |
 | `/t4:quick <change>` | a small understood local change | code, meaningful tests, checklist report | change public contracts or silently widen scope |
 | `/t4:chore <change>` | small maintenance, no behaviour change | code + tests | change behaviour beyond the request |
-| `/t4:check` | before committing | nothing — JSON verdict | fix anything it finds |
+| `/t4:review` | before committing | nothing — JSON verdict | fix anything it finds |
+| `/t4:check` | deprecated name of `/t4:review`; says so, then runs the review task | as `/t4:review` | as `/t4:review` |
 | `/t4:report <delivery id>` | after review, or any time you need to know where a delivery stands (contracts enabled) | `ai-factory/reports/<id>/completion.{md,json}` | run checks, edit artifacts or publish anything — its MR text is a draft |
 
 ### The agents
 
-Eight subagents do the work the commands delegate. Each is deliberately narrow. Four run the
+Nine subagents do the work the commands delegate. Each is deliberately narrow. Four run the
 loop steps, so that each step starts from its artefacts and not from the chat that produced
 them; the session keeps what only a session can do — refuse an empty argument, ask a question,
 resolve a tracker key, relay the report:
@@ -514,7 +540,7 @@ resolve a tracker key, relay the report:
   ticks the box only when green. Red, or a test it cannot find: stops and explains. Never the
   next step, never a knowledge source, and the dont-touch guard blocks it like anyone else.
 
-Four stand outside the loop's steps:
+Five stand outside the loop's steps:
 
 
 - **`reviewer`** — reads the selected diff against the spec, plan and standards. Read-only,
@@ -531,6 +557,12 @@ Four stand outside the loop's steps:
   scenarios and traceability. Labels every statement a supplied fact, assumption, proposal
   or open question and never lets one become another. Invents no policy, estimate, approval
   or existing architecture. Writes `ai-factory/analyses/` only.
+- **`risk`** — `/t4:risk`: assesses one spec, plan or change for security threats and delivery
+  risk across eight categories, and records each finding with its severity, status, evidence
+  and mitigation in `ai-factory/risks/`. It alone may run network dependency-audit tools
+  ([ADR DJX496](../adr/DJX496-risk-agent-network-audit.md)); without them it records the
+  category as not assessed. Never sets `accepted`, never code. The specifier, planner and
+  reviewer act on the latest section of an assessment that applies.
 
 Their project copies live in `ai-factory/agents/` — add project-specific checks there, not to the
 plugin.
@@ -538,7 +570,7 @@ plugin.
 ### External knowledge, read-only
 
 Declare a source in `ai-factory/knowledge_base.md` — one table with `name`, `kind` and `use` — and the
-explorer, specifier, planner, analyst, architect and reviewer agents read it. Every fact
+explorer, specifier, planner, analyst, architect, reviewer and risk agents read it. Every fact
 they take from it is labelled with the source's name and *external, unverified*, ranks below the
 code and an accepted ADR, and a disagreement becomes an open question. Nothing is ever written
 back. A source that cannot be reached — Codex, headless, not attached — is one line in the
@@ -553,17 +585,46 @@ declares nothing sees no change at all. `/t4:adopt-sdlc` offers to declare one (
 
 ```
 make -f ai-factory/make/ai.mk ai TASK=chore INPUT="bump the node version"
-make -f ai-factory/make/ai.mk ai TASK=check INPUT_FILE=some.diff
+make -f ai-factory/make/ai.mk ai TASK=review INPUT_FILE=some.diff
 make -f ai-factory/make/ai.mk review # staged, unstaged and nonignored untracked changes
 ```
+
+`TASK=review` runs the review task on the input you give it, like any other task. The `review`
+target is the independent review: it selects the change itself, runs the same task, gates the
+verdict and, with `DELIVERY=<id>`, records review evidence. `TASK=check`, the deprecated name,
+still runs the review task and says so on stderr.
 
 Set `REVIEW_SCOPE=branch` for committed branch review. Supplied input wins over automatic
 selection. The run records the reviewed scope and paths; the gate consumes that exact output.
 `GATE_ENFORCE=1` requires a valid `approve` result with no blockers. Missing or malformed
 results, `request_changes`, and invalid enforcement values fail. Unset or `0` is advisory.
-Explicit `MODEL` wins; `MODEL=` requests CLI inheritance. Otherwise check/review uses
+Explicit `MODEL` wins; `MODEL=` requests CLI inheritance. Otherwise the review task uses
 `review:`, the tool default, then CLI inheritance. `CMD` selects a single executable,
 not a shell fragment. Neither a root Makefile nor project adapters are required.
+
+**`TASK=loop`.** `make -f ai-factory/make/ai.mk ai TASK=loop INPUT="<plan number or path>"` runs
+`/t4:loop` headless. It asks no question: where an interactive loop would ask, it reports and
+stops. The runner starts the loop before launching a host, so a usage error or an invalid plan
+launches nothing, and an input naming no single plan prints the candidates and exits 0. The exit
+code comes from the loop's outcome record, never from the host's prose; a missing record exits 1,
+and a valid record's code stands even when the host exits non-zero after writing it. `INPUT` is
+split at whitespace into words with no quoting, and so is the content of `INPUT_FILE`, so a plan
+path containing a space cannot be selected headless: name that plan by its number (`INPUT=0022`).
+
+| Code | Meaning |
+|---|---|
+| `0` | every step ticked and the review ran; without `GATE_ENFORCE=1` the verdict is reported but changes nothing |
+| `1` | a step failed or timed out |
+| `2` | usage error: an unknown option or a value out of range |
+| `3` | plan validation failed: a missing `Depends on:` reference, a cycle, or a withdrawn step left unticked |
+| `4` | a merge conflict, a refused apply or a failed worktree snapshot copy |
+| `5` | with `GATE_ENFORCE=1`, the review verdict is anything but a valid `approve` with no blockers |
+
+When a run hits several causes, the code is picked by priority: 4, then 1, then 5. The report
+lists every cause in the order it happened. **The `make` caveat:** GNU make exits 2 whenever a
+recipe fails, so `make ai TASK=loop` returns 0 on success and reports every failure as 2. Only
+`TASK=loop INPUT="…" node ai-factory/make/runner.js ai` returns the distinct codes 1 to 5; call it
+directly when CI must tell the causes apart.
 
 With artifact contracts enabled, CI can gate on the handoff chain as well:
 
@@ -596,8 +657,9 @@ routing:
       codex: gateway/testing-codex
 ```
 
-Task names are the files in `ai-factory/tasks/`, custom ones included. `make review` runs the
-`check` task, so map `check`; `review` is rejected under `tasks:`. Aliases are passed verbatim and
+Task names are the files in `ai-factory/tasks/`, custom ones included. `make review` and
+`TASK=review` both run the `review` task, so map `review`. `check`, its deprecated name, is still
+read as `review` and doctor suggests the rename; mapping both is an error. Aliases are passed verbatim and
 select a model, not a provider — endpoints, keys and gateways stay in each tool's own configuration.
 
 The model is resolved once per task, first match wins:
@@ -607,7 +669,7 @@ The model is resolved once per task, first match wins:
 | 1 | explicit | `MODEL=<id>` | `/t4:plan --task-model=<id> -- <input>` |
 | 2 | explicit inherit | `MODEL=` on the command line | `--task-model=inherit` |
 | 3 | task default | `routing.tasks.<task>.<tool>`, when enabled and not blank | same |
-| 4 | review default | `review:`, for `check` only | same |
+| 4 | review default | `review:`, for `review` only | same |
 | 5 | tool default | `claude:` or `codex:` | same |
 | 6 | CLI default | no model argument; the tool's own configuration | the session's model |
 
@@ -635,7 +697,7 @@ unavailable workers, stale adapters and invalid classification results stop with
 **Continue model scope.** Continuation never routes to a worker: selection and its one handoff run
 in the invoking session whatever `routing.tasks.continue` says, and doctor reports such a mapping
 as ignored. Its dispatch directive is `session` (or `legacy` with routing off). The one destination
-runs under its own mapping, so map `plan`, `test`, `run`, `check` or `report` instead. A concrete
+runs under its own mapping, so map `plan`, `test`, `run`, `review` or `report` instead. A concrete
 continue `--task-model=<id>` is blocked before inspection; `inherit` is accepted.
 
 **Interactive.** A routed task runs in a worker agent pinned to the selected model; the chat
@@ -888,7 +950,7 @@ mid-session is not yet running.
 ```
 once:      /t4:adopt-sdlc  →  /t4:fleet  →  fill in ai-factory/docs/*
 per change: /t4:design? → /t4:analyse? → /t4:explore? → /t4:spec → /t4:plan
-            → /t4:test red → /t4:run ×N → /t4:test gaps → /t4:check
+            → /t4:test red → /t4:run ×N → /t4:test gaps → /t4:review
             → /t4:report (with contracts)  →  commit ai(<task>): …  →  MR labelled ai-assisted
 per dependency or lasting decision: /t4:adr
 opt-in:    node ai-factory/make/contracts.js enable  ·  "lifecycle": {"enabled": true} in contracts/config.json

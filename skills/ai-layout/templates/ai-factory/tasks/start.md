@@ -16,7 +16,8 @@ Return exactly one JSON object, without Markdown fences or surrounding prose:
 - Clarification: {"status":"question","reason":"Smallest necessary question"}
 - Cannot proceed: {"status":"blocked","reason":"Problem and adoption or drift guidance"}
 Use only these fields. Reason is nonempty and at most 1000 characters. Never return commands,
-rewritten input, model options, or a next-phase chain.
+rewritten input, model options, or a next-phase chain. The one exception is the optional
+/t4:risk mention that rule 3 allows in reason; it is never the routed task.
 
 1. Empty input: return question asking for the change and expected result. Missing workspace or
    required procedure: return blocked with adoption/drift guidance; never silently repair it.
@@ -25,7 +26,9 @@ rewritten input, model options, or a next-phase chain.
    not routine implementation decisions.
 3. Apply risk before size: uncertain requirements, authorization, public contracts, migrations,
    dependencies or service ownership require normal planned work. Even a one-line defect or
-   maintenance request must not use a shortcut when it carries those risks.
+   maintenance request must not use a shortcut when it carries those risks. Only when one of
+   these risk triggers is present, reason names /t4:risk as an optional next step for a security
+   and delivery risk assessment; with no risk trigger, reason never names it.
 4. For understood low-risk work choose fix for a reproducible defect; chore for explicit cleanup
    or maintenance such as removing unused helpers, with no behavior drift; otherwise quick for an
    understood local change. A requested user-facing wording, heading or label change is quick,

@@ -16,7 +16,9 @@ learn from your report that the mechanism is there.
 Delegate to the `specifier` subagent with this instruction: write the spec for the request
 below (with the resolved key and description, when there is one). Read ai-factory/AGENTS.md,
 ai-factory/docs/architecture.md, and the exploration and analysis for this feature if either exists;
-write ai-factory/specs/<NNNN>-<slug>.md with a title and summary, `Ticket: <key>` only when a key was
+create the spec with `node ai-factory/make/ids.js new spec <slug>`, passing `--id` with a
+new-style parent's ID as the specifier's procedure says, and write into the path it prints,
+keeping its first two lines unchanged: a summary, `Ticket: <key>` only when a key was
 handed over, the user story, Given/When/Then criteria numbered AC1… that each stand on their
 own, out of scope, open questions, and data, routes and components touched; what a description
 leaves implicit is an open question, never a criterion; write no code and no plan. Return its

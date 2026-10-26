@@ -23,11 +23,12 @@ review:
 #   1. explicit MODEL=<id> (headless) or --task-model=<id> (interactive)
 #   2. explicit MODEL= (headless) or --task-model=inherit (interactive): the CLI's own model
 #   3. routing.tasks.<task>.<tool>, when enabled and not blank
-#   4. review: above, for check (make review runs check)
+#   4. review: above, for the review task (make review and TASK=review both run it)
 #   5. the tool's entry above
 #   6. the CLI's own configuration
-# Task names are the files in ai-factory/tasks/ (plan, test, run, check, quick, fix, …); map
-# `check`, not `review`. A missing or blank entry falls back and says so. Aliases are passed
+# Task names are the files in ai-factory/tasks/ (plan, test, run, review, quick, fix, …). `check`,
+# the deprecated name of review, is still read as review (doctor suggests the rename); mapping both
+# is an error. A missing or blank entry falls back and says so. Model aliases are passed
 # verbatim: they select a model, not a provider — endpoints and keys stay in the tool.
 # After changing routing, run `bash ai-factory/make/sync-adapters.sh --adapters=routing` and
 # restart the session; interactive tasks stop with that instruction until you do.
@@ -35,6 +36,10 @@ review:
 routing:
   enabled: false
   tasks:
+    # /t4:risk: a threat assessment is worth the strongest model. codex: blank is the host default.
+    risk:
+      claude: claude-opus-5-5
+      codex:
 # Delete only the leading # to use an example; the indentation is already right.
 #    plan:
 #      claude: gateway/planning-claude

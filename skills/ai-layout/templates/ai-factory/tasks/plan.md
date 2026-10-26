@@ -2,12 +2,17 @@
 description: Turn a spec into an ordered implementation plan with checkboxes
 argument-hint: <spec path>
 ---
-Delegate to the `planner` subagent with this instruction: turn the spec named below into
-ai-factory/plans/<NNNN>-<slug>.md, same number as the spec. Read ai-factory/AGENTS.md, ai-factory/docs/architecture.md,
-ai-factory/docs/coding-standards.md, the spec and the relevant ai-factory/skills/; write the goal and spec
-link, files to create or modify with one line each on why, server versus client components,
+Delegate to the `planner` subagent with this instruction: turn the spec named below into one
+plan, created with `node ai-factory/make/ids.js new plan <slug> --id <spec ID>` and written into
+the path it prints, keeping its first two lines unchanged; if the helper exits 3, report the
+existing plan's path and write nothing. Read ai-factory/AGENTS.md, ai-factory/docs/architecture.md,
+ai-factory/docs/coding-standards.md, the spec and the relevant ai-factory/skills/; write the goal and a
+`**Spec:**` line naming the spec's path, files to create or modify with one line each on why, server versus client components,
 steps as `- [ ] Step N — …` each small enough for one `/t4:run`, naming the tests that prove
-it and its verification phase (`red`, `step`, or `final`). Record expected-red test identities
+it and its verification phase (`red`, `step`, or `final`). An optional `Depends on: N, M` line
+in a step's indented body, step numbers only, names the steps it needs; a step without it waits
+for all earlier steps. Write it where steps are independent, referring only to existing earlier
+step numbers and never forming a cycle. Record expected-red test identities
 and causes; scope red tests to the next step unless whole-plan coverage was requested. Include
 risks and how each is checked, and the exact verification commands; change no code. Return
 its report unchanged: the plan path and anything in the spec that made planning ambiguous.

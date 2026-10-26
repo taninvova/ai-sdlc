@@ -10,10 +10,10 @@ require("./_common").runHook(() => {
 	// The parent `transcript_path` is never opened. Every field comes from the payload, from
 	// `agent_transcript_path`, or from `cwd` — so an unreadable or absent parent transcript costs this
 	// row nothing, and the event adds exactly one transcript read to the turn.
-	const { readEvent, aiDir, user, branch, task, path } = require("./_common");
+	const { readEvent, logDir, user, branch, task, path } = require("./_common");
 	const { claims, sumTranscript, price } = require("./_usage");
 	const ev = readEvent();
-	const ai = aiDir(ev);
+	const ai = logDir(ev);
 	if (!ai) return;
 	const cwd = ev.cwd || process.cwd();
 	if (!ev.agent_transcript_path) return;

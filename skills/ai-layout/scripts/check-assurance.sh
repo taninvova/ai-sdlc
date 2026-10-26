@@ -386,7 +386,7 @@ check("policy", "safe-paths", () => {
 
 // --- runtime (Step 2): gate, runner, completion evidence and reports ---------------------------
 // Each case is a disposable Git repository built from the contract fixtures with the whole make/
-// directory, a check task and a fake host CLI that records each launch and returns a canned review.
+// directory, a review task and a fake host CLI that records each launch and returns a canned review.
 const FIXTURES = path.resolve("skills/ai-layout/fixtures/contracts");
 // Canonical procedures: the task templates and the plugin's own agents (the template agents are
 // these plus the Project additions section, kept in step by materialize-agents.js).
@@ -419,7 +419,7 @@ function workspace(fixture, { preset, contracts = !preset, procedures = false } 
 		fs.cpSync(TASKS, path.join(dir, "ai-factory/tasks"), { recursive: true });
 		fs.cpSync(TEMPLATE_AGENTS, path.join(dir, "ai-factory/agents"), { recursive: true });
 	} else {
-		write(dir, "ai-factory/tasks/check.md", "Return exactly one review JSON object.\n");
+		write(dir, "ai-factory/tasks/review.md", "Return exactly one review JSON object.\n");
 		write(dir, "ai-factory/tasks/quick.md", "Quick task fixture.\n");
 	}
 	write(dir, "ai-factory/models.yaml", "claude:\ncodex:\nreview:\n");
@@ -721,7 +721,7 @@ const COMPLETE = "`node ai-factory/make/assurance.js complete <id>`";
 const REVIEW = "`make -f ai-factory/make/ai.mk review DELIVERY=<id>`";
 const NO_REVIEW_RUN = "Never run `make -f ai-factory/make/ai.mk review`";
 const CLAIMING = ["quick", "fix", "chore"];
-const CONSULTING = ["quick", "fix", "chore", "run", "check", "report"];
+const CONSULTING = ["quick", "fix", "chore", "run", "review", "report"];
 const ROLES = ["implementer", "reviewer"];
 // Prompt lines wrap anywhere and sentences may start with a capital, so wording is compared with
 // runs of whitespace collapsed and case folded.
@@ -819,10 +819,10 @@ check("procedures", "worker-no-redispatch", () => {
 	for (const name of CONSULTING)
 		assert.match(routedWorker(dir, name), /Do not run `models\.js dispatch`, and never hand this task to another agent or back to the session\./, `${name} worker`);
 	const models = require(path.join(dir, "ai-factory/make/models.js"));
-	assert.equal(models.workerSpec(fs.realpathSync(dir), "check").readOnly, true, "the review worker stays read-only");
+	assert.equal(models.workerSpec(fs.realpathSync(dir), "review").readOnly, true, "the review worker stays read-only");
 	// Independent-review coordination stays outside routed workers, the reviewer and the review run.
 	for (const name of CLAIMING) says(procedure(name), "A routed worker or a headless run never runs it", `tasks/${name}.md`);
-	says(procedure("check"), NO_REVIEW_RUN, "tasks/check.md");
+	says(procedure("review"), NO_REVIEW_RUN, "tasks/review.md");
 	for (const name of ROLES) says(agentText(name), NO_REVIEW_RUN, `agents/${name}.md`);
 	for (const text of [...CONSULTING.map(procedure), ...ROLES.map(agentText)])
 		assert.doesNotMatch(text, /models\.js dispatch/, "no procedure tells a worker to dispatch");
@@ -871,7 +871,7 @@ check("procedures", "legacy-procedures-unchanged", () => {
 	assert.equal(prompts(dir).at(-1), `${procedure("quick")}\n## Input\nedit`);
 	says(procedure("quick"), "Clearly call this a self-review", "tasks/quick.md");
 	says(procedure("quick"), "never imply independence", "tasks/quick.md");
-	says(procedure("check"), "An in-session review is a self-check, not an independent opinion.", "tasks/check.md");
+	says(procedure("review"), "An in-session review is a self-check, not an independent opinion.", "tasks/review.md");
 	assert.ok(!exists(dir, "ai-factory/assurance.json"));
 });
 
@@ -898,9 +898,9 @@ const doc = (name) => fs.readFileSync(DOCS[name], "utf8");
 // The 0021 entry only: from its heading to the next unreleased or released heading.
 const changelogEntry = () => {
 	const text = doc("changelog");
-	const start = text.indexOf("**Unreleased — plan 0021 assurance presets");
+	const start = text.indexOf("**Plan 0021 assurance presets");
 	assert.ok(start >= 0, "CHANGELOG.md has no plan 0021 entry");
-	const next = text.slice(start + 1).search(/^\*\*(Unreleased|\d)/m);
+	const next = text.slice(start + 1).search(/^(\*\*|## )/m);
 	return next < 0 ? text.slice(start) : text.slice(start, start + 1 + next);
 };
 const fenced = (text) => [...text.matchAll(/^```[a-z]*\n([\s\S]*?)^```/gm)].map((match) => match[1]).join("\n");

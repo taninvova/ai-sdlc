@@ -1,1 +1,0 @@
-../../skills/ai-layout/templates/ai-factory/tasks/check.md

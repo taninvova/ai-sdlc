@@ -45,6 +45,48 @@ function aiDir(ev) {
 	}
 	return null;
 }
+// A /t4:loop worktree lives at <main>/<layout>/runs/tmp/worktrees/<name>. Inside one, the main
+// repository is found through the git common dir, so its run log and its dont-touch policy
+// govern; every other checkout, including a developer's own worktree, keeps its own. Returns
+// { root, ai, name } for the main repository, or null. Git runs only for a cwd on that path.
+const WORKTREES = ["runs", "tmp", "worktrees"];
+function loopWorktree(ev) {
+	try {
+		const root = repositoryRoot(ev.cwd || process.cwd());
+		const parts = root.split(path.sep);
+		const at = parts.findIndex(
+			(part, i) =>
+				LAYOUT_DIRS.includes(part) &&
+				WORKTREES.every((name, j) => parts[i + 1 + j] === name),
+		);
+		if (at < 0) return null;
+		const common = git(["rev-parse", "--git-common-dir"], root);
+		if (!common) return null;
+		const gitDir = fs.realpathSync(path.resolve(root, common));
+		if (path.basename(gitDir) !== ".git") return null;
+		const main = path.dirname(gitDir);
+		for (const name of LAYOUT_DIRS) {
+			const ai = path.join(main, name);
+			const relative = path.relative(path.join(ai, ...WORKTREES), root);
+			if (
+				!relative ||
+				relative.startsWith("..") ||
+				path.isAbsolute(relative) ||
+				relative.includes(path.sep)
+			)
+				continue;
+			fs.lstatSync(ai);
+			return { root: main, ai, name: relative };
+		}
+	} catch {}
+	return null;
+}
+// Where run-log rows, task markers, claims and lifecycle events go: the main repository's
+// layout directory inside a loop worktree, the checkout's own everywhere else (AC37).
+function logDir(ev) {
+	const loop = loopWorktree(ev);
+	return loop ? loop.ai : aiDir(ev);
+}
 
 // Resolve each existing component before handling '..', just as the filesystem does.
 // Missing leaves are allowed; broken links, loops and inaccessible ancestors are not.
@@ -131,6 +173,9 @@ function task(ai, sessionId) {
 module.exports = {
 	readEvent,
 	aiDir,
+	logDir,
+	loopWorktree,
+	WORKTREES,
 	repositoryRoot,
 	canonicalTarget,
 	git,

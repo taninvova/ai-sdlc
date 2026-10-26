@@ -204,6 +204,13 @@ ag() { node -e "const C = require('$COST'); const A = C.aggregate(C.readLog('$FX
 # grp <fixture> <dimension> — "key=rows/input_tokens" per group, in the engine's own order.
 grp() { ag "$1" "console.log(A.groups['$2'].map(g => g.key + '=' + g.rows + '/' + g.input_tokens).join(' '));"; }
 
+# A row logged under a deprecated task name is grouped under the task's current name: `check` was
+# renamed `review`, and the log is never rewritten. two-tools.csv carries one such row, verbatim.
+eq "two-tools.csv: the logged row still says check" \
+  "$(rd two-tools.csv 'console.log(L.rows.map(r => C.field(r, "task")).join(" "));')" "run check"
+eq "two-tools.csv: a check row is grouped as review" "$(grp two-tools.csv task)" "review=1/900 run=1/1500"
+eq "two-tools.csv: only the task dimension is renamed" "$(grp two-tools.csv agent)" "(unattributed)=1/900 implementer=1/1500"
+
 # hit_rate is RECOMPUTED from the summed tokens, never averaged over rows. hit-rate.csv exists to
 # make the difference impossible to miss: its two rows are 100/(0+100+0) = 1.00 and
 # 100/(300+100+0) = 0.25, whose mean is 0.625, while the group's true rate is the summed
