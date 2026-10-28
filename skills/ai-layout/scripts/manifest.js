@@ -5,7 +5,7 @@
 //   manifest.js write <repo-root> <plugin-root> [--overlay name=version]
 //   manifest.js check <repo-root> <plugin-root>
 //
-// Two hashes per file, not one. /t4:adopt-sdlc substitutes {{app}}, {{stack}} and friends, so a
+// Two hashes per file, not one. /fc:adopt-sdlc substitutes {{app}}, {{stack}} and friends, so a
 // repo file never equals its template. `received` is what landed in the repo (detects local
 // edits); `template` is the template it came from (detects upstream change). Comparing a
 // repo file to a template directly would report every substituted file as modified forever.
@@ -135,14 +135,14 @@ function cmdWrite(repoRoot, pluginRoot, args) {
 		return 0;
 	}
 	// The same trap cmdCheck short-circuits: a repo on the pre-1.0.0 layout has a layout, so sending it
-	// to /t4:adopt-sdlc would scaffold a second one beside the first. Reachable by hand, from a
+	// to /fc:adopt-sdlc would scaffold a second one beside the first. Reachable by hand, from a
 	// developer who ran the baseline command this file used to print.
 	if (!fs.existsSync(path.join(repoRoot, "ai-factory"))) {
 		if (fs.existsSync(path.join(repoRoot, "ai")))
 			die(
-				"this repo is on the pre-1.0.0 layout — ai/, not ai-factory/. Run /t4:migrate-layout first, from an ai-sdlc checkout at 2.0.0 or earlier since 2.1.0 removed it; /t4:adopt-sdlc would add a second layout beside it.", // path-scan-ok: diagnosing historical layout, not an instruction path
+				"this repo is on the pre-1.0.0 layout — ai/, not ai-factory/. Run /fc:migrate-layout first, from an ai-sdlc checkout at 2.0.0 or earlier since 2.1.0 removed it; /fc:adopt-sdlc would add a second layout beside it.", // path-scan-ok: diagnosing historical layout, not an instruction path
 			); // path-scan-ok
-		die("no ai-factory/ directory — run /t4:adopt-sdlc first");
+		die("no ai-factory/ directory — run /fc:adopt-sdlc first");
 	}
 	const safe = boundary(path.join(repoRoot, "ai-factory"));
 	const destination = safe.assertPath(path.join(repoRoot, MANIFEST));
@@ -174,7 +174,7 @@ function cmdCheck(repoRoot, pluginRoot) {
 	// worse than a long report. MANIFEST is now ai-factory/.sdlc.json, so a repo holding a perfectly
 	// good pre-1.0.0 manifest looks like it has none: the branch below tells it "adopted before
 	// manifests existed" (false), sends it to manifest.js write (which refuses, having no ai-factory/),
-	// from there to /t4:adopt-sdlc, which would scaffold a SECOND layout beside the first. Three
+	// from there to /fc:adopt-sdlc, which would scaffold a SECOND layout beside the first. Three
 	// wrong answers in a row to a repo whose only problem is that it has not run one command.
 	if (
 		!fs.existsSync(path.join(repoRoot, "ai-factory")) &&
@@ -190,7 +190,7 @@ function cmdCheck(repoRoot, pluginRoot) {
 			`  rename: every tracked path changed prefix, so the usual report would be one line per file.`,
 		);
 		console.log(
-			`  Move this repo first, in a commit of its own:  /t4:migrate-layout`,
+			`  Move this repo first, in a commit of its own:  /fc:migrate-layout`,
 		);
 		console.log(
 			`  2.1.0 removed that command — run it from an ai-sdlc checkout at 2.0.0 or earlier.`,
@@ -306,7 +306,7 @@ function cmdCheck(repoRoot, pluginRoot) {
 			"\n  up to date with upstream; the differences above are your own.",
 		);
 	console.log(
-		"\n  Reported only — /t4:sync-sdlc changes nothing under ai-factory/.",
+		"\n  Reported only — /fc:sync-sdlc changes nothing under ai-factory/.",
 	);
 	return 0;
 }

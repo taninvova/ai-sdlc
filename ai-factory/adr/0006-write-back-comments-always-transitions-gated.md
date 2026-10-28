@@ -44,9 +44,9 @@ ai-sdlc may **append** to a ticket whenever it resolved one, and may **move** a 
 a repo where every runtime can move it. This narrows §6 of the design, which gated transitions
 on configuration alone.
 
-1. **Three tasks comment: `/t4:spec`, `/t4:plan`, `/t4:check`.** They are the three that produce
-   one durable artefact at a stable path — the spec, the plan, the verdict. `/t4:test` and
-   `/t4:run` resolve the key so they can find the spec, and write nothing: `/t4:run` executes one
+1. **Three tasks comment: `/fc:spec`, `/fc:plan`, `/fc:check`.** They are the three that produce
+   one durable artefact at a stable path — the spec, the plan, the verdict. `/fc:test` and
+   `/fc:run` resolve the key so they can find the spec, and write nothing: `/fc:run` executes one
    plan step at a time and would flood the ticket with its own progress. Where §6 says "each
    task" and §9 says "spec/plan/check", §9 is the one that ships.
 
@@ -61,7 +61,7 @@ on configuration alone.
    is ever posted (`docs/adr/0004` rule 2).
 
 4. **Every run comments; nothing is de-duplicated, suppressed or edited.** This resolves the
-   open question the design left in §11. Re-running `/t4:spec` on one ticket posts a second
+   open question the design left in §11. Re-running `/fc:spec` on one ticket posts a second
    comment, because it *is* a second event, and the interesting fact — the spec was rewritten
    after the plan was drafted — is exactly what suppression would hide. The alternative the
    design floated, commenting only when the file did not already exist, makes the ticket claim

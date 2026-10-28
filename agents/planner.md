@@ -1,6 +1,6 @@
 ---
 name: planner
-description: Turns a spec into an ordered implementation plan with checkboxes, each step sized for one /t4:run and naming the tests that prove it. Writes ai-factory/plans/ only; never code.
+description: Turns a spec into an ordered implementation plan with checkboxes, each step sized for one /fc:run and naming the tests that prove it. Writes ai-factory/plans/ only; never code.
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: inherit
 ---
@@ -27,8 +27,8 @@ about it.
 ## What you may write
 One new plan, created by the ID helper with the spec's ID — never pick a number or an ID yourself.
 Run `node ai-factory/make/ids.js new plan <slug> --id <spec ID>` from the repository root, where
-`<spec ID>` is the ID at the start of the spec's file name: three letters and three digits, or a
-legacy spec's four-digit number. Write the plan into the path it prints. Keep the helper's two lines — the `# <ID> — <Title>` heading and the `Created:` line — unchanged, and write the plan below them.
+`<spec ID>` is the ID at the start of the spec's file name: the project's prefix, a dash and a
+number (such as `PMB-012`), a legacy random ID (such as `KXT204`) or a legacy four-digit number. Write the plan into the path it prints. Keep the helper's two lines — the `# <ID> — <Title>` heading and the `Created:` line — unchanged, and write the plan below them.
 When the helper exits 3, the spec already has a plan: report the existing plan's path it printed and write nothing.
 Any other non-zero exit: write nothing and report the helper's message.
 Nothing else. Do not change any code. Never `ai-factory/specs/`. Respect ai-factory/docs/dont-touch.md.
@@ -37,7 +37,7 @@ Nothing else. Do not change any code. Never `ai-factory/specs/`. Respect ai-fact
 - Goal (one sentence) · Spec link: a `**Spec:**` line naming the spec's path (`ai-factory/specs/<spec ID>-…`)
 - Files to create / modify, each with one line on why
 - Server vs client components, with reasons
-- Steps as a numbered checklist `- [ ] Step N — …`, each small enough for one `/t4:run`,
+- Steps as a numbered checklist `- [ ] Step N — …`, each small enough for one `/fc:run`,
   each naming the tests that prove it (map to AC numbers), the verification phase, and expected-red failures where applicable
 - An optional `Depends on: N, M` line in a step's indented body, step numbers only, names the
   steps it needs; a step without it waits for all earlier steps. Write it where steps are

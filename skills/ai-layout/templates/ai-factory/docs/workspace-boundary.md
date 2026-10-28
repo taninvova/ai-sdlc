@@ -4,7 +4,7 @@ Keep all plugin-owned project instructions, configuration, plans, specs, decisio
 logs and caches in `ai-factory/`. Put scratch work under `ai-factory/runs/tmp/`; retain evidence
 under `ai-factory/runs/`. Opt-in contract evidence (see `contracts/README.md`) is committed
 under `ai-factory/evidence/`; its command logs stay in ignored `ai-factory/runs/evidence/`.
-Completion reports (`/t4:report`) are committed snapshots under `ai-factory/reports/<id>/`.
+Completion reports (`/fc:report`) are committed snapshots under `ai-factory/reports/<id>/`.
 Opt-in lifecycle events and telemetry exports stay local, in the ignored
 `ai-factory/runs/lifecycle/` and `ai-factory/runs/telemetry/`. Model selection records stay local
 too: `<run>.json.model.json` beside each headless output and `ai-factory/runs/routing.jsonl`.

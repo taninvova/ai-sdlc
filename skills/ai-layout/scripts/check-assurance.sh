@@ -24,7 +24,7 @@ const HELPER = path.join(MAKE, "assurance.js");
 const GROUPS = ["policy", "runtime", "procedures", "docs"];
 const selected = process.env.ASSURANCE_GROUP;
 const want = (name) => selected === "all" || selected === name;
-const base = fs.mkdtempSync(path.join(os.tmpdir(), "t4-assurance-"));
+const base = fs.mkdtempSync(path.join(os.tmpdir(), "fc-assurance-"));
 const passed = [], failed = [], ran = new Set();
 function check(groupName, label, fn) {
 	if (!want(groupName)) return;
@@ -42,7 +42,7 @@ function need(name) {
 	assert.equal(typeof value, "function", `assurance.js exports no ${name}(): that behavior is not implemented`);
 	return value;
 }
-const CONFIG = { schema: "t4-contracts-config", version: 1, code_scope: { include: ["**"], exclude: [] } };
+const CONFIG = { schema: "fc-contracts-config", version: 1, code_scope: { include: ["**"], exclude: [] } };
 let projects = 0;
 function project({ config, selection, manifest = true } = {}) {
 	const dir = path.join(base, `p${++projects}`);
@@ -63,7 +63,7 @@ function write(dir, file, text) {
 const writeJson = (dir, file, value) => write(dir, file, `${JSON.stringify(value, null, 2)}\n`);
 const exists = (dir, file) => fs.existsSync(path.join(dir, file));
 const readJson = (dir, file) => JSON.parse(fs.readFileSync(path.join(dir, file), "utf8"));
-const selection = (preset) => ({ schema: "t4-assurance", version: 1, preset });
+const selection = (preset) => ({ schema: "fc-assurance", version: 1, preset });
 // Every file below ai-factory/ with its bytes: proves a command wrote nothing.
 function tree(dir) {
 	const out = {};
@@ -125,7 +125,7 @@ check("policy", "preset-resolution", () => {
 	// The resolver is deterministic and produces one shared document shape.
 	const again = resolve({ preset: "strict", contracts: adoptedContracts(), env: {} });
 	assert.deepEqual(again, resolve({ preset: "strict", contracts: adoptedContracts(), env: {} }));
-	assert.equal(again.schema, "t4-assurance-policy");
+	assert.equal(again.schema, "fc-assurance-policy");
 	assert.match(again.note, /project rules/i, "the policy states project rules still apply");
 	// Unknown preset names are rejected by the resolver, not mapped to a default.
 	assert.throws(() => resolve({ preset: "paranoid", contracts: adoptedContracts(), env: {} }), /unknown preset/i);
@@ -260,7 +260,7 @@ check("policy", "invalid-input", () => {
 		["not json", "{"],
 		["array", "[]\n"],
 		["wrong schema", `${JSON.stringify({ schema: "other", version: 1, preset: "light" })}\n`],
-		["wrong version", `${JSON.stringify({ schema: "t4-assurance", version: 2, preset: "light" })}\n`],
+		["wrong version", `${JSON.stringify({ schema: "fc-assurance", version: 2, preset: "light" })}\n`],
 		["unknown preset", `${JSON.stringify(selection("paranoid"))}\n`],
 		["extra keys", `${JSON.stringify({ ...selection("light"), review: "none" })}\n`],
 	]) {
@@ -281,7 +281,7 @@ check("policy", "invalid-input", () => {
 	expectExit(cli(dir, ["show"], { GATE_ENFORCE: "yes" }), 1, "invalid GATE_ENFORCE is a reported conflict");
 	assert.deepEqual(tree(dir), before);
 	// A malformed contracts configuration stops setup before any write.
-	const broken = project({ config: { schema: "t4-contracts-config", version: 1 } });
+	const broken = project({ config: { schema: "fc-contracts-config", version: 1 } });
 	const brokenBefore = tree(broken);
 	assert.match(expectExit(cli(broken, ["set", "standard", "--apply"]), 2, "malformed config").stderr, /config\.json/);
 	assert.deepEqual(tree(broken), brokenBefore);
@@ -308,7 +308,7 @@ check("policy", "explicit-apply", () => {
 	const result = jsonOf(expectExit(cli(dir, ["set", "standard", "--apply", "--json"]), 0, "apply standard"));
 	assert.equal(result.applied, true);
 	assert.deepEqual(readJson(dir, "ai-factory/assurance.json"), selection("standard"));
-	assert.equal(readJson(dir, "ai-factory/contracts/config.json").schema, "t4-contracts-config", "standard enables contracts through the existing helper");
+	assert.equal(readJson(dir, "ai-factory/contracts/config.json").schema, "fc-contracts-config", "standard enables contracts through the existing helper");
 	assert.deepEqual(readJson(dir, "ai-factory/.sdlc.json").capabilities, { contracts: { version: 1 } });
 	assert.equal(show(dir).status, "active");
 	// Reapplying the same preset is a no-op; a custom config is never rewritten.
@@ -407,7 +407,7 @@ const fs=require('node:fs');let input='';process.stdin.on('data',c=>input+=c);pr
 });
 `;
 const bare = { ...clean };
-for (const key of ["DELIVERY", "STEP", "PHASE", "REQUIRE", "TASK", "TOOL", "CMD", "MODEL", "INPUT", "INPUT_FILE", "REVIEW_SCOPE", "CONTRACT_FIXTURE_EXIT", "CONTRACT_FIXTURE_RED_EXIT", "CLAUDE_CODE_SUBAGENT_MODEL", "T4_LIFECYCLE_RUN", "FAKE_VERDICT", "FAKE_BLOCKER"]) delete bare[key];
+for (const key of ["DELIVERY", "STEP", "PHASE", "REQUIRE", "TASK", "TOOL", "CMD", "MODEL", "INPUT", "INPUT_FILE", "REVIEW_SCOPE", "CONTRACT_FIXTURE_EXIT", "CONTRACT_FIXTURE_RED_EXIT", "CLAUDE_CODE_SUBAGENT_MODEL", "FC_LIFECYCLE_RUN", "FAKE_VERDICT", "FAKE_BLOCKER"]) delete bare[key];
 const gitIn = (dir, ...args) => execFileSync("git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", ...args], { cwd: dir, stdio: "pipe" });
 const readText = (dir, file) => fs.readFileSync(path.join(dir, file), "utf8");
 // `procedures: true` ships the canonical task procedures and agents instead of the stubs.
@@ -667,7 +667,7 @@ check("runtime", "report-readers", () => {
 	assert.ok(fresh.assurance && typeof fresh.assurance === "object", "a report made under a preset carries the assurance field");
 	for (const key of schema.required) assert.ok(Object.hasOwn(fresh, key), `new report has ${key}`);
 	for (const key of assuranceSchema.required) assert.ok(Object.hasOwn(fresh.assurance, key), `assurance has ${key}`);
-	assert.equal(fresh.assurance.schema, "t4-assurance-policy");
+	assert.equal(fresh.assurance.schema, "fc-assurance-policy");
 	assert.ok(assuranceSchema.properties.status.enum.includes(fresh.assurance.status));
 	// Existing readers accept the new field: continuation sees the saved report, status reads it.
 	const { inspect } = require(path.join(dir, "ai-factory/make/continue.js"));
@@ -756,7 +756,7 @@ check("procedures", "direct-policy-consult", () => {
 	const dir = workspace("quick", { preset: "standard", procedures: true });
 	for (const name of CONSULTING) {
 		assert.ok(fs.readFileSync(`commands/${name}.md`, "utf8").includes(`ai-factory/tasks/${name}.md`), `commands/${name}.md reads the task procedure`);
-		assert.ok(fs.readFileSync(`codex-skills/t4-${name}/SKILL.md`, "utf8").includes(`ai-factory/tasks/${name}.md`), `t4-${name} reads the task procedure`);
+		assert.ok(fs.readFileSync(`codex-skills/fc-${name}/SKILL.md`, "utf8").includes(`ai-factory/tasks/${name}.md`), `fc-${name} reads the task procedure`);
 		assert.ok(routedWorker(dir, name).includes(`Read \`ai-factory/tasks/${name}.md\``), `a routed ${name} worker reads the task procedure`);
 	}
 	// Headless: the runner shows the effective requirements, and the prompt is the procedure itself.

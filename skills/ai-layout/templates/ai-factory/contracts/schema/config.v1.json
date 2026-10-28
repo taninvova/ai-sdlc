@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "t4-contracts-config/v1",
+  "$id": "fc-contracts-config/v1",
   "title": "Artifact contracts adoption marker and code scope",
   "description": "ai-factory/contracts/config.json. Its presence opts the project into contracts; its code_scope selects the files whose content binds verification evidence.",
   "type": "object",
@@ -11,7 +11,7 @@
   ],
   "properties": {
     "schema": {
-      "const": "t4-contracts-config"
+      "const": "fc-contracts-config"
     },
     "version": {
       "const": 1

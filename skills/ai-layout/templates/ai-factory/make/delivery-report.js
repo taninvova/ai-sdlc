@@ -13,9 +13,9 @@ const ENTRY_DIRECTORY =
 	require.main === module ? path.dirname(process.argv[1]) : __dirname;
 const ROOT = fs.realpathSync(path.resolve(ENTRY_DIRECTORY, "../.."));
 
-const SCHEMA = "t4-delivery-report";
+const SCHEMA = "fc-delivery-report";
 const VERSION = 1;
-const TELEMETRY = { schema: "t4-delivery-telemetry", version: 1 };
+const TELEMETRY = { schema: "fc-delivery-telemetry", version: 1 };
 const STATES = ["ready", "incomplete", "unverified", "blocked"];
 const ATTEMPTS = 3;
 const MAX_PATHS = 200;
@@ -672,7 +672,7 @@ function completion(options = {}) {
 	const files = requirement === "fresh_ready_report" ? save(ctx, report).map((file) => ctx.rel(file)) : [];
 	const claimable = policy?.status !== "conflict" && (requirement === "summary" || report.status === "ready");
 	return {
-		schema: "t4-assurance-completion",
+		schema: "fc-assurance-completion",
 		version: VERSION,
 		delivery: report.delivery.id,
 		mode: policy ? policy.mode : "legacy",

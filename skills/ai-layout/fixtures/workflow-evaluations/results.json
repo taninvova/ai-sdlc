@@ -1,5 +1,5 @@
 {
-	"schema": "t4-workflow-evaluation-synthetic-results",
+	"schema": "fc-workflow-evaluation-synthetic-results",
 	"version": 1,
 	"note": "Synthetic final states for offline evaluator checks. No model produced these; each is applied over a fresh benchmark fixture and evaluated by the harness.",
 	"records": [
@@ -127,7 +127,7 @@
 			{ "id": "review-1-baseline", "variant": "baseline", "scenario": "review", "repetition": 1, "order": 1, "status": "completed", "beganAt": "2026-10-01T16:00:00.000Z", "elapsedMs": 30000, "usage": [] }
 		],
 		"lifecycle": {
-			"schema": "t4-lifecycle-report",
+			"schema": "fc-lifecycle-report",
 			"version": 1,
 			"generated_at": "2026-10-01T18:00:00.000Z",
 			"deliveries": [
@@ -195,7 +195,7 @@
 			{ "id": "escalation-1-candidate", "variant": "candidate", "repetition": 1, "order": 2, "result": "escalation-asks-policy", "beganAt": "2026-10-01T13:02:00.000Z", "elapsedMs": 45000, "usage": [] }
 		],
 		"costLinks": {
-			"schema": "t4-benchmark-cost-links",
+			"schema": "fc-benchmark-cost-links",
 			"version": 1,
 			"links": [
 				{ "run": "bug-1-baseline", "lifecycleRun": "r-partial", "session": "s-bug-baseline" },
@@ -203,7 +203,7 @@
 			]
 		},
 		"judgments": {
-			"schema": "t4-workflow-judgments",
+			"schema": "fc-workflow-judgments",
 			"version": 1,
 			"reviews": [
 				{ "run": "bug-1-candidate", "transcript": "bug-1-candidate/final.txt", "reviewer": "maintainer", "complete": true },

@@ -25,7 +25,7 @@ function repo() {
   return root;
 }
 function event(root, extra = {}) {
-  return { cwd: root, session_id: 'fixture', prompt: '/t4:run step 1', transcript_path: transcript,
+  return { cwd: root, session_id: 'fixture', prompt: '/fc:run step 1', transcript_path: transcript,
     agent_transcript_path: transcript, agent_id: 'worker', agent_type: 'implementer',
     tool_input: { file_path: 'src/file.js', command: 'npm test && git commit -m check' }, ...extra };
 }

@@ -88,7 +88,7 @@
 - Modify `skills/ai-layout/scripts/check-contracts.sh`: add cases for AC26 and AC32.
 - Modify `skills/ai-layout/scripts/check-continuation.sh`: add a `selector` case for AC33 using new-style file names.
 - Modify `skills/ai-layout/scripts/check-manifest.sh` and `check-workspace.sh`: adoption must deliver and track `ai-factory/make/ids.js`.
-- Modify `commands/state.md`: the field becomes `id`, the flag becomes `--spec <id>`, and the description changes (AC34, AC35). Regenerate `codex-skills/t4-state/SKILL.md`.
+- Modify `commands/state.md`: the field becomes `id`, the flag becomes `--spec <id>`, and the description changes (AC34, AC35). Regenerate `codex-skills/fc-state/SKILL.md`.
 - Modify the agents `agents/specifier.md`, `planner.md`, `explorer.md`, `analyst.md` and `architect.md`. Each creates its file through `ids.js` and writes below the helper's two lines. The planner passes `--id`. The specifier gets the parent rules (AC21–AC23, AC52). The architect sets `superseded by <ID>` and fills in the ADR's `Date:` (AC20, AC25). Regenerate `skills/ai-layout/templates/ai-factory/agents/*.md` with `materialize-agents.js`.
 - Modify the tasks `skills/ai-layout/templates/ai-factory/tasks/spec.md`, `plan.md`, `explore.md`, `analyse.md`, `design.md` and `adr.md`: drop `<NNNN>` and the counting, and name the helper. Regenerate `commands/*.md` and `codex-skills/` with the sync scripts.
 - Modify `skills/ai-layout/templates/ai-factory/adr/0000-template.md`: the heading becomes `# <ID> — Title`, with no `NNNN` and no `{{…}}` (AC25).
@@ -175,17 +175,17 @@ N/A. There is no application, UI or service. Local Node and bash helpers own the
     - `bash skills/ai-layout/scripts/check-delivery-status.sh`
     - `bash skills/ai-layout/scripts/check-delivery-report.sh`
 
-- [x] Step 5 — `/t4:state` reads IDs: selection, pairing, the `id` field and messages (AC28–AC31, AC34, AC35).
+- [x] Step 5 — `/fc:state` reads IDs: selection, pairing, the `id` field and messages (AC28–AC31, AC34, AC35).
   - Change `state.sh` as follows:
     - `id_of`;
     - `--spec` accepts a legacy number in every spelling, or a new-style ID, basename or path, in any case;
     - the plan→spec fallback matches case-insensitively;
     - the header says `id`;
     - the messages use `--spec DHW631`, `--spec <id>` and "spec ID".
-  - Update the golden headers and the refusal-wording expectations in `check-state.sh`, and the header in `check-delivery-status.sh`. Update `commands/state.md` and regenerate the Codex `t4-state` skill.
+  - Update the golden headers and the refusal-wording expectations in `check-state.sh`, and the header in `check-delivery-status.sh`. Update `commands/state.md` and regenerate the Codex `fc-state` skill.
   - Tests, in the `state` group of `check-ids.sh`:
     - `state-legacy-unchanged` (AC28): a legacy tree under no flag, `--done`, `--specs` and `--plans` gives the same rows and pairings as before, apart from the header name
-    - `state-legacy-spec-forms` (AC29): `0010`, `10`, `0010-t4-state` and the full path
+    - `state-legacy-spec-forms` (AC29): `0010`, `10`, `0010-fc-state` and the full path
     - `state-spec-case-insensitive` (AC30)
     - `state-pair-by-id` (AC31)
     - `state-id-field` (AC34): the header and `commands/state.md`
@@ -202,7 +202,7 @@ N/A. There is no application, UI or service. Local Node and bash helpers own the
     - `bash skills/ai-layout/scripts/check-delivery-status.sh`
     - `node skills/ai-layout/scripts/sync-codex-skills.js --check`
 
-- [x] Step 6 — `/t4:state` ordering and the `--next` tie-break (AC36–AC41).
+- [x] Step 6 — `/fc:state` ordering and the `--next` tie-break (AC36–AC41).
   - Change the listing sort key to the three bands within each directory. Change the `--next` rank and its reason wording. Legacy-only ties still say "the lower number decided", and the `check-state.sh` 14d and golden `--next` text are unchanged.
   - Tests, in the `state` group:
     - `state-listing-order` (AC36): a legacy file, dated new-style files whose `Created:` order is the reverse of their alphabetical order, two with equal timestamps, and an undated one that sorts first alphabetically
@@ -261,15 +261,15 @@ N/A. There is no application, UI or service. Local Node and bash helpers own the
     - that legacy files stay valid;
     - the `number` → `id` rename;
     - `make -f ai-factory/make/ai.mk ids-check` and the optional `ai-factory/ids-deny.txt`.
-  - **Host runs:** in a scratch adopted repo, run one before/after spec creation on each host: `/t4:spec` on Claude Code, `$t4-spec` on Codex, and `make -f ai-factory/make/ai.mk ai TASK=spec INPUT=…`.
+  - **Host runs:** in a scratch adopted repo, run one before/after spec creation on each host: `/fc:spec` on Claude Code, `$fc-spec` on Codex, and `make -f ai-factory/make/ai.mk ai TASK=spec INPUT=…`.
     - Each must show the helper call, a file matching AC1 and AC8, and lines 1–2 unchanged after the agent writes (AC11, AC24).
-    - Also run `/t4:plan` on the new spec (AC19), and specs from a new-style exploration, from an exploration plus an analysis, from a legacy exploration, and a second spec from an already-used parent (AC21–AC23, AC52).
+    - Also run `/fc:plan` on the new spec (AC19), and specs from a new-style exploration, from an exploration plus an analysis, from a legacy exploration, and a second spec from an already-used parent (AC21–AC23, AC52).
     - Link the transcripts in the MR, and mark the MR breaking.
   - **Host runs waived (2026-10-25).** The developer waived the host runs. Skipped:
-    - `/t4:spec` on Claude Code;
-    - `$t4-spec` on Codex;
+    - `/fc:spec` on Claude Code;
+    - `$fc-spec` on Codex;
     - `make -f ai-factory/make/ai.mk ai TASK=spec INPUT=…`;
-    - `/t4:plan` on the new spec;
+    - `/fc:plan` on the new spec;
     - specs from a new-style exploration, from an exploration plus an analysis, and from a legacy exploration, and a second spec from an already-used parent.
 
     AC11, AC19, AC21, AC22, AC23, AC24 and AC52 are therefore unverified by host transcripts; only the static `procedures` checks cover them. The risk that a headless host refuses the agent's Bash call to `ids.js` stays unproven.

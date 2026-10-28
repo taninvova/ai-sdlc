@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# /t4:loop (spec 0022): pins the ADR that records the loop's exceptions, and later the
+# /fc:loop (spec 0022): pins the ADR that records the loop's exceptions, and later the
 # ai-factory/make/loop.js helper, the headless runner, the prompts and the docs.
 #
 # Groups: adr, options, select, validate, schedule, worktree, apply, outcome, headless,
@@ -41,9 +41,9 @@ function adrs() {
 
 // ---- adr (plan 0022 Step 1, AC53) ---------------------------------------------------------
 test("adr", "adr-records-exceptions", () => {
-	const naming = adrs().filter((adr) => /\/t4:loop\b/.test(adr.text));
-	if (naming.length === 0) throw new Error("no ADR names /t4:loop");
-	assert.equal(naming.length, 1, `more than one ADR names /t4:loop: ${naming.map((adr) => adr.rel).join(", ")}`);
+	const naming = adrs().filter((adr) => /\/fc:loop\b/.test(adr.text));
+	if (naming.length === 0) throw new Error("no ADR names /fc:loop");
+	assert.equal(naming.length, 1, `more than one ADR names /fc:loop: ${naming.map((adr) => adr.rel).join(", ")}`);
 	const [{ rel, text }] = naming;
 	for (const id of ["DEC-003", "BR-010", "FR-026", "FR-027"])
 		assert.match(text, new RegExp(`\\b${id}\\b`), `${rel} does not name ${id}`);
@@ -248,14 +248,20 @@ test("select", "select-number-and-path", () => {
 		"ai-factory/plans/0012-beta.md": LEGACY,
 		"ai-factory/plans/done/0004-filed.md": plan("Filed", "- [~] Step 1 — Partly."),
 		"ai-factory/plans/ABC123-new-id.md": LEGACY,
+		"ai-factory/plans/PMB-007-prefixed.md": LEGACY,
 		"ai-factory/specs/0003-alpha.md": "# Alpha\n",
 	});
 	const want = "ai-factory/plans/0003-alpha.md";
 	for (const arg of ["3", "03", "0003", "0003-alpha", "0003-alpha.md", want, `./${want}`, path.join(dir, want)])
 		assert.equal(expectStarted(dir, [arg]).state.plan, want, `start ${arg} selected another plan`);
 	assert.equal(expectStarted(dir, ["0004"]).state.plan, "ai-factory/plans/done/0004-filed.md", "a plan under plans/done/ is not selectable");
-	// Ambiguity 1: numeric NNNN only until spec 0022 is amended; a spec path is not a plan.
-	for (const arg of ["ABC123", "ai-factory/plans/ABC123-new-id.md", "ai-factory/specs/0003-alpha.md"]) expectList(dir, [arg], "unknown");
+	// Prefixed and letter-and-digit IDs select in any case, with or without zeros, by ID, basename or path.
+	for (const arg of ["PMB-007", "pmb-7", "PMB-07", "PMB-007-prefixed", "pmb-007-prefixed.md", "ai-factory/plans/PMB-007-prefixed.md"])
+		assert.equal(expectStarted(dir, [arg]).state.plan, "ai-factory/plans/PMB-007-prefixed.md", `start ${arg} selected another plan`);
+	for (const arg of ["ABC123", "abc123", "ABC123-new-id", "ai-factory/plans/ABC123-new-id.md"])
+		assert.equal(expectStarted(dir, [arg]).state.plan, "ai-factory/plans/ABC123-new-id.md", `start ${arg} selected another plan`);
+	// A spec path is not a plan, and an ID no plan carries selects nothing.
+	for (const arg of ["PMB-008", "ABD123", "ai-factory/specs/0003-alpha.md"]) expectList(dir, [arg], "unknown");
 });
 test("select", "select-no-arg", () => {
 	const dir = repo("no-arg", {
@@ -587,7 +593,7 @@ test("schedule", "alone-runs-main", () => {
 	assert.equal(loop.next(state).action, "wait");
 	loop.finish(state, 2, "met", { dry: true });
 	assert.deepEqual(loop.next(state).steps, [{ number: 4, mode: "main" }], "a step running alone after a parallel batch is not in the main tree");
-	// A main-tree step is ticked by its implementer, as under /t4:run: finish applies no delta.
+	// A main-tree step is ticked by its implementer, as under /fc:run: finish applies no delta.
 	const main = loop.finish(state, 4, "met", { dry: true });
 	assert.deepEqual(main.applied, []);
 	assert.deepEqual(main.ticked, [4]);
@@ -735,7 +741,7 @@ function refsOf(dir) {
 	return {
 		head: git(dir, "symbolic-ref", "HEAD").trim(),
 		commit: git(dir, "rev-parse", "HEAD").trim(),
-		refs: git(dir, "for-each-ref", "--format=%(refname) %(objectname)").split("\n").filter((line) => line && !line.startsWith("refs/heads/t4-loop/")),
+		refs: git(dir, "for-each-ref", "--format=%(refname) %(objectname)").split("\n").filter((line) => line && !line.startsWith("refs/heads/fc-loop/")),
 		count: git(dir, "rev-list", "--count", "HEAD").trim(),
 	};
 }
@@ -761,7 +767,7 @@ test("worktree", "worktree-location-branch", () => {
 	for (const step of [2, 3]) {
 		const got = expectPrepared(dir, loopId, step);
 		const rel = `ai-factory/runs/tmp/worktrees/${loopId}-S${step}`;
-		const branch = `t4-loop/${loopId}/S${step}`;
+		const branch = `fc-loop/${loopId}/S${step}`;
 		assert.equal(got.worktree, rel, `Step ${step}'s worktree is not under ai-factory/runs/tmp/worktrees/`);
 		assert.equal(got.branch, branch);
 		assert.ok(fs.existsSync(path.join(dir, rel, ".git")), `${rel} is not a git worktree`);
@@ -876,10 +882,10 @@ test("worktree", "snapshot-failure-stops", () => {
 	assert.deepEqual(end.causes.map((cause) => [cause.kind, cause.step]), [["snapshot", 2]]);
 	assert.deepEqual(end.remaining, [2, 4]);
 	assert.deepEqual({ ...mainTree(dir), ...refsOf(dir) }, before, "a failed snapshot changed the main tree or the developer's refs");
-	// A worktree that cannot be created at all (a branch named t4-loop blocks t4-loop/…) is the same
+	// A worktree that cannot be created at all (a branch named fc-loop blocks fc-loop/…) is the same
 	// cause, through the CLI with the real git.
 	const blocked = startedPair("wt-blocked");
-	git(blocked.dir, "branch", "t4-loop");
+	git(blocked.dir, "branch", "fc-loop");
 	const run = cli(blocked.dir, "prepare", blocked.loopId, "3");
 	assert.equal(run.status, 0, `a failed snapshot exited ${run.status}: ${run.stderr.trim()}`);
 	assert.equal(run.json.action, "snapshot-failed");
@@ -894,9 +900,9 @@ test("worktree", "head-and-branches-unchanged", () => {
 	const before = refsOf(dir);
 	for (const step of [2, 3]) expectPrepared(dir, loopId, step);
 	assert.deepEqual(refsOf(dir), before, "prepare moved HEAD, a branch of the developer's or committed outside the loop's branches");
-	const loopBranches = git(dir, "for-each-ref", "--format=%(refname)", "refs/heads/t4-loop/").trim().split("\n");
-	assert.deepEqual(loopBranches, [`refs/heads/t4-loop/${loopId}/S2`, `refs/heads/t4-loop/${loopId}/S3`], "prepare created a branch other than the step's own");
-	assert.equal(git(dir, "rev-list", "--count", `HEAD..t4-loop/${loopId}/S2`).trim(), "0", "prepare committed on the loop branch");
+	const loopBranches = git(dir, "for-each-ref", "--format=%(refname)", "refs/heads/fc-loop/").trim().split("\n");
+	assert.deepEqual(loopBranches, [`refs/heads/fc-loop/${loopId}/S2`, `refs/heads/fc-loop/${loopId}/S3`], "prepare created a branch other than the step's own");
+	assert.equal(git(dir, "rev-list", "--count", `HEAD..fc-loop/${loopId}/S2`).trim(), "0", "prepare committed on the loop branch");
 });
 test("worktree", "main-tree-not-reset", () => {
 	const { dir, loopId } = startedPair("wt-reset");
@@ -927,7 +933,7 @@ function finisher() {
 }
 const LINES = Array.from({ length: 20 }, (_, index) => `line ${index + 1}`);
 const worktreeDir = (dir, loopId, step) => path.join(dir, `ai-factory/runs/tmp/worktrees/${loopId}-S${step}`);
-const loopBranch = (loopId, step) => `t4-loop/${loopId}/S${step}`;
+const loopBranch = (loopId, step) => `fc-loop/${loopId}/S${step}`;
 const branchExists = (dir, branch) => spawnSync("git", ["rev-parse", "--verify", "-q", `refs/heads/${branch}`], { cwd: dir, env: ENV }).status === 0;
 const indexDigest = (dir) => crypto.createHash("sha256").update(fs.readFileSync(path.join(dir, ".git/index"))).digest("hex");
 function editLine(file, number, text) {
@@ -986,7 +992,7 @@ test("apply", "two-loop-commits", () => {
 		assert.equal(git(dir, "rev-parse", `${answer.commit}^`).trim(), answer.baseline, "the step commit does not sit on the baseline");
 		assert.equal(git(dir, "rev-parse", `${answer.baseline}^`).trim(), head, "the baseline does not sit on HEAD");
 		for (const sha of [answer.baseline, answer.commit]) {
-			assert.equal(git(dir, "log", "-1", "--format=%an <%ae>|%cn <%ce>", sha).trim(), "t4-loop <t4-loop@invalid>|t4-loop <t4-loop@invalid>", "a loop commit is not the loop's");
+			assert.equal(git(dir, "log", "-1", "--format=%an <%ae>|%cn <%ce>", sha).trim(), "fc-loop <fc-loop@invalid>|fc-loop <fc-loop@invalid>", "a loop commit is not the loop's");
 			assert.equal(git(dir, "cat-file", "-p", sha).includes("gpgsig"), false, "a loop commit is signed");
 		}
 		// The baseline holds the snapshot: exactly the main tree's uncommitted work.
@@ -1082,7 +1088,7 @@ test("apply", "no-staging-note-plain", () => {
 	const applies = [];
 	for (const step of [2, 3]) applies.push(...finishStep(dir, loopId, step).applies);
 	assert.deepEqual(applies.map((entry) => [entry.step, entry.apply, entry.staging_changed]), [[2, "plain", false], [3, "none", false]]);
-	// Step 4 runs alone in the main tree and its implementer ticks it, as under /t4:run.
+	// Step 4 runs alone in the main tree and its implementer ticks it, as under /fc:run.
 	assert.deepEqual(cli(dir, "next", loopId).json.steps, [{ number: 4, mode: "main" }]);
 	fs.writeFileSync(path.join(dir, "ai-factory/plans/0001-parallel.md"), planText(dir).replace("- [ ] Step 4 ", "- [x] Step 4 "));
 	finishStep(dir, loopId, 4);
@@ -1163,7 +1169,7 @@ test("apply", "no-commit-main", () => {
 	fs.writeFileSync(path.join(tree(3), "three.txt"), "three\n");
 	for (const step of [2, 3]) finishStep(dir, loopId, step);
 	assert.deepEqual(refsOf(dir), before, "a full apply moved HEAD, a branch of the developer's or committed on it");
-	assert.equal(git(dir, "for-each-ref", "--format=%(refname)", "refs/heads/t4-loop/").trim(), "", "a loop branch survived its clean apply");
+	assert.equal(git(dir, "for-each-ref", "--format=%(refname)", "refs/heads/fc-loop/").trim(), "", "a loop branch survived its clean apply");
 	assert.equal(git(dir, "worktree", "list", "--porcelain").split("\n").filter((line) => line.startsWith("worktree ")).length, 1, "a worktree survived its clean apply");
 	const entries = (text) => text.split("\0").filter(Boolean).sort();
 	assert.deepEqual(entries(mainTree(dir).status), entries(status).concat([" M ai-factory/plans/0001-parallel.md", "?? three.txt", "?? two.txt"]).sort(), `the main tree's status is not its earlier status plus the ticks and the steps' new files: ${JSON.stringify(entries(mainTree(dir).status))} vs ${JSON.stringify(entries(status))}`);
@@ -1321,7 +1327,7 @@ function ender() {
 }
 // `node ai-factory/make/loop.js <subcommand> …` with stdin and extra environment.
 function cliWith(dir, args, { input = "", env = {} } = {}) {
-	const run = spawnSync(process.execPath, ["ai-factory/make/loop.js", ...args], { cwd: dir, encoding: "utf8", input, env: { ...ENV, GATE_ENFORCE: "", T4_LOOP_RESULT: "", ...env } });
+	const run = spawnSync(process.execPath, ["ai-factory/make/loop.js", ...args], { cwd: dir, encoding: "utf8", input, env: { ...ENV, GATE_ENFORCE: "", FC_LOOP_RESULT: "", ...env } });
 	let json = null;
 	try {
 		json = JSON.parse(run.stdout);
@@ -1379,9 +1385,9 @@ test("outcome", "report-includes-verdict-unchanged", () => {
 	assert.deepEqual([end.code, end.causes, end.remaining], [0, [], []]);
 	assert.equal(end.no_steps_remained, false);
 	const record = JSON.parse(fs.readFileSync(outcomeFile(dir, loopId), "utf8"));
-	assert.equal(record.schema, "t4-loop-outcome");
+	assert.equal(record.schema, "fc-loop-outcome");
 	assert.deepEqual([record.code, record.verdict.raw, record.report], [0, APPROVE, end.report], "the outcome record is not the report end printed");
-	// /t4:review runs once: a second verdict is refused.
+	// /fc:review runs once: a second verdict is refused.
 	const again = cliWith(dir, ["verdict", loopId], { input: APPROVE });
 	assert.equal(again.status, 2, "a second verdict was accepted");
 });
@@ -1397,16 +1403,16 @@ test("outcome", "state-from-before-review-rename", () => {
 	const file = path.join(dir, "ai-factory/runs/tmp/loop", loopId, "state.json");
 	const current = fs.readFileSync(file, "utf8");
 	assert.ok(!/"check"/.test(current), "the state records no action name");
-	const old = current.replaceAll("/t4:review", "/t4:check");
+	const old = current.replaceAll("/fc:review", "/fc:check");
 	assert.notEqual(old, current, "the recorded cause names the review command");
 	fs.writeFileSync(file, old);
 	const stopped = cli(dir, "next", loopId).json;
 	assert.equal(stopped.action, "stop");
-	assert.match(stopped.causes[0].message, /^\/t4:check verdict request_changes/);
+	assert.match(stopped.causes[0].message, /^\/fc:check verdict request_changes/);
 	const end = endLoop(dir, loopId, { GATE_ENFORCE: "1" });
 	assert.equal(end.code, 5, "an old verdict cause no longer stops the loop with 5");
-	assert.ok(end.report.includes("/t4:check verdict request_changes, which is not an approval"), "the recorded cause was not relayed unchanged");
-	assert.match(end.report, /^\/t4:review verdict, unchanged:$/m, "the report's own lines use the current name");
+	assert.ok(end.report.includes("/fc:check verdict request_changes, which is not an approval"), "the recorded cause was not relayed unchanged");
+	assert.match(end.report, /^\/fc:review verdict, unchanged:$/m, "the report's own lines use the current name");
 	// A legacy state at the review point with no verdict yet still answers review and takes one.
 	const fresh = repo("oc-renamed-open", { "ai-factory/plans/0001-legacy.md": LEGACY });
 	const openId = expectStarted(fresh, ["0001"]).json.loop_id;
@@ -1614,7 +1620,7 @@ test("outcome", "causes-in-order", () => {
 	// The report lists every cause, in that order, each naming its step.
 	const lines = end.report.split("\n");
 	const at = (pattern) => lines.findIndex((line) => pattern.test(line));
-	const order = [/Step 4.*timeout/, /Step 2.*snapshot/, /Step 3.*failed/, /\/t4:review.*verdict/].map(at);
+	const order = [/Step 4.*timeout/, /Step 2.*snapshot/, /Step 3.*failed/, /\/fc:review.*verdict/].map(at);
 	assert.ok(order.every((index) => index >= 0), `the report does not list every cause: ${JSON.stringify(order)}`);
 	assert.deepEqual([...order].sort((a, b) => a - b), order, "the report lists the causes out of order");
 });
@@ -1661,17 +1667,17 @@ test("outcome", "outcome-record-path", () => {
 	runLegacy(dir, loopId);
 	sendVerdict(dir, loopId, APPROVE);
 	const target = path.join(dir, "ai-factory/runs/tmp/runner-outcome.json");
-	const end = endLoop(dir, loopId, { T4_LOOP_RESULT: target });
+	const end = endLoop(dir, loopId, { FC_LOOP_RESULT: target });
 	assert.equal(end.record, target, "end does not name the record it wrote");
 	const record = JSON.parse(fs.readFileSync(target, "utf8"));
-	assert.deepEqual([record.schema, record.loop_id, record.code], ["t4-loop-outcome", loopId, 0]);
-	assert.ok(!fs.existsSync(outcomeFile(dir, loopId)), "with T4_LOOP_RESULT set, the record also went to the default path");
+	assert.deepEqual([record.schema, record.loop_id, record.code], ["fc-loop-outcome", loopId, 0]);
+	assert.ok(!fs.existsSync(outcomeFile(dir, loopId)), "with FC_LOOP_RESULT set, the record also went to the default path");
 	// Unset, the record goes beside the state.
 	const fallback = endLoop(dir, loopId);
 	assert.equal(fallback.record, `ai-factory/runs/tmp/loop/${loopId}/outcome.json`);
 	assert.equal(JSON.parse(fs.readFileSync(outcomeFile(dir, loopId), "utf8")).code, 0);
-	// A relative T4_LOOP_RESULT is refused rather than guessed at.
-	assert.equal(cliWith(dir, ["end", loopId], { env: { T4_LOOP_RESULT: "out.json" } }).status, 2);
+	// A relative FC_LOOP_RESULT is refused rather than guessed at.
+	assert.equal(cliWith(dir, ["end", loopId], { env: { FC_LOOP_RESULT: "out.json" } }).status, 2);
 	// end refuses before the loop has ended: a step still running, or steps left to start.
 	const other = repo("oc-record-running", { "ai-factory/plans/0001-legacy.md": LEGACY });
 	const id = expectStarted(other, ["0001"]).json.loop_id;
@@ -1696,8 +1702,8 @@ process.stdin.on("data", (chunk) => { input = Buffer.concat([input, chunk]); });
 process.stdin.on("end", () => {
 	fs.appendFileSync("launched", (process.env.TOOL || "") + "\\n");
 	fs.writeFileSync("captured-prompt.txt", input);
-	fs.writeFileSync("captured-env.json", JSON.stringify({ id: process.env.T4_LOOP_ID || null, result: process.env.T4_LOOP_RESULT || null }));
-	const id = process.env.T4_LOOP_ID;
+	fs.writeFileSync("captured-env.json", JSON.stringify({ id: process.env.FC_LOOP_ID || null, result: process.env.FC_LOOP_RESULT || null }));
+	const id = process.env.FC_LOOP_ID;
 	for (const act of JSON.parse(process.env.FAKE_SCRIPT || "[]")) {
 		if (act.tick) {
 			const file = path.join("ai-factory/plans", act.plan);
@@ -1705,7 +1711,7 @@ process.stdin.on("end", () => {
 		} else if ("exit" in act) {
 			process.exitCode = act.exit;
 		} else if ("record" in act) {
-			fs.writeFileSync(process.env.T4_LOOP_RESULT, typeof act.record === "string" ? act.record : JSON.stringify(act.record).split("$ID").join(id));
+			fs.writeFileSync(process.env.FC_LOOP_RESULT, typeof act.record === "string" ? act.record : JSON.stringify(act.record).split("$ID").join(id));
 		} else {
 			const args = act.loop.map((arg) => (arg === "$ID" ? id : arg));
 			const run = spawnSync(process.execPath, ["ai-factory/make/loop.js", ...args], { input: act.input || "", encoding: "utf8" });
@@ -1741,9 +1747,9 @@ const headlessEnv = (dir, input, env = {}) => ({
 	INPUT_FILE: "",
 	MODEL: "",
 	GATE_ENFORCE: "",
-	T4_LOOP_ID: "",
-	T4_LOOP_RESULT: "",
-	T4_LIFECYCLE_RUN: "",
+	FC_LOOP_ID: "",
+	FC_LOOP_RESULT: "",
+	FC_LIFECYCLE_RUN: "",
 	CLAUDE_CODE_SUBAGENT_MODEL: "",
 	DELIVERY: "",
 	STEP: "",
@@ -1796,7 +1802,7 @@ const DRIVE_FAILED = (verdictText) => [
 	...(verdictText === undefined ? [] : [{ loop: ["verdict", "$ID"], input: verdictText }]),
 	{ loop: ["end", "$ID"] },
 ];
-const RECORD = (code, causes) => [{ record: { schema: "t4-loop-outcome", version: 1, loop_id: "$ID", code, causes, report: `scripted report, code ${code}\n` } }];
+const RECORD = (code, causes) => [{ record: { schema: "fc-loop-outcome", version: 1, loop_id: "$ID", code, causes, report: `scripted report, code ${code}\n` } }];
 const INVALID_PLAN = plan("Missing", "- [x] Step 1 — A.", "", "- [ ] Step 2 — B.", "  - Depends on: 1, 9");
 
 test("headless", "headless-validation-3", () => {
@@ -1892,8 +1898,8 @@ test("headless", "headless-missing-outcome-1", () => {
 	assert.match(none.stderr, /no readable outcome record/);
 	const bad = [
 		[[{ record: "{ not json" }], /no readable outcome record/],
-		[[{ record: { schema: "other", loop_id: "$ID", code: 0, causes: [] } }], /not a t4-loop-outcome record/],
-		[[{ record: { schema: "t4-loop-outcome", loop_id: "loop-20200101T000000Z-000000", code: 0, causes: [] } }], /names loop/],
+		[[{ record: { schema: "other", loop_id: "$ID", code: 0, causes: [] } }], /not a fc-loop-outcome record/],
+		[[{ record: { schema: "fc-loop-outcome", loop_id: "loop-20200101T000000Z-000000", code: 0, causes: [] } }], /names loop/],
 		[RECORD(0, [{ kind: "failed", step: 2 }]), /does not follow from its causes/],
 		[RECORD(3, []), /is not 0, 1, 4 or 5/],
 	];
@@ -1933,8 +1939,8 @@ test("headless", "headless-no-question", () => {
 	assert.ok(prompt.includes(`Loop ID: ${loopId}`), "the prompt does not name the started loop");
 	assert.match(prompt, /do not run start again/);
 	const seen = JSON.parse(fs.readFileSync(path.join(dir, "captured-env.json"), "utf8"));
-	assert.equal(seen.id, loopId, "T4_LOOP_ID is not the started loop");
-	assert.ok(path.isAbsolute(seen.result) && seen.result.startsWith(path.join(fs.realpathSync(dir), "ai-factory/runs/tmp/")), `T4_LOOP_RESULT is not an absolute path in the runner's scratch: ${seen.result}`);
+	assert.equal(seen.id, loopId, "FC_LOOP_ID is not the started loop");
+	assert.ok(path.isAbsolute(seen.result) && seen.result.startsWith(path.join(fs.realpathSync(dir), "ai-factory/runs/tmp/")), `FC_LOOP_RESULT is not an absolute path in the runner's scratch: ${seen.result}`);
 	assert.equal(readLoopState(dir, loopId).max_parallel, 2);
 	assert.equal(readLoopState(dir, loopId).host, "headless");
 });
@@ -1971,7 +1977,7 @@ test("procedures", "loop-delegates-implementer", () => {
 	const text = loopTask();
 	const body = taskBody(text);
 	assert.match(text, /^description: .+$/m, "tasks/loop.md has no description");
-	assert.match(text, /^argument-hint: .*plan number or path/m, "the argument hint does not say 'plan number or path'");
+	assert.match(text, /^argument-hint: .*plan ID or path/m, "the argument hint does not say 'plan ID or path'");
 	for (const sub of ["start", "next", "prepare", "finish", "verdict", "end"])
 		assert.ok(body.includes(`node ai-factory/make/loop.js ${sub}`), `tasks/loop.md does not call loop.js ${sub}`);
 	assert.match(body, /`implementer` subagent/, "the steps are not delegated to the implementer subagent");
@@ -1980,8 +1986,8 @@ test("procedures", "loop-delegates-implementer", () => {
 	assert.match(body, /[Dd]o not implement anything yourself/, "the task does not forbid implementing in the session");
 	// The task never starts or chains a step on its own: next decides.
 	assert.match(body, /only the steps? (?:that )?`next` (?:names|starts)/i, "the task does not limit starts to what next names");
-	// AC17: a step that runs alone runs in the main tree and is ticked exactly as /t4:run ticks it.
-	assert.match(body, /`main`[^\n]*\n?[^\n]*as under `\/t4:run`/, "a main-tree step is not ticked as under /t4:run");
+	// AC17: a step that runs alone runs in the main tree and is ticked exactly as /fc:run ticks it.
+	assert.match(body, /`main`[^\n]*\n?[^\n]*as under `\/fc:run`/, "a main-tree step is not ticked as under /fc:run");
 	// The implementer's output of a failed step is relayed through finish --output-file.
 	assert.ok(body.includes("--output-file"), "a step's output is not passed to finish --output-file");
 	assert.match(body, /never (?:through|in) a shell string/i, "the implementer's output may be written through a shell string");
@@ -1997,26 +2003,26 @@ test("procedures", "loop-worktree-mode-delegation", () => {
 	assert.match(body, /`prepare`[\s\S]{0,200}`snapshot-failed`/, "a failed snapshot copy is not handled");
 	onlyForbidden(body, /git worktree remove/, "removing a worktree");
 });
-// Case IDs keep the name plan 0022 records; the task they test is now /t4:review.
+// Case IDs keep the name plan 0022 records; the task they test is now /fc:review.
 test("procedures", "loop-runs-check-once", () => {
 	const body = taskBody(loopTask());
-	assert.match(body, /`\/t4:review` once/, "the loop does not run /t4:review once");
-	assert.match(body, /`reviewer` subagent/, "/t4:review does not go through the reviewer");
+	assert.match(body, /`\/fc:review` once/, "the loop does not run /fc:review once");
+	assert.match(body, /`reviewer` subagent/, "/fc:review does not go through the reviewer");
 	assert.match(body, /`review` \(every step ticked/, "the review answer of next is not handled");
 	assert.match(body, /`tasks\/review\.md`/, "the loop does not follow tasks/review.md");
-	assert.doesNotMatch(body, /\/t4:check|tasks\/check\.md|--phase check/, "the loop still names the review task by its deprecated name");
+	assert.doesNotMatch(body, /\/fc:check|tasks\/check\.md|--phase check/, "the loop still names the review task by its deprecated name");
 	// AC19: an already fully ticked plan still gets the one review, and no step runs.
 	assert.match(body, /already ticked/i, "the fully ticked plan is not covered");
 	assert.ok(body.includes("node ai-factory/make/loop.js verdict"), "the verdict is not passed to loop.js verdict");
 	assert.match(body, /unchanged/, "the verdict or the report is not relayed unchanged");
 	assert.match(body, /node ai-factory\/make\/loop\.js end[\s\S]{0,400}(?:report|record)/, "end's report is not relayed");
 	// Exactly one review: the procedure never says to run it per step or again.
-	assert.doesNotMatch(body, /\/t4:review` (?:after|for) each step/i);
+	assert.doesNotMatch(body, /\/fc:review` (?:after|for) each step/i);
 });
 test("procedures", "loop-no-test-gaps", () => {
 	const body = taskBody(loopTask());
-	onlyForbidden(body, /\/t4:test/, "/t4:test");
-	onlyForbidden(body, /\/t4:report/, "/t4:report");
+	onlyForbidden(body, /\/fc:test/, "/fc:test");
+	onlyForbidden(body, /\/fc:report/, "/fc:report");
 	onlyForbidden(body, /git commit|`commit`|\bcommit\b/, "committing");
 	onlyForbidden(body, /\breset\b/, "a reset");
 	assert.doesNotMatch(body, /\btest gaps\b(?![^\n]*\b(?:never|not|no)\b)/i, "test gaps is run");
@@ -2040,7 +2046,7 @@ test("procedures", "loop-codex-notes", () => {
 });
 test("procedures", "loop-assurance-contracts", () => {
 	const body = taskBody(loopTask());
-	assert.ok(body.includes("node ai-factory/make/assurance.js show"), "assurance is not shown as /t4:run shows it");
+	assert.ok(body.includes("node ai-factory/make/assurance.js show"), "assurance is not shown as /fc:run shows it");
 	assert.ok(body.includes("ai-factory/assurance.json"), "assurance is not conditional on ai-factory/assurance.json");
 	assert.ok(body.includes("ai-factory/contracts/config.json"), "contracts are not conditional on their configuration");
 	assert.match(body, /--delivery <id> --phase/, "a worktree step's evidence is not routed through finish --delivery");
@@ -2053,7 +2059,7 @@ test("procedures", "loop-assurance-contracts", () => {
 });
 test("procedures", "loop-headless", () => {
 	const body = taskBody(loopTask());
-	assert.ok(body.includes("T4_LOOP_ID"), "a headless run does not resume from T4_LOOP_ID");
+	assert.ok(body.includes("FC_LOOP_ID"), "a headless run does not resume from FC_LOOP_ID");
 	assert.match(body, /## Headless loop/, "the runner's headless section is not recognised");
 	assert.match(body, /do not run (?:`?start`? again|`node ai-factory\/make\/loop\.js start`)/i, "a headless run may start a second loop");
 	assert.match(body, /headless[\s\S]{0,200}(?:ask no question|never ask)/i, "a headless run may ask");
@@ -2080,11 +2086,11 @@ test("procedures", "loop-session-owned", () => {
 	assert.equal(sync.status, 0, sync.stderr);
 	for (const host of ["claude", "codex"]) {
 		const agents = path.join(dir, models.ADAPTER_DIRS[host]);
-		assert.deepEqual((fs.existsSync(agents) ? fs.readdirSync(agents) : []).filter((name) => name.startsWith("t4-route-loop-")), [], `a ${host} loop route agent was generated`);
+		assert.deepEqual((fs.existsSync(agents) ? fs.readdirSync(agents) : []).filter((name) => name.startsWith("fc-route-loop-")), [], `a ${host} loop route agent was generated`);
 		const run = spawnSync(process.execPath, ["ai-factory/make/models.js", "dispatch", "--host", host, "--task", "loop"], { cwd: dir, encoding: "utf8", env: { ...ENV, CLAUDE_CODE_SUBAGENT_MODEL: "" } });
 		assert.equal(run.status, 0, run.stdout + run.stderr);
 		assert.match(run.stdout, /directive: session/, `loop on ${host} is not session-owned`);
-		assert.doesNotMatch(run.stdout, /directive: route|subagent_type|spawn_agent|t4-route-/, `loop on ${host} is routed to a worker`);
+		assert.doesNotMatch(run.stdout, /directive: route|subagent_type|spawn_agent|fc-route-/, `loop on ${host} is routed to a worker`);
 		assert.ok(run.stdout.includes(`gateway/loop-${host} is not used`), "the ignored loop mapping is not named");
 		assert.match(run.stdout, /run task's own model policy/, "the directive does not say each step follows run's policy");
 		assert.doesNotMatch(run.stdout, /continue\.js|continuation/, "the loop directive carries continue's text");
@@ -2096,19 +2102,19 @@ test("procedures", "loop-session-owned", () => {
 	assert.match(doctor.stdout, /finding\|routing\|routing\.tasks\.loop is ignored/, "a loop mapping is not a doctor finding");
 	// The generated entries exist and run the loop's routing step; the plugin's command wins.
 	assert.ok(fs.readFileSync("commands/loop.md", "utf8").includes("models.js dispatch --host claude --task loop"), "commands/loop.md is missing or stale");
-	assert.ok(fs.readFileSync("codex-skills/t4-loop/SKILL.md", "utf8").includes("models.js dispatch --host codex --task loop"), "codex-skills/t4-loop/SKILL.md is missing or stale");
+	assert.ok(fs.readFileSync("codex-skills/fc-loop/SKILL.md", "utf8").includes("models.js dispatch --host codex --task loop"), "codex-skills/fc-loop/SKILL.md is missing or stale");
 	assert.match(fs.readFileSync(path.join(MAKE, "sync-adapters.js"), "utf8"), /^\t"loop",$/m, "loop is not a native Claude command");
 });
 test("procedures", "no-nnnn-counting", () => {
 	const text = loopTask();
 	for (const [i, line] of text.split("\n").entries())
 		assert.ok(!/<NNNN>-|\bNNNN-|next free number/i.test(line), `tasks/loop.md:${i + 1} counts plan numbers: ${line.trim()}`);
-	assert.match(text, /plan number or path/, "the task does not say 'plan number or path'");
+	assert.match(text, /plan ID or path/, "the task does not say 'plan ID or path'");
 });
 
 // ---- procedures (plan 0022 Step 10; AC38 review side, AC56, AC57) -------------------------
 // The planner and the plan template define `Depends on:`, the implementer carries one
-// worktree-mode line, and /t4:review never collects the loop's worktrees. Each prompt is read
+// worktree-mode line, and /fc:review never collects the loop's worktrees. Each prompt is read
 // as its source and as the adopted copy materialize-agents.js delivers.
 const TEMPLATE_AGENTS = "skills/ai-layout/templates/ai-factory/agents";
 const agentCopies = (name) => [`agents/${name}.md`, `${TEMPLATE_AGENTS}/${name}.md`].map((rel) => [rel, fs.readFileSync(rel, "utf8")]);
@@ -2207,7 +2213,7 @@ test("apply", "worktree-contract-verify-gates-tick", () => {
 });
 
 // ---- docs (plan 0022 Step 12; AC40, AC55) --------------------------------------------------
-// The loop's exception to "one step per /t4:run" is named where developers and agents read the
+// The loop's exception to "one step per /fc:run" is named where developers and agents read the
 // rules, test tools are told to skip the worktree subtree, and the CHANGELOG says the template
 // change is breaking. Every assertion runs over one section or block and over sentences, never
 // over a whole file: prose wraps, and the same words elsewhere in a long file prove nothing.
@@ -2238,30 +2244,30 @@ const docSentences = (text) =>
 		.replace(/\s+/g, " ")
 		.split(/(?<=[.!?])\s+(?=[A-Z`/(])/);
 const WORKTREE_SUBTREE = "ai-factory/runs/tmp/worktrees/";
-// "One step per /t4:run" with /t4:loop named as its exception, in one sentence.
+// "One step per /fc:run" with /fc:loop named as its exception, in one sentence.
 const namesException = (sentence) =>
-	/\/t4:loop\b/.test(sentence) && /\bexception\b/i.test(sentence) && /one (?:named )?step per `?\/t4:run`?/i.test(sentence);
+	/\/fc:loop\b/.test(sentence) && /\bexception\b/i.test(sentence) && /one (?:named )?step per `?\/fc:run`?/i.test(sentence);
 
 test("docs", "workflow-exception", () => {
-	// AC55: the exception sits under "The rules that make it work", and /t4:run keeps its halt.
+	// AC55: the exception sits under "The rules that make it work", and /fc:run keeps its halt.
 	const rules = docSection(readDoc(WORKFLOW_DOC), "###", /The rules that make it work/);
 	assert.ok(rules, `${WORKFLOW_DOC} has no "The rules that make it work" section`);
 	const sentences = docSentences(rules);
-	assert.ok(sentences.some(namesException), `${WORKFLOW_DOC}'s rules do not name /t4:loop as the exception to one step per /t4:run`);
+	assert.ok(sentences.some(namesException), `${WORKFLOW_DOC}'s rules do not name /fc:loop as the exception to one step per /fc:run`);
 	assert.ok(
-		sentences.some((s) => /`?\/t4:run`? (?:is unchanged|still (?:halts|stops) after one step)/i.test(s)),
-		`${WORKFLOW_DOC}'s rules do not say /t4:run itself still stops after one step`,
+		sentences.some((s) => /`?\/fc:run`? (?:is unchanged|still (?:halts|stops) after one step)/i.test(s)),
+		`${WORKFLOW_DOC}'s rules do not say /fc:run itself still stops after one step`,
 	);
 	assert.ok(
-		sentences.some((s) => /\/t4:loop\b|\bthe loop\b/i.test(s) && /never commits? on (?:your|the developer's) branch/i.test(s)),
+		sentences.some((s) => /\/fc:loop\b|\bthe loop\b/i.test(s) && /never commits? on (?:your|the developer's) branch/i.test(s)),
 		`${WORKFLOW_DOC}'s rules do not say the loop never commits on the developer's branch`,
 	);
 	assert.match(rules, /adr\/ETT683-loop-halt-and-commit-exceptions\.md/, `${WORKFLOW_DOC}'s rules do not link the loop's ADR`);
 	// The command table lists the loop with what it never does.
 	const table = docSection(readDoc(WORKFLOW_DOC), "###", /Project tasks/);
-	const row = linesWith(table, /^\| `\/t4:loop/)[0];
-	assert.ok(row, `${WORKFLOW_DOC}'s project task table has no /t4:loop row`);
-	assert.match(row, /commit on (?:your|the developer's) branch/i, `${WORKFLOW_DOC}'s /t4:loop row does not say it never commits on the branch`);
+	const row = linesWith(table, /^\| `\/fc:loop/)[0];
+	assert.ok(row, `${WORKFLOW_DOC}'s project task table has no /fc:loop row`);
+	assert.match(row, /commit on (?:your|the developer's) branch/i, `${WORKFLOW_DOC}'s /fc:loop row does not say it never commits on the branch`);
 });
 test("docs", "agents-md-exception-and-command", () => {
 	// AC55, both files: this repo's AGENTS.md and the template every adopted repo receives.
@@ -2269,10 +2275,10 @@ test("docs", "agents-md-exception-and-command", () => {
 		const text = readDoc(rel);
 		const slash = linesWith(text, /^Slash commands:/);
 		assert.equal(slash.length, 1, `${rel} has ${slash.length} "Slash commands:" lines, not one`);
-		assert.ok(slash[0].split(/\s+/).includes("/t4:loop"), `${rel} does not list /t4:loop among the slash commands`);
+		assert.ok(slash[0].split(/\s+/).includes("/fc:loop"), `${rel} does not list /fc:loop among the slash commands`);
 		const workflow = docSection(text, "##", /^## Workflow$/);
 		assert.ok(workflow, `${rel} has no "## Workflow" section`);
-		assert.ok(docSentences(workflow).some(namesException), `${rel}'s Workflow does not name /t4:loop as the exception to one step per /t4:run`);
+		assert.ok(docSentences(workflow).some(namesException), `${rel}'s Workflow does not name /fc:loop as the exception to one step per /fc:run`);
 		// SKILL.md's rule for AGENTS.md: under 60 lines, so the exception cannot cost the cache.
 		assert.ok(text.replace(/\n$/, "").split("\n").length < 60, `${rel} is 60 lines or more`);
 	}
@@ -2305,25 +2311,25 @@ test("docs", "tools-exclude-worktrees", () => {
 });
 test("docs", "changelog-breaking-loop", () => {
 	// The template change is breaking for every adopted repo (ai-factory/AGENTS.md), so the top
-	// entry carries a plan 0022 block (Unreleased, or under its released heading) that says so and names what changed.
+	// release entry carries a plan 0022 block (Unreleased, or under its released heading) that says so and names what changed.
 	const text = readDoc("CHANGELOG.md");
-	const top = text.split(/\n(?=## )/).find((part) => part.startsWith("## ")) || "";
-	const blocks = top.split(/\n(?=\*\*[^*\n]+\*\*\n)/);
+	const entry = text.split(/\n(?=## )/).find((part) => part.startsWith("## ") && /^\*\*(?:Unreleased — plan|Plan) 0022\b/m.test(part)) || "";
+	const blocks = entry.split(/\n(?=\*\*[^*\n]+\*\*\n)/);
 	const block = blocks.find((part) => /^\*\*(?:Unreleased — plan|Plan) 0022\b/.test(part));
-	assert.ok(block, "CHANGELOG.md's top entry has no plan 0022 block");
+	assert.ok(block, "no CHANGELOG.md release entry has a plan 0022 block");
 	const flat = block.replace(/\s+/g, " ");
 	assert.match(flat, /Breaking for adopted repos/, "the plan 0022 block is not marked breaking for adopted repos");
 	// Each change is one list item: its lead names it, and its body carries the fact.
 	const items = block.split(/\n(?=- )/).slice(1).map((item) => item.replace(/\s+/g, " "));
 	for (const [what, lead, fact] of [
-		["the new command", /`\/t4:loop/, /`\/t4:run` is unchanged/],
+		["the new command", /`\/fc:loop/, /`\/fc:run` is unchanged/],
 		["the new helper", /make\/loop\.js/, /exit code/],
 		["the headless exit codes", /TASK=loop/, /\b1 step failure or timeout\b[^]*\b4 conflict/],
 		["the guard exception", /guard exception/i, /ai-factory\/runs\/tmp\/worktrees\//],
 		["log writes through the git common dir", /git common dir/i, /git rev-parse --git-common-dir/],
 		["the Depends on: grammar", /Depends on:/, /`Depends on: N, M`/],
 		["the implementer line", /implementer line/i, /worktree mode/],
-		["the migration", /Migration/, /\/t4:sync-sdlc/],
+		["the migration", /Migration/, /\/fc:sync-sdlc/],
 	]) {
 		const item = items.find((text) => lead.test(text.slice(0, 80)));
 		assert.ok(item, `the plan 0022 block has no item for ${what}`);

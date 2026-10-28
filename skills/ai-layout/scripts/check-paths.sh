@@ -53,7 +53,7 @@ $hits"
 # A per-line pragma would be noise on nearly every line of all four, and hooks.json is JSON and
 # cannot carry one.
 #
-# There were eight until 2.1.0, which removed /t4:migrate-layout along with its script, the
+# There were eight until 2.1.0, which removed /fc:migrate-layout along with its script, the
 # rewriter and the check whose fixtures were built out of pre-1.0.0 repos. The fallback trio goes
 # in 3.0.0. What is left then is this script, and the cost of excluding it: its own paths are not
 # self-checked. It has none that a task follows, and the set-size assertion below catches the

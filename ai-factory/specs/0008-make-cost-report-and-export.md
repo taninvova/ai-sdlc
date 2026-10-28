@@ -49,13 +49,13 @@ What exploration 0001 settles and this spec does not reopen:
   plugin's first dependency, first lockfile, first build step and first long-running process, and
   contradicts `.claude-plugin/plugin.json`'s "no runtime dependency", `ai-factory/AGENTS.md`'s "no
   application code, no build step" and `ai-factory/docs/architecture.md`'s "nothing runs as a
-  service". **RS-002**, a `/t4:cost` task that has a model sum the CSV, is not recommended there
+  service". **RS-002**, a `/fc:cost` task that has a model sum the CSV, is not recommended there
   either. Neither is re-proposed here.
 - **The report shows what the log can honestly carry and nothing else.** Obtainable from the
   columns: `branch`, `user`, `tool`, `model`, day, `session_id`, the four token columns, `hit_rate`,
   `turns`, `cost_usd`. Obtainable once 0007 lands: **per task**, **per agent**, and **any sum across
   runs**. Not obtainable from `log.csv` at any effort, and therefore absent: per-plan-step cost
-  inside `/t4:run`, wall-clock duration, tool-call counts, lines changed, and anything about Cursor.
+  inside `/fc:run`, wall-clock duration, tool-call counts, lines changed, and anything about Cursor.
 
 **Decided 2026-09-26 by the developer**, after this spec was first written, and settling what
 exploration 0001 left open about the shape this report reads:
@@ -131,7 +131,7 @@ taken from exploration 0001, which the session named as the source of record, pl
 recorded immediately above; nothing is inferred from the word itself.
 
 ## User story
-As a developer running the t4 loop in a repo, I want `make cost` to tell me what this repo's runs
+As a developer running the fc loop in a repo, I want `make cost` to tell me what this repo's runs
 cost, broken down by task, agent, branch and day, so that I can see which step of the loop is
 expensive without opening a CSV or trusting a model's arithmetic.
 
@@ -271,7 +271,7 @@ collector exists.
   (the directory is symlinks only — `ai-factory/docs/dont-touch.md` forbids editing it directly);
   and `node skills/ai-layout/scripts/manifest.js check <repo> <plugin>` reports a freshly adopted
   repo up to date, with the new file tracked in `ai-factory/.sdlc.json`.
-- **AC19** Given a scratch repo that has just taken `/t4:adopt-sdlc`, When `make cost` is run in it,
+- **AC19** Given a scratch repo that has just taken `/fc:adopt-sdlc`, When `make cost` is run in it,
   Then it behaves as AC10 requires for a header-only log — it is usable from the moment the layout
   lands, not only once rows exist.
 - **AC20** Given the release, When the docs are read, Then `skills/ai-layout/SKILL.md`'s layout
@@ -318,7 +318,7 @@ collector exists.
   peer rows, `session_id` de-duplication across logs, omitting the 22 never-adopted repos, listing
   adopted-but-empty layouts as "no data" and disclosing the coverage hole all belong there, in the
   workspace's own hand-written root `Makefile`. This spec's only obligation to it is AC4.
-- **RS-001** (a local Next.js app, rejected) and **RS-002** (a `/t4:cost` task that has a model sum
+- **RS-001** (a local Next.js app, rejected) and **RS-002** (a `/fc:cost` task that has a model sum
   the CSV, not recommended). Kept in the exploration so they are not re-proposed.
 - **Pricing.** `ai-factory/models.yaml`'s `pricing:` block and the exact-id → longest-prefix →
   `default` → built-in resolution already work and are not changed, moved or extended. Since the
@@ -331,7 +331,7 @@ collector exists.
   on an undocumented directory layout and on files `clean-runs` deletes after 30 days.
 - **Gateway accounting** (option D) and anything requiring a provider to be assumed.
 - **Filling `accepted`.** It stays hand-filled at commit time; the report reports its coverage.
-- **Changing what any `/t4:` command does.** No prompt, agent or slash command is added or altered.
+- **Changing what any `/fc:` command does.** No prompt, agent or slash command is added or altered.
 
 ## Open questions
 A spec with open questions is not buildable. **Nine of the ten are now answered** — 1 on 2026-09-26,
@@ -452,7 +452,7 @@ feature reads and writes:
 ## Routes touched
 None — nothing serves a request and nothing runs as a service. The surface is one new make target,
 `make cost`, in `ai-factory/make/ai.mk`, with a machine-readable mode selected by a variable (Open
-question 5). No hook event is added or changed, and no `/t4:` command is added, removed or altered.
+question 5). No hook event is added or changed, and no `/fc:` command is added, removed or altered.
 Note that the workspace root includes this same `ai.mk` and therefore inherits the target; AC10 and
 AC21 are what make that inheritance harmless rather than misleading.
 

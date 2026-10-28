@@ -29,7 +29,7 @@ Round 2:
 5. The file is created exclusively, and the helper redraws if it exists. A check catches clashes between separate clones or branches.
 6. The script helper `node ai-factory/make/ids.js` creates every artefact, on Claude Code, Codex and headless.
 7. The helper writes a `Created: <ISO timestamp>` line, and ordering uses it. Legacy files sort by number, before all new ones.
-8. `/t4:state`'s `number` field is renamed `id`, which breaks parsers. The usage messages are reworded.
+8. `/fc:state`'s `number` field is renamed `id`, which breaks parsers. The usage messages are reworded.
 9. A new artefact's heading carries its ID. Existing files are not touched.
 10. 0024 ships first. 0022 and 0023 are amended afterwards.
 11. Adopted repos get a CHANGELOG migration note. There is no doctor check.
@@ -95,7 +95,7 @@ Follow-up:
 - **AC21 — A spec from a new-style exploration or analysis.** Given a spec built on exploration `KXT204` alone, or on analysis `KXT204` alone, and no spec has the ID `KXT204` yet, when the specifier creates it, then the spec is created with `--id KXT204` and has that ID.
 - **AC22 — A spec from both.** Given a spec built on exploration `KXT204` and analysis `MRB517`, and no spec has the ID `KXT204` yet, when the specifier creates it, then the spec has the ID `KXT204` and its body cites the analysis's path `ai-factory/analyses/MRB517-…`.
 - **AC23 — A spec from a legacy parent.** Given a spec built on the legacy exploration `0005` or a legacy analysis `0001`, when the specifier creates it, then the spec gets a freshly drawn new-style ID (no `--id`), and its body cites that exploration's or analysis's path.
-- **AC24 — Every host.** Given `/t4:spec` run on Claude Code, the Codex `t4-spec` skill, and `make ai TASK=spec`, when each one writes a spec, then the spec's file was created by the helper and satisfies AC1 and AC8.
+- **AC24 — Every host.** Given `/fc:spec` run on Claude Code, the Codex `fc-spec` skill, and `make ai TASK=spec`, when each one writes a spec, then the spec's file was created by the helper and satisfies AC1 and AC8.
 
 ### Templates and contracts
 - **AC25 — ADR template and supersession.** Given `skills/ai-layout/templates/ai-factory/adr/0000-template.md` and the architect's ADR procedure, when they are read, then neither shows `NNNN`. A new ADR that supersedes another sets the old ADR's status to `superseded by <ID>`, where `<ID>` is the new ADR's ID.
@@ -103,27 +103,27 @@ Follow-up:
 
 ### Legacy artefacts
 - **AC27 — Nothing is renamed.** Given the existing four-digit artefacts, this spec `0024` and its plan, when this change is delivered, then none of them is renamed, and none of their headings or numbers is rewritten.
-- **AC28 — Legacy specs and plans are read as before.** Given the existing four-digit specs and plans, active and under `plans/done/`, when `/t4:state` runs with no flag and with `--done`, `--specs` and `--plans`, then every legacy artefact appears with the same state and the same plan pairing as before. Its `id` field shows its four-digit number as it is.
-- **AC29 — Legacy `--spec` forms still work.** Given spec `0010`, when `/t4:state --spec 0010`, `--spec 10`, `--spec 0010-t4-state` and `--spec ai-factory/specs/0010-t4-state.md` run, then each lists spec `0010` with its plans.
+- **AC28 — Legacy specs and plans are read as before.** Given the existing four-digit specs and plans, active and under `plans/done/`, when `/fc:state` runs with no flag and with `--done`, `--specs` and `--plans`, then every legacy artefact appears with the same state and the same plan pairing as before. Its `id` field shows its four-digit number as it is.
+- **AC29 — Legacy `--spec` forms still work.** Given spec `0010`, when `/fc:state --spec 0010`, `--spec 10`, `--spec 0010-fc-state` and `--spec ai-factory/specs/0010-fc-state.md` run, then each lists spec `0010` with its plans.
 
 ### Readers
-- **AC30 — Case-insensitive selection.** Given a spec `ai-factory/specs/DHW631-foo.md` and its plan, when `/t4:state --spec DHW631`, `--spec dhw631`, `--spec DHW631-foo` and `--spec ai-factory/specs/DHW631-foo.md` run, then each lists that spec with its plan.
-- **AC31 — Pairing by ID without a `**Spec:**` line.** Given a plan `ai-factory/plans/DHW631-foo.md` with no `**Spec:**` line, when `/t4:state` runs, then the plan is paired with `ai-factory/specs/DHW631-foo.md`.
+- **AC30 — Case-insensitive selection.** Given a spec `ai-factory/specs/DHW631-foo.md` and its plan, when `/fc:state --spec DHW631`, `--spec dhw631`, `--spec DHW631-foo` and `--spec ai-factory/specs/DHW631-foo.md` run, then each lists that spec with its plan.
+- **AC31 — Pairing by ID without a `**Spec:**` line.** Given a plan `ai-factory/plans/DHW631-foo.md` with no `**Spec:**` line, when `/fc:state` runs, then the plan is paired with `ai-factory/specs/DHW631-foo.md`.
 - **AC32 — Contract migration pairs by ID.** Given a contracts-enabled repo with a plan `ai-factory/plans/DHW631-foo.md` that has no `**Spec:**` line and no sidecar, and a spec `DHW631-foo.md` that has a sidecar, when `make/contracts.js` migrates sidecars, then the plan's sidecar carries that spec's delivery ID.
-- **AC33 — Continuation and delivery status accept new IDs.** Given a contracts-enabled delivery whose spec and plan have new-style IDs, when `/t4:continue <delivery id>` and `/t4:state --delivery <delivery id>` run, then each behaves as it does for a delivery with four-digit file names.
+- **AC33 — Continuation and delivery status accept new IDs.** Given a contracts-enabled delivery whose spec and plan have new-style IDs, when `/fc:continue <delivery id>` and `/fc:state --delivery <delivery id>` run, then each behaves as it does for a delivery with four-digit file names.
 
-### `/t4:state` output and ordering
-- **AC34 — `number` becomes `id`.** Given any `/t4:state` listing, when its rows and header are read, then the second field is named `id` and no field is named `number`. `commands/state.md` describes the field as `id`.
-- **AC35 — Reworded usage messages.** Given `/t4:state --spec` with no argument, with an argument that is not an ID, or given twice, when it prints its message, then the message uses a new-style example such as `--spec DHW631`. The flag is described as `--spec <id>`.
-- **AC36 — Listing order.** Given a tree with legacy and new-style artefacts, when `/t4:state` lists them, then the order is:
+### `/fc:state` output and ordering
+- **AC34 — `number` becomes `id`.** Given any `/fc:state` listing, when its rows and header are read, then the second field is named `id` and no field is named `number`. `commands/state.md` describes the field as `id`.
+- **AC35 — Reworded usage messages.** Given `/fc:state --spec` with no argument, with an argument that is not an ID, or given twice, when it prints its message, then the message uses a new-style example such as `--spec DHW631`. The flag is described as `--spec <id>`.
+- **AC36 — Listing order.** Given a tree with legacy and new-style artefacts, when `/fc:state` lists them, then the order is:
   1. all legacy artefacts in ascending number order;
   2. the new-style artefacts with a valid `Created:` line, in ascending `Created:` order, with equal timestamps ordered alphabetically by ID;
   3. last, new-style artefacts whose `Created:` line is missing or malformed, alphabetically by ID.
-- **AC37 — `--next` primary key is unchanged.** Given artefacts with different last-commit dates, or uncommitted ones, when `/t4:state --next` runs, then it picks the same artefact as it would before this change, whatever their `Created:` lines say.
-- **AC38 — `--next` tie: new before legacy.** Given a legacy artefact and a new-style artefact with the same `--next` key, when `/t4:state --next` runs, then it picks the new-style one.
-- **AC39 — `--next` tie: undated last.** Given two new-style artefacts with the same `--next` key, one with a valid `Created:` line and one without, when `/t4:state --next` runs, then it picks the dated one.
-- **AC40 — `--next` tie: earliest `Created:` wins.** Given two new-style artefacts with the same `--next` key and valid but different `Created:` timestamps, when `/t4:state --next` runs, then it picks the one with the earlier timestamp.
-- **AC41 — `--next` tie: equal timestamps.** Given two new-style artefacts with the same `--next` key and the same `Created:` timestamp, when `/t4:state --next` runs, then it picks the one whose ID sorts first alphabetically.
+- **AC37 — `--next` primary key is unchanged.** Given artefacts with different last-commit dates, or uncommitted ones, when `/fc:state --next` runs, then it picks the same artefact as it would before this change, whatever their `Created:` lines say.
+- **AC38 — `--next` tie: new before legacy.** Given a legacy artefact and a new-style artefact with the same `--next` key, when `/fc:state --next` runs, then it picks the new-style one.
+- **AC39 — `--next` tie: undated last.** Given two new-style artefacts with the same `--next` key, one with a valid `Created:` line and one without, when `/fc:state --next` runs, then it picks the dated one.
+- **AC40 — `--next` tie: earliest `Created:` wins.** Given two new-style artefacts with the same `--next` key and valid but different `Created:` timestamps, when `/fc:state --next` runs, then it picks the one with the earlier timestamp.
+- **AC41 — `--next` tie: equal timestamps.** Given two new-style artefacts with the same `--next` key and the same `Created:` timestamp, when `/fc:state --next` runs, then it picks the one whose ID sorts first alphabetically.
 
 ### Clash check
 - **AC42 — Two entry points.** Given this repo, when `bash skills/ai-layout/scripts/check-ids.sh` runs, and given an adopted repo, when `make -f ai-factory/make/ai.mk ids-check` runs, then both apply the same rules (AC43–AC48) to that repo's `ai-factory/`. Adoption adds no CI configuration.
@@ -140,7 +140,7 @@ Follow-up:
 - **AC51 — Breaking-change migration note.** Given the CHANGELOG entry and the MR, when they are read, then both mark the change as breaking for adopted repos. The CHANGELOG's migration note:
   - describes the new ID format;
   - says legacy files stay valid;
-  - describes the `/t4:state` `number` → `id` rename;
+  - describes the `/fc:state` `number` → `id` rename;
   - names the `ids-check` make target and the optional `ai-factory/ids-deny.txt`.
   The MR links a before/after run.
 
@@ -150,13 +150,13 @@ Follow-up:
 ## Sequencing
 
 This spec ships first. Afterwards, separately and not as criteria of this spec:
-- **Spec 0022 (`/t4:loop`)** is amended so that `/t4:loop <id>` accepts new-style IDs (case-insensitive) as well as legacy numbers.
+- **Spec 0022 (`/fc:loop`)** is amended so that `/fc:loop <id>` accepts new-style IDs (case-insensitive) as well as legacy numbers.
 - **Spec 0023 (risk agent)** is amended so that a risk file for a spec or plan is created with `ids.js new risk <slug> --id <spec ID>`, and a change assessment gets its own ID from `ids.js new risk <slug>`. Its AC9 is dropped. For a reassessment (0023 AC15/AC16), the agent calls the helper, gets the non-zero exit with the existing path (AC17 here), and appends to that path. The amendment also has to settle how a change assessment is found again for the same target once its file name no longer comes from the branch slug.
 
 ## Out of scope
 
 - Renaming, renumbering or re-heading any existing artefact (AC27).
-- A `/t4:doctor` or `/t4:sync-sdlc` check, and any CI wiring added by adoption.
+- A `/fc:doctor` or `/fc:sync-sdlc` check, and any CI wiring added by adoption.
 - The contract delivery ID (`d-YYYYMMDD-<hex>`), step IDs (`S1`…), criterion IDs (`AC1`…) and quick-check IDs (`QC1`…). They are unchanged.
 - `ai-factory/quick/<slug>.md`, which carries no number.
 - Editing specs 0022 and 0023 (see *Sequencing*).
@@ -171,13 +171,13 @@ No application data. The changes are to workspace artefact names and contents an
 - File names `<ID>-<slug>.md` in `ai-factory/specs/`, `plans/` (including `done/`), `explorations/`, `analyses/`, `designs/`, `adr/` and `risks/`.
 - New artefacts, ADRs included, carry `# <ID> — <Title>` and `Created: <ISO timestamp>` as their first two lines. ADRs are copied from the template, keeping its `Date:` line below them.
 - A new optional `ai-factory/ids-deny.txt` (one triple per line; blank lines and `#` comments allowed).
-- `/t4:state` rows: the `number` field is renamed `id`, and `--spec <number>` becomes `--spec <id>`.
+- `/fc:state` rows: the `number` field is renamed `id`, and `--spec <number>` becomes `--spec <id>`.
 - The ADR `Status: superseded by <ID>` line.
 - The spec content digest in `make/contracts.js` excludes the `Created:` line. Sidecar fields are unchanged.
 
 ## Routes touched
 
-There are no web routes. The behaviour of `/t4:spec`, `/t4:plan`, `/t4:explore`, `/t4:analyse`, `/t4:design`, `/t4:adr`, `/t4:state` (`--spec`, `--next`, listings, row shape) and `/t4:continue` changes, as do their Codex skills and headless `make ai TASK=…`. There are new entry points: `node ai-factory/make/ids.js new <kind> <slug> [--id <ID>] [--title "<Title>"]` and the `ids-check` make target.
+There are no web routes. The behaviour of `/fc:spec`, `/fc:plan`, `/fc:explore`, `/fc:analyse`, `/fc:design`, `/fc:adr`, `/fc:state` (`--spec`, `--next`, listings, row shape) and `/fc:continue` changes, as do their Codex skills and headless `make ai TASK=…`. There are new entry points: `node ai-factory/make/ids.js new <kind> <slug> [--id <ID>] [--title "<Title>"]` and the `ids-check` make target.
 
 ## Components likely involved
 

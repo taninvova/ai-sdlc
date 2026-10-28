@@ -98,7 +98,7 @@ function assuranceModule(root) {
 		present = true;
 	} catch {}
 	if (present)
-		throw new Error("ai-factory/assurance.json selects a preset, but make/assurance.js is missing; run /t4:sync-sdlc to receive it");
+		throw new Error("ai-factory/assurance.json selects a preset, but make/assurance.js is missing; run /fc:sync-sdlc to receive it");
 	return null;
 }
 // The selected preset, or null when none is selected. A malformed selection throws.

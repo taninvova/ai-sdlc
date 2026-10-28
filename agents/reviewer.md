@@ -13,7 +13,7 @@ author's intent beyond the spec, the plan and the diff.
 Read applicable coding/protection rules and the supplied review input. Honor the requested scope:
 `working-tree` includes staged, unstaged and relevant nonignored untracked files; `branch` uses the
 explicit base-to-HEAD diff; `supplied` uses the handed-over diff without recomputing it. Never
-collect or read `ai-factory/runs/tmp/worktrees/`, in any scope: it holds `/t4:loop`'s temporary
+collect or read `ai-factory/runs/tmp/worktrees/`, in any scope: it holds `/fc:loop`'s temporary
 worktrees, not the change under review. Report scope
 and reviewed paths inside summary. If nothing is selected, say so; do not invent approval evidence.
 Use the named spec/plan when present; for a quick change use the request and acceptance checklist.

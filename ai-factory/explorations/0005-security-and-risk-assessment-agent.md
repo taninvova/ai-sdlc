@@ -6,12 +6,12 @@ Add a ninth step agent to the plugin, plus a way to invoke it, that assesses one
 (authorization, data exposure, secrets, injection, dependency/supply chain) and delivery
 risk (migrations, rollback, blast radius), and reports each finding with a severity and a
 mitigation. The exploration has to settle four things: where it fits in the loop (its own
-command, part of `/t4:check`, a gate before `/t4:plan`, or a requirement of the spec 0021
+command, part of `/fc:check`, a gate before `/fc:plan`, or a requirement of the spec 0021
 assurance presets), what it writes, and whether it is read-only.
 
 ## What exists today
 - **Agents.** `agents/*.md` are the canonical procedures. Adopted repos get copies in
-  `ai-factory/agents/`, and the plugin registers each one as `t4:<name>`
+  `ai-factory/agents/`, and the plugin registers each one as `fc:<name>`
   (`skills/ai-layout/templates/ai-factory/make/sync-adapters.js:68-77` has a hard-coded
   `nativeClaudeAgents` set). Either an agent is read-only (`reviewer`: tools
   `Read, Grep, Glob, Bash`, JSON verdict) or it writes into exactly one workspace directory
@@ -36,10 +36,10 @@ assurance presets), what it writes, and whether it is read-only.
   `codex-skills/` wrappers. Adopted repos got new files only, so it was not breaking.
 - **Constraint.** Spec 0012 AC10 says checks reach no external integration or package
   download. Running `npm audit`-style tools would therefore be a new network behaviour.
-- `/t4:check` explicitly never launches another review (`tasks/check.md`).
+- `/fc:check` explicitly never launches another review (`tasks/check.md`).
 
 ## Options
-**A. A read-only `/t4:assess` that reports JSON and writes nothing.**
+**A. A read-only `/fc:assess` that reports JSON and writes nothing.**
 New `agents/assessor.md` (tools without Write) and `tasks/assess.md`. It takes a spec path,
 a plan path or a review scope and returns one JSON object in the reviewer's shape, with
 `category` and `mitigation` added to each finding.
@@ -50,7 +50,7 @@ a plan path or a review scope and returns one JSON object in the reviewer's shap
   planner except by the developer pasting it in.
 - Later: an output that `gate.js` can parse would make headless gating cheap.
 
-**B. A `/t4:assess` that writes one artefact (`ai-factory/assessments/<NNNN>-<slug>.md`) and nothing else.**
+**B. A `/fc:assess` that writes one artefact (`ai-factory/assessments/<NNNN>-<slug>.md`) and nothing else.**
 Same agent and task as A, but the assessor may write only into `assessments/`, like explorer
 and analyst. The file holds the target, the categories assessed, a findings table
 (id · category · severity `blocker|major|minor` · evidence path · mitigation) and residual
@@ -66,12 +66,12 @@ A planner would turn each mitigation into a step or a risk check.
 - Later: makes D straightforward, because there is a durable record to require. Adopted repos
   get new files only, so it is not breaking.
 
-**C. No new agent: deepen `/t4:check`.**
+**C. No new agent: deepen `/fc:check`.**
 Expand reviewer checks 6 and 7 into a fixed category list (the eight in the request) and add
 optional `category` and `mitigation` fields. Optionally add an `--assess` focus argument.
 - Changes: `agents/reviewer.md`, `tasks/check.md`, `check-review-gate.sh` fixtures.
 - Effort: S.
-- Risks: it covers diffs only, never a spec or a plan, so "before /t4:plan" is impossible.
+- Risks: it covers diffs only, never a spec or a plan, so "before /fc:plan" is impossible.
   Security also competes with correctness inside one review budget. This changes the template
   of the most-used agent in every adopted repo.
 - Later: it is the quickest to undo. It also keeps the agent count down.
@@ -91,20 +91,20 @@ open blocker before completion, and `delivery-report.js` would show it.
 ## Comparison
 | Option | Effort | Risk | Reversibility | Fits architecture.md | Recommendation |
 |---|---|---|---|---|---|
-| A read-only `/t4:assess`, JSON | S–M | low | high (new files only) | yes | fallback |
-| B `/t4:assess` writing `assessments/` | M | low–medium (overlap with reviewer) | high (new files only) | yes (one workspace dir, like analyst) | **recommended** |
-| C deepen `/t4:check` | S | medium (diff-only, changes reviewer template) | high | yes | no: misses spec and plan |
+| A read-only `/fc:assess`, JSON | S–M | low | high (new files only) | yes | fallback |
+| B `/fc:assess` writing `assessments/` | M | low–medium (overlap with reviewer) | high (new files only) | yes (one workspace dir, like analyst) | **recommended** |
+| C deepen `/fc:check` | S | medium (diff-only, changes reviewer template) | high | yes | no: misses spec and plan |
 | D assurance requirement | L | medium–high (structural ≠ real) | low (schema and evidence) | yes, but needs a spec extending 0021 | later, on top of B |
 
 ## Recommendation (opinion)
-Option B: a standalone `/t4:assess <spec|plan|working-tree|branch>` backed by an `assessor`
+Option B: a standalone `/fc:assess <spec|plan|working-tree|branch>` backed by an `assessor`
 agent.
 - **What it writes:** `ai-factory/assessments/` only. Toward code, specs, plans and evidence it
   is read-only, and it runs no network or dependency-audit tools.
 - **What it reports:** severity uses the existing `blocker|major|minor` scale. Every finding
   carries a category and a mitigation.
-- **Where it fits:** an optional step between `/t4:spec` and `/t4:plan`. It may also run on the
-  diff before `/t4:check`. The planner turns its mitigations into steps and risks.
+- **Where it fits:** an optional step between `/fc:spec` and `/fc:plan`. It may also run on the
+  diff before `/fc:check`. The planner turns its mitigations into steps and risks.
 - **What it does not do (yet):** gate anything. Reviewer check 6 stays as it is.
 
 Reasons:
@@ -124,13 +124,13 @@ What would change my mind:
    directory, or should it go in `runs/` (which is gitignored)? This decides between A and B.
 2. Numbering: should an assessment reuse the spec or plan number it assesses (like plans do),
    or take the next free number of its own?
-3. Should `/t4:start` (rule 3) or `/t4:plan` *suggest* `/t4:assess` when a risk trigger is
+3. Should `/fc:start` (rule 3) or `/fc:plan` *suggest* `/fc:assess` when a risk trigger is
    present? A suggestion, not a gate.
 4. Should reviewer check 6 defer to an existing assessment, or stay independent of it?
-5. The agent's name: `assessor`, `security`, or something else? It becomes `t4:<name>` and
-   `/t4:assess`.
+5. The agent's name: `assessor`, `security`, or something else? It becomes `fc:<name>` and
+   `/fc:assess`.
 6. Is a dependency or supply-chain check allowed to run local lockfile inspection only, given
    spec 0012 AC10?
 
 ## Next
-`/t4:spec Add an assessor agent and /t4:assess task that assesses a spec, plan or change for security threats and delivery risk and writes ai-factory/assessments/ only (exploration 0005, option B)`
+`/fc:spec Add an assessor agent and /fc:assess task that assesses a spec, plan or change for security threats and delivery risk and writes ai-factory/assessments/ only (exploration 0005, option B)`

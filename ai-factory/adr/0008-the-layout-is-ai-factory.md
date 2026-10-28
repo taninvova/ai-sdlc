@@ -34,7 +34,7 @@ different ways:
    dont-touch guard and its run log with no error at all — the worst failure a rename can have,
    because nothing looks wrong. The prompts get no such fallback: they name the new paths only,
    and a prompt pointed at a missing directory fails in front of the person who can fix it.
-2. **`/t4:migrate-layout`.** The move an adopted repo makes, once, when it takes the update.
+2. **`/fc:migrate-layout`.** The move an adopted repo makes, once, when it takes the update.
 
 **The command goes in 2.1.0. The fallback waits for 3.0.0.** Dropping the command is harmless: a
 repo that still needs it can run the script from an older checkout, and its absence is a missing
@@ -51,7 +51,7 @@ does exist removed nothing. Only the numbers moved. The shape of the decision is
 command goes in a minor, the fallback in the next major after it.
 
 ## The exception this decision makes, and its bounds
-`/t4:sync-sdlc` holds that taking an upstream change is a separate, reviewable edit, and ADR 0002
+`/fc:sync-sdlc` holds that taking an upstream change is a separate, reviewable edit, and ADR 0002
 holds that ai-sdlc never reaches into a repo. The migration rewrites path strings in a repo's own
 prompts, which brushes against the first of those. It is allowed, bounded as follows:
 
@@ -59,13 +59,13 @@ prompts, which brushes against the first of those. It is allowed, bounded as fol
   promised: `check-migrate.sh` compares every changed file against `rewrite(old)` and fails on any
   other difference.
 - **Reported as its own list**, apart from the moves, so it can be reviewed and reverted alone.
-- **Never automatic.** No hook, no task and neither `/t4:adopt-sdlc` nor `/t4:sync-sdlc` invokes it.
+- **Never automatic.** No hook, no task and neither `/fc:adopt-sdlc` nor `/fc:sync-sdlc` invokes it.
 
 The reason for the exception is that the alternative is worse: a move without the rewrite leaves
 every prompt in the repo pointing at a directory that no longer exists.
 
 ## Consequences
-Breaking for every adopted repo. Each runs `/t4:migrate-layout` itself; ai-sdlc keeps no list of
+Breaking for every adopted repo. Each runs `/fc:migrate-layout` itself; ai-sdlc keeps no list of
 adopters and cannot know which have (ADR 0002). Until a repo runs it, its hooks work and its
 prompts do not.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// /t4:loop's helper (spec 0022, plan 0022). It owns every deterministic decision of the loop;
+// /fc:loop's helper (spec 0022, plan 0022). It owns every deterministic decision of the loop;
 // tasks/loop.md only orchestrates. Each subcommand prints one JSON object on stdout, and the
 // module exports are the test seam.
 //   loop.js start [<plan>] [--max-parallel N] [--step-timeout M] [--host claude|codex|headless]
@@ -11,10 +11,10 @@
 //   loop.js next <loop-id>
 //     The steps to start now, each with its mode ({"action":"start","steps":[{number,mode}]}), or
 //     {"action":"wait"} (a running step must finish first), {"action":"review"} (every step is
-//     ticked: run /t4:review) or {"action":"stop"} (a stop cause, and nothing is running).
+//     ticked: run /fc:review) or {"action":"stop"} (a stop cause, and nothing is running).
 //   loop.js prepare <loop-id> <step>
 //     Creates a running worktree step's worktree under ai-factory/runs/tmp/worktrees/ on the
-//     temporary branch t4-loop/<loop-id>/S<N> from HEAD, then copies the main tree's snapshot in
+//     temporary branch fc-loop/<loop-id>/S<N> from HEAD, then copies the main tree's snapshot in
 //     ({"action":"prepared"}). A failure records a `snapshot` cause and the step does not start
 //     ({"action":"snapshot-failed"}, exit 0: the answer, not the status, carries it).
 //   loop.js finish <loop-id> <step> --result met|failed|timeout [--dry]
@@ -39,14 +39,14 @@
 //     while the review gate is enforced (GATE_ENFORCE=1 or an enforcing assurance preset).
 //   loop.js end <loop-id>
 //     Prints the report and writes the outcome record ({"action":"ended","code":N,…}) to
-//     $T4_LOOP_RESULT (absolute) or ai-factory/runs/tmp/loop/<loop-id>/outcome.json. Causes are
+//     $FC_LOOP_RESULT (absolute) or ai-factory/runs/tmp/loop/<loop-id>/outcome.json. Causes are
 //     listed in the order they happened; the code is 4 (conflict, refused, snapshot), else 1
 //     (failed, timeout), else 5 (verdict), else 0. The subcommand itself exits 0.
 // Every subcommand but start holds an exclusive lock beside the loop's state (state.lock) from its
 // read to its write, git apply and ticking included; run them one at a time all the same.
-// A plan is selected by its NNNN number in any spelling state.sh --spec accepts (22, 0022), by its
-// basename, or by its path, from ai-factory/plans/ and ai-factory/plans/done/. Letter-and-digit IDs
-// are not selectable until spec 0022 is amended (plan 0022, Ambiguity 1).
+// A plan is selected by its ID in any spelling state.sh --spec accepts (a legacy number as 22 or
+// 0022, a prefixed ID as PMB-1 or pmb-001, a letter-and-digit ID as dhw631), by its basename, or
+// by its path, from ai-factory/plans/ and ai-factory/plans/done/.
 "use strict";
 const fs = require("node:fs");
 const path = require("node:path");
@@ -57,15 +57,15 @@ const { parsePlanSteps } = require("./contracts.js");
 const ENTRY_DIRECTORY =
 	require.main === module ? path.dirname(process.argv[1]) : __dirname;
 
-const STATE_SCHEMA = "t4-loop-state";
-const OUTCOME_SCHEMA = "t4-loop-outcome";
+const STATE_SCHEMA = "fc-loop-state";
+const OUTCOME_SCHEMA = "fc-loop-outcome";
 const VERSION = 1;
 const PLANS = "ai-factory/plans";
 const LOOP_DIR = "ai-factory/runs/tmp/loop";
 const HOSTS = ["claude", "codex", "headless"];
 const DEFAULTS = { max_parallel: 3, step_timeout: 30, host: "claude" };
 const USAGE = [
-	"usage: loop.js start [<plan number or path>] [--max-parallel 1-8] [--step-timeout 1-240] [--host claude|codex|headless]",
+	"usage: loop.js start [<plan ID or path>] [--max-parallel 1-8] [--step-timeout 1-240] [--host claude|codex|headless]",
 	"       loop.js next <loop-id>",
 	"       loop.js prepare <loop-id> <step>",
 	"       loop.js finish <loop-id> <step> --result met|failed|timeout [--output-file <file>] [--delivery <id> [--phase red|step|final]] [--dry]",
@@ -103,7 +103,7 @@ function parseOptions(argv) {
 		const eq = arg.indexOf("=");
 		const name = eq === -1 ? arg : arg.slice(0, eq);
 		const spec = OPTIONS[name];
-		if (!spec) throw new UsageError(`'${name}' is not an option /t4:loop takes`);
+		if (!spec) throw new UsageError(`'${name}' is not an option /fc:loop takes`);
 		if (seen.has(name)) throw new UsageError(`${name} was given more than once`);
 		seen.add(name);
 		let value;
@@ -135,7 +135,7 @@ function idOf(file) {
 	const base = path.posix.basename(file);
 	const legacy = base.match(/^([0-9]{4})/);
 	if (legacy) return legacy[1];
-	const id = base.match(/^([A-Za-z]{3}[0-9]{3})(?:[-.].*)?$/s);
+	const id = base.match(/^([A-Za-z]{2,5}-[0-9]{3,}|[A-Za-z]{3}[0-9]{3})(?:[-.].*)?$/s);
 	return id ? id[1].toUpperCase() : "-";
 }
 function createdOf(text) {
@@ -144,7 +144,7 @@ function createdOf(text) {
 	return match ? `${match[1]}${match[2] || ".000"}` : "";
 }
 function orderOf(file, id, text) {
-	if (!/^[A-Z]{3}[0-9]{3}$/.test(id)) return ["0", path.posix.basename(file)];
+	if (!/^(?:[A-Z]{3}[0-9]{3}|[A-Z]+-[0-9]{3,})$/.test(id)) return ["0", path.posix.basename(file)];
 	const created = text === null ? "" : createdOf(text);
 	return created ? ["1", `${created} ${id}`] : ["2", id];
 }
@@ -326,7 +326,7 @@ function listing(root, only = null) {
 }
 
 // --- selection -----------------------------------------------------------------------------
-// The selectable plans: NNNN-named Markdown files directly under plans/ and plans/done/.
+// The selectable plans: ID-named Markdown files directly under plans/ and plans/done/.
 function selectable(root) {
 	const out = [];
 	for (const dir of [PLANS, `${PLANS}/done`]) {
@@ -338,7 +338,7 @@ function selectable(root) {
 		}
 		for (const entry of entries) {
 			const rel = `${dir}/${entry.name}`;
-			if (!/^[0-9]{4}-.*\.md$/s.test(entry.name)) continue;
+			if (!/^(?:[0-9]{4}|[A-Za-z]{2,5}-[0-9]{3,}|[A-Za-z]{3}[0-9]{3})-.*\.md$/s.test(entry.name)) continue;
 			try {
 				if (fs.statSync(path.join(root, rel)).isFile()) out.push(rel);
 			} catch {}
@@ -369,9 +369,19 @@ function matchPlans(root, arg) {
 		const number = String(Number(stripZeros(arg))).padStart(4, "0");
 		return plans.filter((rel) => idOf(rel) === number);
 	}
+	if (/^[A-Za-z]{2,5}-[0-9]+$/.test(arg)) {
+		const [prefix, digits] = arg.split("-");
+		const id = `${prefix.toUpperCase()}-${stripZeros(digits).padStart(3, "0")}`;
+		return plans.filter((rel) => idOf(rel) === id);
+	}
+	if (/^[A-Za-z]{3}[0-9]{3}$/.test(arg)) return plans.filter((rel) => idOf(rel) === arg.toUpperCase());
 	if (/^[0-9]+-/.test(arg)) {
 		const name = arg.endsWith(".md") ? arg : `${arg}.md`;
 		return plans.filter((rel) => path.posix.basename(rel) === name);
+	}
+	if (/^(?:[A-Za-z]{2,5}-[0-9]{3,}|[A-Za-z]{3}[0-9]{3})-/.test(arg)) {
+		const name = (arg.endsWith(".md") ? arg : `${arg}.md`).toUpperCase();
+		return plans.filter((rel) => path.posix.basename(rel).toUpperCase() === name);
 	}
 	return [];
 }
@@ -622,7 +632,7 @@ function next(state) {
 	return { action: "stop", causes: state.causes, remaining: left, blocked: true };
 }
 // Records a step's result. A main-tree step that met its phase was ticked by its implementer, as
-// under /t4:run; without --dry its checkbox is read back, and an unticked one is a failure. A
+// under /fc:run; without --dry its checkbox is read back, and an unticked one is a failure. A
 // worktree step that met it gets its two loop commits now, then waits in the apply queue until
 // every lower-numbered running step has finished, so deltas come back in plan order (AC30). A
 // failure or timeout is a stop cause and keeps the step's worktree; queued steps still come back
@@ -647,7 +657,7 @@ function finish(state, number, result, { dry = false, root = null, git: run = gi
 	const entry = state.running[at];
 	if (!dry && entry.mode === "worktree" && !entry.worktree)
 		throw new UsageError(`Step ${number} runs in a worktree that was never prepared — run prepare first`);
-	// A main-tree step's implementer records its own evidence and ticks, exactly as under /t4:run.
+	// A main-tree step's implementer records its own evidence and ticks, exactly as under /fc:run.
 	if (contract && entry.mode !== "worktree")
 		throw new UsageError(`--delivery is for worktree steps only: Step ${number} ran in the main tree, where its implementer records its own contract evidence`);
 	state.running.splice(at, 1);
@@ -744,7 +754,7 @@ function git(args, { cwd, input, env: extra } = {}) {
 	return run.stdout;
 }
 const worktreeOf = (loopId, number) => `${WORKTREES}/${loopId}-S${number}`;
-const branchOf = (loopId, number) => `t4-loop/${loopId}/S${number}`;
+const branchOf = (loopId, number) => `fc-loop/${loopId}/S${number}`;
 
 // Copies one untracked path from the main tree into the worktree: a file with its mode, a symlink
 // as a link, or a directory git reports whole (an embedded repository). Never follows a link in the
@@ -772,7 +782,7 @@ function copyUntracked(top, tree, rel) {
 // The worktree's files as a tree object, through a scratch index in the worktree's own git dir.
 function snapshotTree(tree, head, run) {
 	const gitDir = run(["rev-parse", "--absolute-git-dir"], { cwd: tree }).toString().replace(/\n$/, "");
-	const index = path.join(gitDir, "t4-loop-snapshot.index");
+	const index = path.join(gitDir, "fc-loop-snapshot.index");
 	const env = { GIT_INDEX_FILE: index };
 	try {
 		run(["read-tree", head], { cwd: tree, env });
@@ -846,10 +856,10 @@ function prepare(state, number, { root, git: run = git } = {}) {
 // fallback runs (AC62, AC63).
 const firstLine = (error) => String(error && error.message).trim().split("\n")[0];
 const LOOP_IDENTITY = {
-	GIT_AUTHOR_NAME: "t4-loop",
-	GIT_AUTHOR_EMAIL: "t4-loop@invalid",
-	GIT_COMMITTER_NAME: "t4-loop",
-	GIT_COMMITTER_EMAIL: "t4-loop@invalid",
+	GIT_AUTHOR_NAME: "fc-loop",
+	GIT_AUTHOR_EMAIL: "fc-loop@invalid",
+	GIT_COMMITTER_NAME: "fc-loop",
+	GIT_COMMITTER_EMAIL: "fc-loop@invalid",
 };
 // Both commits are plumbing (commit-tree, then update-ref of the step's own branch only), so no hook
 // runs (core.hooksPath=/dev/null in every git call, and commit-tree runs none) and nothing is signed;
@@ -904,7 +914,7 @@ function tickPlan(root, plan, number) {
 function loopCommits(root, entry, number, run) {
 	const tree = path.join(root, entry.worktree);
 	if (!entry.snapshot) throw new Error("prepare recorded no snapshot for the baseline commit");
-	if (!String(entry.branch || "").startsWith("t4-loop/")) throw new Error(`'${entry.branch}' is not one of the loop's branches`);
+	if (!String(entry.branch || "").startsWith("fc-loop/")) throw new Error(`'${entry.branch}' is not one of the loop's branches`);
 	const ref = `refs/heads/${entry.branch}`;
 	const gitDir = worktreeGitDir(root, entry, run);
 	const own = { GIT_DIR: gitDir, GIT_WORK_TREE: tree };
@@ -919,8 +929,8 @@ function loopCommits(root, entry, number, run) {
 	if (now !== entry.head) throw new Error(`its branch moved from ${entry.head} to ${now}: something other than the loop committed there`);
 	const env = { ...LOOP_IDENTITY, ...own };
 	const commit = (treeId, parent, message) => run([...COMMIT_TREE, treeId, "-p", parent, "-m", message], { cwd: tree, env }).toString().trim();
-	const baseline = commit(entry.snapshot, entry.head, `t4-loop: Step ${number} baseline (the main tree's snapshot)`);
-	const index = path.join(gitDir, `t4-loop-step-${process.pid}-${crypto.randomBytes(4).toString("hex")}.index`);
+	const baseline = commit(entry.snapshot, entry.head, `fc-loop: Step ${number} baseline (the main tree's snapshot)`);
+	const index = path.join(gitDir, `fc-loop-step-${process.pid}-${crypto.randomBytes(4).toString("hex")}.index`);
 	let stepTree;
 	try {
 		const scratch = { ...env, GIT_INDEX_FILE: index };
@@ -930,8 +940,8 @@ function loopCommits(root, entry, number, run) {
 	} finally {
 		fs.rmSync(index, { force: true });
 	}
-	const step = commit(stepTree, baseline, `t4-loop: Step ${number}`);
-	run(["update-ref", "-m", `t4-loop: Step ${number}`, ref, step, entry.head], { cwd: tree, env });
+	const step = commit(stepTree, baseline, `fc-loop: Step ${number}`);
+	run(["update-ref", "-m", `fc-loop: Step ${number}`, ref, step, entry.head], { cwd: tree, env });
 	// Best effort: the worktree's own index follows its branch, so a kept worktree reads clean.
 	try {
 		run(["read-tree", step], { cwd: tree, env });
@@ -1072,7 +1082,7 @@ function applyBack(root, state, done, run, verify = verifyStep) {
 // here is a note for the report, not a stop cause: the step's work is already in the main tree.
 function removeWorktree(root, done, run) {
 	try {
-		if (!done.worktree.startsWith(`${WORKTREES}/`) || !done.branch.startsWith("t4-loop/"))
+		if (!done.worktree.startsWith(`${WORKTREES}/`) || !done.branch.startsWith("fc-loop/"))
 			throw new Error("it is not the loop's own");
 		const tree = boundary(path.join(root, WORKTREES)).assertPath(path.join(root, done.worktree));
 		const top = topOf(root, run);
@@ -1112,7 +1122,7 @@ function mainTreeHash(root, run) {
 	const top = topOf(root, run);
 	const gitDir = run(["rev-parse", "--absolute-git-dir"], { cwd: top }).toString().replace(/\n$/, "");
 	const scratch = toPosix(path.relative(top, path.join(fs.realpathSync(root), SCRATCH))).replace(/\/$/, "");
-	const index = path.join(gitDir, `t4-loop-main-${process.pid}-${crypto.randomBytes(4).toString("hex")}.index`);
+	const index = path.join(gitDir, `fc-loop-main-${process.pid}-${crypto.randomBytes(4).toString("hex")}.index`);
 	const env = { GIT_INDEX_FILE: index };
 	try {
 		if (fs.existsSync(path.join(gitDir, "index"))) fs.copyFileSync(path.join(gitDir, "index"), index, fs.constants.COPYFILE_EXCL);
@@ -1189,11 +1199,11 @@ const atReviewPoint = (state) => !state.running.length && !remaining(state).leng
 
 // verdict(state, text, { root, env }) → { action: "verdict", valid, approved, … }. Reads the
 // reviewer's JSON with gate.js parseVerdict: only a valid approve with no blocker is approval.
-// The text is kept unchanged for the report (AC18). /t4:review runs once, so a second verdict is
+// The text is kept unchanged for the report (AC18). /fc:review runs once, so a second verdict is
 // refused. A non-approving verdict is a stop cause only while the gate is enforced (AC51, AC52).
 function verdict(state, text, { root = null, env = process.env } = {}) {
-	if (state.running.length) throw new UsageError(`steps ${state.running.map((entry) => entry.step).join(", ")} are still running; /t4:review runs after them`);
-	if (state.verdict) throw new UsageError("a /t4:review verdict is already recorded for this loop; /t4:review runs once");
+	if (state.running.length) throw new UsageError(`steps ${state.running.map((entry) => entry.step).join(", ")} are still running; /fc:review runs after them`);
+	if (state.verdict) throw new UsageError("a /fc:review verdict is already recorded for this loop; /fc:review runs once");
 	const enforced = gateEnforced(root, env);
 	const record = { raw: text, valid: false, approved: false, verdict: null, blockers: 0, enforced };
 	try {
@@ -1211,13 +1221,13 @@ function verdict(state, text, { root = null, env = process.env } = {}) {
 	return { action: "verdict", valid: record.valid, approved: record.approved, verdict: record.verdict, blockers: record.blockers, enforced, error: record.error || null, causes: state.causes };
 }
 function verdictMessage(record) {
-	if (!record.valid) return `/t4:review returned no valid verdict (${record.error.replace(/^the verdict is not a valid review: /, "")}), so the review gate is not met`;
-	if (record.verdict === "approve") return `/t4:review verdict approve carries ${record.blockers} blocker(s), so it is not an approval`;
-	return `/t4:review verdict ${record.verdict}, which is not an approval`;
+	if (!record.valid) return `/fc:review returned no valid verdict (${record.error.replace(/^the verdict is not a valid review: /, "")}), so the review gate is not met`;
+	if (record.verdict === "approve") return `/fc:review verdict approve carries ${record.blockers} blocker(s), so it is not an approval`;
+	return `/fc:review verdict ${record.verdict}, which is not an approval`;
 }
 const list = (numbers) => (numbers.length ? numbers.join(", ") : "none");
 function causeLines(cause, index) {
-	const who = cause.kind === "verdict" ? "/t4:review" : `Step ${cause.step}`;
+	const who = cause.kind === "verdict" ? "/fc:review" : `Step ${cause.step}`;
 	const what = {
 		failed: "failed",
 		timeout: cause.mode === "main" ? "timeout (in the main tree)" : "timeout",
@@ -1255,8 +1265,8 @@ function outcome(state, { root = null, env = process.env } = {}) {
 	// No verdict at the review point: no approval when the gate is enforced, and said either way.
 	if (!state.verdict && atReviewPoint(state)) {
 		if (gateEnforced(root, env))
-			causes.push({ kind: "verdict", step: null, message: "no /t4:review verdict was recorded, so the review gate is not met" });
-		else notes.push("no /t4:review verdict was recorded");
+			causes.push({ kind: "verdict", step: null, message: "no /fc:review verdict was recorded, so the review gate is not met" });
+		else notes.push("no /fc:review verdict was recorded");
 	}
 	const code = exitCode(causes);
 	const stopped = causes.some((cause) => stopKinds.has(cause.kind));
@@ -1265,7 +1275,7 @@ function outcome(state, { root = null, env = process.env } = {}) {
 	const applies = state.finished
 		.filter((done) => done.apply)
 		.map((done) => ({ step: done.step, apply: done.apply, staging_changed: Boolean(done.staging_changed) }));
-	const report = [`/t4:loop — ${state.plan}`];
+	const report = [`/fc:loop — ${state.plan}`];
 	report.push(noneRemained ? "no steps remained: every step of the plan was already ticked" : `Steps run in this invocation: ${list(ran)}`);
 	if (!noneRemained) report.push(`Ticked in this invocation: ${list(ticked)}`);
 	report.push(`Still unticked: ${list(left)}`);
@@ -1279,9 +1289,9 @@ function outcome(state, { root = null, env = process.env } = {}) {
 		for (const note of notes) report.push(`  - ${note}`);
 	}
 	if (state.verdict) {
-		report.push(`/t4:review verdict${state.verdict.valid ? "" : " (not a valid review)"}, unchanged:`);
+		report.push(`/fc:review verdict${state.verdict.valid ? "" : " (not a valid review)"}, unchanged:`);
 		report.push(state.verdict.raw.replace(/\n$/, ""));
-	} else report.push("/t4:review verdict: none recorded");
+	} else report.push("/fc:review verdict: none recorded");
 	report.push(`Exit code: ${code}`);
 	return {
 		schema: OUTCOME_SCHEMA,
@@ -1302,15 +1312,15 @@ function outcome(state, { root = null, env = process.env } = {}) {
 		report: `${report.join("\n")}\n`,
 	};
 }
-// end(state, { root, env }) → the outcome record, written to $T4_LOOP_RESULT when the runner set
+// end(state, { root, env }) → the outcome record, written to $FC_LOOP_RESULT when the runner set
 // it (an absolute path), else to ai-factory/runs/tmp/loop/<loop-id>/outcome.json. The loop must
 // have ended: nothing running, and either every step ticked or a stop cause recorded.
 function end(state, { root, env = process.env } = {}) {
 	if (state.running.length) throw new UsageError(`steps ${state.running.map((entry) => entry.step).join(", ")} are still running; end the loop after they finish`);
 	if (remaining(state).length && !state.causes.some((cause) => stopKinds.has(cause.kind)))
 		throw new UsageError(`the loop has not ended: steps ${remaining(state).join(", ")} are unticked and no stop cause is recorded — run next`);
-	const target = env.T4_LOOP_RESULT;
-	if (target && !path.isAbsolute(target)) throw new UsageError(`T4_LOOP_RESULT '${target}' is not an absolute path`);
+	const target = env.FC_LOOP_RESULT;
+	if (target && !path.isAbsolute(target)) throw new UsageError(`FC_LOOP_RESULT '${target}' is not an absolute path`);
 	const record = outcome(state, { root, env });
 	const text = `${JSON.stringify(record, null, 2)}\n`;
 	let written;
@@ -1332,7 +1342,7 @@ function writeOutside(target, text) {
 	try {
 		stat = fs.lstatSync(target);
 	} catch {}
-	if (stat && !stat.isFile()) throw new UsageError(`T4_LOOP_RESULT '${target}' is not a regular file`);
+	if (stat && !stat.isFile()) throw new UsageError(`FC_LOOP_RESULT '${target}' is not a regular file`);
 	const temp = `${target}.${process.pid}.${crypto.randomBytes(4).toString("hex")}.tmp`;
 	fs.writeFileSync(temp, text, { flag: "wx", mode: 0o600 });
 	fs.renameSync(temp, target);

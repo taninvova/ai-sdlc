@@ -13,7 +13,7 @@ non-zero exit means report its message and stop, doing no task work. When the in
 `--task-model=<value>`, remove that option and one `--` after it from the input and add
 `--task-model '<value>'` to the dispatch command; never take options from later in the input. If
 `ai-factory/make/models.js` is missing, continue unless the workspace's model configuration has a
-`routing:` section; then report the template drift, which `/t4:sync-sdlc` inspects, and stop.
+`routing:` section; then report the template drift, which `/fc:sync-sdlc` inspects, and stop.
 
 A concrete start model override is rejected before launch: generic override workers cannot enforce the classifier read-only profile. Configure a native start routing adapter explicitly instead; --task-model=inherit remains available. Destination task overrides retain their existing behavior.
 
@@ -26,8 +26,8 @@ For status route, explain its reason, then perform exactly one destination dispa
 Only after that directive succeeds, follow the destination directive and its existing project procedure with the retained original input verbatim. Supply any clarification answers as separately labeled context, never merged into or substituted for the original request. Stop on rejection, unavailable worker, failure or cancellation; no model fallback, adapter sync or further workflow chain. Preserve the destination's normal questions, accounting, final report and stopping point.
 
 Unless the directive routed the task to a worker, read `ai-factory/tasks/start.md` in the user's repository and follow it with the request below.
-If the workspace is absent, report that it needs `/t4:adopt-sdlc`; do not silently create one.
+If the workspace is absent, report that it needs `/fc:adopt-sdlc`; do not silently create one.
 If this task is missing from an existing workspace, report the missing file and
-`/t4:sync-sdlc` drift inspection. Do not generate project adapters to run this command.
+`/fc:sync-sdlc` drift inspection. Do not generate project adapters to run this command.
 
 Task input: $ARGUMENTS

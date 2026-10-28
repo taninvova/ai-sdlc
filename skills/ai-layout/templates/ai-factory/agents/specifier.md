@@ -34,11 +34,12 @@ One new spec, created by the ID helper — never pick a number or an ID yourself
 root and write the spec into the path it prints. Keep the helper's two lines — the `# <ID> — <Title>` heading and the `Created:` line — unchanged, and write the spec below them.
 Nothing else. Do not write code. Do not write the plan. Respect ai-factory/docs/dont-touch.md.
 
-Whether to pass `--id` depends on the parent you built the spec on. A new-style ID is three letters and three digits, such as `KXT204`; a legacy one is four digits, such as `0005`.
+Whether to pass `--id` depends on the parent you built the spec on. A new-style ID is the project's prefix, a dash and a number, such as `PMB-012`; a legacy random ID such as `KXT204` counts as new-style too. A legacy number is four digits, such as `0005`.
 - A new-style exploration for this feature: pass `--id <exploration ID>`. Otherwise, a new-style analysis: pass `--id <analysis ID>`.
 - Both a new-style exploration and an analysis: use the exploration's ID and cite the analysis's path (`ai-factory/analyses/<ID>-…`) in the spec.
-- A four-digit parent: pass no `--id`; the helper draws a fresh ID, and you cite the parent's path in the spec. With no parent at all, pass no `--id` either.
-- When the helper exits 3, a spec already has the parent's ID: run it again without `--id` so it draws a fresh ID. Then cite the parent's path in the spec and carry on; do not stop and do not report the existing spec.
+- A four-digit parent: pass no `--id`; the helper takes the next free ID, and you cite the parent's path in the spec. With no parent at all, pass no `--id` either.
+- When the helper exits 3, a spec already has the parent's ID: run it again without `--id` so it takes the next free ID. Then cite the parent's path in the spec and carry on; do not stop and do not report the existing spec.
+- When the helper exits 4, the project has no ID prefix yet. In an interactive session, ask the developer for the project name and a prefix of two to five letters, suggesting one from `node ai-factory/make/ids.js suggest "<name>"` (Pembina → PMB). Run `node ai-factory/make/ids.js init --name "<name>" --prefix <PREFIX>`, then run the helper again. In a headless run, write nothing and report its message.
 - Any other non-zero exit: write nothing and report the helper's message.
 
 ## The spec

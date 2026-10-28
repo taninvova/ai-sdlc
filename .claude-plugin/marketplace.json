@@ -1,14 +1,14 @@
 {
   "name": "sdlc",
   "owner": {
-    "name": "T4 platform"
+    "name": "FC platform"
   },
   "plugins": [
     {
-      "name": "t4",
+      "name": "fc",
       "source": ".",
-      "description": "T4 AI SDLC core plugin (ai-sdlc)",
-      "version": "3.0.0"
+      "description": "FC AI SDLC core plugin (ai-sdlc)",
+      "version": "4.0.0"
     }
   ]
 }

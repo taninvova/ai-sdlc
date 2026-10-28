@@ -5,7 +5,7 @@ One paragraph: what this project does and who uses it. Stack: {{stack}}. Scaffol
 
 ## Commands
 {{commands}}
-Slash commands: /t4:start /t4:continue /t4:fleet /t4:design /t4:adr /t4:analyse /t4:explore /t4:spec /t4:plan /t4:risk /t4:test /t4:run /t4:loop /t4:fix /t4:chore /t4:quick /t4:review /t4:report
+Slash commands: /fc:start /fc:continue /fc:fleet /fc:design /fc:adr /fc:analyse /fc:explore /fc:spec /fc:plan /fc:risk /fc:test /fc:run /fc:loop /fc:fix /fc:chore /fc:quick /fc:review /fc:report
 Headless (CI only): make -f ai-factory/make/ai.mk ai TASK=<name> INPUT="…"
 
 ## Non-negotiable rules
@@ -21,17 +21,17 @@ Read architecture when placement is uncertain; fleet for cross-service work; the
 when the selected workflow requires them. Reuse unchanged context already in this session.
 
 ## Workflow
-Use /t4:start <request> to choose one existing workflow interactively; direct commands remain available.
+Use /fc:start <request> to choose one existing workflow interactively; direct commands remain available.
 Start only classifies, preserves original input and dispatches the destination independently.
-Resume a contracts-enabled planned delivery with /t4:continue <delivery id>: it inspects evidence
+Resume a contracts-enabled planned delivery with /fc:continue <delivery id>: it inspects evidence
 read-only, asks when phases are uncertain, stops on spec drift for you to reconcile, and hands off
 to at most one plan, test, run, review or report task in this session. Paths, quick deliveries and
 contracts-disabled repos are unsupported. Headless TASK=start and TASK=continue are unsupported;
 CI must name a destination task.
-Small, understood local change: /t4:quick. Bug: /t4:fix. Maintenance: /t4:chore.
+Small, understood local change: /fc:quick. Bug: /fc:fix. Maintenance: /fc:chore.
 Uncertain requirements, authorization, public contracts, migrations, dependencies or service
-boundaries: /t4:explore → /t4:spec → /t4:plan → /t4:test red → /t4:run → /t4:test gaps → /t4:review (→ /t4:report with contracts).
-One step per /t4:run; the opt-in exception is /t4:loop <plan>: every unticked step, then one /t4:review, never a commit on your branch.
+boundaries: /fc:explore → /fc:spec → /fc:plan → /fc:test red → /fc:run → /fc:test gaps → /fc:review (→ /fc:report with contracts).
+One step per /fc:run; the opt-in exception is /fc:loop <plan>: every unticked step, then one /fc:review, never a commit on your branch.
 Preserve existing changes. Never reset a working tree to start or finish a step. File count is
 not a risk classifier. Match verification to the phase and run required final checks at completion.
 

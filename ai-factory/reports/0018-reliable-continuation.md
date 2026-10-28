@@ -7,7 +7,7 @@ was a self-check). No release/version bump.
 
 ## Result
 
-Interactive Claude `/t4:continue <delivery id>` and Codex `$t4-continue` accept one artifact-contract
+Interactive Claude `/fc:continue <delivery id>` and Codex `$fc-continue` accept one artifact-contract
 delivery ID (`d-YYYYMMDD-xxxxxx`) for a contracts-enabled planned delivery. `make/continue.js`
 inspects read-only by reusing `contracts.js` validation and `delivery-report.js` collection and
 evaluation. It runs no verification, writes nothing, and returns a bounded `action`, `question`,
@@ -89,6 +89,6 @@ Not done, so Step 5 stays unticked pending an owner decision:
 ## Upgrade impact
 
 Adopted workspaces need `tasks/continue.md` and `make/continue.js`, plus updated models.js,
-runner.js, sync-adapters.js and AGENTS.md. Inspect `/t4:sync-sdlc` drift and retain local
+runner.js, sync-adapters.js and AGENTS.md. Inspect `/fc:sync-sdlc` drift and retain local
 additions. Regenerate routing adapters and restart the host where routing is enabled. Nothing is
 written silently, and no dependency is added.

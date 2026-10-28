@@ -29,7 +29,7 @@ never weakens project rules. Under `standard` or `strict` record the checklist w
    A repeated failure needs a new hypothesis or evidence. After two attempts at the same failure
    with no new evidence, report the blocker and preserve work. Never weaken tests to pass.
    With contracts, tick the items, then record `make -f ai-factory/make/ai.mk verify DELIVERY=<id>`;
-   report its result and `make -f ai-factory/make/ai.mk contracts DELIVERY=<id>`; `/t4:report <id>`
+   report its result and `make -f ai-factory/make/ai.mk contracts DELIVERY=<id>`; `/fc:report <id>`
    writes the optional completion report.
 5. Self-review the actual local diff, including relevant untracked files. Clearly call this a
    self-review. Use independent review if the user or project requires it; never imply independence.

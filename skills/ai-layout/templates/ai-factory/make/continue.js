@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Read-only inspection for /t4:continue. Selection never runs verification or writes artifacts.
+// Read-only inspection for /fc:continue. Selection never runs verification or writes artifacts.
 const path = require("node:path");
 const crypto = require("node:crypto");
 const contracts = require("./contracts.js");
@@ -103,7 +103,7 @@ function select({ ctx, input, refs, collected, answers }) {
 		// Final verification and lifecycle telemetry do not show whether gaps testing ran.
 		if (answers.gaps_tested === false) return result("action", "Every step is done and gaps testing has not run; run it before review.", input, refs, fp, { task: "test", args: { spec, plan, mode: "gaps" } });
 		if (answers.gaps_tested !== true)
-			return result("question", "Every step is done and final verification is recorded, but no evidence shows whether gaps testing ran. Has /t4:test gaps been run for this delivery?", input, refs, fp, { clarify: "gaps_tested" });
+			return result("question", "Every step is done and final verification is recorded, but no evidence shows whether gaps testing ran. Has /fc:test gaps been run for this delivery?", input, refs, fp, { clarify: "gaps_tested" });
 		if (review.required) return result("action", "Gaps testing is reported done and no review is recorded; review the change.", input, refs, fp, { task: "review", args: { scope: "working-tree", spec, plan } });
 	}
 	const readiness = reports.evaluate(collected);

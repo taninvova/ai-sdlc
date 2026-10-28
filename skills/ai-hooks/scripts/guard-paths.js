@@ -9,7 +9,7 @@ const {
 	path,
 } = require("./_common");
 
-const EMPTY_POLICY = "<!-- t4:allow-empty-policy -->";
+const EMPTY_POLICY = "<!-- fc:allow-empty-policy -->";
 const hasControl = (value) =>
 	Array.from(value).some((character) => character.charCodeAt(0) < 32);
 function parseRules(text) {
@@ -56,7 +56,7 @@ function matches(target, rule) {
 
 try {
 	const ev = readEvent();
-	// Inside a /t4:loop worktree, paths are judged against the main repository and its policy:
+	// Inside a /fc:loop worktree, paths are judged against the main repository and its policy:
 	// the worktree's own dont-touch.md is a copy an implementer could edit.
 	const loop = loopWorktree(ev);
 	const ai = loop ? loop.ai : aiDir(ev);

@@ -1,7 +1,7 @@
 ---
-name: T4 AI SDLC
-description: "T4 AI SDLC core: a cross-role agent workflow from requirements to review."
-owner: T4 platform
+name: FC AI SDLC
+description: "FC AI SDLC core: a cross-role agent workflow from requirements to review."
+owner: FC platform
 authors:
   - "Volodymyr Tanin <taninvova@gmail.com>"
 install_script: "git clone git@github.com:taninvova/ai-sdlc.git && claude --plugin-dir ./ai-sdlc-plugin"
@@ -15,7 +15,7 @@ use_cases:
   - Automated code review
 ---
 
-# T4 AI SDLC
+# FC AI SDLC
 
 A curated collection of agents, skills, rules and conventions that stitches nine agents
 into one cross-role, cross-phase workflow. Each agent is a separate role with its own
@@ -34,16 +34,16 @@ both the developer and, independently, QA.
 
 | Phase | Role | Agent | Command | Reads | Writes |
 | --- | --- | --- | --- | --- | --- |
-| Architecture | Architect | `architect` | `/t4:design`, `/t4:adr` | `ai-factory/docs/fleet.md` | `ai-factory/designs/`, `ai-factory/adr/` |
-| Requirements | Business analyst | `analyst` | `/t4:analyse` | feature description | `ai-factory/analyses/` |
-| Options | Explorer | `explorer` | `/t4:explore` | code, `ai-factory/analyses/` | `ai-factory/explorations/` |
-| Specification | Specifier | `specifier` | `/t4:spec` | `ai-factory/analyses/`, `ai-factory/explorations/` | `ai-factory/specs/` |
-| Planning | Planner | `planner` | `/t4:plan` | `ai-factory/specs/` | `ai-factory/plans/` |
-| Risk | Security and risk | `risk` | `/t4:risk` | one spec, plan or change | `ai-factory/risks/` — the specifier, planner and reviewer act on it |
-| QA | Tester | `tester` | `/t4:test` | `ai-factory/specs/` (ACs only) | test files |
-| Development | Implementer | `implementer` | `/t4:run`, `/t4:loop` | `ai-factory/plans/` one step (`/t4:loop`: every unticked step) | source |
-| Review | Reviewer | `reviewer` | `/t4:review` | branch diff vs `ai-factory/specs/`, `ai-factory/plans/` | JSON verdict |
-| Handoff | Developer | none | `/t4:report` | contract sidecars and evidence of one delivery | `ai-factory/reports/<id>/` completion report |
+| Architecture | Architect | `architect` | `/fc:design`, `/fc:adr` | `ai-factory/docs/fleet.md` | `ai-factory/designs/`, `ai-factory/adr/` |
+| Requirements | Business analyst | `analyst` | `/fc:analyse` | feature description | `ai-factory/analyses/` |
+| Options | Explorer | `explorer` | `/fc:explore` | code, `ai-factory/analyses/` | `ai-factory/explorations/` |
+| Specification | Specifier | `specifier` | `/fc:spec` | `ai-factory/analyses/`, `ai-factory/explorations/` | `ai-factory/specs/` |
+| Planning | Planner | `planner` | `/fc:plan` | `ai-factory/specs/` | `ai-factory/plans/` |
+| Risk | Security and risk | `risk` | `/fc:risk` | one spec, plan or change | `ai-factory/risks/` — the specifier, planner and reviewer act on it |
+| QA | Tester | `tester` | `/fc:test` | `ai-factory/specs/` (ACs only) | test files |
+| Development | Implementer | `implementer` | `/fc:run`, `/fc:loop` | `ai-factory/plans/` one step (`/fc:loop`: every unticked step) | source |
+| Review | Reviewer | `reviewer` | `/fc:review` | branch diff vs `ai-factory/specs/`, `ai-factory/plans/` | JSON verdict |
+| Handoff | Developer | none | `/fc:report` | contract sidecars and evidence of one delivery | `ai-factory/reports/<id>/` completion report |
 
 Two properties the file handoff buys:
 
@@ -68,7 +68,7 @@ agree, not that a requirement is right. Existing specs and plans are drafted int
 by an explicit `contracts.js migrate --write`, which never edits prose. Details are in
 `ai-factory/contracts/README.md`.
 
-For a small, well-understood local change the full chain is overhead: `/t4:quick` makes
+For a small, well-understood local change the full chain is overhead: `/fc:quick` makes
 the change with focused checks and a self-review it labels as such, and hands back to the
 chain when the change turns out to touch authorization, public contracts, migrations,
 dependencies or service ownership.
@@ -82,7 +82,7 @@ specialize it for an archetype by filling the `{{…_extra}}` slots in its templ
 stack-specific factory inherits the whole chain above and only supplies what differs.
 
 Two optional paths reach outside the repo and are inert until configured: a tracker
-(`ai-factory/jira.yaml`, which makes `/t4:spec ABC-12` resolve a ticket key) and a
+(`ai-factory/jira.yaml`, which makes `/fc:spec ABC-12` resolve a ticket key) and a
 read-only knowledge source (`ai-factory/knowledge_base.md`, an MCP server or knowledge base
 that the explorer, specifier, planner, analyst, architect and reviewer cite as external and
 unverified).
@@ -92,26 +92,26 @@ unverified).
 | Kind | Artifacts |
 | --- | --- |
 | Skills | `ai-layout` (where an AI-related file belongs), `ai-hooks` (run logging, dont-touch guard) |
-| Setup commands | `/t4:adopt-sdlc`, `/t4:doctor`, `/t4:state` (`--done`, `--next`, `--specs`, `--plans`, `--spec <id>`), `/t4:setup-tracker`, `/t4:setup-knowledge`, `/t4:sync-sdlc` |
-| Other loop commands | `/t4:quick`, `/t4:fleet`, `/t4:fix`, `/t4:chore`, `/t4:report` |
+| Setup commands | `/fc:adopt-sdlc`, `/fc:doctor`, `/fc:state` (`--done`, `--next`, `--specs`, `--plans`, `--spec <id>`), `/fc:setup-tracker`, `/fc:setup-knowledge`, `/fc:sync-sdlc` |
+| Other loop commands | `/fc:quick`, `/fc:fleet`, `/fc:fix`, `/fc:chore`, `/fc:report` |
 | Hooks | session / edit / test-command / usage logging to `ai-factory/runs/`, one row per concluded subagent; dont-touch guard — for Claude Code (`hooks/hooks.json`) and Codex (`hooks/codex.json`) |
 | Headless runner | `make -f ai-factory/make/ai.mk ai TASK=<task> INPUT="…"`, no root Makefile needed |
 | Review gate | `make -f ai-factory/make/ai.mk review`, advisory by default, `GATE_ENFORCE=1` to block |
-| Artefact IDs | `ai-factory/make/ids.js new <kind> <slug>` names each new artefact `<ID>-<slug>.md` with a random `[A-Z]{3}[0-9]{3}` ID; `make -f ai-factory/make/ai.mk ids-check` finds clashes after a merge (exit 1 from `ids.js`, which make reports as 2); optional `ai-factory/ids-deny.txt` |
+| Artefact IDs | `ai-factory/make/ids.js new <kind> <slug>` names each new artefact `<ID>-<slug>.md` with the project's prefix and the next free number (`PMB-001`), the prefix chosen at adoption in `ai-factory/project.json`; `make -f ai-factory/make/ai.mk ids-check` finds clashes after a merge (exit 1 from `ids.js`, which make reports as 2) |
 | Cost report | `make -f ai-factory/make/ai.mk cost`, token spend by task, agent, branch and day |
 | Model selection | `ai-factory/models.yaml`: optional model per tool and for review, plus pricing; opt-in per-task routing for headless and interactive tasks |
 | Conventions | commit `ai(<task>): …`, MR labelled `ai-assisted` |
 
 ## Where the work is left
 
-`/t4:state` lists every outstanding spec and plan, each plan with its incomplete steps. It
+`/fc:state` lists every outstanding spec and plan, each plan with its incomplete steps. It
 is read-only and deterministic, so two people on the same commit get the same answer.
 `--done` lists only finished items. `--next` names the one item to pick up, chosen by git
 commit date. Steps a plan explicitly withdraws are not counted as pending.
 `--specs` and `--plans` narrow a listing to one kind, and combine with `--done` and `--next`.
 `--spec <id>` lists one spec with the plans paired to it, finished or not. The `id` field is the
-ID a file name starts with: a random letter-and-digit ID such as `DHW631` for new artefacts, or a
-legacy four-digit number, which stays valid and is never renamed.
+ID a file name starts with: a prefixed ID such as `PMB-001` for new artefacts, or a legacy
+letter-and-digit ID (`DHW631`) or four-digit number, which stay valid and are never renamed.
 
 ## Headless runs and the review gate
 
@@ -127,10 +127,10 @@ make -f ai-factory/make/ai.mk review                    # the reviewer, headless
 as given. The gate is advisory unless `GATE_ENFORCE=1`. It then passes only a schema-valid
 `approve` with no blockers; `request_changes`, a malformed verdict or a missing one fails.
 
-`/t4:loop <plan>` is the opt-in exception to one step per `/t4:run`, recorded in ADR ETT683.
+`/fc:loop <plan>` is the opt-in exception to one step per `/fc:run`, recorded in ADR ETT683.
 One invocation implements every unticked step of one plan. Independent steps run concurrently
 on Claude Code, each in a temporary git worktree under `ai-factory/runs/tmp/worktrees/`. Each
-step's change is applied back uncommitted, and the loop ends with one `/t4:review`. It never
+step's change is applied back uncommitted, and the loop ends with one `/fc:review`. It never
 commits on the developer's branch. Test, lint and typecheck tools must exclude the worktree
 subtree. Headless, `make -f ai-factory/make/ai.mk ai TASK=loop INPUT="<plan>"` exits 0 on
 success and 2 on any failure. `TASK=loop INPUT="…" node ai-factory/make/runner.js ai` returns the
@@ -144,7 +144,7 @@ the handoff chain read-only, and `make -f ai-factory/make/ai.mk verify DELIVERY=
 (`passed`, `failed`, `not_run` or `unavailable`). `make -f ai-factory/make/ai.mk review DELIVERY=…`
 also records review evidence bound to the exact gated output, including its findings.
 
-`make -f ai-factory/make/ai.mk delivery-report DELIVERY=…` is the headless form of `/t4:report`.
+`make -f ai-factory/make/ai.mk delivery-report DELIVERY=…` is the headless form of `/fc:report`.
 It writes `ai-factory/reports/<id>/completion.md` and `completion.json` with one status —
 `ready`, `incomplete`, `blocked` or `unverified` — and every reason with its evidence. It exits 0
 only when the delivery is `ready`, so it works as a CI gate. It runs no check and publishes
@@ -165,7 +165,7 @@ everything else is shown as unattributed, and nothing measured is shown as zero.
 `ai-factory/models.yaml` (a `routing.tasks.<task>` entry when routing is enabled, `review:` for
 reviews, then the tool's entry), then whatever the CLI is already configured with. Blank entries
 inherit, so any provider or gateway works. With routing enabled the same mapping applies to
-interactive `/t4:<task>` and `$t4-<task>`: the task runs in a generated worker agent pinned to
+interactive `/fc:<task>` and `$fc-<task>`: the task runs in a generated worker agent pinned to
 that model (`sync-adapters.sh --adapters=routing`), and a task that cannot be honored stops
 instead of running on the chat's model.
 
@@ -173,7 +173,7 @@ instead of running on the chat's model.
 
 The hooks write a 17-column run log with one row per turn and one per concluded subagent.
 Rows collect in `log.pending.csv` and move into the committed `ai-factory/runs/log.csv` on
-`git commit`. The `task` column records the `/t4:` command that started the
+`git commit`. The `task` column records the `/fc:` command that started the
 session, and the `agent` column records which agent spent the tokens. Rows are increments,
 so they add up. A usage record copied into several transcripts is counted once.
 
@@ -204,10 +204,10 @@ governs arbitrary shell commands.
 
 ## Hosts
 
-Claude Code and Codex run the same procedures. The plugin ships all 23 `/t4:` commands
-natively for Claude Code and the matching `$t4-<task>` skills for Codex; each loads the
+Claude Code and Codex run the same procedures. The plugin ships all 23 `/fc:` commands
+natively for Claude Code and the matching `$fc-<task>` skills for Codex; each loads the
 repo's own `ai-factory/tasks/<name>.md`, so project customizations are kept. Built-in tasks
-need no project pointers — `/t4:sync-sdlc` generates them only for project-specific tasks
+need no project pointers — `/fc:sync-sdlc` generates them only for project-specific tasks
 and for opt-in hosts such as Cursor.
 
 ## Install
@@ -220,9 +220,9 @@ claude --plugin-dir ./ai-sdlc-plugin
 ```
 
 Codex: `codex plugin marketplace add /absolute/path/to/ai-sdlc-plugin`, then
-`codex plugin add t4@sdlc`, and restart the session.
+`codex plugin add fc@sdlc`, and restart the session.
 
-Then, once per repo: `/t4:adopt-sdlc` to add the `ai-factory/` layout, `/t4:doctor` to
+Then, once per repo: `/fc:adopt-sdlc` to add the `ai-factory/` layout, `/fc:doctor` to
 report what is still wrong. Full walkthrough with a worked example:
 [ai-factory/docs/workflow.md](ai-factory/docs/workflow.md).
 

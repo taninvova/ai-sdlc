@@ -21,7 +21,7 @@ sees nothing change.
 ## Acceptance criteria
 
 - **AC1** Given a repo adopted at the release version with no `ai/knowledge_base.md`, When any
-  `/t4:*` task or agent runs, Then its artefact and its report contain no reference to a
+  `/fc:*` task or agent runs, Then its artefact and its report contain no reference to a
   knowledge source, a seam, a declaration or a provider, and are identical to the same run on
   the previous release apart from the artefact number and date.
 - **AC2** Given the same repo with an `ai/knowledge_base.md` that is empty, comment-only,
@@ -67,18 +67,18 @@ sees nothing change.
 - **AC13** Given an example declaration in the seam document or the templates, When it is
   read, Then it contains no token, secret or endpoint that carries a secret, and the synthetic
   `name` values are visibly not real systems.
-- **AC14** Given a configured repo, When `/t4:doctor` runs, Then one line says the knowledge
+- **AC14** Given a configured repo, When `/fc:doctor` runs, Then one line says the knowledge
   seam is configured and names no provider; given an unconfigured repo whose layout has the
   seam document, the line says it is not configured; given a layout that predates the seam
-  document, the line says so and names `/t4:sync-sdlc`.
-- **AC15** Given a repo adopted before this release, When `/t4:sync-sdlc` runs, Then the seam
+  document, the line says so and names `/fc:sync-sdlc`.
+- **AC15** Given a repo adopted before this release, When `/fc:sync-sdlc` runs, Then the seam
   document appears as a new upstream file and no existing file is reported changed by this
   feature except the task and agent prompts that now name the seam document.
 
 ## Out of scope
 - Writing anything back to a declared source. `docs/adr/0007` defers it outright; a new ADR
   would be needed, not a key.
-- A command that writes `ai/knowledge_base.md` for the developer, the way `/t4:setup-tracker`
+- A command that writes `ai/knowledge_base.md` for the developer, the way `/fc:setup-tracker`
   writes the tracker file. Hand-written for now.
 - Caching or storing query results anywhere under `ai/`; the artefact keeps only what it cites.
 - The tracker seam (`ai/docs/tracker.md`): unchanged; its stop-and-ask on a missing ticket
@@ -92,7 +92,7 @@ the plan can build on them; the pack's registers (Q-010, Q-018, Q-019) cite this
 
 1. **Executors that consult a source:** the `explore`, `spec` and `plan` tasks, and the
    `analyst`, `architect` and `reviewer` agents. The `tester` never does (`docs/adr/0007`). The
-   `implementer` is decided in the step-agents spec (EPIC-002), not here; until then `/t4:run`
+   `implementer` is decided in the step-agents spec (EPIC-002), not here; until then `/fc:run`
    consults nothing.
 2. **Banned-term list:** the declaration filename `knowledge_base.md`, plus the name of every
    provider or product the seam document itself names. "MCP" and "knowledge base" are not

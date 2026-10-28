@@ -50,7 +50,7 @@
 #       source               one row per source artifact, naming its Markdown and sidecar paths
 #   state.sh --delivery (plan Step 3): the same table on stdout, byte-identical to the helper's; a
 #     refusal is one line on stdout with exit 0 and no tab (the existing refusal convention); a
-#     helper runtime failure exits non-zero; a missing helper names /t4:sync-sdlc. Chosen wordings:
+#     helper runtime failure exits non-zero; a missing helper names /fc:sync-sdlc. Chosen wordings:
 #     combined modes say they "do not combine" (or "cannot be combined"/"mutually exclusive"), a
 #     missing ID says "delivery ID", a malformed one shows the form d-YYYYMMDD-xxxxxx, a repeated
 #     --delivery says "once"/"more than one"/"twice"/"duplicate".
@@ -119,7 +119,7 @@ const read = (dir, file) => fs.readFileSync(path.join(dir, file), "utf8");
 const write = (dir, file, text) => fs.writeFileSync(path.join(dir, file), text);
 const json = (dir, file) => JSON.parse(read(dir, file));
 const writeJson = (dir, file, value) => write(dir, file, `${JSON.stringify(value, null, 2)}\n`);
-const CONFIG = { schema: "t4-contracts-config", version: 1, code_scope: { include: ["**"], exclude: [] } };
+const CONFIG = { schema: "fc-contracts-config", version: 1, code_scope: { include: ["**"], exclude: [] } };
 
 function project(name, { helper = true } = {}) {
 	const dir = fs.mkdtempSync(path.join(scratch, `${name}-`));
@@ -585,7 +585,7 @@ test("helper", "helper-no-false-success", async () => {
 	notReady(t, "ticks and mappings only");
 	assert.deepEqual(groups(t, ACS).verified, [], "ticks and AC mappings alone prove nothing (AC3)");
 	fs.mkdirSync(path.join(dir, `ai-factory/reports/${id}`), { recursive: true });
-	writeJson(dir, `ai-factory/reports/${id}/completion.json`, { schema: "t4-delivery-report", version: 1, status: "ready", criteria: ACS.map((ac) => ({ id: ac, result: "passed" })) });
+	writeJson(dir, `ai-factory/reports/${id}/completion.json`, { schema: "fc-delivery-report", version: 1, status: "ready", criteria: ACS.map((ac) => ({ id: ac, result: "passed" })) });
 	fs.mkdirSync(path.join(dir, "ai-factory/runs/lifecycle/events"), { recursive: true });
 	write(dir, "ai-factory/runs/lifecycle/events/run-1.jsonl", `${JSON.stringify({ delivery_id: id, task: "run", outcome: "success" })}\n`);
 	write(dir, "ai-factory/runs/log.csv", `2026-01-01T00:00:00Z,run,${id},success\n2026-01-01T00:01:00Z,check,${id},success\n`);
@@ -714,7 +714,7 @@ test("cli", "cli-no-false-success-ticks", async () => {
 test("cli", "cli-no-false-success-saved-report", async () => {
 	const { dir, id } = await planned({ steps: 3 });
 	fs.mkdirSync(path.join(dir, `ai-factory/reports/${id}`), { recursive: true });
-	writeJson(dir, `ai-factory/reports/${id}/completion.json`, { schema: "t4-delivery-report", version: 1, status: "ready" });
+	writeJson(dir, `ai-factory/reports/${id}/completion.json`, { schema: "fc-delivery-report", version: 1, status: "ready" });
 	const { t } = cliTable(dir, id, "saved ready report, no final evidence");
 	notReady(t, "saved report");
 	assert.deepEqual(groups(t, ACS).verified, [], "a saved report snapshot is not current evidence");
@@ -780,7 +780,7 @@ test("cli", "cli-absent-helper", async () => {
 	const { dir, id } = await planned({ steps: 1, helper: false });
 	assert.ok(!fs.existsSync(path.join(dir, "ai-factory/make/delivery-status.js")), "fixture: no helper installed");
 	const text = oneLine(state(dir, ["--delivery", id]), "absent helper");
-	assert.match(text, /sync-sdlc/, `a missing helper names /t4:sync-sdlc: ${text}`);
+	assert.match(text, /sync-sdlc/, `a missing helper names /fc:sync-sdlc: ${text}`);
 	assert.match(text, /delivery-status/, text);
 	assert.ok(!NOT_A_FLAG.test(text), text);
 });
@@ -790,7 +790,7 @@ test("cli", "cli-outdated-helper-modules", async () => {
 	const { dir, id } = await planned({ steps: 1 });
 	fs.unlinkSync(path.join(dir, "ai-factory/make/delivery-report.js"));
 	const text = oneLine(state(dir, ["--delivery", id]), "outdated helper modules");
-	assert.match(text, /sync-sdlc/, `an outdated workspace names /t4:sync-sdlc: ${text}`);
+	assert.match(text, /sync-sdlc/, `an outdated workspace names /fc:sync-sdlc: ${text}`);
 	assert.match(text, /delivery-report\.js/, text);
 	assert.ok(!text.startsWith(LISTING_HEADER) && !NOT_A_FLAG.test(text), text);
 });

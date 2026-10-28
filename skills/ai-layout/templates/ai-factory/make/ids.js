@@ -1,26 +1,32 @@
 #!/usr/bin/env node
-// Artefact IDs: the one place that owns the `[A-Z]{3}[0-9]{3}` format. Every new spec, plan,
+// Artefact IDs: the one place that owns the `<PREFIX>-<NNN>` format. Every new spec, plan,
 // exploration, analysis, design, ADR and risk assessment is created here, so no prompt ever
 // picks or counts an ID itself.
+//   ids.js init --name "<Project>" [--prefix <ABC>]
+//                                                 write ai-factory/project.json once
+//   ids.js suggest "<Project>"                    print the prefix init would choose
 //   ids.js new <kind> <slug> [--id <ID>] [--title "<Title>"]
 //                                                 create ai-factory/<kind dir>/<ID>-<slug>.md
 //   ids.js check                                  the clash check across clones (make ids-check)
-// Exit 0: created, the repository-relative path on stdout. Exit 2: refused (usage, bad slug or
-// title, missing parent, or reuse not allowed for this kind), one line on stderr. Exit 3: this
-// kind already has a file with the ID, its path on stdout. Exit 1: runtime failure.
-// An ID is drawn at random (never counted), checked against one ID space shared by all seven
-// kind directories, reserved under ai-factory/runs/tmp/ids/ while it is rechecked, and the file
-// is created exclusively. Two sessions drawing the same ID at the same moment therefore end
-// with two different IDs, even when their slugs differ.
-// `--id` reuses a parent's ID instead of drawing: a spec takes an exploration's or analysis's,
-// a plan or risk assessment its spec's (a legacy four-digit spec number too). One file per kind
-// per ID; the reservation key is `<kind>-<ID>`, so two sessions reusing one ID end with one file.
-// `check` reads the `.md` files of the seven kinds after a merge: a new-style ID may be shared
-// only by one spec with at most one exploration or analysis, one plan and one risk assessment;
-// a legacy number only must not repeat within a kind. Exit 0: pass. Exit 1: every clash on
-// stdout with every path involved. A new-style file without a valid line-2 `Created:` is
-// warned about on stderr, and a warning alone never fails the check.
-const crypto = require("node:crypto");
+// Exit 0: done, the repository-relative path (or the prefix) on stdout. Exit 2: refused (usage,
+// bad slug, title, name or prefix, missing parent, reuse not allowed for this kind, or project
+// already configured), one line on stderr. Exit 3: this kind already has a file with the ID, its
+// path on stdout. Exit 4: no project prefix is configured yet; run `init`. Exit 1: runtime failure.
+// The project's name and prefix live in ai-factory/project.json, chosen at adoption. A new ID is
+// the prefix, a dash and the next free number, zero-padded to three digits (PMB-001, PMB-002…):
+// one past the highest number that prefix already uses across all seven kind directories (one ID
+// space). The number is reserved under ai-factory/runs/tmp/ids/ while it is rechecked and the
+// file is created exclusively, so two sessions in one tree end with two different IDs. Separate
+// clones or branches can still take the same number; `check` finds that after a merge.
+// `--id` reuses a parent's ID instead: a spec takes an exploration's or analysis's, a plan or
+// risk assessment its spec's (a four-digit legacy spec number or a legacy random ID too). One
+// file per kind per ID; the reservation key is `<kind>-<ID>`, so two sessions reusing one ID end
+// with one file.
+// `check` reads the `.md` files of the seven kinds after a merge: a prefixed (or legacy random)
+// ID may be shared only by one spec with at most one exploration or analysis, one plan and one
+// risk assessment; a four-digit legacy number only must not repeat within a kind. Exit 0: pass.
+// Exit 1: every clash on stdout with every path involved. A prefixed or legacy random file
+// without a valid line-2 `Created:` is warned about on stderr, and a warning alone never fails.
 const fs = require("node:fs");
 const path = require("node:path");
 const { boundary } = require("./safe-files.js");
@@ -29,9 +35,6 @@ const ENTRY_DIRECTORY =
 	require.main === module ? path.dirname(process.argv[1]) : __dirname;
 const ROOT = fs.realpathSync(path.resolve(ENTRY_DIRECTORY, "../.."));
 
-// No I or O: they read as 1 and 0.
-const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-const DIGITS = "0123456789";
 const KINDS = {
 	spec: "specs",
 	plan: "plans",
@@ -43,10 +46,18 @@ const KINDS = {
 };
 // The one ID space: every entry name here uses its ID, sidecars and done plans included.
 const SCANNED = [...Object.values(KINDS), "plans/done"];
-const DENY_FILE = "ai-factory/ids-deny.txt";
+const PROJECT_FILE = "ai-factory/project.json";
 const ADR_TEMPLATE = "ai-factory/adr/0000-template.md";
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-const ENTRY_ID = /^([A-Za-z]{3}[0-9]{3})(?=[-.]|$)/;
+// Two to five letters. AC and QC would read as criterion and quick-check IDs (AC1, QC1).
+const PREFIX = /^[A-Z]{2,5}$/;
+const RESERVED_PREFIXES = new Set(["AC", "QC"]);
+const DIGITS = 3;
+// The ID an entry name starts with: prefixed (PMB-001) or legacy random (DHW631, spec 0024).
+const ENTRY_ID = /^([A-Za-z]{2,5}-[0-9]{3,}|[A-Za-z]{3}[0-9]{3})(?=[-.]|$)/;
+const PREFIXED_ID = /^([A-Za-z]{2,5})-([0-9]+)$/;
+const RANDOM_ID = /^[A-Za-z]{3}[0-9]{3}$/;
+const LEGACY_ID = /^[0-9]{4}$/;
 const ATTEMPTS = 1000;
 // Which kinds may reuse an ID, and the kinds whose artefact must already hold it.
 const PARENTS = {
@@ -54,22 +65,11 @@ const PARENTS = {
 	plan: { dirs: ["specs"], name: "spec" },
 	risk: { dirs: ["specs"], name: "spec" },
 };
-const NEW_ID = /^[A-Za-z]{3}[0-9]{3}$/;
-const LEGACY_ID = /^[0-9]{4}$/;
 // A reuse waits this long for another session's reservation, polling, before it refuses; a
 // reservation older than STALE_MS was left by a crash and is reclaimed.
 const WAIT_MS = 2000;
 const POLL_MS = 20;
 const STALE_MS = 60_000;
-// Offensive or loaded letter triples never drawn. ai-factory/ids-deny.txt adds to this list.
-const BUILTIN_DENY = Object.freeze(
-	[
-		"ASS", "BUM", "CNT", "CUM", "DCK", "DMN", "FAG", "FCK", "FKU", "FUC", "FUK", "FUX",
-		"GAY", "GDM", "HOR", "JEW", "JZZ", "KKK", "KYS", "NAZ", "NGA", "NGR", "NIG", "PCP",
-		"PEE", "PMS", "PNS", "POO", "PRN", "PUS", "PSY", "RAP", "SAD", "SEX", "SHT", "SLT",
-		"STD", "SUK", "SUX", "TIT", "TWT", "VAG", "WAP", "WTF", "XXX", "ZEX",
-	].sort(),
-);
 
 class Refusal extends Error {}
 // This kind already has a file with the ID: exit 3, its path on stdout.
@@ -79,95 +79,137 @@ class Existing extends Error {
 		this.path = file;
 	}
 }
+// No ai-factory/project.json yet: exit 4, so a prompt knows to ask for a name and a prefix.
+class Unconfigured extends Error {}
 const refuse = (message) => {
 	throw new Refusal(message);
 };
-const defaultWarn = (line) => process.stderr.write(`ids.js: ${line}\n`);
 const relative = (root, file) =>
 	path.relative(root, file).split(path.sep).join("/");
 
-// Built-in triples plus the repo's own, matched case-insensitively. Blank and `#` lines are
-// silent; any other line that is not exactly three letters is named in a warning and skipped.
-function denylist(root, warn) {
-	const deny = new Set(BUILTIN_DENY);
-	let text;
-	try {
-		text = fs.readFileSync(path.join(root, DENY_FILE), "utf8");
-	} catch (error) {
-		if (error.code === "ENOENT") return deny;
-		throw error;
-	}
-	for (const [index, raw] of text.split(/\r?\n/).entries()) {
-		const line = raw.trim();
-		if (!line || line.startsWith("#")) continue;
-		if (/^[A-Za-z]{3}$/.test(line)) deny.add(line.toUpperCase());
-		else
-			warn(
-				`${DENY_FILE} line ${index + 1}: '${line}' is not three letters; skipped`,
-			);
-	}
-	return deny;
+const format = (prefix, number) => `${prefix}-${String(number).padStart(DIGITS, "0")}`;
+
+// A prefixed ID in its one written form: uppercase, the number padded to three digits, so
+// `pmb-1`, `PMB-01` and `PMB-001` are one ID. Anything else is returned uppercase as it stands.
+function normalise(id) {
+	const match = PREFIXED_ID.exec(id);
+	if (!match) return id.toUpperCase();
+	return format(match[1].toUpperCase(), Number(match[2]));
 }
 
-// Every ID an entry name already uses, uppercase. Legacy four-digit names use none.
+function validPrefix(prefix) {
+	if (typeof prefix !== "string" || !PREFIX.test(prefix))
+		refuse(`prefix '${prefix}' must be two to five uppercase letters, such as PMB`);
+	if (RESERVED_PREFIXES.has(prefix))
+		refuse(`prefix '${prefix}' would read as a criterion or quick-check ID; choose another`);
+	return prefix;
+}
+
+// The prefix a project name suggests: its first letter, then its consonants in order, then its
+// remaining letters, three in all with no letter twice in a row. Pembina → PMB, Acme → ACM.
+function suggest(name) {
+	const letters = String(name ?? "").toUpperCase().replace(/[^A-Z]/g, "");
+	if (letters.length < 2) refuse(`the project name '${name}' has fewer than two letters to make a prefix from`);
+	const picked = [0];
+	const take = (test) => {
+		for (let i = 1; i < letters.length && picked.length < 3; i++)
+			if (!picked.includes(i) && test(letters[i]) && letters[i] !== letters[picked[picked.length - 1]])
+				picked.push(i);
+	};
+	take((ch) => !"AEIOUY".includes(ch));
+	take(() => true);
+	for (let i = 1; i < letters.length && picked.length < 3; i++) if (!picked.includes(i)) picked.push(i);
+	let prefix = picked.sort((a, b) => a - b).map((i) => letters[i]).join("");
+	if (RESERVED_PREFIXES.has(prefix)) prefix = `${prefix}X`;
+	return prefix;
+}
+
+// The configured { name, prefix }, or undefined when the project has none yet.
+function project(root = ROOT) {
+	let text;
+	try {
+		text = fs.readFileSync(path.join(root, PROJECT_FILE), "utf8");
+	} catch (error) {
+		if (error.code === "ENOENT") return undefined;
+		throw error;
+	}
+	let data;
+	try {
+		data = JSON.parse(text);
+	} catch {
+		refuse(`${PROJECT_FILE} is not valid JSON`);
+	}
+	if (!data || typeof data.name !== "string" || !data.name.trim())
+		refuse(`${PROJECT_FILE} has no project name`);
+	try {
+		validPrefix(data.prefix);
+	} catch (error) {
+		refuse(`${PROJECT_FILE}: ${error.message}`);
+	}
+	return { name: data.name, prefix: data.prefix };
+}
+
+// Write ai-factory/project.json once; returns { name, prefix, path }. It never replaces one.
+function init({ root = ROOT, name, prefix } = {}) {
+	if (typeof name !== "string" || !name.trim() || /[\r\n]/.test(name))
+		refuse("the project name must be a single non-empty line");
+	const existing = project(root);
+	if (existing)
+		refuse(`${PROJECT_FILE} already names ${existing.name} with the prefix ${existing.prefix}; nothing changed`);
+	const chosen = validPrefix(prefix === undefined ? suggest(name) : String(prefix).toUpperCase());
+	const ai = path.join(root, "ai-factory");
+	const safe = boundary(ai);
+	const target = path.join(ai, "project.json");
+	try {
+		safe.write(target, `${JSON.stringify({ name: name.trim(), prefix: chosen }, null, "\t")}\n`, { exclusive: true });
+	} catch (error) {
+		if (error.code === "EEXIST") refuse(`${PROJECT_FILE} already exists; nothing changed`);
+		throw error;
+	}
+	return { name: name.trim(), prefix: chosen, path: relative(root, target) };
+}
+
+const readNames = (root, dir) => {
+	try {
+		return fs.readdirSync(path.join(root, "ai-factory", dir));
+	} catch (error) {
+		if (error.code === "ENOENT" || error.code === "ENOTDIR") return [];
+		throw error;
+	}
+};
+
+// Every ID an entry name already uses, in its written form. Legacy four-digit names use none.
 function usedIds(root) {
 	const used = new Set();
-	for (const dir of SCANNED) {
-		let names;
-		try {
-			names = fs.readdirSync(path.join(root, "ai-factory", dir));
-		} catch (error) {
-			if (error.code === "ENOENT" || error.code === "ENOTDIR") continue;
-			throw error;
-		}
-		for (const name of names) {
+	for (const dir of SCANNED)
+		for (const name of readNames(root, dir)) {
 			const match = ENTRY_ID.exec(name);
-			if (match) used.add(match[1].toUpperCase());
+			if (match) used.add(normalise(match[1]));
 		}
-	}
 	return used;
 }
 
-// An ID must never read as a criterion (AC1), quick-check (QC1) or step (S1) ID.
-function rejected(id, deny, used) {
-	return (
-		/^(AC|QC)/.test(id) ||
-		/^S[0-9]+$/.test(id) ||
-		/\bAC[0-9]+\b/.test(id) ||
-		/\bQC[0-9]+\b/.test(id) ||
-		deny.has(id.slice(0, 3)) ||
-		used.has(id)
-	);
-}
-
-function candidate(random) {
-	let id = "";
-	for (let i = 0; i < 3; i++) id += LETTERS[random(LETTERS.length)];
-	for (let i = 0; i < 3; i++) id += DIGITS[random(DIGITS.length)];
-	return id;
-}
-
-function drawFrom({ random, deny, used, tried }) {
-	for (let attempt = 0; attempt < ATTEMPTS * 10; attempt++) {
-		const id = candidate(random);
-		if (!rejected(id, deny, used) && !tried.has(id)) return id;
+// The number after the highest one `prefix` uses anywhere in the ID space.
+function nextNumber(used, prefix) {
+	let highest = 0;
+	for (const id of used) {
+		const match = PREFIXED_ID.exec(id);
+		if (match && match[1] === prefix) highest = Math.max(highest, Number(match[2]));
 	}
-	throw new Error("no free ID found; the random source keeps returning used IDs");
+	return highest + 1;
 }
 
-// Draw one free ID over the tree at `root`. It is not reserved: create() does that.
-function draw({
-	root = ROOT,
-	random = crypto.randomInt,
-	warn = defaultWarn,
-} = {}) {
-	return drawFrom({
-		random,
-		deny: denylist(root, warn),
-		used: usedIds(root),
-		tried: new Set(),
-	});
+// The next free ID over the tree at `root`. It is not reserved: create() does that.
+function next({ root = ROOT } = {}) {
+	const configured = project(root);
+	if (!configured) throw unconfigured();
+	return format(configured.prefix, nextNumber(usedIds(root), configured.prefix));
 }
+
+const unconfigured = () =>
+	new Unconfigured(
+		`no project prefix is configured; ask for the project name and prefix, then run node ai-factory/make/ids.js init --name "<Project>" --prefix <ABC>`,
+	);
 
 function titleFrom(slug, title) {
 	if (title === undefined) {
@@ -197,37 +239,33 @@ function contentFor(kind, id, title, created, template) {
 const sleep = (ms) =>
 	Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
+// The ID a file name starts with, in its written form, or undefined. Four-digit names included.
+function idOfName(name) {
+	const match = ENTRY_ID.exec(name);
+	if (match) return normalise(match[1]);
+	const legacy = /^([0-9]{4})(?=[-.]|$)/.exec(name);
+	return legacy ? legacy[1] : undefined;
+}
+
 // The `.md` files under ai-factory/<dir> whose name carries `id` (case-insensitive), sorted.
 function holders(root, dirs, id) {
 	const found = [];
-	for (const dir of dirs) {
-		let names;
-		try {
-			names = fs.readdirSync(path.join(root, "ai-factory", dir));
-		} catch (error) {
-			if (error.code === "ENOENT" || error.code === "ENOTDIR") continue;
-			throw error;
-		}
-		for (const name of names.sort()) {
-			const dash = name.indexOf("-");
-			if (dash < 0 || !name.endsWith(".md")) continue;
-			if (name.slice(0, dash).toUpperCase() === id)
-				found.push(`ai-factory/${dir}/${name}`);
-		}
-	}
+	for (const dir of dirs)
+		for (const name of readNames(root, dir).sort())
+			if (name.endsWith(".md") && idOfName(name) === id) found.push(`ai-factory/${dir}/${name}`);
 	return found;
 }
 const kindDirs = (kind) => (kind === "plan" ? ["plans", "plans/done"] : [KINDS[kind]]);
 
-// Validate a reused ID before anything is created; returns it uppercase.
+// Validate a reused ID before anything is created; returns it in its written form.
 function reusable(kind, raw) {
 	if (!Object.hasOwn(PARENTS, kind))
 		refuse(`a ${kind} never reuses an ID (--id is for spec, plan and risk)`);
-	if (typeof raw !== "string" || !(NEW_ID.test(raw) || LEGACY_ID.test(raw)))
-		refuse(`--id '${raw}' is neither an ID like DHW631 nor a four-digit legacy number`);
+	if (typeof raw !== "string" || !(PREFIXED_ID.test(raw) || RANDOM_ID.test(raw) || LEGACY_ID.test(raw)))
+		refuse(`--id '${raw}' is neither an ID like PMB-001 nor a legacy ID such as DHW631 or 0024`);
 	if (LEGACY_ID.test(raw) && kind === "spec")
-		refuse(`a spec never takes the legacy number ${raw}; draw a fresh ID and cite the parent`);
-	return raw.toUpperCase();
+		refuse(`a spec never takes the legacy number ${raw}; let it take the next ID and cite the parent`);
+	return normalise(raw);
 }
 
 // Refuse unless a permitted parent holds the ID; exit 3 when this kind already holds it.
@@ -292,18 +330,18 @@ function reuse({ root, safe, kind, slug, id, heading, now, beforeOpen, directory
 	}
 }
 
-// Create one artefact with a freshly drawn ID; returns { id, path } (path repository-relative).
-// `beforeOpen(target, id)` runs just before the exclusive create: a test seam for the race.
+// Create one artefact with the next free ID; returns { id, path } (path repository-relative).
+// `beforeReserve(id)` runs after the scan and before the reservation, `beforeOpen(target, id)`
+// just before the exclusive create: test seams for the two races.
 function create({
 	root = ROOT,
 	kind,
 	slug,
 	title,
 	id,
-	random = crypto.randomInt,
 	now = () => new Date(),
+	beforeReserve,
 	beforeOpen,
-	warn = defaultWarn,
 } = {}) {
 	if (!Object.hasOwn(KINDS, kind))
 		refuse(
@@ -311,43 +349,47 @@ function create({
 		);
 	const reused = id === undefined ? undefined : reusable(kind, id);
 	if (kind === "plan" && reused === undefined)
-		refuse("a plan reuses its spec's ID (--id <spec ID>); it is never drawn fresh");
+		refuse("a plan reuses its spec's ID (--id <spec ID>); it never takes a new one");
 	if (typeof slug !== "string" || !SLUG.test(slug))
 		refuse(`slug '${slug}' must match ${SLUG.source}`);
 	const heading = titleFrom(slug, title);
+	const configured = reused === undefined ? project(root) : undefined;
+	if (reused === undefined && !configured) throw unconfigured();
 	const ai = path.join(root, "ai-factory");
 	const safe = boundary(ai);
 	// The template is only read, and in the source repo it is a symlink into skills/.
 	const template =
 		kind === "adr" ? fs.readFileSync(path.join(root, ADR_TEMPLATE), "utf8") : "";
-	const deny = denylist(root, warn);
 	const directory = safe.mkdir(path.join(ai, KINDS[kind]));
 	const reservations = safe.mkdir(path.join(ai, "runs", "tmp", "ids"));
 	if (reused !== undefined)
 		return reuse({ root, safe, kind, slug, id: reused, heading, now, beforeOpen, directory, reservations });
-	const tried = new Set();
-	for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
-		const drawn = drawFrom({ random, deny, used: usedIds(root), tried });
-		tried.add(drawn);
-		const reservation = path.join(reservations, drawn);
+	const { prefix } = configured;
+	let number = nextNumber(usedIds(root), prefix);
+	for (let attempt = 0; attempt < ATTEMPTS; attempt++, number++) {
+		const used = usedIds(root);
+		number = Math.max(number, nextNumber(used, prefix));
+		const taken = format(prefix, number);
+		const reservation = path.join(reservations, taken);
+		if (beforeReserve) beforeReserve(taken);
 		try {
 			safe.write(reservation, `${process.pid}\n`, { exclusive: true });
 		} catch (error) {
-			if (error.code === "EEXIST") continue; // another session holds this ID: redraw
+			if (error.code === "EEXIST") continue; // another session holds this number: take the next
 			throw error;
 		}
 		try {
-			if (usedIds(root).has(drawn)) continue; // created while we drew: redraw
-			const target = path.join(directory, `${drawn}-${slug}.md`);
-			if (beforeOpen) beforeOpen(target, drawn);
-			const content = contentFor(kind, drawn, heading, now().toISOString(), template);
+			if (usedIds(root).has(taken)) continue; // created meanwhile: take the next
+			const target = path.join(directory, `${taken}-${slug}.md`);
+			if (beforeOpen) beforeOpen(target, taken);
+			const content = contentFor(kind, taken, heading, now().toISOString(), template);
 			try {
 				safe.write(target, content, { exclusive: true });
 			} catch (error) {
-				if (error.code === "EEXIST") continue; // never overwrite: redraw
+				if (error.code === "EEXIST") continue; // never overwrite: take the next
 				throw error;
 			}
-			return { id: drawn, path: relative(root, target) };
+			return { id: taken, path: relative(root, target) };
 		} finally {
 			safe.unlink(reservation);
 		}
@@ -357,11 +399,11 @@ function create({
 
 // The kind of each scanned directory; done plans are plans.
 const KIND_OF = { ...Object.fromEntries(Object.entries(KINDS).map(([k, d]) => [d, k])), "plans/done": "plan" };
-const ARTEFACT = /^(?:([A-Za-z]{3}[0-9]{3})|([0-9]{4}))-.*\.md$/;
+const ARTEFACT = /^(?:([A-Za-z]{2,5}-[0-9]{3,}|[A-Za-z]{3}[0-9]{3})|([0-9]{4}))-.*\.md$/;
 // The one valid line 2: the UTC form create() writes.
 const CREATED = /^Created: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z\r?$/;
 
-// Why a group of new-style files sharing one ID is not allowed, or undefined when it is.
+// Why a group of files sharing one ID is not allowed, or undefined when it is.
 function clash(byKind) {
 	const kinds = Object.keys(byKind);
 	const doubled = kinds.filter((kind) => byKind[kind].length > 1);
@@ -376,7 +418,7 @@ function clash(byKind) {
 }
 
 // The clash check over the tree at `root`: { failures: [{ id, reason, paths }], warnings, count }.
-function check({ root = ROOT, warn = defaultWarn } = {}) {
+function check({ root = ROOT, warn = (line) => process.stderr.write(`ids.js: ${line}\n`) } = {}) {
 	const fresh = new Map();
 	const legacy = new Map();
 	const warnings = [];
@@ -396,7 +438,7 @@ function check({ root = ROOT, warn = defaultWarn } = {}) {
 			const rel = `ai-factory/${dir}/${entry.name}`;
 			const kind = KIND_OF[dir];
 			const groups = match[1] ? fresh : legacy;
-			const id = (match[1] || match[2]).toUpperCase();
+			const id = match[1] ? normalise(match[1]) : match[2];
 			if (!groups.has(id)) groups.set(id, {});
 			(groups.get(id)[kind] ||= []).push(rel);
 			if (!match[1]) continue;
@@ -421,26 +463,23 @@ function check({ root = ROOT, warn = defaultWarn } = {}) {
 	return { failures, warnings, count };
 }
 
-const USAGE = 'usage: ids.js new <kind> <slug> [--id <ID>] [--title "<Title>"] | ids.js check';
+const USAGE =
+	'usage: ids.js init --name "<Project>" [--prefix <ABC>] | ids.js suggest "<Project>" | ids.js new <kind> <slug> [--id <ID>] [--title "<Title>"] | ids.js check';
 
-function parseNew(args) {
+// Options as { values, positional }; `names` are the options this command takes, each with a value.
+function parse(args, names) {
 	const positional = [];
-	let title;
-	let id;
+	const values = {};
 	for (let i = 0; i < args.length; i++) {
 		const arg = args[i];
-		if (arg === "--id") {
-			if (i + 1 >= args.length) refuse("--id needs a value");
-			id = args[++i];
-		} else if (arg === "--title") {
-			if (i + 1 >= args.length) refuse("--title needs a value");
-			title = args[++i];
-		} else if (arg.startsWith("-")) refuse(`unknown option '${arg}'`);
-		else positional.push(arg);
+		if (arg.startsWith("-")) {
+			const name = arg.slice(2);
+			if (!arg.startsWith("--") || !names.includes(name)) refuse(`unknown option '${arg}'`);
+			if (i + 1 >= args.length) refuse(`${arg} needs a value`);
+			values[name] = args[++i];
+		} else positional.push(arg);
 	}
-	if (positional.length !== 2)
-		refuse(USAGE);
-	return { kind: positional[0], slug: positional[1], title, id };
+	return { values, positional };
 }
 
 function main(argv) {
@@ -457,8 +496,22 @@ function main(argv) {
 		process.stdout.write(`ids ok — ${result.count} artefacts, no clash\n`);
 		return;
 	}
+	if (command === "suggest") {
+		if (rest.length !== 1) refuse(USAGE);
+		process.stdout.write(`${suggest(rest[0])}\n`);
+		return;
+	}
+	if (command === "init") {
+		const { values, positional } = parse(rest, ["name", "prefix"]);
+		if (positional.length || values.name === undefined) refuse(USAGE);
+		const made = init({ root: ROOT, name: values.name, prefix: values.prefix });
+		process.stdout.write(`${made.path}\n`);
+		return;
+	}
 	if (command !== "new") refuse(USAGE);
-	const made = create({ root: ROOT, ...parseNew(rest) });
+	const { values, positional } = parse(rest, ["id", "title"]);
+	if (positional.length !== 2) refuse(USAGE);
+	const made = create({ root: ROOT, kind: positional[0], slug: positional[1], title: values.title, id: values.id });
 	process.stdout.write(`${made.path}\n`);
 }
 
@@ -469,8 +522,9 @@ if (require.main === module) {
 		const message = String(error.message || error).split("\n")[0];
 		if (error instanceof Existing) process.stdout.write(`${error.path}\n`);
 		process.stderr.write(`ids.js: ${message}\n`);
-		process.exitCode = error instanceof Existing ? 3 : error instanceof Refusal ? 2 : 1;
+		process.exitCode =
+			error instanceof Existing ? 3 : error instanceof Unconfigured ? 4 : error instanceof Refusal ? 2 : 1;
 	}
 }
 
-module.exports = { draw, create, check, BUILTIN_DENY };
+module.exports = { next, create, check, init, project, suggest, normalise };

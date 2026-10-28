@@ -12,7 +12,7 @@ server is the developer's job, in their own tool settings.
 Refuse early, before reading or writing anything:
 
 1. **No `ai-factory/docs/knowledge.md`?** Stop. Say this repo's layout predates knowledge-source
-   support, and that `/t4:sync-sdlc` will report it as an upstream file to take. Do not create
+   support, and that `/fc:sync-sdlc` will report it as an upstream file to take. Do not create
    the file yourself — it is a template, and a local copy would fork it from the one that ships.
 
 2. **Not an interactive session?** Stop, and say the command is interactive. Every step below

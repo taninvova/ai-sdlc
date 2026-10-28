@@ -1,6 +1,6 @@
 # 0005 — Step agents: explorer, specifier, planner, implementer
 
-Summary: the four loop steps `/t4:explore`, `/t4:spec`, `/t4:plan` and `/t4:run` each run in an
+Summary: the four loop steps `/fc:explore`, `/fc:spec`, `/fc:plan` and `/fc:run` each run in an
 agent of their own — `explorer`, `specifier`, `planner`, `implementer` — so every step starts
 from its inputs rather than from the developer's chat, and so an orchestrator has units to call.
 The task prompts keep what only a session can do: refuse an empty argument, ask a question, and
@@ -30,7 +30,7 @@ with the same questions asked and the same report.
 - **AC2** Given the four task prompts, When read, Then `explore.md`, `spec.md`, `plan.md` and
   `run.md` each carry the exact phrase ``Delegate to the `<agent>` subagent`` naming its agent,
   and `bash ai/make/sync-adapters.sh` followed by `check-adapters.sh` passes with the Codex
-  inline note present in `.codex/skills/t4-{explore,spec,plan,run}/SKILL.md`, naming
+  inline note present in `.codex/skills/fc-{explore,spec,plan,run}/SKILL.md`, naming
   `ai/agents/{explorer,specifier,planner,implementer}.md`. Nine of the twelve generated Codex
   skills then carry a note.
 - **AC3** Given each step agent's prompt, When read, Then it names one write target and forbids
@@ -38,12 +38,12 @@ with the same questions asked and the same report.
   only, never the plan or code; planner writes `ai/plans/` only, never code; implementer writes
   source, tests and the one checkbox of the step it was given, and never starts the next step.
   Every prohibition the four task prompts state today appears in the corresponding agent.
-- **AC4** Given a scratch repo, When `/t4:spec add CSV export to the reports page` runs under
+- **AC4** Given a scratch repo, When `/fc:spec add CSV export to the reports page` runs under
   Claude Code, Then the transcript shows a `specifier` invocation, the spec is written where
   the task says, and the report is the spec path plus the open questions, unchanged in shape.
-  The same holds for `/t4:explore` (path and recommended option), `/t4:plan` (path and
-  ambiguities) and `/t4:run` (files changed, tests, what the plan got wrong).
-- **AC5** Given `/t4:plan` with nothing after the command name and two files in `specs/`, When
+  The same holds for `/fc:explore` (path and recommended option), `/fc:plan` (path and
+  ambiguities) and `/fc:run` (files changed, tests, what the plan got wrong).
+- **AC5** Given `/fc:plan` with nothing after the command name and two files in `specs/`, When
   it runs, Then the main session asks which spec, lists both paths, and invokes no agent. The
   same holds for the other three tasks with an empty argument.
 - **AC6** Given a step agent reaches a point its prompt resolves by asking — a spec argument
@@ -52,7 +52,7 @@ with the same questions asked and the same report.
   no artefact for that decision and returns the question in its report; the task then asks the
   developer in an interactive session, or reports and stops in a headless one. Nothing is
   guessed.
-- **AC7** Given `/t4:run <plan> step N` where the tests cannot be made green, When the
+- **AC7** Given `/fc:run <plan> step N` where the tests cannot be made green, When the
   implementer stops, Then the step's checkbox is not ticked and the report says why.
 - **AC8** Given a scratch repo whose `ai/docs/dont-touch.md` lists `prisma/migrations/` and a
   plan step that would write there, When the implementer attempts the write under Claude Code,
@@ -72,13 +72,13 @@ with the same questions asked and the same report.
 - **AC13** Given `docs/workflow.md`, When read, Then §5 lists all eight agents with one line
   each, §8's Codex table names all eight as inlined, and the decision tree and command table
   are otherwise unchanged.
-- **AC14** Given a repo adopted at 0.26.0, When `/t4:sync-sdlc` runs at this release, Then it
+- **AC14** Given a repo adopted at 0.26.0, When `/fc:sync-sdlc` runs at this release, Then it
   reports the four task prompts as upstream changed and the four agent stubs as new upstream,
   and nothing else from this feature; a repo that had edited one of the four prompts sees it
   reported as both changed, to merge by hand.
 
 ## Out of scope
-- Agents for `/t4:fleet`, `/t4:fix` and `/t4:chore` (DEC-002).
+- Agents for `/fc:fleet`, `/fc:fix` and `/fc:chore` (DEC-002).
 - The orchestrator that drives these agents (EPIC-003, its own spec).
 - Recovering subagent token usage into the session row, for example through a SubagentStop
   hook (PROP-013). AC9 documents the under-count; closing it is a later change.

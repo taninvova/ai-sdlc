@@ -4,8 +4,8 @@ argument-hint: <feature description> | lean|questions <feature description> | re
 ---
 Use this when the request is a business description rather than a buildable feature: several
 actors, permissions, business rules, a lifecycle, integrations, or policy nobody has decided
-yet. A small, well-understood change goes straight to /t4:spec; where a capability lives is
-/t4:design; how to build it is /t4:explore. This task settles WHAT the business needs, in
+yet. A small, well-understood change goes straight to /fc:spec; where a capability lives is
+/fc:design; how to build it is /fc:explore. This task settles WHAT the business needs, in
 enough detail that a spec can be written without guessing.
 
 Delegate to the `analyst` subagent.
@@ -22,7 +22,7 @@ create anything in an external system or send anything anywhere — documentatio
 none of that.
 
 End with the file path, the readiness assessment in one sentence, the open questions that
-block a spec, and the exact `/t4:spec …` line(s) to run once they are answered.
+block a spec, and the exact `/fc:spec …` line(s) to run once they are answered.
 
 If nothing follows the command name, ask the user which feature to analyse, and stop. Do not
 take it from the branch name or the last commit.

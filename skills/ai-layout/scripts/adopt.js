@@ -35,8 +35,16 @@ function detect(root) {
 	};
 }
 
-function adopt(root, pluginRoot, owner) {
+// `name` and `prefix` go to ai-factory/project.json, which ids.js reads for every new artefact ID
+// (PMB-001). Without them the folder's name stands in and the prefix is suggested from it.
+function adopt(root, pluginRoot, owner, { name, prefix } = {}) {
 	root = fs.realpathSync(root);
+	const ids = require(path.join(pluginRoot, "skills/ai-layout/templates/ai-factory/make/ids.js"));
+	const projectName = name || path.basename(root);
+	// Refuse a bad name or prefix before anything is copied.
+	const projectPrefix = prefix === undefined ? ids.suggest(projectName) : String(prefix).toUpperCase();
+	if (!/^[A-Z]{2,5}$/.test(projectPrefix) || ["AC", "QC"].includes(projectPrefix))
+		throw new Error(`prefix '${prefix}' must be two to five letters, not AC or QC, such as PMB`);
 	const target = path.join(root, "ai-factory");
 	try {
 		fs.lstatSync(target);
@@ -48,7 +56,7 @@ function adopt(root, pluginRoot, owner) {
 	}
 	const values = {
 		...detect(root),
-		app: path.basename(root),
+		app: projectName,
 		owner: owner || "TBD",
 		backup: "TBD",
 		date: new Date().toISOString().slice(0, 10),
@@ -85,6 +93,7 @@ function adopt(root, pluginRoot, owner) {
 		}
 	}
 	fill(target);
+	ids.init({ root, name: projectName, prefix: projectPrefix });
 	execFileSync(
 		process.execPath,
 		[
@@ -99,9 +108,22 @@ function adopt(root, pluginRoot, owner) {
 }
 if (require.main === module) {
 	try {
-		const [root = ".", owner] = process.argv.slice(2);
+		// adopt.js [root] [owner] [--name "<Project>"] [--prefix <ABC>]
+		const positional = [];
+		const options = {};
+		const args = process.argv.slice(2);
+		for (let i = 0; i < args.length; i++) {
+			if (args[i] === "--name" || args[i] === "--prefix") {
+				if (i + 1 >= args.length) throw new Error(`${args[i]} needs a value`);
+				options[args[i].slice(2)] = args[++i];
+			} else positional.push(args[i]);
+		}
+		const [root = ".", owner] = positional;
+		const pluginRoot = path.resolve(__dirname, "../../..");
+		const target = adopt(root, pluginRoot, owner, options);
+		const { name, prefix } = JSON.parse(fs.readFileSync(path.join(target, "project.json"), "utf8"));
 		console.log(
-			`Created ${adopt(root, path.resolve(__dirname, "../../.."), owner)}; existing root files and host configuration preserved.`,
+			`Created ${target} for ${name}, artefact IDs ${prefix}-001, ${prefix}-002…; existing root files and host configuration preserved.`,
 		);
 	} catch (error) {
 		console.error(`adopt: ${error.message}`);

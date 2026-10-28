@@ -102,7 +102,7 @@ async function asyncReview(extra){return new Promise((resolve,reject)=>{const ch
   }
  }
  assert.notEqual(review({TOOL:"codex",FAKE_VERDICT:"request_changes"}).status,0,"routing must not change gate enforcement");
- // worktree-excluded (spec 0022 AC38): /t4:loop's kept worktrees under ai-factory/runs/tmp/worktrees/
+ // worktree-excluded (spec 0022 AC38): /fc:loop's kept worktrees under ai-factory/runs/tmp/worktrees/
  // add no selected path and no content, under the template's ignore rules and with that subtree un-ignored.
  const selectedPaths=input=>/Selected paths: (.*)/.exec(input)[1];
  const worktrees=path.join(payload,"runs/tmp/worktrees");
@@ -111,7 +111,7 @@ async function asyncReview(extra){return new Promise((resolve,reject)=>{const ch
   fs.writeFileSync(path.join(payload,".gitignore"),ignore);
   ok(review());const before=capture().at(-1).input;
   const name=`L1-S${label.length}`;const tree=path.join(worktrees,name);
-  git(["worktree","add","-q","-b",`t4-loop/L1/${name}`,tree,"HEAD"]);
+  git(["worktree","add","-q","-b",`fc-loop/L1/${name}`,tree,"HEAD"]);
   fs.writeFileSync(path.join(tree,"committed.txt"),"worktree tracked marker\n");
   fs.writeFileSync(path.join(tree,"worktree only.txt"),"worktree untracked marker\n");
   fs.mkdirSync(path.join(worktrees,"plain"),{recursive:true});fs.writeFileSync(path.join(worktrees,"plain/left.txt"),"worktree leftover marker\n");
@@ -120,7 +120,7 @@ async function asyncReview(extra){return new Promise((resolve,reject)=>{const ch
    assert.equal(selectedPaths(after),selectedPaths(before),`${label}: a populated worktree subtree changed the selected paths`);
    assert.ok(!/runs\/tmp\/worktrees/.test(selectedPaths(after)),`${label}: a worktree path was selected`);
    for(const marker of ["worktree tracked marker","worktree untracked marker","worktree leftover marker"])assert.ok(!after.includes(marker),`${label}: review read ${marker}`);
-  }finally{git(["worktree","remove","--force",tree]);git(["branch","-D",`t4-loop/L1/${name}`]);fs.rmSync(worktrees,{recursive:true,force:true});}
+  }finally{git(["worktree","remove","--force",tree]);git(["branch","-D",`fc-loop/L1/${name}`]);fs.rmSync(worktrees,{recursive:true,force:true});}
  }
  assert.equal(git(["worktree","list","--porcelain"]).match(/^worktree /gm).length,1,"no fixture worktree left");
  console.log("PASS: empty, staged, unstaged, untracked, mixed, branch, supplied, Codex, failed and concurrent review scopes; index/worktree preserved; make review and make ai TASK=review (and deprecated TASK=check) share the routed review model and stay distinct; loop worktrees under ai-factory/runs/tmp/worktrees/ excluded");

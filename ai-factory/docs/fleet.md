@@ -10,16 +10,16 @@ and CI, so "service" means "plugin" and "contract" means "the templates and prom
 consumer builds on".
 
 Three names are in play and none of them match, which is the first thing to get straight:
-the **repo** is `ai-sdlc` (GitLab `ai-factory/sdlc`), the **plugin** is `t4` — which is why every
-command is `/t4:…` — and the **marketplace** is `sdlc`. The install handle is therefore
-`t4@sdlc` (d).
+the **repo** is `ai-sdlc` (GitLab `ai-factory/sdlc`), the **plugin** is `fc` — which is why every
+command is `/fc:…` — and the **marketplace** is `sdlc`. The install handle is therefore
+`fc@sdlc` (d).
 
 Provenance: `(d)` detected from the repo, `(t)` told by the developer, `unverified` neither.
-Last refreshed by `/t4:fleet`.
+Last refreshed by `/fc:fleet`.
 
 | Service | Repo | Owns | Exposes | Consumes | Owner |
 |---|---|---|---|---|---|
-| ai-sdlc (plugin `t4`) | `ai-factory/sdlc` (d) — local dir `ai-sdlc` | the `ai-factory/` layout, task prompts, nine agents (reviewer, tester, architect, analyst, risk, explorer, specifier, planner, implementer), logging and guard hooks | `skills/ai-layout/templates/` · `agents/*.md` · `hooks/hooks.json` · `/t4:adopt-sdlc` `/t4:sync-sdlc` (d) | **nothing** (d) | tanin (d) |
+| ai-sdlc (plugin `fc`) | `ai-factory/sdlc` (d) — local dir `ai-sdlc` | the `ai-factory/` layout, task prompts, nine agents (reviewer, tester, architect, analyst, risk, explorer, specifier, planner, implementer), logging and guard hooks | `skills/ai-layout/templates/` · `agents/*.md` · `hooks/hooks.json` · `/fc:adopt-sdlc` `/fc:sync-sdlc` (d) | **nothing** (d) | tanin (d) |
 
 - **Owns** — the data and the capability this service is the source of truth for.
 - **Exposes** — the contracts others may depend on. Anything not listed here is internal and
@@ -36,7 +36,7 @@ or version-pinned by anything in this repo — the dependency runs one way only.
   `{{fleet_extra}}` slots with their own rules, docs and skills. An overlay owns the
   `overlay` block of `ai-factory/.sdlc.json`; ai-sdlc never writes it, which is how it stays ignorant
   of who its overlays are.
-- **Adopted application repos** — any repo that has run `/t4:adopt-sdlc`, carrying its own copy
+- **Adopted application repos** — any repo that has run `/fc:adopt-sdlc`, carrying its own copy
   of the layout under `ai-factory/` and an `ai-factory/.sdlc.json` recording which ai-sdlc version it holds.
   Each is the source of truth for its own version; nothing here keeps a copy.
 
@@ -57,7 +57,7 @@ or version-pinned by anything in this repo — the dependency runs one way only.
 - No runtime dependency of any kind: no package manager, no lockfile, no submodule, no
   vendored code. Hook scripts use the Node standard library only (d).
 - A change to `skills/ai-layout/templates/` is a contract change: it reaches every adopted
-  repo on its next `/t4:adopt-sdlc` or `/t4:sync-sdlc`, and needs a CHANGELOG entry naming the
+  repo on its next `/fc:adopt-sdlc` or `/fc:sync-sdlc`, and needs a CHANGELOG entry naming the
   blast radius.
 - Hook scripts must never write to stdout and must no-op in a repo with no `ai-factory/` directory —
   they run in every repo where the plugin is installed, not only adopted ones.
@@ -79,7 +79,7 @@ carries per-model prices for the cost column of `ai-factory/runs/log.csv`.
   stale hook rather than trusting it. Editing the installed copy is still not a fix — updating
   the plugin and restarting the session is.
 - ~~A repo adopted before 0.5.0 kept its bare `.claude/commands/spec.md` through every sync and
-  answered both `/spec` and `/t4:spec`~~ — **fixed** in 0.16.0: cleanup identifies generated
+  answered both `/spec` and `/fc:spec`~~ — **fixed** in 0.16.0: cleanup identifies generated
   commands by the `ai-factory/tasks/` include they carry rather than by a name glob, so older
   generations go and hand-written commands stay. Found in a repo scaffolded at ai-base 0.1.2.
 - ~~`.claude-plugin/marketplace.json` pinned ai-sdlc at `0.3.0` while `plugin.json` was
@@ -88,15 +88,15 @@ carries per-model prices for the cost column of `ai-factory/runs/log.csv`.
 - ~~`README.md` installed from a URL that did not match the
   remote~~ — **fixed**; the documented install command works now.
 - ~~An adopted repo has no way to learn its layout is behind these templates~~ — **built** in
-  0.8.0: `/t4:adopt-sdlc` writes `ai-factory/.sdlc.json` and `/t4:sync-sdlc` reports drift against it
+  0.8.0: `/fc:adopt-sdlc` writes `ai-factory/.sdlc.json` and `/fc:sync-sdlc` reports drift against it
   (ai-factory/adr/0001–0003). Still open: taking an upstream change is manual — there is no
-  `/t4:sync-sdlc --update` — and by design nothing here can answer "which repos are behind?".
+  `/fc:sync-sdlc --update` — and by design nothing here can answer "which repos are behind?".
 - ~~Nothing checks that `marketplace.json`'s pin agrees with `plugin.json`~~ — **fixed** in
   0.9.0: `skills/ai-layout/scripts/check-versions.sh` compares every manifest that carries a
   version. It caught a real drift on its first run (ai-factory/adr/0003).
 - ~~`ai-factory/specs/0000-scaffold.md` and `hooks/hooks.json` still named "ai-base"~~ — **fixed** in
-  0.7.1. The plugin has since been renamed twice more — `ai-sdlc` in 0.12.0, `t4` in 0.13.0 —
-  and the marketplace twice, `t4` in 0.11.0 and `sdlc` in 0.15.0. Naming is the most
+  0.7.1. The plugin has since been renamed twice more — `ai-sdlc` in 0.12.0, `fc` in 0.13.0 —
+  and the marketplace twice, `fc` in 0.11.0 and `sdlc` in 0.15.0. Naming is the most
   frequently churned thing in this repo; anything quoting a name dates quickly.
 - ~~Two writers appended to `ai-factory/runs/log.csv` with different columns~~ — **fixed** in 0.7.0:
   one 16-column schema, a `source` column saying which writer produced the row, and

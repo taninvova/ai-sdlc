@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "t4-delivery-report/v1",
+  "$id": "fc-delivery-report/v1",
   "title": "Delivery completion report",
   "description": "ai-factory/reports/<delivery_id>/completion.json, written by make delivery-report (make/delivery-report.js). completion.md is rendered from the same document. Only generated_at differs between two runs over identical evidence.",
   "type": "object",
   "required": ["schema", "version", "generated_at", "note", "delivery", "snapshot", "status", "reasons", "counts", "policy", "criteria", "steps", "contract_status", "changes", "verification", "review", "attestations", "limitations", "telemetry", "mr_draft"],
   "properties": {
-    "schema": { "const": "t4-delivery-report" },
+    "schema": { "const": "fc-delivery-report" },
     "version": { "const": 1 },
     "generated_at": { "type": "string" },
     "note": { "type": "string" },
@@ -77,7 +77,7 @@
       "description": "Optional; present only when an assurance preset is selected (ai-factory/assurance.json). The resolved policy the report applied, as make/assurance.js show --json prints it. Readers must accept reports without it.",
       "required": ["schema", "version", "mode", "preset", "status", "settings", "conflicts", "unmet"],
       "properties": {
-        "schema": { "const": "t4-assurance-policy" },
+        "schema": { "const": "fc-assurance-policy" },
         "version": { "const": 1 },
         "mode": { "const": "preset" },
         "preset": { "enum": ["light", "standard", "strict"] },

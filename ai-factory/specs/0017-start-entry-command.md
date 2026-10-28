@@ -1,14 +1,14 @@
 # Unified start entry command
 
-Add `/t4:start <request>` to recommend the appropriate existing T4 workflow, briefly explain the choice, and hand the request to its first task.
+Add `/fc:start <request>` to recommend the appropriate existing FC workflow, briefly explain the choice, and hand the request to its first task.
 
 ## User story
 
-As a developer bringing a change to T4, I want one entry command that chooses an appropriate existing procedure so that I can begin without learning every task name.
+As a developer bringing a change to FC, I want one entry command that chooses an appropriate existing procedure so that I can begin without learning every task name.
 
 ## Request and status
 
-The user requested a plan for the previously proposed option: “One entry command: `/t4:start <request>` recommends `quick`, `fix`, `chore`, or the planned workflow. Explains the choice briefly and invokes existing procedures. Direct commands remain available.”
+The user requested a plan for the previously proposed option: “One entry command: `/fc:start <request>` recommends `quick`, `fix`, `chore`, or the planned workflow. Explains the choice briefly and invokes existing procedures. Direct commands remain available.”
 
 This is a draft prerequisite for that plan, not authorization to implement. Acceptance criteria below express that requested behavior and existing repository constraints. Proposed details are separated below and are not represented as independently approved requirements.
 
@@ -16,7 +16,7 @@ This is a draft prerequisite for that plan, not authorization to implement. Acce
 
 ### AC1 — Unified entry
 
-Given a repository with the applicable T4 workspace procedures, when a developer supplies a change request to the new start entry, then it selects an existing `quick`, `fix`, `chore`, or planned-workflow entry task and explains the choice briefly before handing off.
+Given a repository with the applicable FC workspace procedures, when a developer supplies a change request to the new start entry, then it selects an existing `quick`, `fix`, `chore`, or planned-workflow entry task and explains the choice briefly before handing off.
 
 ### AC2 — Existing procedure handoff
 
@@ -71,7 +71,7 @@ No application models or fields. Existing task input, host dispatch directives, 
 
 ## Routes touched
 
-New Claude Code `/t4:start` command and corresponding Codex `t4-start` skill; initial handoff to existing tasks. Any headless exposure must obey existing runner restrictions and cannot assume interactive clarification is available.
+New Claude Code `/fc:start` command and corresponding Codex `fc-start` skill; initial handoff to existing tasks. Any headless exposure must obey existing runner restrictions and cannot assume interactive clarification is available.
 
 ## Components likely involved
 

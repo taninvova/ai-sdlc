@@ -15,14 +15,14 @@ const ROOT = fs.realpathSync(path.resolve(ENTRY_DIRECTORY, "../.."));
 
 const VERSION = 1;
 const SCHEMAS = {
-	config: "t4-contracts-config",
-	spec: "t4-contract/spec",
-	plan: "t4-contract/plan",
-	quick: "t4-contract/quick",
-	evidence: "t4-contract/evidence",
-	attestation: "t4-contract/attestation",
-	diagnostics: "t4-contract-diagnostics",
-	snapshot: "t4-contract/snapshot",
+	config: "fc-contracts-config",
+	spec: "fc-contract/spec",
+	plan: "fc-contract/plan",
+	quick: "fc-contract/quick",
+	evidence: "fc-contract/evidence",
+	attestation: "fc-contract/attestation",
+	diagnostics: "fc-contract-diagnostics",
+	snapshot: "fc-contract/snapshot",
 };
 // Kept equal to the `required` arrays in ai-factory/contracts/schema/*.v1.json by check-contracts.sh.
 const REQUIRED = {
@@ -360,7 +360,7 @@ function shapeProblem(value, kind) {
 			message: `unsupported version ${JSON.stringify(value.version)}; this validator supports ${VERSION}`,
 			hint:
 				Number.isInteger(value.version) && value.version > VERSION
-					? "Update the plugin (/t4:sync-sdlc) before trusting this artifact."
+					? "Update the plugin (/fc:sync-sdlc) before trusting this artifact."
 					: "Regenerate the sidecar with contracts.js init.",
 		};
 	const missing = REQUIRED[kind].filter((key) => !Object.hasOwn(value, key));
@@ -1338,8 +1338,8 @@ function migrate(options = {}) {
 		if (!read.bytes) continue;
 		const text = read.bytes.toString("utf8");
 		const link = text.match(/\*\*Spec:\*\*\s*`?(ai-factory\/specs\/[^`\s)]+\.md)/);
-		// Legacy four-digit numbers and spec 0024 letter-digit IDs, compared case-insensitively.
-		const idOf = (file) => path.basename(file).match(/^([0-9]{4}|[A-Za-z]{3}[0-9]{3})-/)?.[1].toUpperCase();
+		// Legacy four-digit numbers, legacy letter-digit IDs and prefixed IDs (PMB-001), compared case-insensitively.
+		const idOf = (file) => path.basename(file).match(/^([0-9]{4}|[A-Za-z]{2,5}-[0-9]{3,}|[A-Za-z]{3}[0-9]{3})-/)?.[1].toUpperCase();
 		const number = idOf(md.file);
 		let specFile = link && path.resolve(ctx.root, link[1]);
 		if (!specFile || !specs.has(specFile))

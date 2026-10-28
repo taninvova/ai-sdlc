@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "t4-contract/plan/v1",
+  "$id": "fc-contract/plan/v1",
   "title": "Plan sidecar",
   "description": "ai-factory/plans/[done/]<name>.contract.json beside <name>.md. Written by `contracts.js init plan`.",
   "type": "object",
   "required": ["schema", "version", "delivery_id", "sha256", "spec_sha256", "steps"],
   "properties": {
-    "schema": { "const": "t4-contract/plan" },
+    "schema": { "const": "fc-contract/plan" },
     "version": { "const": 1 },
     "delivery_id": { "type": "string", "pattern": "^d-[0-9]{8}-[0-9a-f]{6}$" },
     "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the plan Markdown with checkbox marks normalized to [ ]." },

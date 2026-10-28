@@ -8,7 +8,7 @@ the path it prints, keeping its first two lines unchanged; if the helper exits 3
 existing plan's path and write nothing. Read ai-factory/AGENTS.md, ai-factory/docs/architecture.md,
 ai-factory/docs/coding-standards.md, the spec and the relevant ai-factory/skills/; write the goal and a
 `**Spec:**` line naming the spec's path, files to create or modify with one line each on why, server versus client components,
-steps as `- [ ] Step N — …` each small enough for one `/t4:run`, naming the tests that prove
+steps as `- [ ] Step N — …` each small enough for one `/fc:run`, naming the tests that prove
 it and its verification phase (`red`, `step`, or `final`). An optional `Depends on: N, M` line
 in a step's indented body, step numbers only, names the steps it needs; a step without it waits
 for all earlier steps. Write it where steps are independent, referring only to existing earlier

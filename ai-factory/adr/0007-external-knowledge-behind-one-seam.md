@@ -148,7 +148,7 @@ be checkable by reading it; this attaches another. 0004's proposed rewording of
 `ai/docs/fleet.md` — "one optional service dependency, and no other" — has not been applied
 yet (the Boundaries section still carries its "Under review" banner), which is fortunate,
 because that wording would now be false. The chore that applies 0004's text should apply this
-instead, so both seams are covered by one sentence. Proposed, for a `/t4:chore`, not edited
+instead, so both seams are covered by one sentence. Proposed, for a `/fc:chore`, not edited
 here:
 
 *`ai/docs/fleet.md`, opening line* — "This plugin is standalone: it has no dependency on any

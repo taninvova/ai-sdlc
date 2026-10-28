@@ -1,7 +1,7 @@
 # 0007 — A SubagentStop hook: per-agent token accounting, and the task that groups it
 
 Summary: the run log gains the two dimensions it is missing — **which agent** spent the tokens
-and **which t4 task** it spent them under — by writing a row at the moment a subagent concludes,
+and **which fc task** it spent them under — by writing a row at the moment a subagent concludes,
 from the agent's own transcript, and by recording the task the session is running so both the
 session row and the agent rows can be grouped by it. The cumulative-per-session defect is fixed
 in the same change, because a dimension you cannot sum is not a dimension.
@@ -38,15 +38,15 @@ not reopened below.
 | SD-001 | **The agent name is a 17th column, `agent`.** Not encoded inside `tool` as `claude/explorer`: that overloads a field the reader already parses and forces every consumer to split it. | AC3, AC17. Closes exploration Q4 and answers `ai-factory/analyses/0001` Q-006, whose "keep as is" was only a proposal |
 | SD-002 | **The `log.csv` header break is accepted.** The header does change, so every adopted repo's existing rows rotate into `log.previous.csv` on the next write; the MR and the CHANGELOG say so, as `ai-factory/AGENTS.md` requires. | AC17, now firm rather than conditional; AC15 |
 | SD-003 | **Deltas at write.** Each new row records the increment since that session's previous row, not a re-sum of the whole transcript. **No migration script and no reinterpretation of the existing cumulative rows**: SD-002's header change already quarantines every one of them in `log.previous.csv`, which is exactly where rows written under the old semantics belong. That quarantine is a consequence of the break, not separate work — and it is not licence to read those rows later as if they were deltas. | AC14, AC15, AC16 |
-| SD-004 | **Usage records are duplicated across agent transcripts, and the remedy is de-duplication by message `uuid` — not a depth rule.** A usage record belongs to exactly one agent, the one whose own turn produced it, and is counted once however many transcripts carry a copy. Measured 2026-09-26, session `1453ad4c-3ce5-43a9-b9fc-263c94b45c7b` in `-Users-tanin-code-svc`: a parent agent of 711 records / 317 with `usage` / 59,172,796 tokens, and four `spawnDepth: 2` `fork` children of 4.8M, 4.7M, 30.4M and 8.2M tokens (48,151,365 total), each re-logging 54 of the parent's records — 20 of them with `usage`, the same UUIDs and the same 1,944,712 tokens in all four, at positions 11–50, an inherited prefix rather than the child's own work. Naively summed, those tokens are counted five times: 7,778,848 of pure over-count in one session. The cause is context inheritance and it is `fork`-shaped; the plain subagents this feature is mostly about (the t4 step agents) are not forks and were **not** observed to share UUIDs — one tested directly carried only its own work. So the duplication is proven for forks and unobserved for non-forks, and the `uuid` rule is correct for both, which is why it is unconditional rather than conditional on agent type. | AC2, AC16, AC19. Was Open question 11 |
+| SD-004 | **Usage records are duplicated across agent transcripts, and the remedy is de-duplication by message `uuid` — not a depth rule.** A usage record belongs to exactly one agent, the one whose own turn produced it, and is counted once however many transcripts carry a copy. Measured 2026-09-26, session `1453ad4c-3ce5-43a9-b9fc-263c94b45c7b` in `-Users-tanin-code-svc`: a parent agent of 711 records / 317 with `usage` / 59,172,796 tokens, and four `spawnDepth: 2` `fork` children of 4.8M, 4.7M, 30.4M and 8.2M tokens (48,151,365 total), each re-logging 54 of the parent's records — 20 of them with `usage`, the same UUIDs and the same 1,944,712 tokens in all four, at positions 11–50, an inherited prefix rather than the child's own work. Naively summed, those tokens are counted five times: 7,778,848 of pure over-count in one session. The cause is context inheritance and it is `fork`-shaped; the plain subagents this feature is mostly about (the fc step agents) are not forks and were **not** observed to share UUIDs — one tested directly carried only its own work. So the duplication is proven for forks and unobserved for non-forks, and the `uuid` rule is correct for both, which is why it is unconditional rather than conditional on agent type. | AC2, AC16, AC19. Was Open question 11 |
 
 Seven open questions remain and are listed below. They keep their original numbers 4–10, so a
 reference to one of them still lands; none of them blocks the plan.
 
 ## User story
-As the owner of a repo that runs the t4 loop, I want every run recorded with the agent that did
+As the owner of a repo that runs the fc loop, I want every run recorded with the agent that did
 the work and the task it was doing, in rows that can be added up, so that I can say where the
-money went — `/t4:run`'s implementers, `/t4:explore`'s explorer, the reviewer — instead of only
+money went — `/fc:run`'s implementers, `/fc:explore`'s explorer, the reviewer — instead of only
 that the repo spent some, and so that the report specs that follow have something true to read.
 
 ## Acceptance criteria
@@ -92,7 +92,7 @@ that the repo spent some, and so that the report specs that follow have somethin
 
 - **AC9** Given the release, When `hooks/hooks.json` is read, Then it registers
   `UserPromptSubmit` backed by a new script in `skills/ai-hooks/scripts/`; and When a prompt that
-  carries a `/t4:<name>` command is submitted in a repo with the layout, Then the task name is
+  carries a `/fc:<name>` command is submitted in a repo with the layout, Then the task name is
   written to a session-scoped file under `ai-factory/runs/` keyed by `session_id`, **nothing is
   printed to stdout** — a print from this event enters the model's context and breaks the cached
   prefix — and the script no-ops in a repo without the layout.
@@ -100,16 +100,16 @@ that the repo spent some, and so that the report specs that follow have somethin
   for that session, Then both carry `spec` in the `task` column; and given no such file exists
   for the session, Then both leave `task` empty. A task is never inferred from the branch name,
   the agent type or the prompt text.
-- **AC11** Given an interactive session that ran `/t4:plan`, When its session row reaches
+- **AC11** Given an interactive session that ran `/fc:plan`, When its session row reaches
   `log.csv`, Then `task` is `plan` — the column that `session-stop.js` writes empty today is
   filled for interactive sessions, not only for `make ai TASK=`.
-- **AC12** Given a `specifier` spawned under `/t4:run` — the crossing measured in the
+- **AC12** Given a `specifier` spawned under `/fc:run` — the crossing measured in the
   exploration, 1 of 18 — When its row is written, Then `task` is `run` and the agent name is
   `specifier`: attribution follows the task the session is running, never a static
   agent→task map.
 - **AC13** Given the release, When `skills/ai-hooks/SKILL.md`'s prescribed gitignore lines, the
   template's gitignore prescription and this repo's own `.gitignore` are read, Then each covers
-  the task file; and When a session runs a `/t4:` command, Then `git status` afterwards does not
+  the task file; and When a session runs a `/fc:` command, Then `git status` afterwards does not
   show it.
 
 ### Rows that can be summed
@@ -174,7 +174,7 @@ that the repo spent some, and so that the report specs that follow have somethin
   lockfile, no build step — so `ai-factory/AGENTS.md`'s "no new dependency without an ADR" rule is
   satisfied without one, and `architecture.md`'s "nothing runs as a service" still holds.
 - **AC21** Given a repo that has taken this update and still holds `ai/` rather than
-  `ai-factory/`, When a subagent concludes and when a `/t4:` prompt is submitted, Then both new
+  `ai-factory/`, When a subagent concludes and when a `/fc:` prompt is submitted, Then both new
   scripts behave exactly as they do in a migrated repo, writing under `ai/runs/` — the 1.0.0 hook
   fallback in `_common.js` `aiDir()` covers the new events too, and `hooks/hooks.json`'s
   description still describes every registered event.
@@ -190,7 +190,7 @@ that the repo spent some, and so that the report specs that follow have somethin
 - **Options B, C and D**: reconciling from Claude Code's `subagents/` directory at Stop,
   a read-only `make cost` reconciler over the transcripts, and gateway-level accounting.
   Considered and not chosen; B is retained in the exploration as a record, not a fallback.
-- **RS-001** (a local Next.js app) and **RS-002** (a `/t4:cost` task that has a model sum the CSV)
+- **RS-001** (a local Next.js app) and **RS-002** (a `/fc:cost` task that has a model sum the CSV)
   — rejected in the exploration, kept there so they are not re-proposed.
 - **Per-agent attribution for Codex.** Impossible by construction: `sync-adapters.sh` tells Codex
   to read `ai-factory/agents/<x>.md` and follow it in the same session, so one session is the task
@@ -202,7 +202,7 @@ that the repo spent some, and so that the report specs that follow have somethin
   not extended, not moved into a shared module unless the plan finds that cheaper than the
   duplication it already accepts.
 - **Filling `accepted`.** It stays a hand-filled column at commit time.
-- **Anything `log.csv` cannot carry**: per-plan-step cost inside `/t4:run`, wall-clock duration,
+- **Anything `log.csv` cannot carry**: per-plan-step cost inside `/fc:run`, wall-clock duration,
   tool-call counts and lines changed. The exploration establishes that none is obtainable from
   this file at any effort.
 - **Rewriting history, and any migration script.** No adopted repo's existing rows are converted
@@ -229,10 +229,10 @@ The three that blocked the plan, and question 11, are answered under **Decided**
    not the discriminator in the tested mode, so the exploration calls this a residual to confirm
    in passing rather than a gate. Confirm it during implementation, and say so in the MR.
 9. **When is the task file removed, and what happens between tasks?** Unstated by the request. A
-   session that runs `/t4:plan`, then types a plain prompt, then runs `/t4:run` — does the file
-   keep the last `/t4:` name, or clear on a non-command prompt? A background agent still running
+   session that runs `/fc:plan`, then types a plain prompt, then runs `/fc:run` — does the file
+   keep the last `/fc:` name, or clear on a non-command prompt? A background agent still running
    from the previous task would be attributed to the new one under last-writer-wins.
-10. **What fills `task` for a session that never typed a `/t4:` command at all?** AC10 says empty;
+10. **What fills `task` for a session that never typed a `/fc:` command at all?** AC10 says empty;
     confirm that an empty value is wanted rather than a named bucket, given the later report has
     to show an `unattributed` row either way.
 
@@ -250,7 +250,7 @@ changes is files under `ai-factory/runs/`:
 ## Routes touched
 None — nothing serves a request. The surfaces are hook events in `hooks/hooks.json`:
 `SubagentStop` added, `UserPromptSubmit` added, `Stop` changed (AC10, AC11, AC14). `SessionStart`,
-the two `PreToolUse` and the two `PostToolUse` entries are untouched. No `/t4:` command is added,
+the two `PreToolUse` and the two `PostToolUse` entries are untouched. No `/fc:` command is added,
 removed or changed.
 
 ## Components likely involved

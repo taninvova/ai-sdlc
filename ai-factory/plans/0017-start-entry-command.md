@@ -22,7 +22,7 @@ This is an implementation plan, not implementation authorization. All steps are 
 Create:
 
 - `skills/ai-layout/templates/ai-factory/tasks/start.md` — concise project-owned classification procedure and output contract.
-- `commands/start.md`, `codex-skills/t4-start/SKILL.md` — generated host entries that own classification and destination handoff.
+- `commands/start.md`, `codex-skills/fc-start/SKILL.md` — generated host entries that own classification and destination handoff.
 - `skills/ai-layout/scripts/check-start-routing.sh` — focused regression checks with named `dispatch`, `entry`, and `headless` groups; this script does not exist yet.
 - `skills/ai-layout/fixtures/start-routing/cases.md` — fixed requests, fixture setup, expected decisions, and host transcript evaluation rubric; this is not a new evaluation framework.
 
@@ -78,7 +78,7 @@ Neither: this plugin consists of prompts, local Node scripts, and generated host
 
 ## Behavioral before/after runs
 
-Use disposable adopted repositories under `ai-factory/runs/tmp/`; preserve the developer's checkout. Capture actual host transcripts using each host's normal interactive invocation, with the same fixture input/configuration before and after. Before implementation, record the missing start entry and directly invoke the expected existing destination as the behavior baseline. After implementation, invoke `/t4:start` on Claude Code and `t4-start` on Codex. Record host/model, fixture state, original input, explanation, selected task, dispatch directive, received task input, observed writes and stopping point. Do not fabricate runs from test output.
+Use disposable adopted repositories under `ai-factory/runs/tmp/`; preserve the developer's checkout. Capture actual host transcripts using each host's normal interactive invocation, with the same fixture input/configuration before and after. Before implementation, record the missing start entry and directly invoke the expected existing destination as the behavior baseline. After implementation, invoke `/fc:start` on Claude Code and `fc-start` on Codex. Record host/model, fixture state, original input, explanation, selected task, dispatch directive, received task input, observed writes and stopping point. Do not fabricate runs from test output.
 
 Evaluate these cases on both hosts:
 

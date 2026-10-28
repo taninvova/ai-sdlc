@@ -1,7 +1,7 @@
 # Continuation host fixtures
 
 Use disposable adopted repositories with artifact contracts enabled, on both hosts (Claude Code
-`/t4:continue <delivery>`, Codex `$t4-continue <delivery>`). Build each delivery from
+`/fc:continue <delivery>`, Codex `$fc-continue <delivery>`). Build each delivery from
 `skills/ai-layout/fixtures/contracts/planned` the way `check-continuation.sh` does: copy it, add
 `ai-factory/contracts/config.json`, `git init`, then `contracts.js init spec` and `init plan` for
 `ai-factory/specs/0001-csv-export.md` and `ai-factory/plans/0001-csv-export.md`. Record evidence only
@@ -14,7 +14,7 @@ destination directive and `Destination input:` line, observed writes, and where 
 stopped. Static checks and `check-continuation.sh` prove the selector and handoff mechanics only;
 they are not host runs and must never be reported as one.
 
-Before: the same fixture state without `/t4:continue` — record the manual sequence a developer
+Before: the same fixture state without `/fc:continue` — record the manual sequence a developer
 uses today (read the plan, open the evidence directory, run `make … contracts DELIVERY=<id>`,
 decide the phase, invoke the direct task). After: invoke continue with the same state.
 
@@ -29,8 +29,8 @@ decide the phase, invoke the direct task). After: invoke continue with the same 
 
 | ID | Setup and input | Expected |
 | --- | --- | --- |
-| empty | `/t4:continue` with nothing after it | asks for the delivery ID; no helper call, dispatch or writes |
-| path | `/t4:continue ai-factory/specs/0001-csv-export.md` | unsupported input; stop |
+| empty | `/fc:continue` with nothing after it | asks for the delivery ID; no helper call, dispatch or writes |
+| path | `/fc:continue ai-factory/specs/0001-csv-export.md` | unsupported input; stop |
 | unknown | a well-formed ID that matches no sidecar, or a quick delivery's ID | `blocked`: no contract-backed planned delivery; stop |
 | disabled | no `ai-factory/contracts/config.json` | `blocked`: contracts not enabled; stop |
 | gaps-question | every step done, final evidence recorded, no review | `question` with `clarify: gaps_tested`; the answer is passed as `--answer gaps_tested=yes|no`; `no` selects `test … gaps`, `yes` selects `check working-tree …` |

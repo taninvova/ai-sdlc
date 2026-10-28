@@ -7,7 +7,7 @@ Step 4's independent review of the final diff waived. Deterministic final checks
 
 ## Result
 
-Interactive Claude `/t4:start` and Codex `$t4-start` classify into one allowlisted existing
+Interactive Claude `/fc:start` and Codex `$fc-start` classify into one allowlisted existing
 workflow, validate bounded JSON, and hand original request text to the destination independently.
 The classifier changes no files. Configured native workers have read-only host profiles.
 Questions resume classification; answers remain separate context. Existing direct entries remain.
@@ -42,7 +42,7 @@ after review identified that host per-call overrides cannot enforce the required
   and its dispatch/routing checks pass. The next run passed through host checks then caught the
   changelog release-heading convention; corrected the unreleased preamble while retaining 2.8.0
   as the latest release. The unchanged release-docs check passes. **Final `make check` passed (exit 0): all 27 regression scripts completed**, including start
-  routing and the final 62-case write-boundary check. Log: `/private/tmp/t4-start-full-check.log`.
+  routing and the final 62-case write-boundary check. Log: `/private/tmp/fc-start-full-check.log`.
 
 Step 1's original ordering required generated Step 2 entries for its routing regression. Once
 those entries existed, the exact regression passed and Step 1 was checked. Workspace regression
@@ -51,7 +51,7 @@ exclusion set in sync-adapters.js. The unchanged regression passed after this fi
 
 ## Live behavior
 
-A real Claude interactive attempt in `/private/tmp/t4-start-live-rhq3j_s6` changed README's
+A real Claude interactive attempt in `/private/tmp/fc-start-live-rhq3j_s6` changed README's
 Setup heading to Installation through start, but selected chore instead of expected quick.
 The fixture also contained unsubstituted template placeholders. Retain this as a failed
 classification run, not acceptance. The task now explicitly routes requested wording/heading/
@@ -64,7 +64,7 @@ Corrected live runs passed on both hosts:
 - Incompatible explicit choice (`Use quick to add a public API and database migration.`): both
   hosts returned a validated question, with no destination dispatch or file changes. Codex asked
   to use the planned workflow; Claude offered planned/design or analyse options.
-- Claude transcript: [interactive run](/Users/Volodymyr_Tanin/.claude/projects/-private-tmp-t4-start-live-rhq3j-s6/9959488f-690c-4cf8-b55d-1e4cdcb3b780.jsonl).
+- Claude transcript: [interactive run](/Users/Volodymyr_Tanin/.claude/projects/-private-tmp-fc-start-live-rhq3j-s6/9959488f-690c-4cf8-b55d-1e4cdcb3b780.jsonl).
 - Codex transcript: [interactive run](/Users/Volodymyr_Tanin/.codex/sessions/2026/10/05/rollout-2026-10-05T17-04-01-01a10de1-75b4-71f1-8326-f8f761be5831.jsonl).
 
 Codex used a native local skill in an isolated fixture. This does not prove installed-plugin

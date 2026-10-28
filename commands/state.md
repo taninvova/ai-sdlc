@@ -4,14 +4,14 @@ allowed-tools: Bash, Read
 ---
 Report what is still outstanding in this repo, or one contract delivery's status.
 **Change nothing.** Do not edit a file, tick or untick a checkbox, move a plan between
-`ai-factory/plans/` and its `done/` subdirectory, start a step, hand one to `/t4:run`, or run
-tests, review, a report or `/t4:continue` — this lists work, it never does any, and being
+`ai-factory/plans/` and its `done/` subdirectory, start a step, hand one to `/fc:run`, or run
+tests, review, a report or `/fc:continue` — this lists work, it never does any, and being
 read-only is what makes it safe to run before anyone knows what is left. Do not ask the developer anything: this
 reports, it does not interview, and it must behave the same in a headless run.
 **Launch no agent.** Start no subagent, background task or workflow, and invoke no other command
 or skill — the one Bash call in step 1 is the only tool this command needs. A table of
 outstanding steps is not a request to start one, however obvious the next one looks, and however
-many `/t4:run` hand-offs came before it in this session.
+many `/fc:run` hand-offs came before it in this session.
 
 1. Run:
    `bash "${CLAUDE_PLUGIN_ROOT}/skills/ai-layout/scripts/state.sh" . "${CLAUDE_PLUGIN_ROOT}"`
@@ -21,15 +21,15 @@ many `/t4:run` hand-offs came before it in this session.
    line as that failure, never as a status or an empty answer.
 
 1b. **Hand the developer's argument to that command.** Whatever the developer typed after
-   `/t4:state` is the `Context:` line at the very end of this prompt. Append it verbatim, after
-   the second path, and run the command with it — so `/t4:state --done` runs that same command
-   with `--done` on the end, and `/t4:state` with nothing typed runs it exactly as written above.
+   `/fc:state` is the `Context:` line at the very end of this prompt. Append it verbatim, after
+   the second path, and run the command with it — so `/fc:state --done` runs that same command
+   with `--done` on the end, and `/fc:state` with nothing typed runs it exactly as written above.
    Pass the argument through unchanged: do not interpret it, do not translate it into a
    different flag, do not silently drop one you do not recognise, and do not answer it yourself.
    Pass `--delivery <id>` the same way, the ID exactly as typed. The script decides what every
    argument means, including the ones it refuses: `--done` and `--next` do not combine,
    `--delivery` combines with neither and needs exactly one delivery ID, a missing workspace
-   helper is answered with `/t4:sync-sdlc` guidance, and a flag it does not recognise is named
+   helper is answered with `/fc:sync-sdlc` guidance, and a flag it does not recognise is named
    back with the ones it does take. `--specs`, `--plans` and `--spec <id>` go through the
    same way, the ID exactly as typed: they narrow a listing to specs, to plans, or to one
    spec and its plans, and the script alone decides what they combine with. It answers each of those in one line, and that line is the answer, not an error to
@@ -53,12 +53,13 @@ many `/t4:run` hand-offs came before it in this session.
 4. **Which columns, provisionally.** Render the header the script actually printed — the mode is
    whichever header line came back. The listing modes print a tab-separated header line and then
    tab-separated rows carrying six fields — `kind`, `id`, `state`, `path`, `step`, `detail`.
-   `id` is the ID the artefact's file name starts with: a letter-and-digit ID such as `DHW631`,
-   or a legacy four-digit number such as `0010`, shown as the script printed it.
+   `id` is the ID the artefact's file name starts with: a prefixed ID such as `PMB-001`, a
+   letter-and-digit ID such as `DHW631`, or a legacy four-digit number such as `0010`, shown as
+   the script printed it.
    Render them as they come: one column per field, in the order the header line gives, with the
    header line's own names. This is deliberately provisional. Which of the six become columns, in
    what order, and whether a spec row and a plan-step row share one column set or the table is
-   sectioned by kind, is an open question on `ai-factory/specs/0010-t4-state.md` and is not
+   sectioned by kind, is an open question on `ai-factory/specs/0010-fc-state.md` and is not
    settled here. So do not invent a column, merge two, reorder them or drop one on your own
    judgement — when the answer lands, this instruction is the one place it changes.
 

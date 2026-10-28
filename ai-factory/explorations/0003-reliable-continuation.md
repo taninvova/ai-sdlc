@@ -2,7 +2,7 @@
 
 ## Request
 
-Add `/t4:continue <delivery>` to inspect a delivery's artifacts and verification evidence, explain the next valid action, and resume through the existing workflow. When its spec has changed, explain which downstream artifacts and evidence require reconsideration before proceeding.
+Add `/fc:continue <delivery>` to inspect a delivery's artifacts and verification evidence, explain the next valid action, and resume through the existing workflow. When its spec has changed, explain which downstream artifacts and evidence require reconsideration before proceeding.
 
 ## What exists today
 
@@ -58,4 +58,4 @@ These are scope/policy decisions for the spec; the recommendation is not an acce
 
 ## Next
 
-`/t4:spec Use ai-factory/explorations/0003-reliable-continuation.md, option B, to specify /t4:continue <delivery>; resolve its open questions before finalizing acceptance criteria.`
+`/fc:spec Use ai-factory/explorations/0003-reliable-continuation.md, option B, to specify /fc:continue <delivery>; resolve its open questions before finalizing acceptance criteria.`

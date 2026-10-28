@@ -1,6 +1,6 @@
-# 0001 — /t4:spec accepts a ticket key
+# 0001 — /fc:spec accepts a ticket key
 
-**Goal:** teach `/t4:spec` to draft from a tracker ticket in a configured repo, while a repo
+**Goal:** teach `/fc:spec` to draft from a tracker ticket in a configured repo, while a repo
 with no `ai/jira.yaml` cannot tell the feature shipped.
 
 **Spec:** `specs/0001-spec-accepts-a-ticket-key.md` · **ADRs:** `docs/adr/0004`, `0005`, `0006`
@@ -51,7 +51,7 @@ Step 1 builds the seam first so that step 2 has something to point at and no rea
   to adding one. *Proves:* AC1–AC6, AC8–AC11. *Check:* real runs, per step 6.
 
 - [x] **Step 4 — Assert the prompt invariants in `check-adapters.sh`.** AC7: the generated
-  `/t4:spec` command names `ai/docs/tracker.md` and contains no vendor name, connector name,
+  `/fc:spec` command names `ai/docs/tracker.md` and contains no vendor name, connector name,
   URL, field name or JSON shape. Verify it fails when a vendor string is reintroduced, not just
   that it passes. *Proves:* AC7. *Check:* `bash skills/ai-layout/scripts/check-adapters.sh`,
   plus the deliberate-break run.
@@ -59,11 +59,11 @@ Step 1 builds the seam first so that step 2 has something to point at and no rea
 - [x] **Step 5 — Make Codex behave the same, or say why not.** AC4 is Codex's *normal* path,
   not an edge case, since arm two does not exist. Confirm the generated skill inherits
   stop-and-ask by pointing at the task file; if it does not, add it in `sync-adapters.sh`.
-  *Proves:* AC4 under Codex. *Check:* read a generated `.codex/skills/t4-spec/SKILL.md`.
+  *Proves:* AC4 under Codex. *Check:* read a generated `.codex/skills/fc-spec/SKILL.md`.
 
 - [x] **Step 6 — Run the ACs for real and record the transcripts.** The repo has no test
   runner; behaviour is proved by runs (coding-standards, Tests). Minimum set: AC1
-  (`/t4:spec UTF-8` with no config — the regression that shaped the design), AC12 (seam present,
+  (`/fc:spec UTF-8` with no config — the regression that shaped the design), AC12 (seam present,
   no config, nothing changes), AC3 (partial match), AC4 (configured, unreachable), AC2 (happy
   path, needs one real ticket). *Proves:* AC1–AC6, AC12. *Check:* transcripts linked in the MR,
   definition of done item 2.
@@ -112,7 +112,7 @@ bash skills/ai-layout/scripts/check-versions.sh
 bash skills/ai-layout/scripts/check-manifest.sh
 bash skills/ai-hooks/fixtures/check-log-schema.sh
 ```
-Plus the step 6 transcripts, and `/t4:check` with no blocker findings open.
+Plus the step 6 transcripts, and `/fc:check` with no blocker findings open.
 
 ## Planning notes
 - **AC2 is the only criterion this repo cannot prove on its own.** It needs a configured

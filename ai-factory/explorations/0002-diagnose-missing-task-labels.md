@@ -2,7 +2,7 @@
 
 ## Request
 Two read-only ways to tell a developer *why* `task` is empty in `ai-factory/runs/`: (a) a check in
-`/t4:doctor`, or (b) an offline audit of the existing CSVs. The live-validation case plan 0007 left
+`/fc:doctor`, or (b) an offline audit of the existing CSVs. The live-validation case plan 0007 left
 open (Step 7, withdrawn).
 
 ## What exists today
@@ -11,7 +11,7 @@ open (Step 7, withdrawn).
   fixture `agent` row with `task` empty.
 - `log-task.js` writes `.task.<session_id>`; `_common.js` `task()` returns `""` on ENOENT.
   `session-stop.js:36` and `subagent-stop.js:37` look it up by `ev.session_id`.
-- Empty is ambiguous by design: no `/t4:` prompt typed (AC10, legitimate); a stale cached plugin
+- Empty is ambiguous by design: no `/fc:` prompt typed (AC10, legitimate); a stale cached plugin
   lacking the `UserPromptSubmit` registration (R12); a subagent `session_id` unlike the parent's;
   last-writer-wins (Q9).
 - `skills/ai-layout/scripts/doctor.sh`: read-only bash, one `[ok]/[finding]/[unknown]` line plus a
@@ -47,5 +47,5 @@ is where those live; historical rows cannot answer it. Opinion: once `log.csv` h
 
 ## Next
 ```
-/t4:spec a read-only task-attribution check in /t4:doctor: whether UserPromptSubmit is registered in the plugin copy a session loads, whether ai-factory/runs/.task.<session_id> exists, and whether the newest log.pending.csv rows carry a task — one line with a remedy, plus a check-doctor.sh case; writes nothing, ignores 16-column rows
+/fc:spec a read-only task-attribution check in /fc:doctor: whether UserPromptSubmit is registered in the plugin copy a session loads, whether ai-factory/runs/.task.<session_id> exists, and whether the newest log.pending.csv rows carry a task — one line with a remedy, plus a check-doctor.sh case; writes nothing, ignores 16-column rows
 ```

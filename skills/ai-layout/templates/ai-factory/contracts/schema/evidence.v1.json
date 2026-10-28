@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "t4-contract/evidence/v1",
+  "$id": "fc-contract/evidence/v1",
   "title": "Verification evidence",
   "description": "ai-factory/evidence/<delivery_id>/{S<N>-red,S<N>-step,final,quick,review}.json. Written only by `contracts.js record` (make verify) and `make review`; never by hand.",
   "type": "object",
   "required": ["schema", "version", "delivery_id", "scope", "phase", "expected", "inputs", "code", "commands", "status", "started_at", "finished_at"],
   "properties": {
-    "schema": { "const": "t4-contract/evidence" },
+    "schema": { "const": "fc-contract/evidence" },
     "version": { "const": 1 },
     "delivery_id": { "type": "string", "pattern": "^d-[0-9]{8}-[0-9a-f]{6}$" },
     "scope": {

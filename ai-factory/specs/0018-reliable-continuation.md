@@ -1,10 +1,10 @@
 # Reliable continuation
 
-Add `/t4:continue <delivery>` to inspect a planned delivery's artifacts and evidence, explain its next valid action, and resume one existing workflow task.
+Add `/fc:continue <delivery>` to inspect a planned delivery's artifacts and evidence, explain its next valid action, and resume one existing workflow task.
 
 ## User story
 
-As a developer returning to an interrupted delivery, I want T4 to establish what the recorded artifacts and evidence support so that I can resume safely without reconstructing progress or overlooking work affected by a changed spec.
+As a developer returning to an interrupted delivery, I want FC to establish what the recorded artifacts and evidence support so that I can resume safely without reconstructing progress or overlooking work affected by a changed spec.
 
 ## Agreed scope
 
@@ -70,7 +70,7 @@ Given a delivery for which the existing contract and report evaluation establish
 
 ### AC14 — Host integration and existing workflows
 
-Given an adopted workspace or this plugin's generated entry points, when the feature is installed through the existing generation and adoption mechanisms, then Claude Code exposes `/t4:continue` and Codex exposes the corresponding `t4-continue` skill with the same selection and handoff rules. Existing direct tasks retain their behavior, and the report task remains read-only toward delivery artifacts and does not run checks. Headless continuation is explicitly unsupported in version one rather than waiting for answers or guessing them.
+Given an adopted workspace or this plugin's generated entry points, when the feature is installed through the existing generation and adoption mechanisms, then Claude Code exposes `/fc:continue` and Codex exposes the corresponding `fc-continue` skill with the same selection and handoff rules. Existing direct tasks retain their behavior, and the report task remains read-only toward delivery artifacts and does not run checks. Headless continuation is explicitly unsupported in version one rather than waiting for answers or guessing them.
 
 ## Out of scope
 
@@ -91,7 +91,7 @@ No application models or fields. Read existing delivery IDs, spec and plan Markd
 
 ## Routes touched
 
-New Claude Code `/t4:continue <delivery>` and corresponding Codex `t4-continue` entry. Handoffs use existing plan, test, run, check, and report tasks. The headless runner must reject unsupported continuation explicitly.
+New Claude Code `/fc:continue <delivery>` and corresponding Codex `fc-continue` entry. Handoffs use existing plan, test, run, check, and report tasks. The headless runner must reject unsupported continuation explicitly.
 
 ## Components likely involved
 

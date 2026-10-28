@@ -123,7 +123,7 @@ async function main() {
 		const before = tree(dir, ["ai-factory/reports"]);
 		const value = report(dir, id, "ready");
 		for (const key of schema.required) assert.ok(Object.hasOwn(value, key), `report has ${key}`);
-		assert.equal(value.schema, "t4-delivery-report");
+		assert.equal(value.schema, "fc-delivery-report");
 		assert.equal(value.version, 1);
 		assert.deepEqual(value.counts, { criteria: 3, passed: 3, attested: 0, pending: 0, failed: 0, uncovered: 0, unverified: 0 });
 		assert.deepEqual(value.criteria.map((row) => [row.id, row.steps, row.basis]), [["AC1", ["S1"], "automated"], ["AC2", ["S2"], "automated"], ["AC3", ["S3"], "automated"]]);
@@ -400,7 +400,7 @@ async function main() {
 	{
 		const plugin = process.cwd();
 		const claude = fs.readFileSync(path.join(plugin, "commands/report.md"), "utf8");
-		const codex = fs.readFileSync(path.join(plugin, "codex-skills/t4-report/SKILL.md"), "utf8");
+		const codex = fs.readFileSync(path.join(plugin, "codex-skills/fc-report/SKILL.md"), "utf8");
 		for (const wrapper of [claude, codex]) assert.match(wrapper, /ai-factory\/tasks\/report\.md/, "wrapper reads the shared task");
 		const task = fs.readFileSync(path.join(plugin, "skills/ai-layout/templates/ai-factory/tasks/report.md"), "utf8");
 		assert.match(task, /make -f ai-factory\/make\/ai\.mk delivery-report DELIVERY=<id>/);
@@ -445,7 +445,7 @@ async function main() {
 		assert.match(md(), /Status: \*\*unavailable\*\*/);
 		fs.mkdirSync(path.join(dir, "ai-factory/runs/telemetry"), { recursive: true });
 		const file = `ai-factory/runs/telemetry/${id}.json`;
-		const base = { schema: "t4-delivery-telemetry", version: 1, delivery_id: id, coverage: { measured: 1, total: 3 }, metrics: { cost_usd: null, duration_s: 42.5 }, pricing: { source: "models.yaml" } };
+		const base = { schema: "fc-delivery-telemetry", version: 1, delivery_id: id, coverage: { measured: 1, total: 3 }, metrics: { cost_usd: null, duration_s: 42.5 }, pricing: { source: "models.yaml" } };
 		writeJson(dir, file, base);
 		value = report(dir, id, "ready");
 		assert.equal(value.telemetry.status, "partial");

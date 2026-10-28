@@ -1,25 +1,78 @@
 # Changelog
 
+## 4.0.0 — 2026-10-28
+
+Releases the work merged since 3.0.0: the plugin is renamed `t4` → `fc`, and new artefacts get
+project-prefixed sequential IDs (`PMB-001`) from `ai-factory/project.json`. **Breaking for installs
+and adopted repos:** reinstall the plugin as `fc@sdlc`, take the renamed templates with
+`/fc:sync-sdlc`, and name the project once with `ids.js init` before the next new artefact.
+
+**The plugin prefix is renamed `t4` → `fc`**
+
+**Breaking for installs and adopted repos.** The plugin is now named `fc`: every command is
+`/fc:<task>` (was `/t4:<task>`), every Codex skill `$fc-<task>` (was `$t4-<task>`), the environment
+variables are `FC_LIFECYCLE_RUN`, `FC_LOOP_ID` and `FC_LOOP_RESULT` (were `T4_*`), and the brand
+text reads "FC AI SDLC". There are no aliases for the old names. The rename was applied to the
+whole repository, history included: earlier entries in this changelog, specs, plans, ADRs and
+recorded runs now spell `fc` as well.
+
+- **Reinstall the plugin.** Uninstall `t4` and install `fc` from the `sdlc` marketplace.
+- **Migrate an adopted repo.** Run `/fc:sync-sdlc` to take the renamed templates, then delete the
+  old `.codex/skills/t4-*` directories by hand: sync writes the `fc-*` skills but does not remove
+  stale ones. Rename any local scripts or CI jobs that set `T4_*` variables or call `/t4:` commands.
+
+**Project-prefixed artefact IDs**
+
+**Breaking for adopted repos.** The templates change how every new artefact is named again, and
+an adopted repo must name its project once before its next new spec, exploration, analysis, design,
+ADR or change risk assessment.
+
+- **New ID format.** A new artefact is named `ai-factory/<dir>/<ID>-<slug>.md`, where `<ID>` is
+  `<PREFIX>-<NNN>`: the project's prefix of two to five letters, a dash and the next free number,
+  zero-padded to three digits (`PMB-001`, `PMB-002`…, then `PMB-1000`). The number is one past the
+  highest that prefix uses in any kind directory, so every kind shares one sequence; gaps are never
+  refilled. A plan or risk assessment still reuses its spec's ID with `--id`, and a spec its
+  exploration's or analysis's. `--id` and `/fc:state --spec` accept any case and dropped zeros
+  (`pmb-1` is `PMB-001`). The random letter draw and its denylist are gone:
+  `ai-factory/ids-deny.txt` is no longer read.
+- **The project name and prefix.** `ai-factory/project.json` holds `{"name": …, "prefix": …}`.
+  `/fc:adopt-sdlc` asks for both and suggests a prefix from the name (Pembina → `PMB`, with
+  `ids.js suggest "<Project>"`); `adopt.js` takes `--name` and `--prefix`, and headless adoption
+  uses the folder's name. **Migration for an adopted repo:** run
+  `node ai-factory/make/ids.js init --name "<Project>" --prefix <ABC>` once and commit
+  `ai-factory/project.json`. Until then `ids.js new` without `--id` creates nothing and exits 4.
+  The specifier, explorer, analyst, architect and risk agents then ask for the name and prefix,
+  run `init` and retry in an interactive session, and stop in a headless one.
+- **Legacy files stay valid.** Existing files are never renamed or re-headed: four-digit (`0010`) and
+  letter-and-digit (`DHW631`) artefacts keep their names, every reader accepts all three forms,
+  and a plan or risk assessment for such a spec still passes its ID with `--id`.
+- **`/fc:loop` selects the new IDs.** `/fc:loop <plan>` now takes a prefixed or letter-and-digit
+  ID (case-insensitive, zeros optional), its basename or its path, as well as a legacy number.
+- **The clash check.** A sequential number is unique within one working tree, but two branches can
+  still take the same one. `make -f ai-factory/make/ai.mk ids-check` applies spec 0024's rules
+  to prefixed IDs too (`PMB-001` and `PMB-0001` are one ID), so run it after a merge and renumber
+  the later artefact by hand.
+
 ## 3.0.0 — 2026-10-26
 
-Releases the work merged since 2.9.0. `/t4:loop` runs every unticked step of a plan (plan 0022);
-the `risk` agent and `/t4:risk` assess security and delivery risk (0023); new artefacts get
+Releases the work merged since 2.9.0. `/fc:loop` runs every unticked step of a plan (plan 0022);
+the `risk` agent and `/fc:risk` assess security and delivery risk (0023); new artefacts get
 letter-and-digit IDs from `make/ids.js` (0024); the `check` task is renamed `review`.
 **Breaking for adopted repos:** templates, hooks, the runner and agent procedures change. Old names
-(`/t4:check`, `$t4-check`, `TASK=check`) remain as deprecated aliases, legacy `NNNN` files stay
-valid and old `check` data is still read. Take the changes with `/t4:sync-sdlc` and preserve local
+(`/fc:check`, `$fc-check`, `TASK=check`) remain as deprecated aliases, legacy `NNNN` files stay
+valid and old `check` data is still read. Take the changes with `/fc:sync-sdlc` and preserve local
 changes. Host runs for plans 0022, 0023 and 0024 were waived; each plan records the acceptance
 criteria left unverified by transcripts.
 
-**Plan 0023 the `risk` agent and `/t4:risk`**
+**Plan 0023 the `risk` agent and `/fc:risk`**
 
 **Breaking for adopted repos.** The templates gain a task, an agent and a workspace directory,
 and the `planner`, `specifier`, `reviewer` and `start` procedures and the shipped `models.yaml`
-change. A repo that never runs `/t4:risk` behaves as before: with no risk file, no procedure
+change. A repo that never runs `/fc:risk` behaves as before: with no risk file, no procedure
 does anything different. Whether this ships as 3.0.0 is a release decision.
 
-- **New `risk` agent and `/t4:risk <spec, plan or change>`** (task `tasks/risk.md`, agent
-  `agents/risk.md`, the `/t4:risk` command, the Codex `$t4-risk` skill and headless `TASK=risk`).
+- **New `risk` agent and `/fc:risk <spec, plan or change>`** (task `tasks/risk.md`, agent
+  `agents/risk.md`, the `/fc:risk` command, the Codex `$fc-risk` skill and headless `TASK=risk`).
   It assesses one spec, plan, working tree, branch or diff for security threats and delivery risk
   across eight categories (authorization, data exposure, secrets, injection, dependency/supply
   chain, migrations, rollback, blast radius), each marked assessed or not assessed with a reason.
@@ -36,8 +89,8 @@ does anything different. Whether this ships as 3.0.0 is a release decision.
   every earlier byte unchanged. The directory is committed by default and the template does not
   gitignore it; a repo that prefers to keep threat detail out of git may ignore it, and sync
   keeps that choice. New adoptions get the directory from the template's `risks/.gitkeep`. For a
-  repo adopted earlier, `/t4:sync-sdlc` stays read-only and does not create it; `ids.js` creates
-  it on the first `/t4:risk`.
+  repo adopted earlier, `/fc:sync-sdlc` stays read-only and does not create it; `ids.js` creates
+  it on the first `/fc:risk`.
 - **The consumers.** The `specifier` puts each `open` blocker or major finding of the spec's
   risk file under Open questions and cites the file. The `planner` turns each mitigation into a
   step or a risk check. The `reviewer` gains check 8: for an applicable assessment (same spec or
@@ -45,13 +98,13 @@ does anything different. Whether this ships as 3.0.0 is a release decision.
   finding whose mitigation is not implemented, in the existing verdict shape, and skips
   `accepted` ones; checks 1–7 and the verdict schema are unchanged. Each reads only the latest
   `## Reassessment` section, or the initial body. `tasks/plan.md` is unchanged.
-- **`start`.** Rule 3 of `tasks/start.md` names `/t4:risk` in `reason` as an optional next step,
-  only when a risk trigger is present. `risk` is not a `/t4:start` destination, and the start
+- **`start`.** Rule 3 of `tasks/start.md` names `/fc:risk` in `reason` as an optional next step,
+  only when a risk trigger is present. `risk` is not a `/fc:start` destination, and the start
   result's JSON contract is unchanged.
 - **Routing.** The shipped `models.yaml` carries a `routing.tasks.risk` entry (`claude:
   claude-opus-5-5`, blank `codex:`) under `routing.enabled: false`, so it has no effect until you
   enable routing. The parser and the resolution order are unchanged.
-- **Knowledge.** `docs/knowledge.md` lists the `risk` agent and `/t4:risk` among the executors
+- **Knowledge.** `docs/knowledge.md` lists the `risk` agent and `/fc:risk` among the executors
   that may consult a declared read-only source.
 - **The network exception.** ADR DJX496 (`ai-factory/adr/DJX496-risk-agent-network-audit.md`)
   records the one exception to spec 0012 AC10: the `risk` agent alone may run network
@@ -63,7 +116,7 @@ does anything different. Whether this ships as 3.0.0 is a release decision.
   network access.
 - **Fix: `materialize-agents.js` and a new agent.** Materializing a canonical agent with no
   template copy yet no longer crashes; the copy is created (with `--check`, reported stale).
-- **Migration.** Run `/t4:sync-sdlc` to take `tasks/risk.md`, `agents/risk.md` and the changed
+- **Migration.** Run `/fc:sync-sdlc` to take `tasks/risk.md`, `agents/risk.md` and the changed
   `agents/planner.md`, `agents/specifier.md`, `agents/reviewer.md`, `tasks/start.md`,
   `models.yaml`, `docs/knowledge.md`, `make/sync-adapters.js` and `AGENTS.md`, keeping your local
   changes. With explicit Claude adapters, a resync drops nothing new: `risk` is a native plugin
@@ -75,40 +128,40 @@ does anything different. Whether this ships as 3.0.0 is a release decision.
 phase change name. Behaviour is unchanged apart from the name. Whether this ships as 3.0.0 is a
 release decision.
 
-- **The rename.** `tasks/check.md` is now `tasks/review.md`: `/t4:check` → `/t4:review`,
-  `$t4-check` → `$t4-review`, `make -f ai-factory/make/ai.mk ai TASK=check` → `TASK=review`, the
+- **The rename.** `tasks/check.md` is now `tasks/review.md`: `/fc:check` → `/fc:review`,
+  `$fc-check` → `$fc-review`, `make -f ai-factory/make/ai.mk ai TASK=check` → `TASK=review`, the
   `routing.tasks.check` key in `models.yaml` → `routing.tasks.review`, the lifecycle phase
-  `--phase check` → `--phase review`, `/t4:continue`'s destination `check` → `review`, and
-  `/t4:loop`'s `loop.js next` answer `{"action":"check"}` → `{"action":"review"}` (its report and
-  stop causes now say `/t4:review`). The `reviewer` agent keeps its name. `make review` is
+  `--phase check` → `--phase review`, `/fc:continue`'s destination `check` → `review`, and
+  `/fc:loop`'s `loop.js next` answer `{"action":"check"}` → `{"action":"review"}` (its report and
+  stop causes now say `/fc:review`). The `reviewer` agent keeps its name. `make review` is
   unchanged and stays distinct: it selects the change, runs the review task headless, gates the
   verdict and, with `DELIVERY=<id>`, records review evidence; `TASK=review` runs the same task on
   the input you give it, ungated. Contract evidence never used `check` (`review.json` is
   unchanged), so no evidence is renamed.
-- **Deprecated alias.** `/t4:check` and `$t4-check` remain as thin generated wrappers: they say
-  they are deprecated in favour of `/t4:review` (`$t4-review`) and run the review task, with its
+- **Deprecated alias.** `/fc:check` and `$fc-check` remain as thin generated wrappers: they say
+  they are deprecated in favour of `/fc:review` (`$fc-review`) and run the review task, with its
   routing and input. `TASK=check` still runs `TASK=review` and says so on stderr. One table,
   `TASK_ALIASES` in `make/models.js`, drives the command and skill generators, project adapter
   sync and every reader below. Remove the alias in a later major release.
 - **Old data is read as `review`.** Nothing recorded is rewritten. A `routing.tasks.check` entry
   in an adopted `models.yaml` is read as `routing.tasks.review` (the route agent is the same, so
-  no resync is needed), and `/t4:doctor` suggests renaming the key; mapping both is an error.
+  no resync is needed), and `/fc:doctor` suggests renaming the key; mapping both is an error.
   Lifecycle events and run-log rows that say `check` aggregate under `review` in `make lifecycle`
-  and `make cost`, and `--phase check` is recorded as `review`. Typed `/t4:check` and `$t4-check`
-  attribute their run-log rows to `review`. A `/t4:loop` state written before the rename is read
+  and `make cost`, and `--phase check` is recorded as `review`. Typed `/fc:check` and `$fc-check`
+  attribute their run-log rows to `review`. A `/fc:loop` state written before the rename is read
   unchanged, its recorded cause messages relayed as written.
-- **Migration.** Run `/t4:sync-sdlc` to take `tasks/review.md` (and drop `tasks/check.md`),
+- **Migration.** Run `/fc:sync-sdlc` to take `tasks/review.md` (and drop `tasks/check.md`),
   `tasks/loop.md`, `tasks/continue.md`, `make/models.js`, `make/runner.js`, `make/continue.js`,
   `make/lifecycle.js`, `make/cost.js`, `make/loop.js`, `make/sync-adapters.js`, `models.yaml` and
   `AGENTS.md`, keeping your local changes; carry any local edits of `tasks/check.md` over to
-  `tasks/review.md`. Until then the plugin's `/t4:review` and `/t4:check` report the missing
+  `tasks/review.md`. Until then the plugin's `/fc:review` and `/fc:check` report the missing
   `tasks/review.md` as template drift. Rename `routing.tasks.check` to `review`, and update CI that
   runs `TASK=check` or scripts that read `loop.js next`'s `check` answer or `--phase check` events.
 
 **Plan 0024 letter-and-digit artefact IDs**
 
 **Breaking for adopted repos.** The templates change how every new artefact is named, and the
-`/t4:state` listing renames a column. Whether this ships as 3.0.0 is a release decision.
+`/fc:state` listing renames a column. Whether this ships as 3.0.0 is a release decision.
 
 - **New ID format.** A new spec, plan, exploration, analysis, design, ADR or risk assessment is
   named `ai-factory/<dir>/<ID>-<slug>.md`, where `<ID>` is three letters and three digits
@@ -123,7 +176,7 @@ release decision.
   or re-headed, and nothing needs to be migrated. Every reader accepts both forms. A plan for a
   legacy spec passes the four-digit number (`--id 0010`). A spec's `Created:` line is left out of
   its contract content digest, so a legacy spec's sidecar is unchanged after the upgrade.
-- **`/t4:state`: `number` → `id`.** The listing header's `number` field is now `id`. It holds the
+- **`/fc:state`: `number` → `id`.** The listing header's `number` field is now `id`. It holds the
   letter-and-digit ID, or the legacy number as before. `--spec <number>` becomes `--spec <id>`,
   matched case-insensitively. Legacy files list first by number, then new-style files by their
   `Created:` instant and then by ID. A tree holding only legacy files lists the same rows in the
@@ -138,28 +191,28 @@ release decision.
 - **Optional `ai-factory/ids-deny.txt`.** One three-letter triple per line, matched
   case-insensitively, adds to the built-in list of triples never drawn. Blank and `#` lines are
   ignored. Adoption does not create the file.
-- **Migration.** Run `/t4:sync-sdlc` to take the new `make/ids.js`, `make/ai.mk`, agents, tasks and
-  ADR template, and keep your local changes. Update anything that parses `/t4:state` output by the
+- **Migration.** Run `/fc:sync-sdlc` to take the new `make/ids.js`, `make/ai.mk`, agents, tasks and
+  ADR template, and keep your local changes. Update anything that parses `/fc:state` output by the
   `number` column name.
 
-**Plan 0022 `/t4:loop`**
+**Plan 0022 `/fc:loop`**
 
 **Breaking for adopted repos.** The templates gain a task and a helper, and the hooks, the runner,
 the model router and four procedures change. ADR ETT683 records the loop as the one opt-in
-exception to "one step per `/t4:run`" and to "the factory never commits". Whether this ships as
+exception to "one step per `/fc:run`" and to "the factory never commits". Whether this ships as
 3.0.0 is a release decision.
 
-- **New `/t4:loop <plan number or path>`** (task `tasks/loop.md`, the `/t4:loop` command and the
-  Codex `$t4-loop` skill). One invocation implements every unticked step of one plan, then runs
-  `/t4:check` once. Ready steps run concurrently on Claude Code, up to `--max-parallel` (1–8,
+- **New `/fc:loop <plan number or path>`** (task `tasks/loop.md`, the `/fc:loop` command and the
+  Codex `$fc-loop` skill). One invocation implements every unticked step of one plan, then runs
+  `/fc:check` once. Ready steps run concurrently on Claude Code, up to `--max-parallel` (1–8,
   default 3), each in a temporary git worktree under `ai-factory/runs/tmp/worktrees/`. A step
   running alone runs in the main tree. Each worktree step's change is applied back to your tree
   uncommitted and then ticked; `--3way` is the fallback, and it is the only path that stages.
   The loop halts on a failure, a conflict or a timeout (`--step-timeout`, 1–240 minutes, default
   30). On Codex the steps run one at a time and the timeout is not enforced. Nothing is committed
   on your branch, pushed or opened as an MR: the only commits are a baseline and a step commit on
-  each worktree's own `t4-loop/…` branch. Worktrees kept after a stop are yours to remove.
-  `/t4:run` is unchanged.
+  each worktree's own `fc-loop/…` branch. Worktrees kept after a stop are yours to remove.
+  `/fc:run` is unchanged.
 - **New `make/loop.js`** owns every deterministic decision: option parsing, plan selection,
   validation, scheduling, worktree snapshots, apply-back, ticking, stop causes, the report and the
   exit code. Adoption delivers it, and the manifest tracks it.
@@ -180,7 +233,7 @@ exception to "one step per `/t4:run`" and to "the factory never commits". Whethe
   worktree nothing changes.
 - **The `Depends on:` grammar.** The planner and the plan template gain an optional
   `Depends on: N, M` line in a step's indented body. It lists existing earlier step numbers only
-  and never forms a cycle. A step without it waits for every earlier step. Only `/t4:loop` reads
+  and never forms a cycle. A step without it waits for every earlier step. Only `/fc:loop` reads
   it; to every other reader it is plain text.
 - **The implementer line.** `agents/implementer.md` gains one line: in worktree mode, work only
   under the named worktree root, do not tick the step, record no contract evidence, and report
@@ -194,7 +247,7 @@ exception to "one step per `/t4:run`" and to "the factory never commits". Whethe
   ignores `runs/tmp/`; this repository's root `.gitignore` now ignores `ai-factory/runs/tmp/` too.
 - **Post-review fixes.**
   - A worktree step's two commits are built with plumbing (`commit-tree` from a scratch index,
-    then a compare-and-swap `update-ref` of the step's own `t4-loop/…` branch only). Before any
+    then a compare-and-swap `update-ref` of the step's own `fc-loop/…` branch only). Before any
     commit the helper verifies that the worktree still uses its own git dir and is still on that
     branch at the head recorded at prepare, so a switched worktree can never commit on your branch.
   - `state.json` is guarded by an exclusive lock (`state.lock`) from each subcommand's read to its
@@ -206,19 +259,19 @@ exception to "one step per `/t4:run`" and to "the factory never commits". Whethe
     fails after `loop.js end` wrote it; the host's failure is still reported.
   - `INPUT` (and `INPUT_FILE`) for `TASK=loop` is split at whitespace with no quoting, so a plan
     whose path holds a space must be named by its number; the docs say so.
-- **Migration.** Run `/t4:sync-sdlc` to take `make/loop.js`, `make/runner.js`, `make/models.js`,
+- **Migration.** Run `/fc:sync-sdlc` to take `make/loop.js`, `make/runner.js`, `make/models.js`,
   `make/sync-adapters.js`, `tasks/loop.md`, `tasks/plan.md`, `tasks/check.md`, the planner,
   implementer and reviewer agents and `AGENTS.md`, and keep your local changes. Then exclude the
   worktree subtree from your test, lint and typecheck configuration.
 
 ## 2.9.0 — 2026-10-21
 
-Releases the work merged since 2.8.0. Opt-in assurance presets (plan 0021); `/t4:state` filters
+Releases the work merged since 2.8.0. Opt-in assurance presets (plan 0021); `/fc:state` filters
 `--specs`, `--plans` and `--spec <number>`, and a read-only turn that launches nothing; workflow
-outcome evaluations (plan 0020); `/t4:state --delivery` status (0019); a simpler scaffold spec;
-`/t4:continue` (0018) and `/t4:start` (0017). **Everything new is opt-in or additive: a repo that
+outcome evaluations (plan 0020); `/fc:state --delivery` status (0019); a simpler scaffold spec;
+`/fc:continue` (0018) and `/fc:start` (0017). **Everything new is opt-in or additive: a repo that
 selects no preset and enables no contracts behaves as on 2.8.0.** Adopted repositories see changed
-templates; inspect them with `/t4:sync-sdlc` and preserve local changes.
+templates; inspect them with `/fc:sync-sdlc` and preserve local changes.
 
 **Plan 0021 assurance presets**
 
@@ -226,7 +279,7 @@ templates; inspect them with `/t4:sync-sdlc` and preserve local changes.
   `make/assurance.js`. `show [--json]` is read-only and prints the preset, each effective requirement
   and its source. `set <preset>` previews the change. `set <preset> --apply` enables contracts first
   where the preset needs them, then writes `ai-factory/assurance.json`
-  (`{"schema":"t4-assurance","version":1,"preset":…}`). It refuses to overwrite a malformed selection.
+  (`{"schema":"fc-assurance","version":1,"preset":…}`). It refuses to overwrite a malformed selection.
   `complete <delivery> [--json]` exits 0 only when completion may be claimed.
   Statuses are `legacy`, `active`, `incomplete` (`U_CONTRACTS_NOT_ENABLED`) and `conflict`
   (`E_GATE_CONFLICT`, `E_GATE_INVALID`).
@@ -242,7 +295,7 @@ templates; inspect them with `/t4:sync-sdlc` and preserve local changes.
 - **Review provenance.** Review evidence records `independence` and `boundary`. Only
   `make -f ai-factory/make/ai.mk review DELIVERY=<id>` records `independent`.
   - `quick`, `fix` and `chore` run it only from a session the developer invoked. Routed workers, headless task runs,
-    the reviewer and an interactive `/t4:check` report the review as unmet with that command, and self-review never satisfies it.
+    the reviewer and an interactive `/fc:check` report the review as unmet with that command, and self-review never satisfies it.
   - Under `standard` and `strict`, a review without independent provenance is `REVIEW_NOT_INDEPENDENT`. This includes
     review evidence recorded before this release, which must be recorded again with `make review`.
 - **Completion.** `assurance.js complete` evaluates current evidence and never reads a saved report. Under `strict` it writes
@@ -261,28 +314,28 @@ templates; inspect them with `/t4:sync-sdlc` and preserve local changes.
   `check-review-gate.sh` and `check-delivery-report.sh`.
 - **Template upgrade impact:** this changes the templates of every adopted repository: the task procedures, the agents,
   `make/` helpers and the contracts README and schemas. Adopted repositories receive `make/assurance.js` on their next
-  `/t4:adopt-sdlc` or `/t4:sync-sdlc`. Adoption and sync never create a selection, and both preserve an existing selection, a customized
+  `/fc:adopt-sdlc` or `/fc:sync-sdlc`. Adoption and sync never create a selection, and both preserve an existing selection, a customized
   `contracts/config.json` and evidence. Until a repo selects a preset its behavior is unchanged. A repo that has
-  `ai-factory/assurance.json` without the helper stops headless runs and the gate with `/t4:sync-sdlc` guidance.
+  `ai-factory/assurance.json` without the helper stops headless runs and the gate with `/fc:sync-sdlc` guidance.
 
-**`/t4:state` filters by kind and by spec**
+**`/fc:state` filters by kind and by spec**
 
-- `/t4:state --specs` lists only specs and `--plans` only plans. Both combine with `--done` and
+- `/fc:state --specs` lists only specs and `--plans` only plans. Both combine with `--done` and
   `--next`; together they are refused in one line.
-- `/t4:state --spec <number>` lists one spec with the plans whose `**Spec:**` line names it. On
+- `/fc:state --spec <number>` lists one spec with the plans whose `**Spec:**` line names it. On
   its own it shows them whatever their state; `--done`, `--next`, `--specs` and `--plans` narrow
   it. The number may be bare (`10`), zero-padded, or the spec's file name or path. A number that
   names no spec, a missing number and a second `--spec` are answered in one line.
 - None of the three combines with `--delivery`. Rows, header and order are unchanged: a filtered
   row is byte-identical to the unfiltered one. `check-state.sh` pins this in a new section.
-  Codex `$t4-state` reads the same file.
+  Codex `$fc-state` reads the same file.
 
-**`/t4:state` ends its turn**
+**`/fc:state` ends its turn**
 
 - `commands/state.md` now says to launch no agent, background task, workflow, command or skill,
   and to end the turn after the table. "Change nothing" alone did not stop a session that had just
-  run several `/t4:run` hand-offs from delegating the next step straight after the listing.
-  `check-state.sh` pins both sentences. Codex `$t4-state` reads the same file.
+  run several `/fc:run` hand-offs from delegating the next step straight after the listing.
+  `check-state.sh` pins both sentences. Codex `$fc-state` reads the same file.
 
 **Plan 0020 workflow evaluations**
 
@@ -300,7 +353,7 @@ templates; inspect them with `/t4:sync-sdlc` and preserve local changes.
 - Money stays unknown unless `cost-links.json` links a run to a lifecycle report delivery that holds only that run.
   Lifecycle usage is never added to benchmark tokens. `make cost` is unchanged.
 - New offline `--summarize=<run-directory>` regenerates `summary.md` and `report.json` inside the `ai-factory/`
-  boundary and never launches a model. It reads optional human judgments (`judgments.json`, `t4-workflow-judgments` v1):
+  boundary and never launches a model. It reads optional human judgments (`judgments.json`, `fc-workflow-judgments` v1):
   questions labelled necessary/unnecessary/uncertain with a rationale, review markers and completion rulings.
   Unreviewed question counts are unknown, never 0.
 - **Report format change:** the summary is now a workflow-evaluation report. The *Quality passes* column is replaced by
@@ -313,7 +366,7 @@ templates; inspect them with `/t4:sync-sdlc` and preserve local changes.
 
 **Delivery 0019**
 
-- Add `/t4:state --delivery <id>` (Codex `$t4-state --delivery <id>`): one contract delivery's
+- Add `/fc:state --delivery <id>` (Codex `$fc-state --delivery <id>`): one contract delivery's
   status — planned or quick — as a read-only `field`/`value` table. It needs artifact contracts
   enabled and one delivery ID (`d-YYYYMMDD-xxxxxx`). `state.sh` passes the ID literally to the new
   `make/delivery-status.js`, which collects and evaluates once in memory through
@@ -327,7 +380,7 @@ templates; inspect them with `/t4:sync-sdlc` and preserve local changes.
 - The default listing, `--done` and `--next` are unchanged. `--delivery` combines with neither and
   refuses a missing, repeated, malformed, unknown or duplicated ID in one line.
 - **Template upgrade impact:** adopted repositories need the new `make/delivery-status.js` from
-  `/t4:sync-sdlc` (or adoption). Until then `--delivery` answers with `/t4:sync-sdlc` guidance
+  `/fc:sync-sdlc` (or adoption). Until then `--delivery` answers with `/fc:sync-sdlc` guidance
   and writes nothing; the listing modes keep working. Repos without contracts are unaffected.
 - Add `check-delivery-status.sh` (`helper` and `cli` groups) and legacy-listing coverage in
   `check-state.sh`. Live host status:
@@ -338,11 +391,11 @@ templates; inspect them with `/t4:sync-sdlc` and preserve local changes.
 - Simplify `0000-scaffold.md` to four plain-language setup checks. Replace the API feature
   example with a small quick change and describe pending logs accurately.
 - **Template upgrade impact:** adopted repositories will see this spec as changed upstream;
-  review it through `/t4:sync-sdlc` and preserve local acceptance criteria. Runtime behavior is unchanged.
+  review it through `/fc:sync-sdlc` and preserve local acceptance criteria. Runtime behavior is unchanged.
 
 **Delivery 0018**
 
-- Add interactive `/t4:continue <delivery id>` and `$t4-continue`. It accepts one artifact-contract
+- Add interactive `/fc:continue <delivery id>` and `$fc-continue`. It accepts one artifact-contract
   delivery ID for a contracts-enabled planned delivery. A read-only selector (`make/continue.js`)
   reuses contract validation and report evaluation, runs no checks, writes nothing, and returns
   `action`, `question`, `blocked` or `complete` with evidence references and a fingerprint.
@@ -359,7 +412,7 @@ templates; inspect them with `/t4:sync-sdlc` and preserve local changes.
   quick deliveries and contracts-disabled repos.
 - **Template upgrade impact:** adopted repositories need the new `tasks/continue.md` and
   `make/continue.js`, plus updated models.js, runner.js, sync-adapters.js and AGENTS.md. Inspect
-  `/t4:sync-sdlc` drift and preserve local additions. Regenerate routing adapters and restart the host if
+  `/fc:sync-sdlc` drift and preserve local additions. Regenerate routing adapters and restart the host if
   routing is enabled. Direct tasks are unchanged and no adapters are written silently.
 - Add `check-continuation.sh` (selector, handoff, integration groups) and transcript scenarios in
   `skills/ai-layout/fixtures/continuation/cases.md`. Live host status:
@@ -367,13 +420,13 @@ templates; inspect them with `/t4:sync-sdlc` and preserve local changes.
 
 **Delivery 0017**
 
-- Add interactive `/t4:start` and `$t4-start`: bounded read-only classification, one validated
+- Add interactive `/fc:start` and `$fc-start`: bounded read-only classification, one validated
   session-owned handoff, original request preservation, and independent destination model selection.
   Existing direct commands remain available; headless `TASK=start` rejects before launch or artifacts.
 - Concrete start model overrides are rejected because generic workers cannot enforce read-only
   classification. Use a configured native routing adapter or explicit `inherit` instead.
 - **Template upgrade impact:** adopted repositories need the new start task and updated models.js,
-  runner.js, sync-adapters.js and AGENTS.md. Inspect `/t4:sync-sdlc` drift, preserve local additions,
+  runner.js, sync-adapters.js and AGENTS.md. Inspect `/fc:sync-sdlc` drift, preserve local additions,
   and explicitly regenerate configured routing adapters/restart the host when needed. No silent
   adapter writes or release/version bump.
 - Add dispatch, entry, headless and adoption regression coverage. Live acceptance status and
@@ -383,7 +436,7 @@ templates; inspect them with `/t4:sync-sdlc` and preserve local changes.
 
 Opt-in per-task model routing (spec 0016). `ai-factory/models.yaml` can name a model for each task
 and tool. When enabled, the model is enforced before the task's work starts, for headless runs
-and for interactive `/t4:<task>` and `$t4-<task>`. **With routing absent or `enabled: false`,
+and for interactive `/fc:<task>` and `$fc-<task>`. **With routing absent or `enabled: false`,
 model selection is unchanged.**
 
 - **Configuration.** Add `routing: { enabled, tasks.<task>.<claude|codex> }` in the existing
@@ -406,7 +459,7 @@ model selection is unchanged.**
   number before anything launches, even while routing is disabled. Nothing retries on another model.
 - **Headless.**
   - Every run prints `model: <task> / <tool>: <model> (<source>)` to stderr.
-  - It writes a `<run>.json.model.json` sidecar (`t4.model-selection.v1`), keeping the requested
+  - It writes a `<run>.json.model.json` sidecar (`fc.model-selection.v1`), keeping the requested
     model apart from any model identity the CLI output reported.
   - With routing on, a Claude run refuses to start while `CLAUDE_CODE_SUBAGENT_MODEL` would
     override its subagents.
@@ -415,13 +468,13 @@ model selection is unchanged.**
   - Every task command and skill first runs `node ai-factory/make/models.js dispatch`, which prints
     one directive: `legacy`, `inherit`, `route` or `blocked`.
   - A routed task runs in a generated worker agent pinned to its model:
-    `.claude/agents/t4-route-<task>-<hash>.md` or `.codex/agents/t4-route-<task>-<hash>.toml`.
+    `.claude/agents/fc-route-<task>-<hash>.md` or `.codex/agents/fc-route-<task>-<hash>.toml`.
   - The chat only relays questions and results. It never does the task itself, and never falls
     back to its own model.
   - Worker agents are written by `sync-adapters.sh --adapters=routing` (also by the claude and
     codex selections). Their names are content-addressed, so a session holding an outdated agent
     stops with a restart instruction instead of using the old model.
-  - Dispatches and outcomes go to `ai-factory/runs/routing.jsonl` (`t4.model-dispatch.v1`).
+  - Dispatches and outcomes go to `ai-factory/runs/routing.jsonl` (`fc.model-dispatch.v1`).
 - **Doctor** reports invalid routing, mappings with no task file, missing or stale worker agents,
   and `CLAUDE_CODE_SUBAGENT_MODEL`. It makes no network calls.
 - **Checks.**
@@ -456,7 +509,7 @@ unchanged**, whether telemetry is enabled or disabled.
   - Replayed hooks are idempotent: the same event lands under the same file name.
   - Events hold IDs, timings, outcomes and token counts only.
 - **Instrumentation.**
-  - The headless runner records its own runs (`DELIVERY`, `STEP`) and passes `T4_LIFECYCLE_RUN`
+  - The headless runner records its own runs (`DELIVERY`, `STEP`) and passes `FC_LIFECYCLE_RUN`
     to the CLI child.
   - Stop and SubagentStop link the usage they counted.
   - The Bash hook binds a session to a run when it sees `lifecycle.js start`.
@@ -487,12 +540,12 @@ unchanged**, whether telemetry is enabled or disabled.
   - `make/ai.mk` gains `lifecycle` and `lifecycle-export`.
   - `.gitignore` gains `/runs/lifecycle/` and `/runs/telemetry/`.
   - Six task procedures gain one lifecycle paragraph, which only applies when lifecycle is enabled.
-  - `AGENTS.md` ends its workflow line with `(→ /t4:report with contracts)`.
+  - `AGENTS.md` ends its workflow line with `(→ /fc:report with contracts)`.
   - `docs/definition-of-done.md` gains item 8, the completion report before handoff where contracts
     are enabled, and loses a stray duplicated line under item 2.
   - `docs/workspace-boundary.md` names where reports, lifecycle events and telemetry exports live.
 
-  Take these via `/t4:sync-sdlc`. The plugin hooks update with the plugin. **Not verified on real
+  Take these via `/fc:sync-sdlc`. The plugin hooks update with the plugin. **Not verified on real
   hosts:** interactive Claude and Codex sessions were not exercised live, and Codex session binding
   depends on a PostToolUse payload field that has not been confirmed.
 
@@ -502,10 +555,10 @@ Delivery completion report (spec 0014): one local, reproducible answer to "what 
 what changed, what actually ran, what review found and what is still open", for finished and
 unfinished work alike. It builds on the 2.5.0 artifact contracts and only reads.
 
-- **New `/t4:report <delivery id>`** (Codex `t4-report`) and
+- **New `/fc:report <delivery id>`** (Codex `fc-report`) and
   `make -f ai-factory/make/ai.mk delivery-report DELIVERY=<id>`. Both write
   `ai-factory/reports/<id>/completion.md` and `completion.json`, rendered from one model with
-  schema `t4-delivery-report` v1.
+  schema `fc-delivery-report` v1.
 - **Status** is `ready`, `incomplete`, `blocked` or `unverified`, with every contributing reason
   and its evidence reference.
   - A failed required check or a blocking review finding blocks.
@@ -529,7 +582,7 @@ unfinished work alike. It builds on the 2.5.0 artifact contracts and only reads.
 - **Review evidence** now keeps a summary of the findings: severity, file, line and issue,
   truncated.
 - **Telemetry** is optional. The report reads `ai-factory/runs/telemetry/<id>.json` (provisional
-  schema `t4-delivery-telemetry` v1) if one exists. Nothing produces that file yet, so the section
+  schema `fc-delivery-telemetry` v1) if one exists. Nothing produces that file yet, so the section
   says `unavailable`. Unknown values are never shown as zero, and telemetry never affects status.
 - New check: `skills/ai-layout/scripts/check-delivery-report.sh`, with 20 cases.
 - **Template change for adopted repos:**
@@ -539,10 +592,10 @@ unfinished work alike. It builds on the 2.5.0 artifact contracts and only reads.
   - `make/contracts.js` gains `attest`, attestation evidence, the completion policy and findings in
     review evidence; `make/runner.js` passes those findings.
   - `make/sync-adapters.js` lists `report` as a native command.
-  - `tasks/check.md` and `tasks/quick.md` mention `/t4:report`.
-  - `AGENTS.md` lists `/t4:report`.
+  - `tasks/check.md` and `tasks/quick.md` mention `/fc:report`.
+  - `AGENTS.md` lists `/fc:report`.
 
-  Take these via `/t4:sync-sdlc`. Repos without contracts are unaffected; `/t4:report` needs a
+  Take these via `/fc:sync-sdlc`. Repos without contracts are unaffected; `/fc:report` needs a
   delivery ID from an enabled repo.
 
 ## 2.5.0 — 2026-09-30
@@ -573,8 +626,8 @@ is never silently used as the next step's input. Nothing changes for a repo that
 - **Legacy artifacts.** `contracts.js migrate` is a dry run by default. `--write` drafts sidecars
   for legacy specs and plans. It never edits Markdown and never invents IDs or evidence, and its
   drafts stay `legacy_unverified` until reviewed. Running it twice changes nothing.
-- `/t4:doctor` reports whether contracts are enabled and the overall contract state.
-  `/t4:sync-sdlc` offers the opt-in and the migration dry run.
+- `/fc:doctor` reports whether contracts are enabled and the overall contract state.
+  `/fc:sync-sdlc` offers the opt-in and the migration dry run.
 - New check: `skills/ai-layout/scripts/check-contracts.sh`, 37 cases in disposable repositories.
 - **Template change for adopted repos:**
   - New files: `ai-factory/make/contracts.js` and `ai-factory/contracts/` (README and v1 schemas).
@@ -585,7 +638,7 @@ is never silently used as the next step's input. Nothing changes for a repo that
   - The specifier, planner, tester, implementer and reviewer agents and the quick task gain a
     contracts section that applies only when `ai-factory/contracts/config.json` exists.
 
-  Take these via `/t4:sync-sdlc`, then opt in with `node ai-factory/make/contracts.js enable`.
+  Take these via `/fc:sync-sdlc`, then opt in with `node ai-factory/make/contracts.js enable`.
   Opting out means deleting `config.json`; sidecars and evidence stay in place and are never
   reinterpreted as verified.
 
@@ -594,17 +647,17 @@ is never silently used as the next step's input. Nothing changes for a repo that
 An optional external documentation source, offered at adoption and addable later. The repo's own
 `ai-factory/docs/` stays the primary knowledge base; nothing changes for a repo that skips it.
 
-- New `/t4:setup-knowledge` (and Codex `t4-setup-knowledge`): interactive, modelled on
-  `/t4:setup-tracker`. It picks a source the session already lists, asks what it is for, writes
+- New `/fc:setup-knowledge` (and Codex `fc-setup-knowledge`): interactive, modelled on
+  `/fc:setup-tracker`. It picks a source the session already lists, asks what it is for, writes
   one row to the knowledge declaration after confirming, asks whether to commit or ignore it, and
   proves it with one read-only call. It never writes tool configuration or credentials.
-- `/t4:adopt-sdlc` asks once, in an interactive session only, whether to declare an external
+- `/fc:adopt-sdlc` asks once, in an interactive session only, whether to declare an external
   documentation source; the default is skip. Skipping, or a headless run, writes nothing and the
-  report names `/t4:setup-knowledge` for later.
-- `/t4:doctor` points an unconfigured repo at `/t4:setup-knowledge`, as information, not a finding.
+  report names `/fc:setup-knowledge` for later.
+- `/fc:doctor` points an unconfigured repo at `/fc:setup-knowledge`, as information, not a finding.
 - **Template change for adopted repos:** `ai-factory/docs/knowledge.md` gains *Setting up a source*,
   and `ai-factory/make/sync-adapters.js` lists `setup-knowledge` as a native command. Take both
-  via `/t4:sync-sdlc`; until then `/t4:setup-knowledge` still works from the older `knowledge.md`.
+  via `/fc:sync-sdlc`; until then `/fc:setup-knowledge` still works from the older `knowledge.md`.
 
 ## 2.3.3 — 2026-09-30
 
@@ -638,7 +691,7 @@ No workspace-layout or log-schema change is required. Codex skills remain availa
 
 Update/reinstall the plugin and restart Claude Code (or reload plugins) to load the native
 commands. A real Claude Code 2.1.277 SDK initialization in an empty directory confirmed
-six t4 commands from installed 2.3.1 and 18 from the updated checkout, without repo-local
+six fc commands from installed 2.3.1 and 18 from the updated checkout, without repo-local
 pointers or a model turn. Regression coverage checks both native host surfaces, stale
 pointer cleanup, custom task preservation, and command metadata/procedure references.
 
@@ -647,16 +700,16 @@ pointer cleanup, custom task preservation, and command metadata/procedure refere
 
 Compatibility fixes for Claude Code and Codex, plus accurate reporting of withdrawn work.
 
-- Codex ships native skills for all t4 workflows and setup commands. Its hook adapter
+- Codex ships native skills for all fc workflows and setup commands. Its hook adapter
   handles `apply_patch` targets and rename destinations, task labels, and rollout usage
   with response de-duplication and separate cached input. Codex costs remain unknown;
   Claude hooks retain their event and transcript formats. Delegation uses native agents
   when available and labels inline reviews as self-checks.
-- Claude adapter sync removes duplicate `/t4:quick` pointers and duplicate registrations
+- Claude adapter sync removes duplicate `/fc:quick` pointers and duplicate registrations
   for the plugin's eight agents. Project-specific agents still receive pointers, and
-  native agents read the project's complete procedure and additions. `/t4:doctor`
+  native agents read the project's complete procedure and additions. `/fc:doctor`
   identifies duplicate command pointers separately from missing or stale adapters.
-- `/t4:state` recognizes explicit numbered withdrawal results without editing archived
+- `/fc:state` recognizes explicit numbered withdrawal results without editing archived
   checkboxes. Withdrawn steps are omitted from pending work and `--next`; `--done`
   distinguishes closed plans/specs from fully complete ones. Pending and unknown work
   still takes precedence; quoted and fenced examples do not resolve steps.
@@ -689,12 +742,12 @@ this release does not promise a particular model latency improvement.
   them, and preserves existing root files. Complete agent procedures are delivered
   locally. Node, Bash, Git and a configured AI CLI remain prerequisites; no new package
   or optional integration is required.
-- Adapter generation is now opt-in per host. Default `/t4:sync-sdlc` reports drift and
+- Adapter generation is now opt-in per host. Default `/fc:sync-sdlc` reports drift and
   preserves existing integration files. Explicit generation refuses user-file collisions.
   Manifest writes reject redirected destinations; adapter writes reject shared hard links.
   Use `make -f ai-factory/make/ai.mk` without a root Makefile. Scratch and Git rules live
   inside the workspace. Existing external files are not automatically moved or removed.
-- `/t4:quick` handles understood local enhancements with an acceptance checklist,
+- `/fc:quick` handles understood local enhancements with an acceptance checklist,
   regression evidence and labeled self-review. Uncertainty or sensitive boundaries use
   the planned workflow. Planned verification distinguishes expected red, step, and final
   checks; a future-step failure can remain only when its recorded identity and cause match.
@@ -710,7 +763,7 @@ this release does not promise a particular model latency improvement.
   rejected. Per-run private scratch and exact review-output identities prevent overlap.
 - The edit guard resolves the repository from nested directories and checks canonical
   targets. Missing or malformed policy in an adopted repository fails closed. Intentional
-  empty policy requires `<!-- t4:allow-empty-policy -->`. No-layout repositories remain
+  empty policy requires `<!-- fc:allow-empty-policy -->`. No-layout repositories remain
   a deliberate no-op; the historical old-layout hook fallback remains until 3.0.0.
 - Hook and runner writers reject symlinked or shared mutable destinations and unsafe
   event identifiers. Existing projects using redirected run directories must move them
@@ -724,7 +777,7 @@ this release does not promise a particular model latency improvement.
 ### Adoption and validation
 
 Update the installed plugin and restart its host session to load hooks and native commands.
-Run `/t4:sync-sdlc` to inspect drift, then take template changes as a separate reviewed edit,
+Run `/fc:sync-sdlc` to inspect drift, then take template changes as a separate reviewed edit,
 preserving project additions. Existing adopted runners do not update automatically. Include
 `runner.js`, `safe-files.js`, `gate.js`, `log.js`, the Make entry point, complete agents,
 workflow prompts, and local Git rules when taking this release. Generate external adapters
@@ -737,22 +790,22 @@ selection, isolated adoption, optional adapters and actual-text release assertio
 
 ## 2.2.0 — 2026-09-29
 
-`/t4:state` lists what is still outstanding in a repo — every spec and plan that is not finished,
+`/fc:state` lists what is still outstanding in a repo — every spec and plan that is not finished,
 each outstanding plan shown with its own incomplete steps — and changes nothing while doing it.
 It is what to run when you come back to a repo and need to know where the loop was left, before
-`/t4:run` picks anything up. Nothing else in this release changes, and nothing an adopted repo
+`/fc:run` picks anything up. Nothing else in this release changes, and nothing an adopted repo
 holds is touched by it.
 
-### New — `/t4:state`
+### New — `/fc:state`
 
-- **`/t4:state`** (`commands/state.md`) lists every outstanding spec and plan by
+- **`/fc:state`** (`commands/state.md`) lists every outstanding spec and plan by
   repository-relative path, and under each outstanding plan its incomplete steps, each with the
   step identifier and its one-line description. A finished item is not listed. Where a plan file
   sits decides nothing — its checkboxes do: a plan filed under `ai-factory/plans/done/` with one
   step still open is outstanding, and `- [~]` counts as incomplete exactly as `- [ ]` does.
-- **`/t4:state --done`** replaces that listing with its mirror image: only the items whose every
+- **`/fc:state --done`** replaces that listing with its mirror image: only the items whose every
   step is complete, with the same columns in the same order and the same shape.
-- **`/t4:state --next`** names the single item to pick up — the most recently modified artefact,
+- **`/fc:state --next`** names the single item to pick up — the most recently modified artefact,
   measured by its **git commit date** (`git log -1 --format=%ct`) and not by filesystem mtime, so
   two people sitting on the same commit get the same answer out of the same tree. An mtime does not
   survive a clone; a commit date is identical in every clone. An uncommitted or untracked artefact
@@ -786,9 +839,9 @@ release went out. This release adds none and removes none.
 
 ### Blast radius: nothing moves in an adopted repo
 
-**No template file moved.** `/t4:state` is a plugin command, not a project task, so nothing under
+**No template file moved.** `/fc:state` is a plugin command, not a project task, so nothing under
 `skills/ai-layout/templates/` changed: no adopted repo's `ai-factory/.sdlc.json` gains, loses or
-rehashes an entry, and `/t4:sync-sdlc` reports no drift from this release. Verified rather than
+rehashes an entry, and `/fc:sync-sdlc` reports no drift from this release. Verified rather than
 assumed — the feature's whole diff touches `commands/`, `skills/ai-layout/scripts/`, `README.md`
 and `ai-factory/docs/workflow.md`, and no template path at all; a manifest generated over the
 templates names neither `commands/state.md` nor `skills/ai-layout/scripts/state.sh`, because
@@ -805,13 +858,13 @@ as it does on every release.
   `ai-factory/make/sync-adapters.sh` generates the `.claude/`, `.cursor/` and `.codex/` adapters
   from `ai-factory/tasks/`, `ai-factory/skills/` and `ai-factory/agents/` — it never reads
   `commands/` — and `manifest.js` hashes only the templates. A plugin command is structurally
-  invisible to both, and every plugin command already shipped is equally invisible: `.claude/commands/t4/`
-  holds the twelve task commands and no `/t4:doctor`, `/t4:adopt-sdlc`, `/t4:sync-sdlc` or
-  `/t4:setup-tracker` either. Making one visible means changing the generator or the manifest
+  invisible to both, and every plugin command already shipped is equally invisible: `.claude/commands/fc/`
+  holds the twelve task commands and no `/fc:doctor`, `/fc:adopt-sdlc`, `/fc:sync-sdlc` or
+  `/fc:setup-tracker` either. Making one visible means changing the generator or the manifest
   format, which is a template change and breaking for every adopted repo. **So do not read this
-  entry as saying `/t4:state` is registered in the adapters or listed in `ai-factory/.sdlc.json`.
-  It is not, any more than `/t4:doctor` is.**
-- **Five questions about `/t4:state` are still open, and shipping it closes none of them.** Which
+  entry as saying `/fc:state` is registered in the adapters or listed in `ai-factory/.sdlc.json`.
+  It is not, any more than `/fc:doctor` is.**
+- **Five questions about `/fc:state` are still open, and shipping it closes none of them.** Which
   of the six emitted fields become table columns, in what order, and whether a spec row and a
   plan-step row share one column set. How a spec is paired to its plan — the rule in use is derived
   from the spec rather than confirmed by anyone. The adapter-and-manifest clause above. Whether a
@@ -823,7 +876,7 @@ as it does on every release.
 
 ## 2.1.0 — 2026-09-29
 
-`/t4:migrate-layout` is removed, on the schedule 1.0.0 set and 2.0.0 revised. Nothing else about
+`/fc:migrate-layout` is removed, on the schedule 1.0.0 set and 2.0.0 revised. Nothing else about
 the rename changes: the hooks' fallback to the pre-1.0.0 directory name stays until 3.0.0, so a
 repo that never migrated keeps its dont-touch guard and its run log exactly as it had them.
 
@@ -831,18 +884,18 @@ repo that never migrated keeps its dont-touch guard and its run log exactly as i
 
 Run the migration from an older checkout, which is what made removing it a minor release rather
 than a major one. Check ai-sdlc out at 2.0.0 or earlier, point your tool at that copy
-(`claude --plugin-dir <that checkout>`), and run `/t4:migrate-layout` there; it is unchanged, and
+(`claude --plugin-dir <that checkout>`), and run `/fc:migrate-layout` there; it is unchanged, and
 the two-commit order it prints still applies. Nothing is disarmed while you wait — an unmigrated
 repo's hooks go on reading the old directory name until 3.0.0, and a slash command that is not
 installed fails in front of the person who can fix it.
 
-`/t4:doctor`, `/t4:sync-sdlc` and `manifest.js check` still detect an unmigrated repo and stop
+`/fc:doctor`, `/fc:sync-sdlc` and `manifest.js check` still detect an unmigrated repo and stop
 rather than guess. Each now names the checkout the command lives in, instead of a command this
 release no longer ships.
 
 ### Removed
 
-- `/t4:migrate-layout` (`commands/migrate-layout.md`).
+- `/fc:migrate-layout` (`commands/migrate-layout.md`).
 - `skills/ai-layout/scripts/migrate-layout.sh` and `rewrite-paths.js` — the move and the path
   rewriter. They go with the command: nothing here reaches them without it, and ADR 0008 already
   names an older checkout as where a repo that still needs them gets them.
@@ -885,10 +938,10 @@ the installed copy, so an older one keeps writing 16-field rows, and the guard q
 
 - **One row per concluded subagent**, on `SubagentStop`, summed from that agent's own transcript.
   `source=agent`, the agent's name in the new `agent` column. Tokens spent inside the reviewer, the
-  tester, or the explorer / specifier / planner / implementer that `/t4:explore`, `/t4:spec`,
-  `/t4:plan` and `/t4:run` delegate to are no longer missing from the log.
-- **`task`**, filled on `UserPromptSubmit` from the `/t4:` command you typed — the session's task,
-  carried onto its agents' rows too, so a specifier under `/t4:run` is `run,specifier`.
+  tester, or the explorer / specifier / planner / implementer that `/fc:explore`, `/fc:spec`,
+  `/fc:plan` and `/fc:run` delegate to are no longer missing from the log.
+- **`task`**, filled on `UserPromptSubmit` from the `/fc:` command you typed — the session's task,
+  carried onto its agents' rows too, so a specifier under `/fc:run` is `run,specifier`.
 - **Rows are increments**, not running totals: the rows of one session add up to what it spent.
 - **A usage record is counted once**, keyed on its message uuid, however many transcripts carry a
   copy of it — context inheritance re-logs a prefix of the parent's records into every forked child,
@@ -932,16 +985,16 @@ which it never opens.
 
 ### Still on the pre-1.0.0 layout?
 
-**Run `/t4:migrate-layout` once, in each repo** — this release does not change that, and does not
+**Run `/fc:migrate-layout` once, in each repo** — this release does not change that, and does not
 remove the safety net either. The hooks still accept the old directory name as well as the new one,
 so an unmigrated repo keeps its dont-touch guard and its run log, and the two new events behave
 exactly as they do in a migrated repo. The prompts are not so forgiving: they name `ai-factory/`
 only. **Grep your own CI, pipeline config and tooling** for the old directory name — the plugin
-cannot see those paths and does not touch them. `/t4:doctor` says which state a repo is in.
+cannot see those paths and does not touch them. `/fc:doctor` says which state a repo is in.
 
 ### Deprecated
 
-- `/t4:migrate-layout` — **removed in 2.1.0** (was 1.1.0, which this release skips past). A
+- `/fc:migrate-layout` — **removed in 2.1.0** (was 1.1.0, which this release skips past). A
   one-shot migration; its absence is a missing command, which is loud, and the script can still be
   run from an older checkout.
 - The hooks' fallback to the old directory name — **kept until 3.0.0** (was 2.0.0, which is this
@@ -956,11 +1009,11 @@ cannot see those paths and does not touch them. `/t4:doctor` says which state a 
 - `_usage.js` — the transcript sum, the per-session claim ledger and the price resolution, shared by
   the session and agent rows and pinned by `fixtures/check-usage.sh`.
 - `ai-factory/runs/.counted.*` and `.task.*` — two gitignored state files beside the log. Add both
-  lines to your `.gitignore`; `/t4:sync-sdlc` and `make clean-runs` know about them.
+  lines to your `.gitignore`; `/fc:sync-sdlc` and `make clean-runs` know about them.
 
 ## 1.0.0 — 2026-09-25
 
-**Breaking for every adopted repo. Run `/t4:migrate-layout` once, in each repo.**
+**Breaking for every adopted repo. Run `/fc:migrate-layout` once, in each repo.**
 
 The layout directory is now `ai-factory/`, and the two directories the loop kept outside it have
 moved in:
@@ -978,7 +1031,7 @@ the root, because the tools look for them there. Decided in `ai-factory/adr/0008
 ### What to do
 
 1. Update the plugin.
-2. In each adopted repo, with a clean tree: `/t4:migrate-layout`.
+2. In each adopted repo, with a clean tree: `/fc:migrate-layout`.
 3. Commit what it leaves as **two** commits, in the order it prints — the moves, then the path
    rewrite. The command stages the moves and leaves the rewrite unstaged so the right order is the
    easy one. *(Corrected after this release merged: the original wording said one commit always
@@ -991,7 +1044,7 @@ the root, because the tools look for them there. Decided in `ai-factory/adr/0008
 The migration refuses rather than guess: no layout at all, both layouts present, the same file
 under both, or uncommitted changes to tracked files — an untracked file is named, not refused.
 It commits nothing, and it rewrites path strings only — no new
-prompt text arrives with it. Taking upstream prompt changes is still `/t4:sync-sdlc`, separately.
+prompt text arrives with it. Taking upstream prompt changes is still `/fc:sync-sdlc`, separately.
 
 ### Nothing breaks while you wait
 
@@ -999,12 +1052,12 @@ The hooks accept the old directory name as well as the new one, so a repo that h
 plugin but not yet migrated keeps its dont-touch guard and its run log. A rename that silently
 disarmed the guard would be the worst outcome here, because nothing would look wrong. The prompts
 are not so forgiving — they name `ai-factory/` only, so the tasks will look in a directory that is
-not there until the migration runs. `/t4:doctor` reports which of the three states a repo is in, and
-`/t4:sync-sdlc` stops with the migration instruction instead of a drift report it cannot compute.
+not there until the migration runs. `/fc:doctor` reports which of the three states a repo is in, and
+`/fc:sync-sdlc` stops with the migration instruction instead of a drift report it cannot compute.
 
 ### Deprecated
 
-- `/t4:migrate-layout` — **removed in 1.1.0.** A one-shot migration; its absence is a missing
+- `/fc:migrate-layout` — **removed in 1.1.0.** A one-shot migration; its absence is a missing
   command, which is loud, and the script can still be run from an older checkout.
 - The hooks' fallback to the old directory name — **kept until 2.0.0.** Removing it disarms the
   dont-touch guard and stops the run log in any repo that never migrated, and does so silently.
@@ -1012,7 +1065,7 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
 
 ### Also
 
-- New `/t4:migrate-layout` command, with `skills/ai-layout/scripts/migrate-layout.sh` and
+- New `/fc:migrate-layout` command, with `skills/ai-layout/scripts/migrate-layout.sh` and
   `rewrite-paths.js` behind it.
 - New `check-paths.sh`: no prompt, agent, skill, command or context doc may name a pre-1.0.0 path.
   Records — specs, plans, designs, analyses, ADRs, this file — are exempt and keep the paths that
@@ -1038,11 +1091,11 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   0004 steps 3 and 4; the 0005 file table names `fleet.md` and `adopt-sdlc.md`; the doctor line is
   stated to be the prompt's. 0.27.0's adopter note said eight files; it is nine.
 - Adopted repos: `ai/docs/knowledge.md` changes one paragraph; the Codex notes regenerate on
-  `/t4:sync-sdlc`. Not breaking.
+  `/fc:sync-sdlc`. Not breaking.
 
 ## 0.27.0 — 2026-09-22
 - **The four loop steps run in agents of their own** (`specs/0005`, `ai/analyses/0001` EPIC-002).
-  `/t4:explore`, `/t4:spec`, `/t4:plan` and `/t4:run` delegate to new `explorer`, `specifier`,
+  `/fc:explore`, `/fc:spec`, `/fc:plan` and `/fc:run` delegate to new `explorer`, `specifier`,
   `planner` and `implementer` agents, each carrying its task prompt's reading list, artefact
   format, prohibitions and report word for word, so a step starts from its artefacts and not
   from the chat that produced them. The session keeps what only a session can do: refuse an
@@ -1062,7 +1115,7 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   `run.md`), four new upstream agent stubs (`ai/agents/explorer.md`, `specifier.md`,
   `planner.md`, `implementer.md`), and one paragraph in `ai/docs/knowledge.md`. Not breaking:
   a repo that edited one of the four prompts sees it as changed on both sides and merges by
-  hand, as with 0.19.0. Run `/t4:sync-sdlc` and take the nine files.
+  hand, as with 0.19.0. Run `/fc:sync-sdlc` and take the nine files.
 
 ## 0.26.0 — 2026-09-22
 - **Agents may read a knowledge source the repo declares** (`docs/adr/0007`, `specs/0004`). A
@@ -1074,7 +1127,7 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   quoted content. Read-only: no create, update, delete or comment operation is ever invoked,
   and no configuration turns writing on. An unreachable source — not attached, Codex, headless
   — is one report line and the task proceeds; headless exits 0 and logs its row. The tester
-  never consults a source. `/t4:doctor` adds one line saying whether the seam is configured.
+  never consults a source. `/fc:doctor` adds one line saying whether the seam is configured.
 - **One seam, enforced.** `ai/docs/knowledge.md` is the only file in the layout that may name the
   declaration, a kind, a provider or a query syntax; it also fixes what "configured" means and
   fails closed on anything else. `check-adapters.sh` gains a second banned list (the declaration
@@ -1092,13 +1145,13 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   deferred until the owner's page carries the line.
 - Adopted repos: new upstream file `ai/docs/knowledge.md`; `ai/tasks/explore.md`, `spec.md` and
   `plan.md` gain one conditional paragraph each. Not breaking — nothing behaves differently until
-  a repo commits a declaration. `/t4:sync-sdlc` lists the four files; take them and re-run it.
+  a repo commits a declaration. `/fc:sync-sdlc` lists the four files; take them and re-run it.
 
 ## 0.25.0 — 2026-09-22
-- **New `analyst` agent and `/t4:analyse` task.** A request that is still a business
+- **New `analyst` agent and `/fc:analyse` task.** A request that is still a business
   description — several actors, permissions, business rules, a lifecycle, integrations, policy
-  nobody has decided — had nowhere to go: `/t4:spec` needs a buildable feature and
-  `/t4:explore` needs a settled home. `/t4:analyse <description>` delegates to the `analyst`,
+  nobody has decided — had nowhere to go: `/fc:spec` needs a buildable feature and
+  `/fc:explore` needs a settled home. `/fc:analyse <description>` delegates to the `analyst`,
   which writes `ai/analyses/NNNN-*.md`: objectives with success measures, scope and boundary,
   permission matrix, use cases and state transitions, functional and non-functional
   requirements, business rules and decision tables, data dictionary, integrations, stories with
@@ -1109,13 +1162,13 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   existing architecture; current behaviour comes from the code's public surface, cited as a
   source. Modes: `document` (default), `lean`, `questions`, `review`, `update` (change control
   with ids preserved), `explain`.
-- `/t4:spec` reads `ai/analyses/` when a pack exists for the feature: ACs come from its
+- `/fc:spec` reads `ai/analyses/` when a pack exists for the feature: ACs come from its
   requirements and stories, its open questions carry over, and an assumption or proposal never
   becomes a criterion.
 - Adopted repos: new upstream files `ai/agents/analyst.md`, `ai/tasks/analyse.md` and
   `ai/analyses/.gitkeep`; `ai/tasks/spec.md` changed (one paragraph). Not breaking — nothing
-  that exists behaves differently until the new task is run. `/t4:sync-sdlc` lists them; take
-  them and run it again to get `/t4:analyse`.
+  that exists behaves differently until the new task is run. `/fc:sync-sdlc` lists them; take
+  them and run it again to get `/fc:analyse`.
 
 ## 0.24.0 — 2026-09-17
 - **`ai/runs/log.csv` no longer blocks `git checkout`.** The Stop hook wrote one row into the
@@ -1134,7 +1187,7 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   its own, and gains the flush cases: not on `git status`, not on `--dry-run`, once per commit,
   staged, and a pre-schema `log.csv` migrated when the flush reaches it.
 - Adopted repos: add `ai/runs/log.pending.csv` to `.gitignore` and `ai/runs/log.csv merge=union`
-  to `.gitattributes` (both listed in the ai-hooks skill; `/t4:adopt-sdlc` step 5 writes them
+  to `.gitattributes` (both listed in the ai-hooks skill; `/fc:adopt-sdlc` step 5 writes them
   for a new repo). Until the plugin is updated and the session restarted, the old hook keeps
   writing straight into `log.csv`.
 
@@ -1142,10 +1195,10 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
 - **The plugin's own repo is recognised again once the plugin is installed.** `isPluginItself`
   compared repo-root to plugin-root, which is only equal while the plugin runs from its working
   tree. Installed, plugin-root is the cache, the paths differ, and the source repo looked like
-  an ordinary adopter. Both `manifest.js` and `/t4:doctor` now test identity — a repo carrying
+  an ordinary adopter. Both `manifest.js` and `/fc:doctor` now test identity — a repo carrying
   this plugin's own name in its own `plugin.json` **is** this plugin — and keep the path
   comparison as the fast case.
-- **What that cost, found by running `/t4:doctor` for the first time from a real install:** it
+- **What that cost, found by running `/fc:doctor` for the first time from a real install:** it
   reported "no `ai/.sdlc.json` — start a baseline" in the plugin's own repo, and following that
   advice wrote a manifest into it. `check-manifest.sh` asserts that never happens; the invariant
   was intact and the test could not see the case, because it passed the same path for both
@@ -1158,7 +1211,7 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   — a test that fails dirty makes the next run's result meaningless.
 
 ## 0.22.0 — 2026-09-07
-- **`/t4:doctor` now says when your install is behind.** It compared a repo against whichever
+- **`/fc:doctor` now says when your install is behind.** It compared a repo against whichever
   plugin it was handed and never looked at whether that plugin was current, so a repo could be
   perfectly in step with an install several releases old and report entirely green. That is the
   exact invisible state the command exists for, and it was blind to it. `specs/0002` AC13.
@@ -1177,7 +1230,7 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   the behaviour has been report-and-stop since 0.19.0.
 
 ## 0.21.0 — 2026-09-07
-- **`/t4:setup-tracker`** — points a repo at a tracker and proves it, so turning `specs/0001`
+- **`/fc:setup-tracker`** — points a repo at a tracker and proves it, so turning `specs/0001`
   on no longer means knowing a filename, a key and its exact shape from reading a design
   document. Detects the reachable site, shows it, asks before writing, writes `base_url` and
   nothing else, then resolves one key to demonstrate the result works. Implements
@@ -1192,7 +1245,7 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   contents are shown first.
 - **Committing it is a choice, and the cost of not committing is stated when you make it.**
   Choosing `.gitignore` leaves the repo configured for one developer: a teammate who clones it
-  gets the unconfigured behaviour, so `/t4:spec ABC-12` means different things to different
+  gets the unconfigured behaviour, so `/fc:spec ABC-12` means different things to different
   people on one team. That is allowed; being surprised by it is not.
 - **Writing the file is not evidence it works.** With a key it resolves one and reports what
   came back; with none it says the configuration is unverified and names what would verify it.
@@ -1204,10 +1257,10 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   a re-authorisation, so it waits for a session already in that state.
 
 ## 0.20.0 — 2026-09-07
-- **`/t4:doctor`** — one read-only command that reports what is wrong with a repo's setup and
+- **`/fc:doctor`** — one read-only command that reports what is wrong with a repo's setup and
   the command that fixes each thing. Layout, adapters against tasks, the version the repo
   records against the one the session loaded, drift, where the plugin is installed, and whether
-  older cached copies are still around. Implements `specs/0002-t4-doctor.md`.
+  older cached copies are still around. Implements `specs/0002-fc-doctor.md`.
 - **It never fixes anything, and that is the point.** Every remedy is a command you run. Being
   read-only is what makes it safe as the *first* thing you try, before you know what is wrong —
   and it always exits 0, so it stays usable in CI. A doctor that fails the build when it finds
@@ -1216,7 +1269,7 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   different project than the one you are in, and older cached copies that a session which has
   not restarted may still be running. Both took several rounds of manual digging to identify
   while building the tracker work; both are now one line each.
-- **The one thing it cannot report is in `docs/workflow.md` instead.** If `/t4:doctor` does not
+- **The one thing it cannot report is in `docs/workflow.md` instead.** If `/fc:doctor` does not
   exist in a repo, the plugin is not enabled there — and no command can say so, because in that
   repo none of them are there to run. Its absence is the diagnosis.
 - Names are read from the plugin's own manifest rather than hardcoded, because this plugin and
@@ -1230,12 +1283,12 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   criterion, not a quiet addition.
 
 ## 0.19.0 — 2026-09-07
-- **`/t4:spec` can draft from a tracker ticket.** In a repo that has committed `ai/jira.yaml`,
-  `/t4:spec ABC-12` resolves the key and specs the ticket, recording it as a vendor-neutral
+- **`/fc:spec` can draft from a tracker ticket.** In a repo that has committed `ai/jira.yaml`,
+  `/fc:spec ABC-12` resolves the key and specs the ticket, recording it as a vendor-neutral
   `Ticket: ABC-12` line under the title so later work can find its way back. Implements
   `specs/0001-spec-accepts-a-ticket-key.md`; decided in `docs/adr/0004`, `0005` and `0006`.
 - **Off unless you turn it on, and the gate is configuration — never the shape of what you
-  typed.** A repo with no `ai/jira.yaml` behaves exactly as it did before: `/t4:spec UTF-8`
+  typed.** A repo with no `ai/jira.yaml` behaves exactly as it did before: `/fc:spec UTF-8`
   specs UTF-8. That matters because `UTF-8`, `ISO-8601` and `RFC-7231` all match a ticket-key
   pattern end to end, so keying off the argument would have made a repo with no tracker stop
   and ask about a ticket that cannot exist.
@@ -1274,18 +1327,18 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   fails or writes nothing, says how many bytes it got, and logs no row — a failed run is not
   a run. `make review` inherits this, since it chains on `&&`.
 - **Blast radius: every adopted repo, but not automatically.** `ai/make/ai.mk` is a template,
-  and `/t4:sync-sdlc` regenerates adapters without touching `ai/`, so a repo keeps its broken
+  and `/fc:sync-sdlc` regenerates adapters without touching `ai/`, so a repo keeps its broken
   copy until it takes the drift the sync reports. Any repo relying on `make ai` or
   `make review` in CI should take this one.
 
 ## 0.17.0 — 2026-09-07
-- **`/t4:step` is now `/t4:run`.** `ai/tasks/step.md` becomes `ai/tasks/run.md`; the task
+- **`/fc:step` is now `/fc:run`.** `ai/tasks/step.md` becomes `ai/tasks/run.md`; the task
   itself is unchanged. Breaking for anyone with the old command in a script or a habit.
 - The word "step" stays everywhere it means a step *within* a plan, which is most places:
   the description is still "Implement one step of a plan", the argument hint is still
-  `<plan path> <step>`, and `/t4:plan` still writes `- [ ] Step N — …`. Only the command
-  moved. Two sentences were reworded to avoid "`/t4:run` run".
-- Past CHANGELOG entries keep saying `/t4:step`, unlike the org and plugin renames where
+  `<plan path> <step>`, and `/fc:plan` still writes `- [ ] Step N — …`. Only the command
+  moved. Two sentences were reworded to avoid "`/fc:run` run".
+- Past CHANGELOG entries keep saying `/fc:step`, unlike the org and plugin renames where
   the records were rewritten. Rewriting here would turn "tasks renamed explore, step, fix,
   check" in the 0.5.0 entry into a claim about a rename that happened today, and "step" is
   an ordinary word in those sentences rather than a name being retired.
@@ -1294,8 +1347,8 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
 
 ## 0.16.0 — 2026-09-07
 - **Sync removes the commands it generated under older naming.** Cleanup matched
-  `ai-<task>.md` and `t4/<task>.md` only, so a repo adopted before 0.5.0 kept its bare
-  `.claude/commands/spec.md` through every sync and answered both `/spec` and `/t4:spec` —
+  `ai-<task>.md` and `fc/<task>.md` only, so a repo adopted before 0.5.0 kept its bare
+  `.claude/commands/spec.md` through every sync and answered both `/spec` and `/fc:spec` —
   the same task twice, under two names, one of them pointing at a task file that may no
   longer exist. Found in a repo scaffolded at ai-base 0.1.2.
 - **Ours is identified by the include, not by the name.** A generated command carries
@@ -1308,14 +1361,14 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   survive. Verified by restoring the old glob, which fails it.
 
 ## 0.15.0 — 2026-09-07
-- **The marketplace is `sdlc`; the handle is `t4@sdlc`.** A handle reads
-  `<plugin>@<marketplace>`, so this renames the marketplace only. The plugin stays `t4` —
-  its name is what makes the commands `/t4:`, and renaming it would take them with it.
-  0.13.0 had both called `t4`, which worked but read as a stutter and hid which half meant
+- **The marketplace is `sdlc`; the handle is `fc@sdlc`.** A handle reads
+  `<plugin>@<marketplace>`, so this renames the marketplace only. The plugin stays `fc` —
+  its name is what makes the commands `/fc:`, and renaming it would take them with it.
+  0.13.0 had both called `fc`, which worked but read as a stutter and hid which half meant
   what.
 - The marketplace now matches the git project it is served from, `ai/sdlc.git`, so the name
   in the manifest and the name in the URL finally agree.
-- Unchanged: the org is still `t4 platform`, the plugin is still `t4`, the repo is still
+- Unchanged: the org is still `fc platform`, the plugin is still `fc`, the repo is still
   `ai-sdlc`, and the `/plugin marketplace add` line is the same
   as before. Only the handle's right-hand side moved.
 - The 0.13.0 entry's claim that "plugin and marketplace share a name" was left in place as a
@@ -1326,10 +1379,10 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   $ARGUMENTS`, `Bug: $ARGUMENTS` — and an empty invocation left a dangling colon, which a
   session fills in by guessing: a feature inferred from the branch name, a bug it went
   looking for, the newest spec assumed to be the one you meant. The nine tasks that require
-  input now say what to do when they get none, and say it specifically — `/t4:plan` lists the
-  paths in `specs/` rather than assuming the newest, `/t4:step` names the unticked steps
+  input now say what to do when they get none, and say it specifically — `/fc:plan` lists the
+  paths in `specs/` rather than assuming the newest, `/fc:step` names the unticked steps
   rather than starting one.
-- **`/t4:check` and `/t4:fleet` deliberately do not ask.** Both work with no argument by
+- **`/fc:check` and `/fc:fleet` deliberately do not ask.** Both work with no argument by
   design — check reviews the branch diff, fleet maps the whole repo — so a prompt would be an
   obstacle rather than a safeguard. Their input is marked optional with brackets instead.
 - **`argument-hint` reaches the command menu.** Each task declares one and
@@ -1343,23 +1396,23 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   copying it, so the prompt arrives with the task.
 
 ## 0.13.0 — 2026-09-07
-- **Every command lives under `/t4:`.** The eleven project tasks become `/t4:spec`,
-  `/t4:plan`, `/t4:step` and so on; the plugin's two become `/t4:adopt-sdlc` and
-  `/t4:sync-sdlc`. Reinstall with `/plugin install t4@sdlc`.
-- **The plugin is named `t4`.** That is not cosmetic: a plugin's command namespace *is* its
-  name, so `/t4:adopt-sdlc` is only reachable by renaming the plugin. The repo stays
+- **Every command lives under `/fc:`.** The eleven project tasks become `/fc:spec`,
+  `/fc:plan`, `/fc:step` and so on; the plugin's two become `/fc:adopt-sdlc` and
+  `/fc:sync-sdlc`. Reinstall with `/plugin install fc@sdlc`.
+- **The plugin is named `fc`.** That is not cosmetic: a plugin's command namespace *is* its
+  name, so `/fc:adopt-sdlc` is only reachable by renaming the plugin. The repo stays
   `ai-sdlc`.
 - **The project commands are namespaced by directory, not by prefix.** `sync-adapters.sh`
-  now writes `.claude/commands/t4/<task>.md` instead of `.claude/commands/ai-<task>.md`,
+  now writes `.claude/commands/fc/<task>.md` instead of `.claude/commands/ai-<task>.md`,
   because a subdirectory under `.claude/commands/` is what Claude Code reads as a namespace.
   That puts the generated file one level deeper, so its `@` include needed another `../` —
   a wrong depth still generates a perfectly valid-looking command that silently includes
   nothing, so `check-adapters.sh` now resolves every include and asserts it lands on the task
   file. Verified by reverting the depth: it fails.
-- **Codex skills read `t4-<task>`, not `t4:<task>`.** Codex skill names are invoked as
-  `/name` and take no colon, so the two tools differ here by necessity: `/t4:spec` under
-  Claude Code, `/t4-spec` under Codex.
-- **`/t4:explore` is now project-only.** The plugin shipped its own `explore` for repos with
+- **Codex skills read `fc-<task>`, not `fc:<task>`.** Codex skill names are invoked as
+  `/name` and take no colon, so the two tools differ here by necessity: `/fc:spec` under
+  Claude Code, `/fc-spec` under Codex.
+- **`/fc:explore` is now project-only.** The plugin shipped its own `explore` for repos with
   no `ai/` layout, and under one namespace it collided head-on with the task of the same
   name. The plugin copy is removed and the project one keeps the plain verb, so exploring a
   repo now requires adopting the layout first — the one capability this release drops.
@@ -1367,9 +1420,9 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
 
 ## 0.12.0 — 2026-09-07
 - **The plugin is `ai-sdlc` again, not `sdlc`.** Breaking twice over: the handle is now
-  `ai-sdlc@t4`, and every command moves namespace — `/sdlc:adopt` `/sdlc:explore` `/sdlc:sync`
-  become `/t4:adopt-sdlc` `/t4:explore` `/t4:sync-sdlc`. Reinstall with
-  `/plugin install ai-sdlc@t4`. This undoes the rename made in 0.5.0; plugin and repo name
+  `ai-sdlc@fc`, and every command moves namespace — `/sdlc:adopt` `/sdlc:explore` `/sdlc:sync`
+  become `/fc:adopt-sdlc` `/fc:explore` `/fc:sync-sdlc`. Reinstall with
+  `/plugin install ai-sdlc@fc`. This undoes the rename made in 0.5.0; plugin and repo name
   now agree again.
 - The eleven project commands are untouched — they are generated from `ai/tasks/` into each
   repo and were already `/ai-*`, never namespaced by the plugin.
@@ -1382,14 +1435,14 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
 - Records were rewritten rather than left standing, matching the choice made for the org
   rename in 0.11.0. Two entries now assert things that were never true, and are left that
   way knowingly: 0.5.0 reads "Plugin renamed `ai-sdlc`" when it was in fact renamed *from*
-  that to `sdlc`, and 0.11.0 offers `ai-sdlc@n6` and `ai-sdlc@t4`, handles that did not
+  that to `sdlc`, and 0.11.0 offers `ai-sdlc@n6` and `ai-sdlc@fc`, handles that did not
   exist at the time it describes. History here records the current naming, not the naming
   in force on the day.
 
 ## 0.11.0 — 2026-09-07
-- **The marketplace is now `t4`, not `n6`.** Breaking for anyone who installed by handle:
+- **The marketplace is now `fc`, not `n6`.** Breaking for anyone who installed by handle:
   `ai-sdlc@n6` no longer resolves. Re-point with `/plugin marketplace remove n6`, then
-  `/plugin marketplace add <repo URL>` and `/plugin install ai-sdlc@t4`.
+  `/plugin marketplace add <repo URL>` and `/plugin install ai-sdlc@fc`.
   The git remote is unchanged — only the marketplace handle and the org name moved.
 - The rename is total: manifests, install instructions, the owner and author fields, the
   LICENSE holder, and the earlier changelog entry that named the old org. Outside this entry
@@ -1449,18 +1502,18 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   dont-touch guard** — `docs/workflow.md` says so in those words.
 
 ## 0.8.0 — 2026-09-06
-- **Layout drift detection.** `/t4:adopt-sdlc` now writes `ai/.sdlc.json` recording which ai-sdlc
-  version a repo received and a hash per file; `/t4:sync-sdlc` compares it against the installed
+- **Layout drift detection.** `/fc:adopt-sdlc` now writes `ai/.sdlc.json` recording which ai-sdlc
+  version a repo received and a hash per file; `/fc:sync-sdlc` compares it against the installed
   templates and reports six states — upstream changed (safe to take), both changed (merge by
   hand), locally modified, new upstream, removed upstream, missing locally — plus a version
-  comparison. Before this an adopted repo had no way to learn it was behind, and `/t4:sync-sdlc`
+  comparison. Before this an adopted repo had no way to learn it was behind, and `/fc:sync-sdlc`
   regenerated adapters without comparing anything. Implements
   `ai/designs/0001-layout-version-and-drift.md`; decisions in `docs/adr/0001`-`0003`.
 - **Two hashes per file, not one.** The design sketched a single hash, which cannot work:
   adopt substitutes `{{app}}`, `{{stack}}` and friends, so a repo file never equals its
   template and every substituted file would report as modified forever. The manifest records
   `received` (what landed in the repo) and `template` (what it came from).
-- `/t4:sync-sdlc` still changes nothing under `ai/` — it reports, and taking an upstream change
+- `/fc:sync-sdlc` still changes nothing under `ai/` — it reports, and taking an upstream change
   stays a separate reviewable edit. A repo with no manifest is told how to start a baseline
   rather than treated as an error, and a manifest with a newer `schema` stops the check
   instead of being misread.
@@ -1511,7 +1564,7 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
 - **`make review` corrupted diffs containing `$`.** The diff was routed through a make
   variable, which re-expands `$`; it now goes to a file passed as `INPUT_FILE`, byte for
   byte. `INPUT_FILE=<path>` works for any task.
-- No t4-specific configuration remains in the templates: the AGENTS.md setup section names
+- No fc-specific configuration remains in the templates: the AGENTS.md setup section names
   no provider, and `ai/docs/architecture.md` no longer claims a LiteLLM proxy resolves aliases.
 
 ## 0.5.1 — 2026-09-06
@@ -1519,25 +1572,25 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
   functional dependency — no package manager, lockfile, submodule or out-of-repo path, and
   the hooks use the Node standard library only — but eight documents named the framework
   scaffold repos and pinned their versions, most of it written into `ai/docs/fleet.md` by
-  the first `/t4:fleet` run reading sibling checkouts off disk. Consumers are now described
+  the first `/fc:fleet` run reading sibling checkouts off disk. Consumers are now described
   generically: overlay plugins and adopted repos, named nowhere.
 - `ai/docs/fleet.md` is scoped to this repo alone, its **Consumes** column deliberately
-  empty, with the one-way dependency written into Boundaries so `/t4:design review` enforces
+  empty, with the one-way dependency written into Boundaries so `/fc:design review` enforces
   it on future plans.
 
 ## 0.5.0 — 2026-09-06
 - New `architect` agent: decides where a capability belongs across services, what contract
   it exposes and who owns the data. Writes design docs and ADRs only — never source, specs
   or plans; changes to other context docs are proposed as replacement text, not applied.
-- New `/t4:design`: the capability's home, its contracts and its data ownership, before any
-  spec. Output in `ai/designs/`, ending with the `/t4:adr` and `/t4:spec` lines to run.
-  `/t4:design review <plan>` checks a plan for architectural fit and emits the same JSON
+- New `/fc:design`: the capability's home, its contracts and its data ownership, before any
+  spec. Output in `ai/designs/`, ending with the `/fc:adr` and `/fc:spec` lines to run.
+  `/fc:design review <plan>` checks a plan for architectural fit and emits the same JSON
   shape the reviewer does, so `ai/make/gate.js` reads it unchanged.
   Use it only when a capability spans services or changes a contract between them —
-  `/t4:explore` still decides how to build a feature inside one repo.
-- New `/t4:adr`: writes `docs/adr/NNNN-slug.md`. Three documents already required an ADR for
+  `/fc:explore` still decides how to build a feature inside one repo.
+- New `/fc:adr`: writes `docs/adr/NNNN-slug.md`. Three documents already required an ADR for
   every new dependency and nothing in the loop produced one; now something does.
-- New `ai/docs/fleet.md` — the service map the architect reads — and **`/t4:fleet`, which
+- New `ai/docs/fleet.md` — the service map the architect reads — and **`/fc:fleet`, which
   fills it in**: it detects what it can from the repo (remotes, manifests, compose and k8s
   files, routes, queue names, CODEOWNERS) and asks you for the rest, offering what it
   detected as the default. It refreshes rather than overwrites, and asks nothing in a
@@ -1546,31 +1599,31 @@ not there until the migration runs. `/t4:doctor` reports which of the three stat
 - Definition of done gains item 7: a change crossing a service boundary or changing a
   contract has a design doc, an ADR, and an up-to-date fleet map.
 - New overlay slot `{{fleet_extra}}`.
-- **Adopted repos: run `/t4:sync-sdlc` for the three new commands, then `/t4:fleet` once** —
-  until it runs, `ai/docs/fleet.md` is the unfilled default and `/t4:design` will say so.
+- **Adopted repos: run `/fc:sync-sdlc` for the three new commands, then `/fc:fleet` once** —
+  until it runs, `ai/docs/fleet.md` is the unfilled default and `/fc:design` will say so.
 
 ## 0.4.0 — 2026-09-06
-- New `tester` agent and `/t4:test` task: writes acceptance tests from the spec's ACs,
+- New `tester` agent and `/fc:test` task: writes acceptance tests from the spec's ACs,
   reading the implementation's public surface only and never the diff, so tests are not
-  shaped by the code they check. Modes `red` (before `/t4:step`, ACs must fail first) and
+  shaped by the code they check. Modes `red` (before `/fc:step`, ACs must fail first) and
   `gaps` (after, close uncovered ACs). Writes test files only; never production code.
-- Loop is now `/t4:explore → /t4:spec → /t4:plan → /t4:test red → /t4:step → /t4:test gaps → /t4:check`.
+- Loop is now `/fc:explore → /fc:spec → /fc:plan → /fc:test red → /fc:step → /fc:test gaps → /fc:check`.
 - `sync-adapters.sh`: `shopt -s nullglob` — a repo with no `ai/skills/*/` subdirectory
   previously created a directory literally named `.claude/skills/*`. Agent symlinks now
   loop over `ai/agents/*.md` instead of hardcoding the reviewer, so a new agent needs no
-  script change. **Adopted repos should run `/t4:sync-sdlc`.**
-- Definition-of-done item 2 now names `/t4:test` as the source of AC tests.
+  script change. **Adopted repos should run `/fc:sync-sdlc`.**
+- Definition-of-done item 2 now names `/fc:test` as the source of AC tests.
 - ai-sdlc adopts its own `ai/` layout, symlinked to `skills/ai-layout/templates/`.
 
 ## 0.3.0 — 2026-09-06
-- Plugin renamed `ai-sdlc` (repo stays ai-sdlc). Commands: `/t4:adopt-sdlc` (was init), `/t4:explore` (was investigate), `/t4:sync-sdlc`.
-- Project commands now prefixed `ai-`: `/t4:explore /t4:spec /t4:plan /t4:step /t4:fix /t4:chore /t4:check` (tasks renamed explore, step, fix, check; `/review` collided with a Claude Code built-in). `ai/investigations/` → `ai/explorations/`.
+- Plugin renamed `ai-sdlc` (repo stays ai-sdlc). Commands: `/fc:adopt-sdlc` (was init), `/fc:explore` (was investigate), `/fc:sync-sdlc`.
+- Project commands now prefixed `ai-`: `/fc:explore /fc:spec /fc:plan /fc:step /fc:fix /fc:chore /fc:check` (tasks renamed explore, step, fix, check; `/review` collided with a Claude Code built-in). `ai/investigations/` → `ai/explorations/`.
 
 ## 0.2.0 — 2026-09-06
 - Renamed from ai-base and split: Next.js pieces moved to the nextjs-scaffold plugin; NestJS lives in nestjs-scaffold.
-- New `/t4:explore` command + task: 2–4 implementation options with trade-offs before a spec; output in `ai/explorations/`.
-- New `/t4:adopt-sdlc` command: add the ai/ layout to an existing repo without a framework scaffold.
-- `/ai-sync` renamed `/t4:sync-sdlc`; guards against repos without `ai/`.
+- New `/fc:explore` command + task: 2–4 implementation options with trade-offs before a spec; output in `ai/explorations/`.
+- New `/fc:adopt-sdlc` command: add the ai/ layout to an existing repo without a framework scaffold.
+- `/ai-sync` renamed `/fc:sync-sdlc`; guards against repos without `ai/`.
 - Generic templates are framework-neutral with `{{…_extra}}` slots overlays fill.
 
 ## 0.1.2 / 0.1.1 / 0.1.0 — 2026-09-05 (as ai-base)

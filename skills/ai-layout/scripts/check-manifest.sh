@@ -18,7 +18,7 @@ has() { grep -q -- "$2" "$1" || fail "expected \"$2\" in output:$(printf '\n'; c
 hasnt() { if grep -q -- "$2" "$1"; then fail "did not expect \"$2\" in output:$(printf '\n'; cat "$1")"; fi; }
 
 # A copy of the plugin we may edit, and a repo "adopted" from it (placeholders substituted,
-# exactly as /t4:adopt-sdlc does — this is what makes the two-hash design necessary).
+# exactly as /fc:adopt-sdlc does — this is what makes the two-hash design necessary).
 mkdir -p "$PLUG" "$REPO"
 cp -R .claude-plugin skills "$PLUG/"
 cp -R "$PLUG/skills/ai-layout/templates/." "$REPO/"
@@ -85,8 +85,8 @@ echo "== assurance selection, local configuration and evidence stay the adopter'
 [ ! -e "$REPO/ai-factory/assurance.json" ] || fail "adoption selected an assurance preset"
 SEL=$TMP/selected; cp -R "$REPO" "$SEL"
 mkdir -p "$SEL/ai-factory/contracts" "$SEL/ai-factory/evidence/d-20260101-abcdef"
-printf '{"schema":"t4-assurance","version":1,"preset":"standard"}\n' > "$SEL/ai-factory/assurance.json"
-printf '{"schema":"t4-contracts-config","version":1,"code_scope":{"include":["src/**"],"exclude":[]},"completion":{"require_review_quick":true}}\n' > "$SEL/ai-factory/contracts/config.json"
+printf '{"schema":"fc-assurance","version":1,"preset":"standard"}\n' > "$SEL/ai-factory/assurance.json"
+printf '{"schema":"fc-contracts-config","version":1,"code_scope":{"include":["src/**"],"exclude":[]},"completion":{"require_review_quick":true}}\n' > "$SEL/ai-factory/contracts/config.json"
 printf '{"recorded":true}\n' > "$SEL/ai-factory/evidence/d-20260101-abcdef/final.json"
 KEPT=$(cd "$SEL" && shasum ai-factory/assurance.json ai-factory/contracts/config.json ai-factory/evidence/d-20260101-abcdef/final.json)
 BEFORE=$(find "$SEL" -type f -exec shasum {} \; | sort | shasum)
@@ -178,7 +178,7 @@ $out"
 # 2.1.0 removed the command. Pointing at a slash command that is not installed is a dead end, and
 # the only reason ADR 0008 allowed the removal in a minor is that an older checkout still has it.
 grep -qE 'checkout at 2\.0\.0 or earlier' <<<"$out" \
-  || fail "an unmigrated repo was pointed at /t4:migrate-layout without being told where to get it — 2.1.0 removed the command:
+  || fail "an unmigrated repo was pointed at /fc:migrate-layout without being told where to get it — 2.1.0 removed the command:
 $out"
 # ...and the fallback's own version, which outlives the command by a major.
 grep -qE 'old directory name until 3\.0\.0' <<<"$out" \
@@ -189,16 +189,16 @@ $out"
 grep -qE 'removed upstream|new upstream' <<<"$out" && fail "an unmigrated repo got a per-file drift report across the rename:
 $out"
 
-# write, by hand, in the same repo: it must not send a repo that HAS a layout to /t4:adopt-sdlc,
+# write, by hand, in the same repo: it must not send a repo that HAS a layout to /fc:adopt-sdlc,
 # which would scaffold a second one beside the first. cmdCheck short-circuits; cmdWrite is what a
 # developer reaches by running the baseline command this file used to print.
 out=$(node "$M" write "$OLD" . 2>&1 || true)
 grep -q 'migrate-layout' <<<"$out" || fail "manifest write does not point an unmigrated repo at the migration:
 $out"
 grep -qE 'checkout at 2\.0\.0 or earlier' <<<"$out" \
-  || fail "manifest write points at /t4:migrate-layout without saying where to get it — 2.1.0 removed the command:
+  || fail "manifest write points at /fc:migrate-layout without saying where to get it — 2.1.0 removed the command:
 $out"
-grep -q 'adopt-sdlc first' <<<"$out" && fail "manifest write still sends an unmigrated repo to /t4:adopt-sdlc, which would add a second layout:
+grep -q 'adopt-sdlc first' <<<"$out" && fail "manifest write still sends an unmigrated repo to /fc:adopt-sdlc, which would add a second layout:
 $out"
 [ ! -f "$OLD/ai-factory/.sdlc.json" ] || fail "manifest write created a manifest in an unmigrated repo"
 

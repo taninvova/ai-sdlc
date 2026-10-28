@@ -22,7 +22,7 @@
 - **Commit layout.** Steps 2 and 3 share one commit because freshness lives in the same module
   as the validator.
 - **Not run.** Real-host smoke tests, meaning a live Claude or Codex session driving
-  `/t4:spec` … `/t4:check` with contracts enabled, were not run. `make review DELIVERY=…` was
+  `/fc:spec` … `/fc:check` with contracts enabled, were not run. `make review DELIVERY=…` was
   exercised only against a fake CLI.
 - **This repository does not opt in.** It carries no `ai-factory/contracts/config.json`, so its
   own specs and plans stay `legacy_unverified` under an explicit `validate --all`.
@@ -35,7 +35,7 @@
 - [x] **Step 3 — Implement freshness checks.** AC3. Code snapshot and stale propagation. **Verify:** mutating each upstream input produces the expected `S_*` diagnostic; excluded files and mtime-only changes do not.
 - [x] **Step 4 — Capture verification evidence.** AC4. `contracts.js record` and `make verify`; review evidence from `runner.js review()`. **Verify:** nonzero exit, interruption, unavailable commands and expected red failures never become final passes.
 - [x] **Step 5 — Integrate task handoffs.** AC6, AC7. Update spec, plan, test, run, check and quick procedures and agents; regenerate host entry points. **Verify:** a scratch adopted project completes planned and quick flows; host sync checks pass.
-- [x] **Step 6 — Add adoption and documentation.** AC7. `contracts.js enable` and `migrate`, `/t4:sync-sdlc` and doctor integration, inventories, docs, 2.5.0 release metadata. **Verify:** migration twice is idempotent, customized Markdown survives, `make check` passes.
+- [x] **Step 6 — Add adoption and documentation.** AC7. `contracts.js enable` and `migrate`, `/fc:sync-sdlc` and doctor integration, inventories, docs, 2.5.0 release metadata. **Verify:** migration twice is idempotent, customized Markdown survives, `make check` passes.
 
 ## Risks
 

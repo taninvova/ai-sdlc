@@ -6,7 +6,7 @@
 
 ## Scope and boundary
 
-- Planned workflows (spec → plan → test → run → check) and a small acceptance-checklist contract for `/t4:quick`.
+- Planned workflows (spec → plan → test → run → check) and a small acceptance-checklist contract for `/fc:quick`.
 - Structural validity only. A valid contract proves consistency of IDs, references, digests and recorded execution, never the truth or quality of a requirement. All output says so.
 - Opt-in per project (`ai-factory/contracts/config.json`). Projects that have not adopted contracts keep today's workflow unchanged.
 - Node built-ins and the existing `safe-files.js` boundary only; no schema package.

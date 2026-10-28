@@ -13,7 +13,7 @@ Use a presentation helper around existing `delivery-report.collect` and `evaluat
 
 - Create `skills/ai-layout/templates/ai-factory/make/delivery-status.js`: in-memory collection and compact field/value output using existing readiness semantics.
 - Modify `skills/ai-layout/scripts/state.sh`: parse the mutually exclusive detail mode and pass literal arguments to the adopted helper; retain the existing listing path.
-- Modify `commands/state.md`; regenerate `codex-skills/t4-state/SKILL.md` through `skills/ai-layout/scripts/sync-codex-skills.js`: present the selected mode's header and rows without inference.
+- Modify `commands/state.md`; regenerate `codex-skills/fc-state/SKILL.md` through `skills/ai-layout/scripts/sync-codex-skills.js`: present the selected mode's header and rows without inference.
 - Create `skills/ai-layout/scripts/check-delivery-status.sh`; extend existing `check-state.sh` and adoption/entry-point checks as needed: acceptance fixtures and compatibility coverage.
 - Update `README.md`, `ai-factory/docs/workflow.md` and `CHANGELOG.md`: explain opt-in contracts, detail invocation, unknowns and template impact.
 - Use existing `contracts.js`, `delivery-report.js`, `safe-files.js` and `fixtures/contracts/` unchanged where possible; edit canonical targets only, never protected `ai-factory/make/` symlinks.

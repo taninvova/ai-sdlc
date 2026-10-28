@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# Letter-and-digit artefact IDs (spec 0024): pins ai-factory/make/ids.js, the one helper that
-# draws an ID and creates an artefact, against disposable fixtures under ai-factory/runs/tmp/.
+# Artefact IDs: pins ai-factory/make/ids.js, the one helper that names and creates an artefact,
+# against disposable fixtures under ai-factory/runs/tmp/. New IDs are the project's prefix and the
+# next free number (PMB-001); legacy four-digit and letter-and-digit (spec 0024) names stay valid.
 #
-# Groups: draw, new, reuse, check, state, procedures, docs, repo (default: every group).
+# Groups: next, init, new, reuse, check, state, procedures, docs, repo (default: every group).
 # Each case reports a missing helper or a missing export as its own failure, never as a crash,
 # so the red run of a group names every case it holds.
 set -euo pipefail
 cd "$(dirname "$0")/../../.."
 group="${1:-all}"
 case "$group" in
-	all | draw | new | reuse | check | state | procedures | docs | repo) ;;
-	*) echo "check-ids: unknown group '$group' (expected: draw, new, reuse, check, state, procedures, docs, repo)" >&2; exit 2 ;;
+	all | next | init | new | reuse | check | state | procedures | docs | repo) ;;
+	*) echo "check-ids: unknown group '$group' (expected: next, init, new, reuse, check, state, procedures, docs, repo)" >&2; exit 2 ;;
 esac
 IDS_GROUP="$group" node <<'NODE'
 const assert = require("node:assert/strict");
@@ -22,8 +23,6 @@ const { boundary } = require("./skills/ai-layout/templates/ai-factory/make/safe-
 const MAKE = path.resolve("skills/ai-layout/templates/ai-factory/make");
 const HELPER = path.join(MAKE, "ids.js");
 const ADR_TEMPLATE = path.resolve("skills/ai-layout/templates/ai-factory/adr/0000-template.md");
-const FORM = /^[A-HJ-NP-Z]{3}[0-9]{3}$/;
-const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 const DIRS = { spec: "specs", plan: "plans", exploration: "explorations", analysis: "analyses", design: "designs", adr: "adr", risk: "risks" };
 const scratch = boundary(path.resolve("ai-factory")).scratch(path.resolve("ai-factory/runs/tmp"));
 const selected = process.env.IDS_GROUP;
@@ -39,21 +38,14 @@ function helper(...exports) {
 		if (typeof mod[name] !== "function") throw new Error(`make/ids.js exports no ${name}()`);
 	return mod;
 }
-// A random source that replays the given IDs (index draws: three letters, three digits), then
-// falls back to fresh randomness so a redraw always terminates.
-function forced(...ids) {
-	const queue = [];
-	for (const id of ids)
-		for (const [i, ch] of [...id].entries()) queue.push(i < 3 ? LETTERS.indexOf(ch) : Number(ch));
-	for (const value of queue) assert.ok(value >= 0, `forced(): '${ids}' is not drawable`);
-	return (n) => (queue.length ? queue.shift() : require("node:crypto").randomInt(n));
-}
 let fixtures = 0;
-function fixture({ dirs = Object.values(DIRS), cli = false, adr = true } = {}) {
+// A disposable repo. `prefix` writes ai-factory/project.json as adoption does; null leaves it out.
+function fixture({ dirs = Object.values(DIRS), cli = false, adr = true, prefix = "PMB" } = {}) {
 	const root = path.join(scratch, `repo-${++fixtures}`);
 	fs.mkdirSync(path.join(root, "ai-factory/runs"), { recursive: true });
 	for (const dir of dirs) fs.mkdirSync(path.join(root, "ai-factory", dir), { recursive: true });
 	if (adr && dirs.includes("adr")) fs.copyFileSync(ADR_TEMPLATE, path.join(root, "ai-factory/adr/0000-template.md"));
+	if (prefix) fs.writeFileSync(path.join(root, "ai-factory/project.json"), `${JSON.stringify({ name: "Pembina", prefix })}\n`);
 	if (cli) {
 		fs.mkdirSync(path.join(root, "ai-factory/make"), { recursive: true });
 		for (const file of ["ids.js", "safe-files.js"]) fs.copyFileSync(path.join(MAKE, file), path.join(root, "ai-factory/make", file));
@@ -67,14 +59,14 @@ const touch = (root, rel, text = "") => {
 const read = (root, rel) => fs.readFileSync(path.join(root, rel), "utf8");
 const cli = (root, ...args) =>
 	spawnSync(process.execPath, [path.join(root, "ai-factory/make/ids.js"), ...args], { cwd: root, encoding: "utf8" });
-// Every artefact file under ai-factory/, the helper's own scratch excluded.
+// Every artefact file under ai-factory/, the helper's own scratch and project.json excluded.
 function files(root) {
 	const out = [];
 	const walk = (dir) => {
 		for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
 			const file = path.join(dir, entry.name);
 			const rel = path.relative(root, file).split(path.sep).join("/");
-			if (rel === "ai-factory/runs" || rel === "ai-factory/make") continue;
+			if (rel === "ai-factory/runs" || rel === "ai-factory/make" || rel === "ai-factory/project.json") continue;
 			if (entry.isDirectory()) walk(file);
 			else out.push(rel);
 		}
@@ -82,97 +74,174 @@ function files(root) {
 	walk(path.join(root, "ai-factory"));
 	return out.sort();
 }
-const idOf = (rel) => /^([A-Z]{3}[0-9]{3})-/.exec(path.basename(rel))?.[1];
+const idOf = (rel) => /^([A-Z]{2,5}-[0-9]{3,}|[A-Z]{3}[0-9]{3})-/.exec(path.basename(rel))?.[1];
 const silent = () => {};
 
 const cases = [];
 const test = (group, name, fn) => cases.push({ group, name, fn });
 
-// ---- draw ---------------------------------------------------------------------------------
-test("draw", "draw-form", () => {
-	const { draw } = helper("draw");
+// ---- next ---------------------------------------------------------------------------------
+test("next", "next-first", () => {
+	const { next } = helper("next");
+	assert.equal(next({ root: fixture() }), "PMB-001", "an empty tree starts at 001");
+	assert.equal(next({ root: fixture({ prefix: "AB" }) }), "AB-001", "a two-letter prefix");
+	assert.equal(next({ root: fixture({ prefix: "ABCDE" }) }), "ABCDE-001", "a five-letter prefix");
+});
+test("next", "next-after-highest", () => {
+	const { next } = helper("next");
 	const root = fixture();
-	for (let i = 0; i < 500; i++) {
-		const id = draw({ root, warn: silent });
-		assert.match(id, FORM, `draw() returned '${id}'`);
-	}
+	// Gaps are never filled: the next number is one past the highest, not the first free one.
+	touch(root, "ai-factory/specs/PMB-001-a.md");
+	touch(root, "ai-factory/designs/PMB-007-b.md");
+	touch(root, "ai-factory/adr/PMB-003-c.md");
+	assert.equal(next({ root }), "PMB-008");
+	// Past 999 the number grows a digit rather than wrapping.
+	touch(root, "ai-factory/specs/PMB-999-d.md");
+	assert.equal(next({ root }), "PMB-1000");
+	touch(root, "ai-factory/specs/PMB-1000-e.md");
+	assert.equal(next({ root }), "PMB-1001");
 });
-test("draw", "draw-builtin-deny", () => {
-	const ids = helper("draw");
-	assert.ok(Array.isArray(ids.BUILTIN_DENY) && ids.BUILTIN_DENY.length > 0, "make/ids.js exports no BUILTIN_DENY list");
-	const triple = ids.BUILTIN_DENY.find((t) => [...t].every((ch) => LETTERS.includes(ch)));
-	assert.ok(triple, "the built-in denylist has no drawable triple to force");
-	const root = fixture();
-	assert.equal(ids.draw({ root, random: forced(`${triple}123`, "KLM789"), warn: silent }), "KLM789", `drew the built-in triple ${triple}`);
-	for (let i = 0; i < 300; i++) assert.ok(!ids.BUILTIN_DENY.includes(ids.draw({ root, warn: silent }).slice(0, 3)));
-});
-test("draw", "draw-repo-deny", () => {
-	const { draw } = helper("draw");
-	const root = fixture();
-	touch(root, "ai-factory/ids-deny.txt", "  bcd  \n\tXyZ\n");
-	const warnings = [];
-	const warn = (line) => warnings.push(line);
-	assert.equal(draw({ root, random: forced("BCD123", "XYZ456", "KLM789"), warn }), "KLM789");
-	assert.deepEqual(warnings, [], "a valid deny file warns about nothing");
-	const bare = fixture();
-	assert.equal(draw({ root: bare, random: forced("BCD123"), warn }), "BCD123", "without the file only the built-in list applies");
-	assert.deepEqual(warnings, [], "an absent deny file is not an error");
-});
-test("draw", "deny-hygiene", () => {
-	const { draw, create } = helper("draw", "create");
-	const root = fixture({ cli: true });
-	touch(root, "ai-factory/ids-deny.txt", "\n   \n# a comment\n  # indented comment\nAB\nABCD\nA1C\nbcd\n");
-	const warnings = [];
-	assert.equal(draw({ root, random: forced("BCD123", "KLM789"), warn: (line) => warnings.push(line) }), "KLM789");
-	assert.equal(warnings.length, 3, `expected one warning per bad line:\n${warnings.join("\n")}`);
-	for (const [bad, text] of [["AB", warnings[0]], ["ABCD", warnings[1]], ["A1C", warnings[2]]])
-		assert.match(text, new RegExp(`'${bad}'`), `the warning names ${bad}: ${text}`);
-	const made = create({ root, kind: "spec", slug: "still-made", warn: silent });
-	assert.ok(fs.existsSync(path.join(root, made.path)));
-	const run = cli(root, "new", "spec", "from-cli");
-	assert.equal(run.status, 0, run.stderr);
-	for (const bad of ["AB", "ABCD", "A1C"]) assert.match(run.stderr, new RegExp(`'${bad}'`));
-	assert.doesNotMatch(run.stderr, /comment/, "comment lines are silent");
-	assert.ok(fs.existsSync(path.join(root, run.stdout.trim())), "the file is still created");
-});
-test("draw", "draw-no-criterion-shape", () => {
-	const { draw } = helper("draw");
-	const root = fixture();
-	assert.equal(draw({ root, random: forced("ACD123", "QCD456", "ACB001", "QCK999", "KLM789"), warn: silent }), "KLM789");
-	for (let i = 0; i < 2000; i++) {
-		const id = draw({ root, warn: silent });
-		assert.ok(!/^(AC|QC)/.test(id) && !/^S[0-9]+$/.test(id) && !/\bAC[0-9]+\b/.test(id) && !/\bQC[0-9]+\b/.test(id), id);
-	}
-});
-test("draw", "draw-random", () => {
-	const { draw } = helper("draw");
-	const empty = fixture();
-	const seen = new Set();
-	for (let i = 0; i < 20; i++) seen.add(draw({ root: empty, warn: silent }));
-	assert.equal(seen.size, 20, "20 draws over an unchanged tree differ");
-	const busy = fixture();
-	for (let n = 1; n <= 40; n++) touch(busy, `ai-factory/specs/${String(n).padStart(4, "0")}-legacy-${n}.md`, `# ${n}\n`);
-	touch(busy, "ai-factory/plans/9999-highest.md");
-	touch(busy, "ai-factory/specs/ZZZ999-newest.md");
-	const a = draw({ root: empty, random: forced("MNP345"), warn: silent });
-	const b = draw({ root: busy, random: forced("MNP345"), warn: silent });
-	assert.equal(a, "MNP345");
-	assert.equal(b, a, "the same random source gives the same ID whatever the count or highest number");
-});
-test("draw", "draw-one-id-space", () => {
-	const { draw } = helper("draw");
-	const places = [...Object.values(DIRS), "plans/done"];
-	for (const place of places) {
+test("next", "next-one-id-space", () => {
+	const { next } = helper("next");
+	for (const place of [...Object.values(DIRS), "plans/done"]) {
 		const root = fixture();
-		touch(root, `ai-factory/${place}/BCD234-taken.md`);
-		assert.equal(draw({ root, random: forced("BCD234", "KLM789"), warn: silent }), "KLM789", `an ID used in ${place}/ is redrawn`);
+		touch(root, `ai-factory/${place}/PMB-004-taken.md`);
+		assert.equal(next({ root }), "PMB-005", `a number used in ${place}/ counts`);
 	}
 	const lower = fixture();
-	touch(lower, "ai-factory/designs/bcd234-lower.md");
-	assert.equal(draw({ root: lower, random: forced("BCD234", "KLM789"), warn: silent }), "KLM789", "IDs compare case-insensitively");
+	touch(lower, "ai-factory/designs/pmb-004-lower.md");
+	assert.equal(next({ root: lower }), "PMB-005", "IDs compare case-insensitively");
 	const sidecar = fixture();
-	touch(sidecar, "ai-factory/specs/BCD234-only-sidecar.contract.json", "{}");
-	assert.equal(draw({ root: sidecar, random: forced("BCD234", "KLM789"), warn: silent }), "KLM789", "a sidecar name uses its ID");
+	touch(sidecar, "ai-factory/specs/PMB-004-only-sidecar.contract.json", "{}");
+	assert.equal(next({ root: sidecar }), "PMB-005", "a sidecar name uses its ID");
+});
+test("next", "next-ignores-other-ids", () => {
+	const { next } = helper("next");
+	const root = fixture();
+	// Legacy numbers, legacy letter-and-digit IDs and another prefix's numbers never count.
+	for (let n = 1; n <= 40; n++) touch(root, `ai-factory/specs/${String(n).padStart(4, "0")}-legacy-${n}.md`, `# ${n}\n`);
+	touch(root, "ai-factory/plans/9999-highest.md");
+	touch(root, "ai-factory/specs/ZZZ999-random.md");
+	touch(root, "ai-factory/specs/PMBX-050-longer-prefix.md");
+	touch(root, "ai-factory/specs/PM-060-shorter-prefix.md");
+	touch(root, "ai-factory/specs/OLD-070-renamed-project.md");
+	assert.equal(next({ root }), "PMB-001");
+});
+
+// ---- init ---------------------------------------------------------------------------------
+test("init", "suggest-prefix", () => {
+	const { suggest } = helper("suggest");
+	for (const [name, prefix] of [
+		["Pembina", "PMB"],
+		["pembina", "PMB"],
+		["Acme", "ACM"],
+		["Moon", "MON"],
+		["ai-sdlc", "ASD"],
+		["Order Service", "ORD"],
+		["Qc", "QCX"],
+	])
+		assert.equal(suggest(name), prefix, `suggest('${name}')`);
+	for (const name of ["", "X", "42", "-"]) assert.throws(() => suggest(name), /fewer than two letters/, `suggest('${name}') is refused`);
+	const root = fixture({ cli: true, prefix: null });
+	const run = cli(root, "suggest", "Pembina");
+	assert.equal(run.status, 0, run.stderr);
+	assert.equal(run.stdout, "PMB\n");
+	assert.ok(!fs.existsSync(path.join(root, "ai-factory/project.json")), "suggest writes nothing");
+});
+test("init", "init-writes-once", () => {
+	helper("init");
+	const root = fixture({ cli: true, prefix: null });
+	const run = cli(root, "init", "--name", "Pembina", "--prefix", "pmb");
+	assert.equal(run.status, 0, run.stderr);
+	assert.equal(run.stdout, "ai-factory/project.json\n");
+	assert.deepEqual(JSON.parse(read(root, "ai-factory/project.json")), { name: "Pembina", prefix: "PMB" }, "the prefix is written uppercase");
+	const written = read(root, "ai-factory/project.json");
+	const again = cli(root, "init", "--name", "Other", "--prefix", "OTH");
+	assert.equal(again.status, 2, `a second init is refused: ${again.stderr}`);
+	assert.match(again.stderr, /Pembina/);
+	assert.match(again.stderr, /PMB/);
+	assert.equal(read(root, "ai-factory/project.json"), written, "the existing file is unchanged");
+	// Without --prefix the suggested one is used.
+	const bare = fixture({ cli: true, prefix: null });
+	assert.equal(cli(bare, "init", "--name", "Acme").status, 0);
+	assert.equal(JSON.parse(read(bare, "ai-factory/project.json")).prefix, "ACM");
+});
+test("init", "init-refuses-bad-input", () => {
+	helper("init");
+	for (const args of [
+		["--name", "Pembina", "--prefix", "P"],
+		["--name", "Pembina", "--prefix", "PMBXYZ"],
+		["--name", "Pembina", "--prefix", "P1B"],
+		["--name", "Pembina", "--prefix", "PM-B"],
+		["--name", "Pembina", "--prefix", "AC"],
+		["--name", "Pembina", "--prefix", "qc"],
+		["--name", ""],
+		["--name", "two\nlines"],
+		["--prefix", "PMB"],
+		["--name"],
+		["--name", "Pembina", "--bogus", "x"],
+		["--name", "Pembina", "extra"],
+	]) {
+		const root = fixture({ cli: true, prefix: null });
+		const run = cli(root, "init", ...args);
+		assert.equal(run.status, 2, `init ${JSON.stringify(args)} is refused with exit 2: ${run.stderr}`);
+		assert.equal(run.stderr.trim().split("\n").length, 1, `one line on stderr: ${run.stderr}`);
+		assert.ok(!fs.existsSync(path.join(root, "ai-factory/project.json")), `init ${JSON.stringify(args)} writes nothing`);
+	}
+});
+test("init", "unconfigured-exits-4", () => {
+	const { create } = helper("create");
+	for (const kind of ["spec", "exploration", "analysis", "design", "adr", "risk"]) {
+		const root = fixture({ cli: true, prefix: null });
+		const before = files(root);
+		const run = cli(root, "new", kind, "too-early");
+		assert.equal(run.status, 4, `${kind} without a prefix exits 4: ${run.stderr}`);
+		assert.equal(run.stdout, "");
+		assert.match(run.stderr, /ids\.js init --name/, `the message names the init command: ${run.stderr}`);
+		assert.deepEqual(files(root), before, `${kind} without a prefix creates nothing`);
+	}
+	assert.throws(() => create({ root: fixture({ prefix: null }), kind: "spec", slug: "x" }), /no project prefix/);
+	// A reuse needs no prefix: the parent already holds the ID.
+	const reuse = fixture({ cli: true, prefix: null });
+	touch(reuse, "ai-factory/specs/PMB-002-foo.md");
+	assert.equal(cli(reuse, "new", "plan", "foo", "--id", "PMB-002").status, 0, "a plan is created without project.json");
+	// A broken project.json is a refusal that names the file, never a silent default.
+	for (const text of ["not json", "{}", '{"name":"Pembina"}', '{"name":"Pembina","prefix":"AC"}', '{"prefix":"PMB"}']) {
+		const root = fixture({ cli: true, prefix: null });
+		touch(root, "ai-factory/project.json", text);
+		const run = cli(root, "new", "spec", "x");
+		assert.equal(run.status, 2, `project.json '${text}' is refused: ${run.stderr}`);
+		assert.match(run.stderr, /project\.json/);
+	}
+});
+
+test("init", "adopt-writes-project", () => {
+	const { adopt } = require(path.resolve("skills/ai-layout/scripts/adopt.js"));
+	const plugin = path.resolve(".");
+	const named = path.join(scratch, "adopt-named");
+	fs.mkdirSync(named, { recursive: true });
+	adopt(named, plugin, "tanin", { name: "Pembina", prefix: "pmb" });
+	assert.deepEqual(JSON.parse(read(named, "ai-factory/project.json")), { name: "Pembina", prefix: "PMB" });
+	assert.match(read(named, "ai-factory/AGENTS.md"), /^# Pembina — /, "the project name heads AGENTS.md");
+	const run = spawnSync(process.execPath, [path.join(named, "ai-factory/make/ids.js"), "new", "spec", "first"], { cwd: named, encoding: "utf8" });
+	assert.equal(run.stdout, "ai-factory/specs/PMB-001-first.md\n", `an adopted repo's first spec: ${run.stderr}`);
+	// Without a name the folder's stands in, and its prefix is suggested.
+	const bare = path.join(scratch, "order-service");
+	fs.mkdirSync(bare, { recursive: true });
+	adopt(bare, plugin);
+	assert.deepEqual(JSON.parse(read(bare, "ai-factory/project.json")), { name: "order-service", prefix: "ORD" });
+	// A bad prefix is refused before anything is copied.
+	const bad = path.join(scratch, "adopt-bad");
+	fs.mkdirSync(bad, { recursive: true });
+	assert.throws(() => adopt(bad, plugin, undefined, { name: "Pembina", prefix: "AC" }), /prefix/);
+	assert.ok(!fs.existsSync(path.join(bad, "ai-factory")), "a refused adoption creates no workspace");
+	// The command line takes --name and --prefix.
+	const viaCli = path.join(scratch, "adopt-cli");
+	fs.mkdirSync(viaCli, { recursive: true });
+	const cliRun = spawnSync(process.execPath, [path.resolve("skills/ai-layout/scripts/adopt.js"), viaCli, "tanin", "--name", "Pembina", "--prefix", "PMB"], { encoding: "utf8" });
+	assert.equal(cliRun.status, 0, cliRun.stderr);
+	assert.match(cliRun.stdout, /PMB-001/, `adopt.js reports the ID form: ${cliRun.stdout}`);
+	assert.equal(JSON.parse(read(viaCli, "ai-factory/project.json")).prefix, "PMB");
 });
 
 // ---- new ----------------------------------------------------------------------------------
@@ -184,16 +253,27 @@ test("new", "new-creates", () => {
 		const before = files(root);
 		const run = cli(root, "new", kind, "csv-export");
 		assert.equal(run.status, 0, `${kind}: ${run.stderr}`);
-		const printed = run.stdout.replace(/\n$/, "");
-		assert.match(printed, new RegExp(`^ai-factory/${DIRS[kind]}/[A-HJ-NP-Z]{3}[0-9]{3}-csv-export\\.md$`), `${kind} printed '${run.stdout}'`);
-		assert.equal(run.stdout, `${printed}\n`, "stdout is exactly the path");
+		assert.equal(run.stdout, `ai-factory/${DIRS[kind]}/PMB-001-csv-export.md\n`, `${kind} prints exactly its path`);
 		const added = files(root).filter((f) => !before.includes(f));
-		assert.deepEqual(added, [printed], `${kind} creates exactly one file`);
+		assert.deepEqual(added, [`ai-factory/${DIRS[kind]}/PMB-001-csv-export.md`], `${kind} creates exactly one file`);
 	}
 	const root = fixture({ cli: true });
 	const run = cli(root, "new", "plan", "csv-export");
-	assert.equal(run.status, 2, "a plan never draws a fresh ID");
+	assert.equal(run.status, 2, "a plan never takes a new ID");
 	assert.deepEqual(files(root), ["ai-factory/adr/0000-template.md"]);
+});
+test("new", "new-sequential", () => {
+	helper("create");
+	const root = fixture({ cli: true });
+	const made = ["spec", "exploration", "design", "adr", "analysis", "risk", "spec"].map((kind, n) => {
+		const run = cli(root, "new", kind, `item-${n}`);
+		assert.equal(run.status, 0, run.stderr);
+		return run.stdout.trim();
+	});
+	assert.deepEqual(made.map(idOf), ["PMB-001", "PMB-002", "PMB-003", "PMB-004", "PMB-005", "PMB-006", "PMB-007"], "one sequence across every kind");
+	// A reuse takes no number from the sequence.
+	assert.equal(cli(root, "new", "plan", "item-0", "--id", "PMB-001").status, 0);
+	assert.equal(idOf(cli(root, "new", "spec", "after-reuse").stdout.trim()), "PMB-008");
 });
 test("new", "new-content", () => {
 	const { create } = helper("create");
@@ -204,27 +284,27 @@ test("new", "new-content", () => {
 		const after = Date.now();
 		assert.equal(run.status, 0, run.stderr);
 		const rel = run.stdout.trim();
-		const match = /^# ([A-Z]{3}[0-9]{3}) — Two lines\nCreated: (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)\n$/.exec(read(root, rel));
+		const match = /^# (PMB-[0-9]{3}) — Two lines\nCreated: (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)\n$/.exec(read(root, rel));
 		assert.ok(match, `${kind}: exactly two lines:\n${read(root, rel)}`);
 		assert.equal(match[1], idOf(rel), "the heading carries the file's ID");
 		const at = Date.parse(match[2]);
 		assert.ok(at >= before - 1000 && at <= after + 1000, `Created: ${match[2]} is the time of creation`);
 	}
 	const now = () => new Date("2026-10-24T09:08:07.006Z");
-	const made = create({ root, kind: "spec", slug: "clocked", now, random: forced("RST567"), warn: silent });
-	assert.equal(made.path, "ai-factory/specs/RST567-clocked.md");
-	assert.equal(made.id, "RST567");
-	assert.equal(read(root, made.path), "# RST567 — Clocked\nCreated: 2026-10-24T09:08:07.006Z\n");
+	const clean = fixture();
+	const made = create({ root: clean, kind: "spec", slug: "clocked", now });
+	assert.deepEqual(made, { id: "PMB-001", path: "ai-factory/specs/PMB-001-clocked.md" });
+	assert.equal(read(clean, made.path), "# PMB-001 — Clocked\nCreated: 2026-10-24T09:08:07.006Z\n");
 });
 test("new", "new-title", () => {
 	helper("create");
 	const root = fixture({ cli: true });
 	let run = cli(root, "new", "spec", "x-y", "--title", "Compact delivery status");
 	assert.equal(run.status, 0, run.stderr);
-	assert.match(read(root, run.stdout.trim()).split("\n")[0], /^# [A-Z]{3}[0-9]{3} — Compact delivery status$/);
+	assert.equal(read(root, run.stdout.trim()).split("\n")[0], "# PMB-001 — Compact delivery status");
 	run = cli(root, "new", "design", "compact-delivery-status");
 	assert.equal(run.status, 0, run.stderr);
-	assert.match(read(root, run.stdout.trim()).split("\n")[0], /^# [A-Z]{3}[0-9]{3} — Compact delivery status$/);
+	assert.equal(read(root, run.stdout.trim()).split("\n")[0], "# PMB-002 — Compact delivery status");
 	const before = files(root);
 	for (const args of [
 		["spec", "ok-slug", "--title", "two\nlines"],
@@ -257,18 +337,18 @@ test("new", "new-adr-template", () => {
 	const expected = (id, title) =>
 		[...lines.slice(0, at), `# ${id} — ${title}`, "Created: 2026-10-24T01:02:03.004Z", ...lines.slice(at + 1)].join("\n");
 	const root = fixture({ cli: true });
-	const made = create({ root, kind: "adr", slug: "use-ids", now, random: forced("TUV678"), warn: silent });
-	assert.equal(made.path, "ai-factory/adr/TUV678-use-ids.md");
-	assert.equal(read(root, made.path), expected("TUV678", "Use ids"));
+	const made = create({ root, kind: "adr", slug: "use-ids", now });
+	assert.equal(made.path, "ai-factory/adr/PMB-001-use-ids.md");
+	assert.equal(read(root, made.path), expected("PMB-001", "Use ids"));
 	assert.equal(fs.readFileSync(path.join(root, "ai-factory/adr/0000-template.md"), "utf8"), template, "the template is untouched");
 	// This repository reads its template through a symlink into skills/; the copy must too.
 	const linked = fixture({ cli: true, adr: false });
 	fs.symlinkSync(ADR_TEMPLATE, path.join(linked, "ai-factory/adr/0000-template.md"));
-	const viaLink = create({ root: linked, kind: "adr", slug: "via-link", title: "Via link", now, random: forced("WXY789"), warn: silent });
-	assert.equal(read(linked, viaLink.path), expected("WXY789", "Via link"));
+	const viaLink = create({ root: linked, kind: "adr", slug: "via-link", title: "Via link", now });
+	assert.equal(read(linked, viaLink.path), expected("PMB-001", "Via link"));
 	const run = cli(linked, "new", "adr", "from-cli");
 	assert.equal(run.status, 0, run.stderr);
-	assert.match(read(linked, run.stdout.trim()), /^# [A-Z]{3}[0-9]{3} — From cli\nCreated: \S+Z\n/);
+	assert.match(read(linked, run.stdout.trim()), /^# PMB-002 — From cli\nCreated: \S+Z\n/);
 	const missing = fixture({ cli: true, adr: false });
 	assert.notEqual(cli(missing, "new", "adr", "no-template").status, 0, "an ADR without its template fails");
 	assert.deepEqual(files(missing), [], "and creates nothing");
@@ -285,39 +365,41 @@ test("new", "new-exclusive", () => {
 			fs.writeFileSync(target, "written by another session\n");
 		}
 	};
-	const made = create({ root, kind: "spec", slug: "race", random: forced("BCD234", "KLM789"), beforeOpen, warn: silent });
+	const made = create({ root, kind: "spec", slug: "race", beforeOpen });
 	assert.ok(occupied, "the pre-open callback ran");
-	assert.equal(path.relative(root, occupied).split(path.sep).join("/"), "ai-factory/specs/BCD234-race.md");
+	assert.equal(path.relative(root, occupied).split(path.sep).join("/"), "ai-factory/specs/PMB-001-race.md");
 	assert.equal(fs.readFileSync(occupied, "utf8"), "written by another session\n", "the file is not overwritten");
-	assert.equal(made.path, "ai-factory/specs/KLM789-race.md", "the helper redraws and creates a different file");
-	assert.match(read(root, made.path), /^# KLM789 — Race\n/);
+	assert.equal(made.path, "ai-factory/specs/PMB-002-race.md", "the helper takes the next number and creates a different file");
+	assert.match(read(root, made.path), /^# PMB-002 — Race\n/);
 	assert.ok(calls >= 2);
 });
 test("new", "new-parallel", async () => {
 	const { create } = helper("create");
-	// Deterministic window first: another session creates BCD234 with another slug after this
-	// one's draw scanned the tree and before it reserved the ID. The recheck must catch it.
+	// Deterministic window first: another session creates PMB-001 with another slug after this
+	// one scanned the tree and before it reserved the number. The recheck must catch it.
 	const window = fixture();
-	const replay = forced("BCD234", "KLM789");
-	let draws = 0;
-	const random = (n) => {
-		const value = replay(n);
-		if (++draws === 6) touch(window, "ai-factory/specs/BCD234-other-session.md", "# BCD234 — Other session\n");
-		return value;
+	let once = false;
+	const beforeReserve = (id) => {
+		if (once) return;
+		once = true;
+		assert.equal(id, "PMB-001");
+		touch(window, "ai-factory/specs/PMB-001-other-session.md", "# PMB-001 — Other session\n");
 	};
-	const won = create({ root: window, kind: "spec", slug: "this-session", random, warn: silent });
-	assert.equal(won.path, "ai-factory/specs/KLM789-this-session.md", "an ID used between draw and reservation is redrawn");
+	const won = create({ root: window, kind: "spec", slug: "this-session", beforeReserve });
+	assert.equal(won.path, "ai-factory/specs/PMB-002-this-session.md", "a number used between scan and reservation is passed over");
+	// A number another live session has reserved is passed over too, and its reservation kept.
+	const held = fixture();
+	touch(held, "ai-factory/runs/tmp/ids/PMB-001", "1\n");
+	assert.equal(create({ root: held, kind: "spec", slug: "beside" }).path, "ai-factory/specs/PMB-002-beside.md");
+	assert.ok(fs.existsSync(path.join(held, "ai-factory/runs/tmp/ids/PMB-001")), "another session's reservation is left alone");
 	const root = fixture();
 	const wrapper = path.join(root, "wrapper.js");
-	// Each wrapper waits for the same instant, then creates a spec whose first draw is BCD234.
+	// Each wrapper waits for the same instant, then creates a spec: all of them first see PMB-001.
 	fs.writeFileSync(wrapper, `
 const { create } = require(${JSON.stringify(HELPER)});
-const LETTERS = ${JSON.stringify(LETTERS)};
-const queue = [..."BCD234"].map((c, i) => (i < 3 ? LETTERS.indexOf(c) : Number(c)));
-const random = (n) => (queue.length ? queue.shift() : require("node:crypto").randomInt(n));
 const start = Number(process.argv[2]);
 while (Date.now() < start);
-const made = create({ root: ${JSON.stringify(root)}, kind: "spec", slug: "session-" + process.argv[3], random, warn: () => {} });
+const made = create({ root: ${JSON.stringify(root)}, kind: "spec", slug: "session-" + process.argv[3] });
 process.stdout.write(made.path);
 `);
 	const start = Date.now() + 1500;
@@ -335,8 +417,7 @@ process.stdout.write(made.path);
 	for (const r of runs) assert.equal(r.status, 0, `session ${r.n}: ${r.err}`);
 	const made = files(root).filter((f) => f.startsWith("ai-factory/specs/"));
 	assert.equal(made.length, 8, `eight files:\n${made.join("\n")}`);
-	assert.equal(new Set(made.map(idOf)).size, 8, `eight distinct IDs:\n${made.join("\n")}`);
-	assert.ok(made.some((f) => idOf(f) === "BCD234"), "one session won the shared first draw");
+	assert.deepEqual(made.map(idOf).sort(), Array.from({ length: 8 }, (_, n) => `PMB-00${n + 1}`), `PMB-001 to PMB-008, once each:\n${made.join("\n")}`);
 	for (const r of runs) {
 		assert.ok(made.includes(r.out), `session ${r.n} printed its own file '${r.out}'`);
 		assert.ok(r.out.endsWith(`-session-${r.n}.md`));
@@ -345,11 +426,8 @@ process.stdout.write(made.path);
 	assert.deepEqual(fs.readdirSync(path.join(root, "ai-factory/runs/tmp/ids")), [], "every reservation is released");
 });
 
+
 // ---- reuse --------------------------------------------------------------------------------
-// A reuse never draws: a random source that is called fails the case.
-const noDraw = () => {
-	throw new Error("a reuse drew a fresh ID");
-};
 test("reuse", "reuse-permitted-parents", () => {
 	helper("create");
 	for (const [kind, parent] of [["spec", "explorations"], ["spec", "analyses"], ["plan", "specs"], ["risk", "specs"]]) {
@@ -366,7 +444,7 @@ test("reuse", "reuse-permitted-parents", () => {
 	const { create } = helper("create");
 	const seam = fixture();
 	touch(seam, "ai-factory/specs/KXT204-parent.md");
-	const made = create({ root: seam, kind: "plan", slug: "seam", id: "KXT204", random: noDraw, warn: silent });
+	const made = create({ root: seam, kind: "plan", slug: "seam", id: "KXT204" });
 	assert.deepEqual(made, { id: "KXT204", path: "ai-factory/plans/KXT204-seam.md" });
 	// No parent, or only a parent of a kind that does not count: nothing, and the parent is named.
 	for (const [kind, present, named] of [
@@ -390,7 +468,7 @@ test("reuse", "reuse-permitted-parents", () => {
 		assert.deepEqual(files(root), before, `${label} creates nothing`);
 	}
 	// A malformed --id is refused before anything is read.
-	for (const bad of ["KX204", "KXT2045", "KXT-204", "", "../KXT204", "001", "00010"]) {
+	for (const bad of ["KX204", "KXT2045", "P-001", "PMBXYZ-001", "PMB-", "PMB-12a", "PMB_001", "", "../KXT204", "001", "00010"]) {
 		const root = fixture({ cli: true });
 		touch(root, "ai-factory/specs/KXT204-parent.md");
 		const run = cli(root, "new", "plan", "bad-id", "--id", bad);
@@ -412,7 +490,7 @@ test("reuse", "reuse-refused-kinds", () => {
 		assert.equal(run.stdout, "");
 		assert.match(run.stderr, new RegExp(kind), `the refusal names the kind: ${run.stderr}`);
 		assert.deepEqual(files(root), before, `${kind} --id creates nothing`);
-		assert.throws(() => create({ root, kind, slug: "again", id: "KXT204", random: noDraw, warn: silent }), new RegExp(kind));
+		assert.throws(() => create({ root, kind, slug: "again", id: "KXT204" }), new RegExp(kind));
 		assert.deepEqual(files(root), before);
 	}
 });
@@ -474,17 +552,29 @@ test("reuse", "reuse-case-insensitive", () => {
 	const spec = cli(lower, "new", "spec", "idea", "--id", "KXT204");
 	assert.equal(spec.status, 0, spec.stderr);
 	assert.equal(spec.stdout, "ai-factory/specs/KXT204-idea.md\n");
+	// A prefixed ID in any case, with or without its zeros, is one ID in its written form.
+	const prefixed = fixture({ cli: true });
+	touch(prefixed, "ai-factory/explorations/PMB-004-idea.md");
+	for (const [kind, id, want] of [["spec", "pmb-4", "specs"], ["plan", "PMB-04", "plans"], ["risk", "Pmb-004", "risks"]]) {
+		const run = cli(prefixed, "new", kind, "idea", "--id", id);
+		assert.equal(run.status, 0, `${kind} --id ${id}: ${run.stderr}`);
+		assert.equal(run.stdout, `ai-factory/${want}/PMB-004-idea.md\n`, `${kind} --id ${id} is written PMB-004`);
+	}
+	assert.equal(cli(prefixed, "new", "plan", "again", "--id", "pmb-0004").status, 3, "PMB-0004 is the plan's PMB-004");
+	// Another prefix (a renamed project, or a parent from another repo's numbering) is reused as it is.
+	touch(prefixed, "ai-factory/explorations/OLD-012-before.md");
+	assert.equal(cli(prefixed, "new", "spec", "before", "--id", "OLD-012").stdout, "ai-factory/specs/OLD-012-before.md\n");
 });
 test("reuse", "reuse-legacy-plan", () => {
 	helper("create");
 	for (const kind of ["plan", "risk"]) {
 		const root = fixture({ cli: true });
-		touch(root, "ai-factory/specs/0010-t4-state.md", "# 0010 — T4 state\n");
-		const run = cli(root, "new", kind, "t4-state", "--id", "0010");
+		touch(root, "ai-factory/specs/0010-fc-state.md", "# 0010 — FC state\n");
+		const run = cli(root, "new", kind, "fc-state", "--id", "0010");
 		assert.equal(run.status, 0, `${kind} --id 0010: ${run.stderr}`);
-		const rel = `ai-factory/${DIRS[kind]}/0010-t4-state.md`;
+		const rel = `ai-factory/${DIRS[kind]}/0010-fc-state.md`;
 		assert.equal(run.stdout, `${rel}\n`);
-		assert.match(read(root, rel), /^# 0010 — T4 state\nCreated: \S+Z\n$/);
+		assert.match(read(root, rel), /^# 0010 — Fc state\nCreated: \S+Z\n$/);
 		const again = cli(root, "new", kind, "other", "--id", "0010");
 		assert.equal(again.status, 3, "a legacy plan is one per spec too");
 		assert.equal(again.stdout, `${rel}\n`);
@@ -512,7 +602,7 @@ test("reuse", "reuse-reservation", () => {
 	touch(root, "ai-factory/runs/tmp/ids/plan-KXT204", "99999\n");
 	const old = new Date(Date.now() - 24 * 3600 * 1000);
 	fs.utimesSync(stale, old, old);
-	const made = create({ root, kind: "plan", slug: "after-crash", id: "KXT204", random: noDraw, warn: silent });
+	const made = create({ root, kind: "plan", slug: "after-crash", id: "KXT204" });
 	assert.equal(made.path, "ai-factory/plans/KXT204-after-crash.md");
 	assert.ok(!fs.existsSync(stale), "the reclaimed reservation is released");
 	// A live reservation held by another session is waited on, then refused: nothing is created.
@@ -520,7 +610,7 @@ test("reuse", "reuse-reservation", () => {
 	touch(busy, "ai-factory/specs/KXT204-parent.md");
 	touch(busy, "ai-factory/runs/tmp/ids/plan-KXT204", "1\n");
 	const before = files(busy);
-	assert.throws(() => create({ root: busy, kind: "plan", slug: "blocked", id: "KXT204", random: noDraw, warn: silent }), /KXT204/);
+	assert.throws(() => create({ root: busy, kind: "plan", slug: "blocked", id: "KXT204" }), /KXT204/);
 	assert.deepEqual(files(busy), before, "a busy reuse creates nothing");
 	assert.ok(fs.existsSync(path.join(busy, "ai-factory/runs/tmp/ids/plan-KXT204")), "another session's live reservation is left alone");
 	// A reuse holds a kind-scoped key: a fresh draw of the same ID by another kind is not blocked
@@ -528,7 +618,7 @@ test("reuse", "reuse-reservation", () => {
 	const both = fixture();
 	touch(both, "ai-factory/specs/KXT204-parent.md");
 	touch(both, "ai-factory/runs/tmp/ids/plan-KXT204", "1\n");
-	assert.equal(create({ root: both, kind: "risk", slug: "beside", id: "KXT204", random: noDraw, warn: silent }).path, "ai-factory/risks/KXT204-beside.md");
+	assert.equal(create({ root: both, kind: "risk", slug: "beside", id: "KXT204" }).path, "ai-factory/risks/KXT204-beside.md");
 });
 test("reuse", "reuse-parallel", async () => {
 	helper("create");
@@ -648,9 +738,14 @@ test("check", "check-same-kind", () => {
 		["two designs", "ai-factory/designs/DHW631-a.md", "ai-factory/designs/DHW631-b.md"],
 		["two ADRs", "ai-factory/adr/DHW631-a.md", "ai-factory/adr/DHW631-b.md"],
 		["two risks", "ai-factory/risks/DHW631-a.md", "ai-factory/risks/DHW631-b.md"],
+		["two prefixed specs", "ai-factory/specs/PMB-001-a.md", "ai-factory/specs/PMB-001-b.md"],
+		["two prefixed specs, case apart", "ai-factory/specs/PMB-001-a.md", "ai-factory/specs/pmb-001-b.md"],
+		["two prefixed specs, zeros apart", "ai-factory/specs/PMB-001-a.md", "ai-factory/specs/PMB-0001-b.md"],
+		["two prefixed designs", "ai-factory/designs/PMB-002-a.md", "ai-factory/designs/PMB-002-b.md"],
 	]) {
 		const entries = { [a]: null, [b]: null, "ai-factory/specs/KLM789-other.md": null };
 		if (/\/(plans|risks)\//.test(a)) entries["ai-factory/specs/DHW631-a.md"] = null;
+		entries["ai-factory/specs/PMB-009-other.md"] = null;
 		const r = expectCheck(tree(entries), label, [a, b]);
 		assert.ok(!r.paths.includes("ai-factory/specs/KLM789-other.md"), `${label}: an unrelated file is not named`);
 	}
@@ -668,6 +763,10 @@ test("check", "check-permitted", () => {
 		["exploration, spec, plan and risk", ["ai-factory/explorations/KXT204-idea.md", "ai-factory/specs/KXT204-idea.md", "ai-factory/plans/KXT204-idea.md", "ai-factory/risks/KXT204-idea.md"]],
 		["one of each kind alone", ["ai-factory/designs/DHW631-a.md", "ai-factory/adr/BCD234-a.md", "ai-factory/explorations/EFG345-a.md", "ai-factory/analyses/HJK456-a.md", "ai-factory/specs/LMN567-a.md"]],
 		["mixed case", ["ai-factory/explorations/kxt204-idea.md", "ai-factory/specs/KXT204-idea.md", "ai-factory/plans/Kxt204-idea.md"]],
+		["prefixed exploration, spec, plan and risk", ["ai-factory/explorations/PMB-003-idea.md", "ai-factory/specs/PMB-003-idea.md", "ai-factory/plans/PMB-003-idea.md", "ai-factory/risks/PMB-003-idea.md"]],
+		["prefixed one of each kind alone", ["ai-factory/designs/PMB-001-a.md", "ai-factory/adr/PMB-002-a.md", "ai-factory/explorations/PMB-003-a.md", "ai-factory/analyses/PMB-004-a.md", "ai-factory/specs/PMB-005-a.md"]],
+		["prefixed beside legacy IDs with the same digits", ["ai-factory/specs/PMB-631-a.md", "ai-factory/specs/DHW631-a.md", "ai-factory/specs/0631-a.md"]],
+		["two prefixes with one number", ["ai-factory/specs/PMB-001-a.md", "ai-factory/specs/OLD-001-a.md"]],
 	])
 		expectCheck(tree(Object.fromEntries(entries.map((e) => [e, null]))), label);
 	// AC22: a spec shares its exploration's ID and cites an analysis with another ID.
@@ -696,6 +795,9 @@ test("check", "check-cross-kind", () => {
 		["done plan and risk with no spec", ["ai-factory/plans/done/KXT204-a.md", "ai-factory/risks/KXT204-a.md"]],
 		["exploration and plan with no spec", ["ai-factory/explorations/KXT204-a.md", "ai-factory/plans/KXT204-a.md"]],
 		["analysis and risk with no spec", ["ai-factory/analyses/KXT204-a.md", "ai-factory/risks/KXT204-a.md"]],
+		["prefixed design and spec", ["ai-factory/designs/PMB-004-a.md", "ai-factory/specs/PMB-004-a.md"]],
+		["prefixed ADR and exploration", ["ai-factory/adr/PMB-004-a.md", "ai-factory/explorations/PMB-004-b.md"]],
+		["prefixed plan and risk with no spec", ["ai-factory/plans/PMB-004-a.md", "ai-factory/risks/PMB-004-a.md"]],
 	])
 		expectCheck(tree(Object.fromEntries(entries.map((e) => [e, null]))), label, entries);
 	// Every clash is reported, not only the first.
@@ -733,6 +835,7 @@ test("check", "check-undated-warn", () => {
 		"ai-factory/risks/BCD234-date.md": "# BCD234 — Date only\nCreated: 2026-10-24\n",
 		"ai-factory/explorations/DEF456-line3.md": "# DEF456 — Line three\n\nCreated: 2026-10-24T09:08:07.006Z\n",
 		"ai-factory/analyses/EFG567-word.md": "# EFG567 — Word\nCreated: yesterday\n",
+		"ai-factory/designs/PMB-001-undated.md": "# PMB-001 — Undated\n",
 	};
 	const dated = { "ai-factory/specs/FGH678-dated.md": null, "ai-factory/specs/GHJ789-seconds.md": "# GHJ789 — Seconds\nCreated: 2026-10-24T09:08:07Z\nbody\n", "ai-factory/specs/0001-legacy.md": "# 0001\n" };
 	const root = tree({ ...bodies, ...dated });
@@ -761,7 +864,7 @@ test("repo", "repo-passes", () => {
 });
 
 // ---- state --------------------------------------------------------------------------------
-// /t4:state reads both ID forms (AC28–AC31, AC34, AC35). Fixtures are plain directories under the
+// /fc:state reads both ID forms (AC28–AC31, AC34, AC35). Fixtures are plain directories under the
 // scratch root; none of these cases asks --next, so no git history is needed.
 const STATE = path.resolve("skills/ai-layout/scripts/state.sh");
 const HEADER_ID = "kind\tid\tstate\tpath\tstep\tdetail";
@@ -825,18 +928,18 @@ test("state", "state-legacy-unchanged", () => {
 });
 test("state", "state-legacy-spec-forms", () => {
 	const root = stateTree({
-		"ai-factory/specs/0010-t4-state.md": "# 0010 — T4 state\n",
-		"ai-factory/plans/0010-t4-state.md": planText("Plan 0010 — T4 state", "ai-factory/specs/0010-t4-state.md", ["- [x] Step 1 — the scan.", "- [ ] Step 2 — the prompt."]),
-		"ai-factory/plans/done/0010-earlier.md": planText("Plan 0010 — earlier", "ai-factory/specs/0010-t4-state.md", ["- [x] Step 1 — first pass."]),
+		"ai-factory/specs/0010-fc-state.md": "# 0010 — FC state\n",
+		"ai-factory/plans/0010-fc-state.md": planText("Plan 0010 — FC state", "ai-factory/specs/0010-fc-state.md", ["- [x] Step 1 — the scan.", "- [ ] Step 2 — the prompt."]),
+		"ai-factory/plans/done/0010-earlier.md": planText("Plan 0010 — earlier", "ai-factory/specs/0010-fc-state.md", ["- [x] Step 1 — first pass."]),
 		"ai-factory/specs/0011-other.md": "# 0011 — Other\n",
 		"ai-factory/plans/0011-other.md": planText("Plan 0011 — Other", "ai-factory/specs/0011-other.md", ["- [ ] Step 1 — elsewhere."]),
 	});
 	const want = [
-		row("plan", "0010", "not-started", "ai-factory/plans/0010-t4-state.md", "Step 2", "the prompt."),
+		row("plan", "0010", "not-started", "ai-factory/plans/0010-fc-state.md", "Step 2", "the prompt."),
 		row("plan", "0010", "complete", "ai-factory/plans/done/0010-earlier.md", "-", "Plan 0010 — earlier"),
-		row("spec", "0010", "part-done", "ai-factory/specs/0010-t4-state.md", "-", "0010 — T4 state"),
+		row("spec", "0010", "part-done", "ai-factory/specs/0010-fc-state.md", "-", "0010 — FC state"),
 	];
-	for (const spelling of ["0010", "10", "0010-t4-state", "ai-factory/specs/0010-t4-state.md"])
+	for (const spelling of ["0010", "10", "0010-fc-state", "ai-factory/specs/0010-fc-state.md"])
 		assert.deepEqual(body(state(root, "--spec", spelling)), want, `--spec ${spelling}`);
 });
 test("state", "state-spec-case-insensitive", () => {
@@ -858,6 +961,33 @@ test("state", "state-spec-case-insensitive", () => {
 	const none = refusal(root, "--spec", "zzz999");
 	assert.match(none, /ZZZ999/, `the answer names the ID it looked for: ${none}`);
 	assert.doesNotMatch(none, /is not a spec/, `a well-formed ID is not refused as malformed: ${none}`);
+});
+test("state", "state-prefixed-ids", () => {
+	const root = stateTree({
+		"ai-factory/specs/PMB-012-foo.md": "# PMB-012 — Foo\nCreated: 2026-10-24T09:08:07.006Z\n",
+		"ai-factory/plans/PMB-012-foo.md": planText("PMB-012 — Foo", "ai-factory/specs/PMB-012-foo.md", ["- [x] Step 1 — begun.", "- [ ] Step 2 — the rest."]),
+		// Paired by ID with no **Spec:** line, case-insensitively.
+		"ai-factory/specs/pmb-013-bar.md": "# PMB-013 — Bar\nCreated: 2026-10-25T09:08:07.006Z\n",
+		"ai-factory/plans/done/PMB-013-bar.md": planText("PMB-013 — Bar", null, ["- [x] Step 1 — finished."]),
+		// Shares digits only: neither pairs with nor is selected as PMB-012.
+		"ai-factory/specs/0012-legacy.md": "# 0012 — Legacy\n",
+		"ai-factory/specs/DHW012-random.md": "# DHW012 — Random\nCreated: 2026-10-23T09:08:07.006Z\n",
+	});
+	const want = [
+		row("plan", "PMB-012", "not-started", "ai-factory/plans/PMB-012-foo.md", "Step 2", "the rest."),
+		row("spec", "PMB-012", "part-done", "ai-factory/specs/PMB-012-foo.md", "-", "PMB-012 — Foo"),
+	];
+	for (const spelling of ["PMB-012", "pmb-012", "PMB-12", "pmb-0012", "PMB-012-foo", "pmb-012-foo", "ai-factory/specs/PMB-012-foo.md"])
+		assert.deepEqual(body(state(root, "--spec", spelling)), want, `--spec ${spelling}`);
+	assert.deepEqual(body(state(root, "--specs", "--done")), [row("spec", "PMB-013", "complete", "ai-factory/specs/pmb-013-bar.md", "-", "PMB-013 — Bar")]);
+	// Legacy numbers first, then every dated new-style ID by its Created: instant, whatever its form.
+	assert.deepEqual(body(state(root, "--specs")).map((r) => r.split("\t")[1]), ["0012", "DHW012", "PMB-012"]);
+	const none = refusal(root, "--spec", "PMB-099");
+	assert.match(none, /PMB-099/, `the answer names the ID it looked for: ${none}`);
+	assert.doesNotMatch(none, /is not a spec/, `a well-formed ID is not refused as malformed: ${none}`);
+	// --next on a tie: a prefixed ID before a legacy number, as for a letter-and-digit one.
+	const tie = stateTree({ "ai-factory/specs/0001-legacy.md": "# 0001 — Legacy\n", "ai-factory/specs/PMB-001-new.md": dated("PMB-001 — New", stamp("2026-01-01T00:00:00.000Z")) });
+	assert.equal(next(tie).row, notStarted("PMB-001", "ai-factory/specs/PMB-001-new.md", "PMB-001 — New"));
 });
 test("state", "state-pair-by-id", () => {
 	const root = stateTree({
@@ -889,7 +1019,7 @@ test("state", "state-id-field", () => {
 	const prompt = read(path.resolve("."), "commands/state.md");
 	assert.match(prompt, /`kind`, `id`, `state`, `path`, `step`, `detail`/, "commands/state.md names the six fields with id second");
 	assert.doesNotMatch(prompt, /`number`/, "commands/state.md still names a `number` field");
-	for (const rel of ["commands/state.md", "codex-skills/t4-state/SKILL.md"]) {
+	for (const rel of ["commands/state.md", "codex-skills/fc-state/SKILL.md"]) {
 		const text = read(path.resolve("."), rel);
 		assert.match(text, /--spec <id>/, `${rel} describes --spec <id>`);
 		assert.doesNotMatch(text, /--spec <number>/, `${rel} still describes --spec <number>`);
@@ -902,10 +1032,11 @@ test("state", "state-usage-messages", () => {
 		["--spec followed by a flag", ["--spec", "--done"]],
 		["--spec with a word", ["--spec", "weir"]],
 		["--spec with a malformed ID", ["--spec", "DH631"]],
-		["--spec given twice", ["--spec", "DHW631", "--spec", "0002"]],
+		["--spec given twice", ["--spec", "PMB-001", "--spec", "0002"]],
+		["--spec with a one-letter prefix", ["--spec", "P-001"]],
 	]) {
 		const line = refusal(root, ...args);
-		assert.match(line, /--spec DHW631\b/, `${label}: the message gives a new-style example: ${line}`);
+		assert.match(line, /--spec PMB-001\b/, `${label}: the message gives a prefixed example: ${line}`);
 		assert.doesNotMatch(line, /--spec 0010|spec number/, `${label}: the message still speaks of spec numbers: ${line}`);
 	}
 	assert.match(refusal(root, "--spec", "weir"), /is not a spec ID/, "a non-ID is named as not a spec ID");
@@ -973,7 +1104,7 @@ function gitTree(entries) {
 	// An inherited hook environment must not point these commands at another repository.
 	const { GIT_DIR, GIT_WORK_TREE, GIT_INDEX_FILE, ...clean } = process.env;
 	const git = (env, ...args) => {
-		const run = spawnSync("git", ["-c", "user.name=t4", "-c", "user.email=t4@example.invalid", "-c", "commit.gpgsign=false", ...args], {
+		const run = spawnSync("git", ["-c", "user.name=fc", "-c", "user.email=fc@example.invalid", "-c", "commit.gpgsign=false", ...args], {
 			cwd: root,
 			encoding: "utf8",
 			env: { ...clean, ...env },
@@ -1123,7 +1254,8 @@ test("procedures", "specifier-parent-rules", () => {
 	for (const [rel, text] of agentTexts("specifier")) {
 		const write = section(text, "## What you may write");
 		const rule = (pattern, what) => assert.match(write, pattern, `${rel}: ${what}`);
-		rule(/three letters and three digits/, "says what a new-style ID looks like");
+		rule(/prefix, a dash and a number[^.]*`PMB-012`/, "says what a new-style ID looks like");
+		rule(/legacy random ID[^.]*counts as new-style/, "a legacy letter-and-digit parent lends its ID too");
 		// AC21: one new-style parent lends its ID.
 		rule(/new-style exploration[^.]*`--id <exploration ID>`/, "a new-style exploration lends its ID");
 		rule(/new-style analysis[^.]*`--id <analysis ID>`/, "a new-style analysis lends its ID");
@@ -1138,6 +1270,23 @@ test("procedures", "specifier-parent-rules", () => {
 	}
 	const task = taskText("spec");
 	assert.match(task, /`--id`/, "tasks/spec.md hands the parent rule on");
+});
+test("procedures", "unconfigured-asks-then-inits", () => {
+	// Every agent that can create without --id handles exit 4: ask, init, retry; headless, stop.
+	for (const name of ["specifier", "explorer", "analyst", "architect", "risk"])
+		for (const [rel, text] of agentTexts(name)) {
+			const write = section(text, "## What you may write");
+			assert.match(write, /exits 4[^.]*no ID prefix/, `${rel}: says what exit 4 means`);
+			assert.match(write, /ask the developer for the project name and a prefix/, `${rel}: asks for the name and prefix`);
+			assert.match(write, /`node ai-factory\/make\/ids\.js suggest "<name>"`/, `${rel}: suggests a prefix with the helper`);
+			assert.match(write, /`node ai-factory\/make\/ids\.js init --name "<name>" --prefix <PREFIX>`, then run the helper again/, `${rel}: inits, then retries`);
+			assert.match(write, /headless run, write nothing/, `${rel}: a headless run writes nothing`);
+		}
+	const adopt = fs.readFileSync("commands/adopt-sdlc.md", "utf8");
+	assert.match(adopt, /[Aa]sk for the project name and the artefact prefix/, "adoption asks for the name and prefix");
+	assert.match(adopt, /ids\.js" suggest "<name>"/, "adoption suggests the prefix with the helper");
+	assert.match(adopt, /adopt\.js" \. \[owner\] --name "<name>" --prefix <PREFIX>/, "adoption passes both to adopt.js");
+	assert.match(adopt, /headless run, ask nothing/, "a headless adoption asks nothing");
 });
 test("procedures", "agents-keep-header", () => {
 	for (const name of Object.keys(CREATORS))
@@ -1198,15 +1347,18 @@ test("docs", "changelog-breaking-note", () => {
 	// While unreleased the block says it bumps no version; once released, its version heading carries it.
 	if (/^\*\*Unreleased\b/.test(block)) assert.match(block, /no version bump/, "the block bumps no version");
 	assert.match(block, /[Bb]reaking for adopted repos/, "marks the change breaking for adopted repos");
-	assert.match(block, /`\[A-Z\]\{3\}\[0-9\]\{3\}`/, "describes the ID format as [A-Z]{3}[0-9]{3}");
-	assert.match(block, /three letters and three digits/, "describes the ID format in words");
+	assert.match(block, /`<PREFIX>-<NNN>`/, "describes the ID format as <PREFIX>-<NNN>");
+	assert.match(block, /`PMB-001`/, "gives an example ID");
+	assert.match(block, /next free number/, "says the number is sequential");
+	assert.match(block, /`ai-factory\/project\.json`/, "names ai-factory/project.json");
+	assert.match(block, /`node ai-factory\/make\/ids\.js init --name "<Project>" --prefix <ABC>`/, "gives the init command for an adopted repo");
+	assert.match(block, /exits 4/, "names the new exit code");
 	assert.match(block, /[Ll]egacy files stay valid/, "says legacy files stay valid");
-	assert.match(block, /not renamed|never renamed|is renamed/, "says no legacy file is renamed");
-	assert.match(block, /`\/t4:state`[^\n]*`number` → `id`/, "describes the /t4:state number → id rename");
+	assert.match(block, /not renamed|never renamed/, "says no legacy file is renamed");
+	assert.match(block, /`DHW631`/, "says letter-and-digit IDs stay valid");
 	assert.match(block, /`make -f ai-factory\/make\/ai\.mk ids-check`/, "names the ids-check make target");
-	assert.match(block, /`ai-factory\/ids-deny\.txt`/, "names the optional ai-factory/ids-deny.txt");
-	assert.match(block, /[Oo]ptional `ai-factory\/ids-deny\.txt`/, "says ids-deny.txt is optional");
-	assert.match(block, /exits 1[^.]*make reports[^.]*exit 2/, "says make reports ids.js check's exit 1 as 2");
+	assert.match(block, /`ai-factory\/ids-deny\.txt` is no longer read/, "says ids-deny.txt is no longer read");
+	assert.match(block, /`\/fc:loop`/, "says /fc:loop selects the new IDs");
 });
 test("docs", "docs-spec-id", () => {
 	for (const rel of ["README.md", "FACTORY.md", "ai-factory/docs/workflow.md"]) {
@@ -1218,7 +1370,10 @@ test("docs", "docs-spec-id", () => {
 		const text = fs.readFileSync(rel, "utf8");
 		assert.match(text, /ids\.js/, `${rel} names ids.js`);
 		assert.match(text, /ids-check/, `${rel} names ids-check`);
-		assert.match(text, /ids-deny\.txt/, `${rel} names the optional ids-deny.txt`);
+		assert.match(text, /project\.json/, `${rel} names ai-factory/project.json`);
+		assert.match(text, /PMB-001/, `${rel} shows a prefixed ID`);
+		assert.doesNotMatch(text, /ids-deny\.txt/, `${rel} still names ids-deny.txt`);
+		assert.doesNotMatch(text, /`\[A-Z\]\{3\}\[0-9\]\{3\}`/, `${rel} still gives the random ID format`);
 	}
 });
 

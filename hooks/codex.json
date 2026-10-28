@@ -1,5 +1,5 @@
 {
-  "description": "Codex lifecycle adapters for shared t4 logging and path protection. Review and trust these hooks in Codex before use.",
+  "description": "Codex lifecycle adapters for shared fc logging and path protection. Review and trust these hooks in Codex before use.",
   "hooks": {
     "SessionStart": [
       {

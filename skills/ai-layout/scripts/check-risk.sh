@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# The risk agent and /t4:risk (spec 0023, plan 0023): pins the ADR that records the spec 0012
+# The risk agent and /fc:risk (spec 0023, plan 0023): pins the ADR that records the spec 0012
 # AC10 exception, and later the agent, the task, the risks/ directory, the routing entry, the
-# knowledge seam, the consumers, /t4:start's suggestion and the docs.
+# knowledge seam, the consumers, /fc:start's suggestion and the docs.
 #
 # Groups: adr, agent, task, layout, routing, knowledge, consumers, start, docs (default: every
 # group). Each case reports a missing file as its own failure, never as a crash, so the red run
@@ -62,7 +62,7 @@ test("adr", "adr-records-audit-exception", () => {
 	const [{ rel, text }] = naming;
 	const flat = flatten(text);
 	assert.match(text, /^(?:.*·\s*)?Status:\s*accepted\b/m, `${rel} has no 'Status: accepted' line`);
-	assert.match(flat, /`risk` agent|\brisk agent\b|`t4:risk`/i, `${rel} does not name the risk agent`);
+	assert.match(flat, /`risk` agent|\brisk agent\b|`fc:risk`/i, `${rel} does not name the risk agent`);
 	assert.ok(
 		AUDIT_TOOLS.some((tool) => flat.includes(tool)),
 		`${rel} names none of the audit tools ${AUDIT_TOOLS.join(", ")}`,
@@ -246,7 +246,7 @@ test("agent", "no-old-names", () => {
 	assert.deepEqual(bad, [], `added paths use an old name: ${bad.join(", ")}`);
 	if (fs.existsSync(AGENT)) {
 		const text = fs.readFileSync(AGENT, "utf8");
-		for (const pattern of [/\bassessor\b/i, /\bassessments\b/i, /\/t4:assess\b/, /`assess`/, /\bt4-assess\b/, /TASK=assess\b/])
+		for (const pattern of [/\bassessor\b/i, /\bassessments\b/i, /\/fc:assess\b/, /`assess`/, /\bfc-assess\b/, /TASK=assess\b/])
 			assert.doesNotMatch(text, pattern, `${AGENT} uses an old name (${pattern})`);
 	}
 });
@@ -256,7 +256,7 @@ test("agent", "no-old-names", () => {
 // the task as written is proved by the host runs of plan 0023 Step 10, not here.
 const TASK = "skills/ai-layout/templates/ai-factory/tasks/risk.md";
 const CLAUDE_COMMAND = "commands/risk.md";
-const CODEX_SKILL = "codex-skills/t4-risk/SKILL.md";
+const CODEX_SKILL = "codex-skills/fc-risk/SKILL.md";
 function taskText() {
 	if (!fs.existsSync(TASK)) throw new Error("tasks/risk.md does not exist");
 	return fs.readFileSync(TASK, "utf8");
@@ -291,7 +291,7 @@ test("task", "task-generated-both-hosts", () => {
 	assert.ok(command.includes("ai-factory/tasks/risk.md"), `${CLAUDE_COMMAND} does not load ai-factory/tasks/risk.md`);
 	assert.ok(command.includes("$ARGUMENTS"), `${CLAUDE_COMMAND} does not pass the developer's input`);
 	const skill = fs.readFileSync(CODEX_SKILL, "utf8");
-	assert.match(skill, /^name: t4-risk$/m, `${CODEX_SKILL} is not named t4-risk`);
+	assert.match(skill, /^name: fc-risk$/m, `${CODEX_SKILL} is not named fc-risk`);
 	assert.ok(skill.includes("ai-factory/tasks/risk.md"), `${CODEX_SKILL} does not load ai-factory/tasks/risk.md`);
 	assert.ok(skill.includes("ai-factory/agents/risk.md"), `${CODEX_SKILL} does not name ai-factory/agents/risk.md`);
 });
@@ -314,7 +314,7 @@ test("task", "task-native-command", () => {
 
 // ---- layout (plan 0023 Step 4: AC22, AC23) ------------------------------------------------
 // A new adoption gets ai-factory/risks/ from the templates' .gitkeep; an existing adopter gets it
-// from ids.js on the first /t4:risk write, because sync is pull-only and the manifest skips
+// from ids.js on the first /fc:risk write, because sync is pull-only and the manifest skips
 // .gitkeep. Every fixture is a disposable directory under ai-factory/runs/tmp/, and every git
 // command runs inside a scratch repo of its own, never against this one.
 const { spawnSync } = require("node:child_process");
@@ -423,7 +423,7 @@ test("layout", "ids-creates-risks-dir", () => {
 		const ids = (...args) => spawnSync(process.execPath, [path.join(repo, "ai-factory/make/ids.js"), ...args], { cwd: repo, encoding: "utf8" });
 		const spec = ids("new", "spec", "probe");
 		assert.equal(spec.status, 0, `ids.js new spec failed: ${spec.stderr.trim()}`);
-		const id = /^ai-factory\/specs\/([A-Z0-9]+)-probe\.md$/.exec(spec.stdout.trim())?.[1];
+		const id = /^ai-factory\/specs\/([A-Z]{2,5}-[0-9]{3,})-probe\.md$/.exec(spec.stdout.trim())?.[1];
 		assert.ok(id, `ids.js new spec printed no spec path: ${spec.stdout.trim()}`);
 		const risk = ids("new", "risk", "probe", "--id", id);
 		assert.equal(risk.status, 0, `ids.js new risk --id ${id} failed: ${risk.stderr.trim()}`);
@@ -568,7 +568,7 @@ test("routing", "enabled-unserved-model-errors", () => {
 		// Interactive: the routed directive for risk has the same shape as plan's.
 		const directive = (task) => {
 			const run = models.runDispatch({ root, host: "claude", task, env: {} });
-			return { status: run.status, strategy: run.result?.strategy, text: run.text.replace(/d-[0-9]{14}-[0-9a-f]{6}/g, "<id>").replace(/t4-route-[a-z]+-[0-9a-f]{10}/g, "<agent>").replaceAll(task, "<task>") };
+			return { status: run.status, strategy: run.result?.strategy, text: run.text.replace(/d-[0-9]{14}-[0-9a-f]{6}/g, "<id>").replace(/fc-route-[a-z]+-[0-9a-f]{10}/g, "<agent>").replaceAll(task, "<task>") };
 		};
 		const risk = directive("risk");
 		assert.equal(risk.strategy, "blocked", "dispatch --task risk did not stop before its routing adapter exists");
@@ -618,12 +618,12 @@ test("knowledge", "knowledge-lists-risk", () => {
 		const [agents, commands] = sentence.split(/ — /);
 		assert.ok(commands, `${rel}: the executor sentence has no agents — commands split`);
 		assert.ok(agents.includes("`risk`"), `${rel}: knowledge.md does not list risk among the agents`);
-		assert.ok(commands.includes("`/t4:risk`"), `${rel}: knowledge.md does not list /t4:risk among the commands`);
+		assert.ok(commands.includes("`/fc:risk`"), `${rel}: knowledge.md does not list /fc:risk among the commands`);
 		// The executors already listed stay listed.
 		for (const name of ["explorer", "specifier", "planner", "analyst", "architect", "reviewer"])
 			assert.ok(agents.includes(`\`${name}\``), `${rel}: the executor sentence lost \`${name}\``);
 		for (const name of ["explore", "spec", "plan", "analyse", "design", "adr", "review"])
-			assert.ok(commands.includes(`\`/t4:${name}\``), `${rel}: the executor sentence lost \`/t4:${name}\``);
+			assert.ok(commands.includes(`\`/fc:${name}\``), `${rel}: the executor sentence lost \`/fc:${name}\``);
 	}
 });
 test("knowledge", "knowledge-copies-equal", () => {
@@ -810,17 +810,17 @@ process.stdout.write(JSON.stringify(out));`;
 	});
 });
 test("consumers", "plan-task-unchanged", () => {
-	// AC29: /t4:plan is unchanged by this feature. tasks/plan.md carries uncommitted edits of plans
+	// AC29: /fc:plan is unchanged by this feature. tasks/plan.md carries uncommitted edits of plans
 	// 0022 and 0024, so `main` is no baseline for it; what this feature must not add is any rule
 	// about risk files, which lives in the planner agent alone.
 	const rel = `${TEMPLATES}/ai-factory/tasks/plan.md`;
 	const text = fs.readFileSync(rel, "utf8");
-	for (const pattern of [/ai-factory\/risks/, /\brisks\//, /\/t4:risk\b/, /`risk`/, /\bassessment\b/i, /\bmitigation/i])
-		assert.doesNotMatch(text, pattern, `${rel} mentions risk assessments (${pattern}); /t4:plan must stay unchanged`);
+	for (const pattern of [/ai-factory\/risks/, /\brisks\//, /\/fc:risk\b/, /`risk`/, /\bassessment\b/i, /\bmitigation/i])
+		assert.doesNotMatch(text, pattern, `${rel} mentions risk assessments (${pattern}); /fc:plan must stay unchanged`);
 });
 
 // ---- start (plan 0023 Step 8, AC29) -------------------------------------------------------
-// Static reads of the start task: rule 3 names /t4:risk as an optional next step only when a
+// Static reads of the start task: rule 3 names /fc:risk as an optional next step only when a
 // risk trigger is present, and the "never return commands" sentence states that one mention as
 // its only exception. The JSON contract is unchanged: the allowlist and validateStartResult stay
 // as on `main`. That the classifier obeys is proved by the host runs of plan 0023 Step 10.
@@ -836,38 +836,38 @@ function startRule(text, n) {
 	assert.ok(match, `${START} has no rule ${n}`);
 	return flatten(match[0]).trim();
 }
-// The sentence of rule 3 that names /t4:risk.
+// The sentence of rule 3 that names /fc:risk.
 function riskSuggestion(text) {
-	if (!/\/t4:risk\b/.test(text)) throw new Error("start.md never names /t4:risk");
+	if (!/\/fc:risk\b/.test(text)) throw new Error("start.md never names /fc:risk");
 	const rule = startRule(text, 3);
-	const named = sentences(rule).filter((sentence) => /\/t4:risk\b/.test(sentence));
-	assert.equal(named.length, 1, `${START}: rule 3 names /t4:risk in ${named.length} sentences, not one`);
+	const named = sentences(rule).filter((sentence) => /\/fc:risk\b/.test(sentence));
+	assert.equal(named.length, 1, `${START}: rule 3 names /fc:risk in ${named.length} sentences, not one`);
 	return named[0];
 }
 test("start", "start-rule3-suggests-risk", () => {
 	const text = startText();
 	const suggestion = riskSuggestion(text);
-	assert.match(suggestion, /\breason names \/t4:risk\b/, `${START}: rule 3 does not put /t4:risk in reason`);
-	assert.match(suggestion, /\boptional next step\b/, `${START}: rule 3 does not call /t4:risk an optional next step`);
-	// Outside rule 3, /t4:risk appears only in the exception to "Never return commands".
-	const outside = sentences(text.replace(/^3\. [\s\S]*?(?=\n\d+\. )/m, "")).filter((sentence) => /\/t4:risk\b/.test(sentence));
-	assert.equal(outside.length, 1, `${START} names /t4:risk outside rule 3 in ${outside.length} sentences; only the exception may`);
+	assert.match(suggestion, /\breason names \/fc:risk\b/, `${START}: rule 3 does not put /fc:risk in reason`);
+	assert.match(suggestion, /\boptional next step\b/, `${START}: rule 3 does not call /fc:risk an optional next step`);
+	// Outside rule 3, /fc:risk appears only in the exception to "Never return commands".
+	const outside = sentences(text.replace(/^3\. [\s\S]*?(?=\n\d+\. )/m, "")).filter((sentence) => /\/fc:risk\b/.test(sentence));
+	assert.equal(outside.length, 1, `${START} names /fc:risk outside rule 3 in ${outside.length} sentences; only the exception may`);
 	const flat = flatten(text);
 	assert.match(
 		flat,
-		/Never return commands, rewritten input, model options, or a next-phase chain\. The one exception is the optional \/t4:risk mention that rule 3 allows in reason; it is never the routed task\./,
-		`${START}: the 'Never return commands' rule does not state the /t4:risk mention as its one exception`,
+		/Never return commands, rewritten input, model options, or a next-phase chain\. The one exception is the optional \/fc:risk mention that rule 3 allows in reason; it is never the routed task\./,
+		`${START}: the 'Never return commands' rule does not state the /fc:risk mention as its one exception`,
 	);
 });
 test("start", "start-no-trigger-no-suggestion", () => {
 	// AC29, the negative: the suggestion is conditional on a risk trigger and absent without one.
 	const suggestion = riskSuggestion(startText());
-	assert.match(suggestion, /^Only when one of these risk triggers is present\b/, `${START}: the /t4:risk suggestion is not conditional on a risk trigger`);
+	assert.match(suggestion, /^Only when one of these risk triggers is present\b/, `${START}: the /fc:risk suggestion is not conditional on a risk trigger`);
 	// The negative clause follows the suggestion directly (sentences() splits it off at the ';').
 	const rule = startRule(startText(), 3);
 	assert.ok(
 		rule.includes(`${suggestion} with no risk trigger, reason never names it.`),
-		`${START}: rule 3 does not say, right after the suggestion, that reason omits /t4:risk with no risk trigger`,
+		`${START}: rule 3 does not say, right after the suggestion, that reason omits /fc:risk with no risk trigger`,
 	);
 	// The triggers the condition refers to are rule 3's own list.
 	for (const trigger of ["uncertain requirements", "authorization", "public contracts", "migrations", "dependencies", "service ownership"])
@@ -882,8 +882,8 @@ test("start", "start-allowlist-unchanged", () => {
 	assert.throws(() => m.validateStartResult({ status: "route", task: "risk", reason: "x" }), /invalid start result/, "validateStartResult accepts task risk");
 	// The suggestion is data in reason, so a planned route that names it still validates.
 	assert.deepEqual(
-		m.validateStartResult({ status: "route", task: "spec", reason: "Touches authorization. Optional next step: /t4:risk." }),
-		{ status: "route", task: "spec", reason: "Touches authorization. Optional next step: /t4:risk." },
+		m.validateStartResult({ status: "route", task: "spec", reason: "Touches authorization. Optional next step: /fc:risk." }),
+		{ status: "route", task: "spec", reason: "Touches authorization. Optional next step: /fc:risk." },
 	);
 	const allowlist = (source) => {
 		const match = /^const START_TASKS = (\[[^\]]*\]);$/m.exec(source);
@@ -938,7 +938,7 @@ test("docs", "command-counts-25", () => {
 	const count = fs.readdirSync("commands").filter((name) => name.endsWith(".md")).length;
 	assert.equal(count, 25, `commands/ holds ${count} commands, not 25`);
 	for (const rel of [README, WORKFLOW, LAYOUT_SKILL]) {
-		const said = [...flatten(DOC(rel)).matchAll(/\ball (\d+) (?:native Claude |Claude slash |`\/t4:\*` )commands\b/g)].map((m) => Number(m[1]));
+		const said = [...flatten(DOC(rel)).matchAll(/\ball (\d+) (?:native Claude |Claude slash |`\/fc:\*` )commands\b/g)].map((m) => Number(m[1]));
 		assert.ok(said.length > 0, `${rel} states no command count`);
 		for (const n of said) assert.equal(n, count, `${rel} says all ${n} commands; commands/ holds ${count}`);
 	}
@@ -949,7 +949,7 @@ test("docs", "agents-md-lists-risk", () => {
 		const text = DOC(rel);
 		const slash = text.split("\n").filter((line) => /^Slash commands:/.test(line));
 		assert.equal(slash.length, 1, `${rel} has ${slash.length} "Slash commands:" lines, not one`);
-		assert.ok(slash[0].split(/\s+/).includes("/t4:risk"), `${rel} does not list /t4:risk among the slash commands`);
+		assert.ok(slash[0].split(/\s+/).includes("/fc:risk"), `${rel} does not list /fc:risk among the slash commands`);
 		assert.ok(text.replace(/\n$/, "").split("\n").length < 60, `${rel} is 60 lines or more`);
 	}
 });
@@ -959,19 +959,20 @@ test("docs", "plugin-json-mentions-risk", () => {
 		const description = JSON.parse(DOC(rel)).description;
 		assert.equal(typeof description, "string", `${rel} has no description`);
 		assert.match(description, /\brisk\b[^.;]*\bagents?\b|\bagents?\b[^.;]*\brisk\b/, `${rel}: the description does not name the risk agent`);
-		assert.ok(description.includes("/t4:risk"), `${rel}: the description does not name the /t4:risk task`);
+		assert.ok(description.includes("/fc:risk"), `${rel}: the description does not name the /fc:risk task`);
 		return description;
 	});
 	assert.equal(descriptions[0], descriptions[1], `${MANIFESTS[0]} and ${MANIFESTS[1]} describe the plugin differently`);
 });
-// The plan 0023 block of the CHANGELOG's top entry: from its bold heading (Unreleased, or the
-// released form) to the next bold heading line or the next release.
+// The plan 0023 block of the CHANGELOG release entry that holds it: from its bold heading
+// (Unreleased, or the released form) to the next bold heading line or the next release.
 function changelogBlock() {
 	const text = DOC(CHANGELOG);
-	const top = text.split(/\n## /)[1];
-	assert.ok(top, `${CHANGELOG} has no release entry`);
+	const entries = text.split(/\n## /).slice(1);
+	assert.ok(entries.length, `${CHANGELOG} has no release entry`);
+	const top = entries.find((entry) => /^\*\*(?:Unreleased — plan|Plan) 0023\b/m.test(entry));
+	if (!top) throw new Error(`no ${CHANGELOG} release entry has a plan 0023 block`);
 	const at = top.search(/^\*\*(?:Unreleased — plan|Plan) 0023\b/m);
-	if (at < 0) throw new Error(`${CHANGELOG}'s top entry has no plan 0023 block`);
 	const rest = top.slice(at);
 	const end = rest.slice(2).search(/\n\*\*[^*\n]+\*\*\n/);
 	return end < 0 ? rest : rest.slice(0, end + 2);
@@ -983,7 +984,7 @@ test("docs", "changelog-breaking-risk", () => {
 	for (const name of ["`planner`", "`specifier`", "`reviewer`", "`start`", "`models.yaml`"])
 		assert.ok(flat.includes(name), `${CHANGELOG}: the plan 0023 block does not name the changed ${name} template`);
 	assert.match(flat, /`risk` agent/, `${CHANGELOG}: the plan 0023 block does not name the risk agent`);
-	assert.ok(flat.includes("/t4:risk"), `${CHANGELOG}: the plan 0023 block does not name /t4:risk`);
+	assert.ok(flat.includes("/fc:risk"), `${CHANGELOG}: the plan 0023 block does not name /fc:risk`);
 	assert.ok(flat.includes("ai-factory/risks/"), `${CHANGELOG}: the plan 0023 block does not name ai-factory/risks/`);
 	assert.match(flat, /\bcommitted by default\b/, `${CHANGELOG}: the plan 0023 block does not say ai-factory/risks/ is committed by default`);
 	assert.match(flat, /\b(?:gitignore|ignore)\b/, `${CHANGELOG}: the plan 0023 block does not say a repo may ignore ai-factory/risks/`);
@@ -996,7 +997,7 @@ test("docs", "no-old-names", () => {
 	const docs = [WORKFLOW, FLEET, FACTORY, README, LAYOUT_SKILL, ...AGENTS_COPIES, ...MANIFESTS, CHANGELOG, "ai-factory/docs/architecture.md"];
 	for (const rel of docs) {
 		const text = DOC(rel);
-		for (const pattern of [/\bassessor\b/i, /\bassessments\b/i, /\/t4:assess\b/, /`assess`/, /\bt4-assess\b/, /TASK=assess\b/])
+		for (const pattern of [/\bassessor\b/i, /\bassessments\b/i, /\/fc:assess\b/, /`assess`/, /\bfc-assess\b/, /TASK=assess\b/])
 			assert.doesNotMatch(text, pattern, `${rel} uses an old name (${pattern})`);
 	}
 });

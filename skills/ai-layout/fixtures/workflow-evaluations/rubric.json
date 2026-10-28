@@ -1,5 +1,5 @@
 {
-	"schema": "t4-workflow-evaluation-rubric",
+	"schema": "fc-workflow-evaluation-rubric",
 	"version": 1,
 	"note": "Evaluator-owned. Never copied into a benchmark fixture or prompt. Checks run from the harness against the final fixture after the model exits. Kinds: requirement (a stated requirement; unmet = missed requirement) and defect (a regression check; a failure after reported completion is a fixture-detected escape, not a production defect).",
 	"scenarios": {

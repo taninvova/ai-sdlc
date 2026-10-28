@@ -1,4 +1,4 @@
-# 0003 — /t4:setup-tracker
+# 0003 — /fc:setup-tracker
 
 Summary: an interactive command that detects the tracker site, confirms it with the developer,
 writes `ai/jira.yaml`, and proves the result by resolving one real key.
@@ -8,13 +8,13 @@ Option A of the in-session exploration, deliberately after `specs/0002`. It exis
 filename, the one required key and its exact shape — none of which any command tells them.
 
 ## User story
-As a developer who wants `/t4:spec ABC-12` to work in this repo, I want one command that sets
+As a developer who wants `/fc:spec ABC-12` to work in this repo, I want one command that sets
 the tracker up and then proves it works, so that I find out now rather than the first time I
 pass a key and get a stop-and-ask I cannot explain.
 
 ## Acceptance criteria
 
-- **AC1** Given a repo with `ai/docs/tracker.md`, When `/t4:setup-tracker` runs, Then it
+- **AC1** Given a repo with `ai/docs/tracker.md`, When `/fc:setup-tracker` runs, Then it
   detects the reachable tracker site, shows it, and asks the developer to confirm before
   writing anything.
 - **AC2** Given the developer confirms, When it writes, Then `ai/jira.yaml` contains a mapping
@@ -32,7 +32,7 @@ pass a key and get a stop-and-ask I cannot explain.
   the configuration is unverified and names the command that would verify it. Writing the file
   is not evidence it works.
 - **AC7** Given a repo with no `ai/docs/tracker.md`, When it runs, Then it stops and says the
-  layout predates tracker support, naming `/t4:sync-sdlc` and the drift it will report.
+  layout predates tracker support, naming `/fc:sync-sdlc` and the drift it will report.
 - **AC8** Given a headless or non-interactive run, When it runs, Then it makes no change and
   says the command is interactive. It asks before writing, and there is nobody to ask.
 - **AC9** Given the command runs at all, When it finishes, Then nothing has been written to the
@@ -48,12 +48,12 @@ pass a key and get a stop-and-ask I cannot explain.
   never rewriting an existing `.gitignore` entry.
 - **AC13** Given the developer chooses to ignore it, When setup reports, Then it states plainly
   that the tracker will then resolve keys for this developer only: a teammate cloning the repo
-  gets the unconfigured behaviour, so `/t4:spec ABC-12` means different things to different
+  gets the unconfigured behaviour, so `/fc:spec ABC-12` means different things to different
   people on one team. Choosing to ignore is allowed; not being told is not.
 
 ## Out of scope
 - Configuring anything but the tracker. Whole-layout setup was option B and was rejected: it
-  overlaps `/t4:adopt-sdlc` and `/t4:fleet`, and three commands that all set things up drift
+  overlaps `/fc:adopt-sdlc` and `/fc:fleet`, and three commands that all set things up drift
   apart.
 - Any write to the tracker.
 - Enabling the plugin, which no command can do — `specs/0002` question 1.
@@ -66,7 +66,7 @@ pass a key and get a stop-and-ask I cannot explain.
 2. ~~**Should it offer to add `ai/jira.yaml` to `.gitignore`?**~~ **Answered: yes, ask** — AC12.
    Chosen over committing by default, which was the recommendation, so the cost it carries is
    made explicit rather than left implicit: an ignored config means the repo is configured for
-   one developer and unconfigured for everyone else, and the same `/t4:spec ABC-12` behaves
+   one developer and unconfigured for everyone else, and the same `/fc:spec ABC-12` behaves
    differently per machine. AC13 requires setup to say that at the moment the choice is made.
    The file holds no credential either way — ADR 0004 keeps those in the environment — so this
    is a workflow preference, not a secrets decision.
@@ -85,4 +85,4 @@ None.
 ## Components likely involved
 `ai/docs/tracker.md` (the only source of what configured means and how to resolve),
 `skills/ai-layout/scripts/check-adapters.sh` (AC10, already asserted),
-and `/t4:doctor` from `specs/0002`, whose tracker line is the natural place AC6 points to.
+and `/fc:doctor` from `specs/0002`, whose tracker line is the natural place AC6 points to.

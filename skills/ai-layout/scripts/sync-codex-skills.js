@@ -32,7 +32,7 @@ const tasks = "skills/ai-layout/templates/ai-factory/tasks";
 function taskBody(name, text, preamble) {
 	const agent = /Delegate to the `([a-z]+)` subagent/.exec(text)?.[1];
 	return (
-		`${preamble}\n\nUnless the directive routed the task to a worker, read \`ai-factory/tasks/${name}.md\` in the user's repository and follow it with the user's request as input. If the workspace is absent, report that it needs the t4-adopt-sdlc skill. If the task is missing from an existing workspace, report it and use t4-sync-sdlc to inspect drift. Do not generate project adapters to run this skill.\n` +
+		`${preamble}\n\nUnless the directive routed the task to a worker, read \`ai-factory/tasks/${name}.md\` in the user's repository and follow it with the user's request as input. If the workspace is absent, report that it needs the fc-adopt-sdlc skill. If the task is missing from an existing workspace, report it and use fc-sync-sdlc to inspect drift. Do not generate project adapters to run this skill.\n` +
 		(agent
 			? `\nRead the complete procedure in \`ai-factory/agents/${agent}.md\`. When native delegation is available, give that procedure and the task input to a delegate. Otherwise run it in this session and label any review as a self-check, not an independent review. This same-session fallback applies only to the legacy and inherit directives; a routed task never falls back to this session.\n`
 			: "")
@@ -48,7 +48,7 @@ for (const file of fs
 		);
 	const text = fs.readFileSync(path.join(root, tasks, file), "utf8");
 	add(
-		`t4-${name}`,
+		`fc-${name}`,
 		/^description: (.+)$/m.exec(text)?.[1] || name,
 		taskBody(name, text, entryPreamble("codex", name)),
 	);
@@ -58,8 +58,8 @@ for (const file of fs
 for (const [alias, name] of Object.entries(TASK_ALIASES)) {
 	const text = fs.readFileSync(path.join(root, tasks, `${name}.md`), "utf8");
 	add(
-		`t4-${alias}`,
-		`Deprecated — use $t4-${name}. Runs the ${name} task under its old name`,
+		`fc-${alias}`,
+		`Deprecated — use $fc-${name}. Runs the ${name} task under its old name`,
 		taskBody(name, text, `${aliasNotice("codex", alias)}\n\n${entryPreamble("codex", name)}`),
 	);
 }
@@ -68,12 +68,12 @@ for (const file of fs
 	.filter((f) => f.endsWith(".md"))) {
 	const name = path.basename(file, ".md");
 	// quick's project procedure already supplies its complete behavior and host-neutral fallback.
-	if (expected.has(`codex-skills/t4-${name}/SKILL.md`)) continue;
+	if (expected.has(`codex-skills/fc-${name}/SKILL.md`)) continue;
 	const text = fs.readFileSync(path.join(root, "commands", file), "utf8");
 	add(
-		`t4-${name}`,
+		`fc-${name}`,
 		/^description: (.+)$/m.exec(text)?.[1] || name,
-		`${pluginContext}\nRead and follow the [canonical command](../../commands/${file}). Claude slash-command names in that procedure refer to the corresponding t4 skills in Codex.\n`,
+		`${pluginContext}\nRead and follow the [canonical command](../../commands/${file}). Claude slash-command names in that procedure refer to the corresponding fc skills in Codex.\n`,
 	);
 }
 for (const [file, body] of expected) {

@@ -1,4 +1,4 @@
-# 0003 — /t4:setup-tracker
+# 0003 — /fc:setup-tracker
 
 **Goal:** one interactive command that turns the tracker on for a repo and proves it, rather
 than leaving a developer to guess a filename and a key.
@@ -29,14 +29,14 @@ a prompt.
 ## Steps
 
 - [x] **Step 1 — Refuse early and clearly.** No `ai/docs/tracker.md` → stop, name
-  `/t4:sync-sdlc` and the drift it reports (AC7). Non-interactive → stop, say the command is
+  `/fc:sync-sdlc` and the drift it reports (AC7). Non-interactive → stop, say the command is
   interactive (AC8). Both before anything is read or written.
   *Proves:* AC7, AC8. *Check:* two scratch repos, one without the seam, one run headless.
 
   **Result.** Both run headless through the command's own prompt, after the step had already
   been ticked on the strength of the prompt containing the rules — which is not the same thing
   as the rules firing. **AC7 pass:** in a repo whose `ai/docs/` has no `tracker.md`, the first
-  refusal fired, named `/t4:sync-sdlc`, and refused to create the seam because a local copy
+  refusal fired, named `/fc:sync-sdlc`, and refused to create the seam because a local copy
   would fork from the one that ships. **AC8 pass:** with the seam present so only the second
   refusal could fire, it stopped as non-interactive and said why, explicitly declining to write
   from assumed answers because a repo that merely *looks* configured is worse than one that is
@@ -53,7 +53,7 @@ a prompt.
   than assumed, and nothing was written in the fixture or anywhere else.
 
   **AC4 is outstanding.** It needs a session where nothing is reachable. `specs/0001` AC4 proved
-  that state for `/t4:spec`, which is a different command, and manufacturing it costs the
+  that state for `/fc:spec`, which is a different command, and manufacturing it costs the
   developer a re-authorisation for a case that will arise on its own. It waits for a session
   already in that state.
 
@@ -120,7 +120,7 @@ a prompt.
 | Risk | How it is checked |
 |---|---|
 | It overwrites a hand-written `ai/jira.yaml` — destroying work the guard deliberately does not protect. | AC3, step 3, by running twice. The highest-consequence failure here. |
-| It writes a file that does not satisfy the seam's own definition, so setup "succeeds" and `/t4:spec` still ignores it. | AC2 uses the seam's condition, not a second copy of it; step 4 proves end to end. |
+| It writes a file that does not satisfy the seam's own definition, so setup "succeeds" and `/fc:spec` still ignores it. | AC2 uses the seam's condition, not a second copy of it; step 4 proves end to end. |
 | It reports success without proving anything. | AC5 and AC6 make verification explicit, including its absence. |
 | It writes to the tracker while reading. | AC9 compares status and comments before and after. |
 | A vendor name reaches the prompt. | AC10; `check-adapters.sh` already asserts it. |
@@ -131,7 +131,7 @@ bash skills/ai-layout/scripts/check-adapters.sh     # AC10
 bash skills/ai-layout/scripts/check-versions.sh
 bash ai/make/sync-adapters.sh && bash ai/make/sync-adapters.sh
 ```
-Plus steps 2–5 run for real against a live tracker, and `/t4:check`.
+Plus steps 2–5 run for real against a live tracker, and `/fc:check`.
 
 ## Planning notes
 - **Almost nothing here is fixturable**, and that is the honest difference from plan 0002. Its

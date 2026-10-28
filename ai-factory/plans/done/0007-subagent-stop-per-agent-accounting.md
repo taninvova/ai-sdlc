@@ -65,7 +65,7 @@ scripts require only `fs`, `path`, `child_process` and their siblings, so AC20 h
   than inside it, and reading `claude,implementer` adjacently says so. Nothing depends on position —
   the header break quarantines every existing row and no consumer exists yet (spec 0008 is unwritten).
 - **State files.** Two, both under `ai-factory/runs/`, both gitignored, both keyed by `session_id`:
-  - `.task.<session_id>` — one line, the bare task name (`spec`, not `/t4:spec`). The exploration's
+  - `.task.<session_id>` — one line, the bare task name (`spec`, not `/fc:spec`). The exploration's
     own proposal.
   - `.counted.<session_id>` — newline-delimited claim ledger, `u:<message uuid>` and
     `a:<agent_id>`. One file serves AC16 (a uuid is counted once across every transcript of the
@@ -150,7 +150,7 @@ scripts require only `fs`, `path`, `child_process` and their siblings, so AC20 h
   `node -e 'JSON.parse(require("fs").readFileSync("hooks/hooks.json","utf8"))'`.
 
 - [x] **Step 5 — the task file, and the column it fills.**
-  New `log-task.js`: `aiDir(ev)` guard; match `/t4:([a-z][a-z0-9-]*)` in `ev.prompt`; on a match
+  New `log-task.js`: `aiDir(ev)` guard; match `/fc:([a-z][a-z0-9-]*)` in `ev.prompt`; on a match
   write the bare name to `.task.<session_id>`; **write nothing to stdout or stderr, ever** — a print
   from `UserPromptSubmit` enters the model's context and breaks the cached prefix. No match: do
   nothing at all (see ambiguity Q9 — nothing clears the file). Register `UserPromptSubmit` in
@@ -179,7 +179,7 @@ scripts require only `fs`, `path`, `child_process` and their siblings, so AC20 h
   sentence. Add the CHANGELOG top entry: **breaking for every adopted repo**, existing rows move to
   `log.previous.csv` on the next write, what that means for a log they have been keeping, and — see
   Risk R1 — a repeat of the six clauses `check-release-docs.sh` asserts on the *top* entry (breaking,
-  run `/t4:migrate-layout` in each repo, the hooks keep accepting both names with the guard and the
+  run `/fc:migrate-layout` in each repo, the hooks keep accepting both names with the guard and the
   log, grep your own CI/pipeline/tooling, the command goes in 1.1.0, the fallback in 2.0.0). Bump
   `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` and `.codex-plugin/plugin.json` to
   the same version.
@@ -192,14 +192,14 @@ scripts require only `fs`, `path`, `child_process` and their siblings, so AC20 h
   **Completion — accepted by the developer on 2026-09-29.** Marked done at the
   developer's explicit request after stopping the live validation session. The
   session `3f337135-352c-4f6f-b988-1c9920107d6a` produced a background-agent row with
-  `source=agent`, `task=explore`, and `agent=t4:explorer`. Foreground execution was
+  `source=agent`, `task=explore`, and `agent=fc:explorer`. Foreground execution was
   unavailable in Claude Code 2.1.277: its Agent tool runs subagents in the background
   and exposes no `run_in_background` parameter. Final accounting reconciliation
   was not completed. This acceptance closes the remaining work; it does not claim
   those unperformed checks passed. The original requirements and historical result
   below are retained for context.
 
-  Restart a session so the hooks load from the updated plugin, then in this repo run one `/t4:`
+  Restart a session so the hooks load from the updated plugin, then in this repo run one `/fc:`
   command that delegates to a step agent **interactively** and one that delegates **in the
   background**, and record: the `log.pending.csv` rows with their `agent` and `task` values, that
   the session rows sum rather than climb, that `git status` shows neither state file, and that
@@ -217,7 +217,7 @@ scripts require only `fs`, `path`, `child_process` and their siblings, so AC20 h
   - **It needs a restarted session.** The hooks load from the installed plugin, not the working tree
     (Risk R12), so the run only exercises this change after a restart — and no agent can restart the
     session it is itself running in. That is the developer's action.
-  - **The step agents it names are not registered agent types.** The step asks for a `/t4:` command
+  - **The step agents it names are not registered agent types.** The step asks for a `/fc:` command
     that delegates to a *step agent*, but `ai-factory/agents/` symlinks only four of the eight
     definitions under `agents/` — `analyst`, `architect`, `reviewer`, `tester` — and only those four
     are spawnable. `explorer`, `implementer`, `planner` and `specifier` exist as definitions with no
@@ -302,8 +302,8 @@ guess. None of them blocked writing this plan.
 | 6 — Codex parity | No | Out of scope in the spec; no step touches Codex. |
 | 7 — Cursor | No | Out of scope in the spec; nothing here can see it. |
 | 8 — the EXD-002 residual (interactive *and* background) | Becomes a step | The spec itself says confirm in passing and say so in the MR, so it is Step 7 rather than a gate. |
-| 9 — when is the task file removed, and what happens between tasks? | **Yes — Step 5** | Nothing in the ACs says. AC10 speaks only of the file's *existence*. The plan implements the minimum the criteria allow: only a `/t4:` prompt writes, last writer wins, nothing clears the file, nothing deletes it. The consequence the question predicts is real and unmitigated — a background agent still running from `/t4:plan` concludes after `/t4:run` was typed and is attributed to `run`. AC12 asks for exactly this last-writer-wins behaviour in the one crossing it names, so the criteria cannot distinguish the wanted case from the unwanted one. If the answer is "clear on a non-command prompt", Step 5 changes; if it is "per-agent capture at SubagentStart", the spec's own *Out of scope* forbids it. |
-| 10 — what fills `task` for a session that never typed `/t4:`? | No | AC10 says empty; the plan writes empty. Spec 0008 decides what an `unattributed` bucket is called at the reporting end. |
+| 9 — when is the task file removed, and what happens between tasks? | **Yes — Step 5** | Nothing in the ACs says. AC10 speaks only of the file's *existence*. The plan implements the minimum the criteria allow: only a `/fc:` prompt writes, last writer wins, nothing clears the file, nothing deletes it. The consequence the question predicts is real and unmitigated — a background agent still running from `/fc:plan` concludes after `/fc:run` was typed and is attributed to `run`. AC12 asks for exactly this last-writer-wins behaviour in the one crossing it names, so the criteria cannot distinguish the wanted case from the unwanted one. If the answer is "clear on a non-command prompt", Step 5 changes; if it is "per-agent capture at SubagentStart", the spec's own *Out of scope* forbids it. |
+| 10 — what fills `task` for a session that never typed `/fc:`? | No | AC10 says empty; the plan writes empty. Spec 0008 decides what an `unattributed` bucket is called at the reporting end. |
 
 ### Found while planning
 
@@ -329,7 +329,7 @@ guess. None of them blocked writing this plan.
   level up. Step 3 should decide deliberately whether the ledger is keyed by `session_id` or by
   transcript path; `session_id` is the plan's choice, not the spec's requirement.
 - **A-4 — the release version.** `1.1.0` is reserved by the 1.0.0 CHANGELOG entry and by ADR 0008
-  for the release that removes `/t4:migrate-layout`; `2.0.0` for the one that removes the `ai/`
+  for the release that removes `/fc:migrate-layout`; `2.0.0` for the one that removes the `ai/`
   fallback, which AC21 requires this release to keep. Shipping this as `1.1.0` publishes a
   deprecation notice that contradicts itself. The plan picks `1.0.1` — the only number that claims
   no reserved slot — and notes that semver would want a major for a breaking payload change. The

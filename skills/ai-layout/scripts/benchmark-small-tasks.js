@@ -483,7 +483,7 @@ function loadOracle(file = rubricPath) {
 	const text = fs.readFileSync(resolved, "utf8");
 	const rubric = JSON.parse(text);
 	if (
-		rubric.schema !== "t4-workflow-evaluation-rubric" ||
+		rubric.schema !== "fc-workflow-evaluation-rubric" ||
 		!Number.isInteger(rubric.version) ||
 		!rubric.scenarios ||
 		typeof rubric.scenarios !== "object"
@@ -911,8 +911,8 @@ function costBasis(provenance) {
 	return kinds.size === 1 ? [...kinds][0] : "mixed";
 }
 function linkLifecycleCost(records, report, links = []) {
-	if (!report || report.schema !== "t4-lifecycle-report" || report.version !== 1 || !Array.isArray(report.deliveries))
-		throw new Error("Linked lifecycle input must be a t4-lifecycle-report version 1 (lifecycle.js report --json)");
+	if (!report || report.schema !== "fc-lifecycle-report" || report.version !== 1 || !Array.isArray(report.deliveries))
+		throw new Error("Linked lifecycle input must be a fc-lifecycle-report version 1 (lifecycle.js report --json)");
 	const byId = new Map(records.map((record) => [record.id, record]));
 	for (const link of links)
 		if (!byId.has(link?.run)) throw new Error(`Lifecycle link names an unknown benchmark run: ${link?.run}`);
@@ -984,8 +984,8 @@ function linkLifecycleCost(records, report, links = []) {
 // optional human files beside records.json. It never launches a model and never rewrites inputs.
 //   judgments.json   question judgments, transcript-review markers and completion rulings
 //   cost-links.json  explicit {run, lifecycleRun, session} links into a lifecycle report
-const JUDGMENTS_SCHEMA = "t4-workflow-judgments";
-const COST_LINKS_SCHEMA = "t4-benchmark-cost-links";
+const JUDGMENTS_SCHEMA = "fc-workflow-judgments";
+const COST_LINKS_SCHEMA = "fc-benchmark-cost-links";
 const QUESTION_LABELS = ["necessary", "unnecessary", "uncertain"];
 const VARIANTS = ["baseline", "candidate"];
 const COMPLETION_STATUSES = ["completed", "blocked", "failed", "interrupted", "unknown"];
@@ -1302,7 +1302,7 @@ function buildReport({ metadata = {}, records = [], judgments = null, costLinks 
 	const count = (list, key, value) => list.filter((item) => item[key] === value).length;
 	const effective = metadata.settings?.effective ?? null;
 	return {
-		schema: "t4-workflow-evaluation-report",
+		schema: "fc-workflow-evaluation-report",
 		version: 1,
 		run: {
 			startedAt: metadata.startedAt ?? null,

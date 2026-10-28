@@ -13,7 +13,7 @@ non-zero exit means report its message and stop, doing no task work. When the in
 `--task-model=<value>`, remove that option and one `--` after it from the input and add
 `--task-model '<value>'` to the dispatch command; never take options from later in the input. If
 `ai-factory/make/models.js` is missing, continue unless the workspace's model configuration has a
-`routing:` section; then report the template drift, which `/t4:sync-sdlc` inspects, and stop.
+`routing:` section; then report the template drift, which `/fc:sync-sdlc` inspects, and stop.
 
 continue takes no concrete model override: --task-model=<model> is refused before inspection, and continue's own routing never launches a worker. Selection runs in this session; its one destination runs under that task's own model policy.
 
@@ -23,8 +23,8 @@ For an action, supply the JSON result on standard input through a literal data c
 Only when the handoff succeeds, follow the destination directive it prints with its Destination input line verbatim. Stop on a stopped continuation, rejection, unavailable worker, failure or cancellation: no model fallback, adapter sync or further workflow chain. Preserve the destination's normal questions, accounting, final report and stopping point.
 
 Unless the directive routed the task to a worker, read `ai-factory/tasks/continue.md` in the user's repository and follow it with the request below.
-If the workspace is absent, report that it needs `/t4:adopt-sdlc`; do not silently create one.
+If the workspace is absent, report that it needs `/fc:adopt-sdlc`; do not silently create one.
 If this task is missing from an existing workspace, report the missing file and
-`/t4:sync-sdlc` drift inspection. Do not generate project adapters to run this command.
+`/fc:sync-sdlc` drift inspection. Do not generate project adapters to run this command.
 
 Task input: $ARGUMENTS

@@ -90,7 +90,7 @@ try {
   assert.equal(s.routing_enabled,true);
   assert.equal(s.task,task==="check"?"review":task);
   assert.match(s.config_digest,/^[0-9a-f]{12}$/);
-  assert.equal(s.schema,"t4.model-selection.v1");
+  assert.equal(s.schema,"fc.model-selection.v1");
  }
  assert.notEqual(select("claude","plan").model,select("claude","test").model,"plan and test must select different models");
  assert.equal(models.describe(select("codex","plan")),"plan / codex: gateway/planning codex (task default)");

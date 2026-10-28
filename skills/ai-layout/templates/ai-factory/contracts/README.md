@@ -15,13 +15,13 @@ node ai-factory/make/contracts.js enable
 git add ai-factory/contracts/config.json ai-factory/.sdlc.json
 ```
 
-From then on, `/t4:spec`, `/t4:plan`, `/t4:test`, `/t4:run`, `/t4:review` and `/t4:quick` maintain the contracts themselves. You rarely run the commands below by hand, except to see where a delivery stands or to fix what a diagnostic points at.
+From then on, `/fc:spec`, `/fc:plan`, `/fc:test`, `/fc:run`, `/fc:review` and `/fc:quick` maintain the contracts themselves. You rarely run the commands below by hand, except to see where a delivery stands or to fix what a diagnostic points at.
 
 **Choose the code scope.** Before the first delivery, pick the files that count as code in `ai-factory/contracts/config.json`. The default `include: ["**"]` covers every tracked and untracked file that Git does not ignore. Add the output your tests generate to `exclude`, such as coverage or snapshots that are not gitignored:
 
 ```json
 {
-  "schema": "t4-contracts-config",
+  "schema": "fc-contracts-config",
   "version": 1,
   "code_scope": { "include": ["src/**", "test/**", "package.json"], "exclude": ["test/__snapshots__/**"] }
 }
@@ -31,7 +31,7 @@ If a verification run changes an in-scope file, the validator reports `E_EVIDENC
 
 ### 2. A planned feature: spec → plan → test → run → review
 
-**Spec.** `/t4:spec <request>` writes the spec as usual, then runs `contracts.js init spec`. Criteria must be numbered so the validator can find them:
+**Spec.** `/fc:spec <request>` writes the spec as usual, then runs `contracts.js init spec`. Criteria must be numbered so the validator can find them:
 
 ```
 | ID | Given / When / Then |
@@ -46,7 +46,7 @@ If a verification run changes an in-scope file, the validator reports `E_EVIDENC
 contracts: wrote ai-factory/specs/0007-csv-export.contract.json (d-20260930-c4cc51) — valid
 ```
 
-**Plan.** `/t4:plan <spec>` names the criteria each step covers and each step's checks, then runs `contracts.js init plan`:
+**Plan.** `/fc:plan <spec>` names the criteria each step covers and each step's checks, then runs `contracts.js init plan`:
 
 ```
 - [ ] **Step 1 — Rows to lines.** AC1. Verify (red): `npm test -- export.rows` Verify: `npm test -- export.rows`
@@ -57,7 +57,7 @@ contracts: wrote ai-factory/specs/0007-csv-export.contract.json (d-20260930-c4cc
 - Commands run as plain arguments, not through a shell. Put anything that needs quotes, pipes or `&&` in a script or make target, then call that.
 - Every AC must be named by some step, and at least one step needs a `final` command. `init plan` reports anything missing, and the planner fixes the plan until the report is clean.
 
-**Tests (red).** `/t4:test <spec> red` writes the failing tests, then records that they fail:
+**Tests (red).** `/fc:test <spec> red` writes the failing tests, then records that they fail:
 
 ```
 make verify DELIVERY=<id> STEP=S1 PHASE=red
@@ -66,7 +66,7 @@ contracts: recorded failed (red, expected fail) → ai-factory/evidence/<id>/S1-
 
 A red run that passes is reported as `E_RED_PASSED`. It means the test checks nothing.
 
-**Run.** Each `/t4:run <plan> step N` implements one step and records its checks. It ticks the box only if the recording passes and validation stays `valid`:
+**Run.** Each `/fc:run <plan> step N` implements one step and records its checks. It ticks the box only if the recording passes and validation stays `valid`:
 
 ```
 make verify DELIVERY=<id> STEP=S1
@@ -75,7 +75,7 @@ make contracts DELIVERY=<id>
 
 The last step also records final verification with `make verify DELIVERY=<id> PHASE=final`. Once every step is ticked, final evidence is required.
 
-**Review.** `/t4:review` runs the read-only validator and reports anything that is not valid as a review finding. Headless, `make review DELIVERY=<id>` also records review evidence. Before merging, require both final and review evidence:
+**Review.** `/fc:review` runs the read-only validator and reports anything that is not valid as a review finding. Headless, `make review DELIVERY=<id>` also records review evidence. Before merging, require both final and review evidence:
 
 ```
 make contracts DELIVERY=<id> REQUIRE=final,review
@@ -83,7 +83,7 @@ make contracts DELIVERY=<id> REQUIRE=final,review
 
 ### 3. Quick work
 
-With contracts enabled, `/t4:quick` writes its checklist to `ai-factory/quick/<slug>.md` instead of the chat:
+With contracts enabled, `/fc:quick` writes its checklist to `ai-factory/quick/<slug>.md` instead of the chat:
 
 ```
 - [ ] QC1 — The footer shows dates as YYYY-MM-DD.
@@ -146,7 +146,7 @@ node ai-factory/make/contracts.js migrate --write  # writes the drafts
 
 ### 7. The completion report
 
-Once review is done, or at any point you want to know where a delivery stands, run `/t4:report <id>`. It is the same as:
+Once review is done, or at any point you want to know where a delivery stands, run `/fc:report <id>`. It is the same as:
 
 ```
 make delivery-report DELIVERY=<id>            # writes ai-factory/reports/<id>/completion.md and .json
@@ -220,7 +220,7 @@ Lifecycle telemetry records how long a delivery took, how long it waited, how of
 **Reading it.**
 
 ```
-make lifecycle [DELIVERY=<id>] [JSON=1]      # human summary, or the t4-lifecycle-report v1 document
+make lifecycle [DELIVERY=<id>] [JSON=1]      # human summary, or the fc-lifecycle-report v1 document
 make lifecycle-export DELIVERY=<id>          # writes ai-factory/runs/telemetry/<id>.json (telemetry.v1)
 node ai-factory/make/lifecycle.js prune [--days N] [--write]   # dry run unless --write
 ```
@@ -238,7 +238,7 @@ node ai-factory/make/lifecycle.js prune [--days N] [--write]   # dry run unless 
 | Cost | A known subtotal plus the number of unpriced records. The total is unknown whenever any record has no price. Zero-priced records are counted separately. Each figure carries its provenance: `host-reported`, `estimated:models.yaml` or `estimated:built-in-rates`. |
 
 **Attribution** happens only by explicit identity, never by branch name or the most recent ticket:
-- **Headless children** inherit `T4_LIFECYCLE_RUN`.
+- **Headless children** inherit `FC_LIFECYCLE_RUN`.
 - **Interactive sessions** are bound to a run when the command hook sees `lifecycle.js start`.
 
 Usage whose transcript timestamps overlap exactly one bound run belongs to that run. Ambiguous or unbound usage is reported as unattributed, with the reason.
@@ -300,11 +300,11 @@ git add ai-factory/assurance.json ai-factory/contracts/config.json
 
 **Setup.**
 - `set` without `--apply` only previews. It lists the changes and the effective settings afterwards.
-- With `--apply`, `standard` and `strict` first enable contracts if they are off, the same way `contracts.js enable` does. Only then is `ai-factory/assurance.json` written, as `{"schema":"t4-assurance","version":1,"preset":"standard"}`.
+- With `--apply`, `standard` and `strict` first enable contracts if they are off, the same way `contracts.js enable` does. Only then is `ai-factory/assurance.json` written, as `{"schema":"fc-assurance","version":1,"preset":"standard"}`.
 - If a write fails, the command names the failed step and what had already been done. The preset is not active.
 - A conflict, such as `strict` with `GATE_ENFORCE=0` in the environment, blocks the change.
 - A malformed selection file is refused and never overwritten. Fix it or remove it, then run `set` again.
-- Select a preset only through `set --apply`. Adoption and `/t4:sync-sdlc` never create, change or remove the selection.
+- Select a preset only through `set --apply`. Adoption and `/fc:sync-sdlc` never create, change or remove the selection.
 
 **Status.**
 
@@ -325,13 +325,13 @@ git add ai-factory/assurance.json ai-factory/contracts/config.json
 
 **Review provenance.** Review evidence now records `independence` (`independent`, `self` or `unspecified`) and the `boundary` that recorded it.
 - Only `make review DELIVERY=<id>` records `independent`, with boundary `make review`. A task procedure runs it only from a session the developer invoked directly.
-- Routed workers, headless task runs, the reviewer and an interactive `/t4:review` never run it. They report the review as an unmet requirement and name that command.
+- Routed workers, headless task runs, the reviewer and an interactive `/fc:review` never run it. They report the review as an unmet requirement and name that command.
 - Under `standard` and `strict`, quick, fix and chore work needs independent review too. Self-review never satisfies it, and a review whose provenance is not `independent` is reported as `REVIEW_NOT_INDEPENDENT`.
 - Review evidence recorded before this release has no provenance. It does not count under these presets until `make review DELIVERY=<id>` is run again.
 
 **Completion.** `assurance.js complete <id>` uses the completion-report rules to evaluate the delivery's current evidence. It never reads a saved report, so an earlier report cannot authorize completion, and generating a report never needs a previous one.
 - **`summary`.** Only a normal task summary is required. Project rules still apply.
-- **`recorded_checks`.** The evaluation must be `ready`. Nothing is read from or written to `ai-factory/reports/`. Saving a report with `/t4:report` is optional.
+- **`recorded_checks`.** The evaluation must be `ready`. Nothing is read from or written to `ai-factory/reports/`. Saving a report with `/fc:report` is optional.
 - **`fresh_ready_report`.** The command writes `ai-factory/reports/<id>/completion.{md,json}` now, and that fresh report must be `ready`.
 
 The command exits `0` only when completion may be claimed. Otherwise it exits `1` and lists every open reason with its evidence. A `conflict` is never claimable. The task procedures claim completion only after it exits `0`.
@@ -340,14 +340,14 @@ The command exits `0` only when completion may be claimed. Otherwise it exits `1
 
 **Known limitations.**
 - **Provenance is a label, not proof.** `contracts.recordReview()` accepts `independence: "independent"` from any caller. A script that calls it directly can claim independence it does not have. The presets rely on review evidence being recorded only through `make review`.
-- **`/t4:continue` still wants a saved report.** `continue.js` returns `complete` only when a matching saved completion report exists, even under `standard`, where `assurance.js complete` does not need one. It proposes `/t4:report` first.
+- **`/fc:continue` still wants a saved report.** `continue.js` returns `complete` only when a matching saved completion report exists, even under `standard`, where `assurance.js complete` does not need one. It proposes `/fc:report` first.
 - **Host behavior is unverified.** The task and agent procedures were not exercised in real Claude Code or Codex sessions. `check-assurance.sh` proves the helpers and the procedure wording, not that a model follows it.
 
 **Switching and rollback.** `set <other preset> --apply` changes the selection. Switching down keeps contracts configuration and evidence. Deleting `ai-factory/assurance.json` returns to legacy behavior. Contracts stay enabled until you delete `config.json` as well.
 
 ## Adoption
 
-- Contracts are opt-in. Run `node ai-factory/make/contracts.js enable`, or accept the offer in `/t4:sync-sdlc`. Either one creates `ai-factory/contracts/config.json` and records `capabilities.contracts.version` in `ai-factory/.sdlc.json`.
+- Contracts are opt-in. Run `node ai-factory/make/contracts.js enable`, or accept the offer in `/fc:sync-sdlc`. Either one creates `ai-factory/contracts/config.json` and records `capabilities.contracts.version` in `ai-factory/.sdlc.json`.
 - Until `config.json` exists, every task behaves exactly as before.
 - You can run `validate` explicitly at any time. In an unadopted project it reports artifacts without sidecars as `legacy_unverified`.
 - `contracts.js migrate` shows the sidecars it would draft for existing specs and plans. `migrate --write` creates them. Migration:
@@ -383,7 +383,7 @@ The JSON Schema documents in `schema/` are informative. The validator implements
 
 - **Criteria.** A spec criterion is a line whose first token is its ID, either as a table row or as a list item: `| AC1 | Given … |` or `- AC1 Given …`.
 - **Checklist items.** A quick checklist item is written `- [ ] QC1 — …`.
-- **Plan steps.** A plan step is `- [ ] **Step N — title.**` at the start of a line. This is the same grammar `/t4:state` uses. `**Result — Step N withdrawn; …**` withdraws a step.
+- **Plan steps.** A plan step is `- [ ] **Step N — title.**` at the start of a line. This is the same grammar `/fc:state` uses. `**Result — Step N withdrawn; …**` withdraws a step.
 - **Step criteria.** The `ACn` references in a step's text are the criteria that step covers.
 - **Verification commands.** Write each one as ``Verify (red|step|final): `command` ``. The phase defaults to `step`.
   - Commands run as argv, without a shell. A command that needs quotes, pipes or globbing is not drafted. Wrap it in a script or a make target instead.

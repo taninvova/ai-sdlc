@@ -3,10 +3,10 @@
 ## Shape
 A Claude Code and Codex plugin loaded from `.claude-plugin/plugin.json` and
 `.codex-plugin/plugin.json`. Nothing runs as a service. Three surfaces reach a developer: plugin
-commands (`commands/*.md` → `/t4:*`, mirrored as Codex skills in `codex-skills/`), skills
+commands (`commands/*.md` → `/fc:*`, mirrored as Codex skills in `codex-skills/`), skills
 (`skills/*/SKILL.md`, model-invoked), and the step agents (`agents/*.md`).
 Hooks in `hooks/hooks.json` fire on SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop
-and SubagentStop — the second remembering which `/t4:` command the session is running, so the rows
+and SubagentStop — the second remembering which `/fc:` command the session is running, so the rows
 written later can be grouped by task, and the last writing one run-log row per concluded subagent,
 from that agent's own transcript.
 
@@ -15,7 +15,7 @@ from that agent's own transcript.
 - `codex-skills/` — generated Codex entry points reading the same task and agent procedures
 - `agents/` — canonical step agents; adopted repos receive materialized copies with project additions
 - `skills/ai-layout/` — the `ai-factory/` layout skill plus `templates/`, the payload copied into
-  adopted repos by /t4:adopt-sdlc. Task prompts here become `/t4:<name>` there
+  adopted repos by /fc:adopt-sdlc. Task prompts here become `/fc:<name>` there
 - `skills/ai-hooks/` — hook scripts and fixtures; `_common.js` holds event parsing and
   the `ai-factory/` detection that makes every script a no-op elsewhere
 - `ai-factory/` — this repo's own layout, symlinked to the templates (see ai-factory/AGENTS.md)
@@ -32,16 +32,17 @@ Owns the artifact contract formats (`templates/ai-factory/contracts/`, validated
 everything else. `make/lifecycle.js` (spec 0015) aggregates opt-in lifecycle events that the
 runner and the hooks write through `make/lifecycle-events.js`, mirrored byte-for-byte as
 `skills/ai-hooks/scripts/_lifecycle-events.js`; the run log and `make cost` are unchanged.
-Owns the artefact ID format: `make/ids.js` (spec 0024) is the only place that draws the
-`[A-Z]{3}[0-9]{3}` ID, creates each new spec, plan, exploration, analysis, design, ADR and risk
+Owns the artefact ID format: `make/ids.js` is the only place that takes the next
+`<PREFIX>-<NNN>` ID (`PMB-001`) from the prefix in `ai-factory/project.json`, which adoption writes
+through `ids.js init`, creates each new spec, plan, exploration, analysis, design, ADR and risk
 assessment, and runs the clash check (`make ids-check`). Prompts call it and never count. Readers
-(`state.sh`, `contracts.js`) accept the new IDs and legacy four-digit numbers alike; adopted repos
-own the optional `ai-factory/ids-deny.txt`.
-Owns `/t4:loop`'s decisions: `make/loop.js` (spec 0022) selects and validates the plan
+(`state.sh`, `loop.js`, `contracts.js`) accept prefixed IDs, spec 0024's letter-and-digit IDs and
+legacy four-digit numbers alike.
+Owns `/fc:loop`'s decisions: `make/loop.js` (spec 0022) selects and validates the plan
 (`Depends on:`), schedules steps, creates the temporary worktrees under
 `ai-factory/runs/tmp/worktrees/`, applies each step's delta back uncommitted, ticks it, and
 decides the stop causes and the `TASK=loop` exit code; `tasks/loop.md` only delegates.
-Commits exist only on the worktrees' own `t4-loop/…` branches (ADR ETT683). Inside a worktree
+Commits exist only on the worktrees' own `fc-loop/…` branches (ADR ETT683). Inside a worktree
 the hooks log to the main repository through the git common dir, and the guard applies the
 main repository's dont-touch rules relative to the worktree root.
 Each adopted repo owns its own
@@ -53,7 +54,7 @@ there means the tool's own configured model, so no provider is assumed. `make/mo
 sync and doctor all call it. Opt-in routing reaches interactive tasks only through generated,
 content-addressed worker agents (`.claude/agents/`, `.codex/agents/`) written by an explicit sync.
 Owns the deprecated task names: `TASK_ALIASES` in `make/models.js` (`check` → `review`) is the one
-table. The command and skill generators emit a thin deprecated `/t4:check` / `$t4-check` from it;
+table. The command and skill generators emit a thin deprecated `/fc:check` / `$fc-check` from it;
 the runner, routing, lifecycle and `make cost` read the old name as `review`, so recorded data is
 never rewritten. The `log-task.js` hook carries a pinned copy because a hook cannot load templates.
 

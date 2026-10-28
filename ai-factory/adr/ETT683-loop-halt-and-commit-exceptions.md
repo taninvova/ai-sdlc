@@ -17,9 +17,9 @@ commits on that worktree's branch. Spec 0022 asks for one command that runs ever
 of a plan, while the developer's branch must still never gain a commit made by the factory.
 
 ## Decision
-`/t4:loop` is an explicit, opt-in exception to DEC-003, BR-010 and FR-026: one invocation
+`/fc:loop` is an explicit, opt-in exception to DEC-003, BR-010 and FR-026: one invocation
 implements every unticked step of one plan, halting only on a failure, conflict or timeout
-and ending with one `/t4:check`. `/t4:run` is unchanged and still halts after one step.
+and ending with one `/fc:check`. `/fc:run` is unchanged and still halts after one step.
 Commits made by the loop on its own temporary worktree branches under
 `ai-factory/runs/tmp/worktrees/` (a baseline commit and a step commit per worktree step) are
 the only exception to FR-027. Nothing is ever committed on the developer's branch, nothing is
@@ -29,13 +29,13 @@ pushed, and no MR is opened; each step's delta is applied back to the main tree 
 - Easier: a plan with many steps runs in one invocation, and independent steps (`Depends on:`)
   can run concurrently.
 - Harder: the developer no longer reviews between steps inside a loop run. A wrong early step is
-  built on by later ones and is found only at the final `/t4:check`, so a bad loop run costs more
-  to unpick than a bad `/t4:run`. The gate is now opt-in by command choice rather than universal.
+  built on by later ones and is found only at the final `/fc:check`, so a bad loop run costs more
+  to unpick than a bad `/fc:run`. The gate is now opt-in by command choice rather than universal.
 - Harder: "the factory never commits" is no longer absolute. Every tool that inspects git state
   must now tell the loop's temporary branches and worktrees apart from the developer's branch:
-  `/t4:check`, the guard hook and the repo's test, lint and typecheck tools must skip
+  `/fc:check`, the guard hook and the repo's test, lint and typecheck tools must skip
   `ai-factory/runs/tmp/worktrees/`, and worktrees kept after a failure, conflict or timeout are
   left for the developer to remove.
-- Must now: `docs/workflow.md` and `AGENTS.md` name this exception; `/t4:run` keeps its one-step
+- Must now: `docs/workflow.md` and `AGENTS.md` name this exception; `/fc:run` keeps its one-step
   halt; and any further exception to DEC-003, BR-010, FR-026 or FR-027 (an unattended mode, a
   per-run gate flag, a commit on the developer's branch) is a new ADR, not a widening of this one.

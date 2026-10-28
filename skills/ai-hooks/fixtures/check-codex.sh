@@ -47,25 +47,25 @@ check('Codex patch logs every touched file', () => {
   assert.deepEqual(rows.map(r => r.file), ['src/old.js', 'src/new.js']);
 });
 check('Codex skill invocation attributes the task', () => {
-  for (const prompt of ['$t4-run 0007', '$t4:t4-run 0007', '/t4:run 0007']) {
+  for (const prompt of ['$fc-run 0007', '$fc:fc-run 0007', '/fc:run 0007']) {
     hook('log-task', { prompt });
     assert.equal(fs.readFileSync(path.join(ai, 'runs/.task.codex-live'), 'utf8'), 'run\n');
   }
 });
 check('a deprecated task name attributes the task it now names', () => {
-  // /t4:check and $t4-check are the deprecated names of review: their rows say review.
-  for (const prompt of ['$t4-check', '$t4:t4-check', '/t4:check working-tree']) {
-    hook('log-task', { prompt: '/t4:run 0007' });
+  // /fc:check and $fc-check are the deprecated names of review: their rows say review.
+  for (const prompt of ['$fc-check', '$fc:fc-check', '/fc:check working-tree']) {
+    hook('log-task', { prompt: '/fc:run 0007' });
     hook('log-task', { prompt });
     assert.equal(fs.readFileSync(path.join(ai, 'runs/.task.codex-live'), 'utf8'), 'review\n', prompt);
   }
-  hook('log-task', { prompt: '$t4-review' });
+  hook('log-task', { prompt: '$fc-review' });
   assert.equal(fs.readFileSync(path.join(ai, 'runs/.task.codex-live'), 'utf8'), 'review\n');
   // The hook's table is the template's TASK_ALIASES, not a drifting copy.
   const hookSource = fs.readFileSync(path.join(process.cwd(), 'skills/ai-hooks/scripts/log-task.js'), 'utf8');
   const { TASK_ALIASES } = require(path.join(process.cwd(), 'skills/ai-layout/templates/ai-factory/make/models.js'));
   assert.ok(hookSource.includes(`const ALIASES = ${JSON.stringify(TASK_ALIASES).replace(/"([a-z-]+)":/g, '$1: ').replace(/,/g, ', ').replace(/^\{/, '{ ').replace(/\}$/, ' }')};`), 'log-task.js ALIASES differs from models.js TASK_ALIASES');
-  hook('log-task', { prompt: '/t4:run 0007' }); // the rows below are attributed to run
+  hook('log-task', { prompt: '/fc:run 0007' }); // the rows below are attributed to run
 });
 const transcript = path.join(root, 'rollout.jsonl');
 const usage = (id, input, cached, output) => ({ type: 'token_usage_record', payload: { response_id: id, usage: { input_tokens: input, cached_input_tokens: cached, output_tokens: output } } });

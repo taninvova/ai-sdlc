@@ -15,4 +15,4 @@ Lines starting with "- `" are rules; the backticked prefix is matched against th
 
 `ai-factory/tasks/`, `ai-factory/agents/` and `ai-factory/make/` are symlinks into the templates — edit the target
 under `skills/ai-layout/templates/` (or `agents/`) instead. To change adapters, edit `ai-factory/`
-and run /t4:sync-sdlc.
+and run /fc:sync-sdlc.

@@ -203,7 +203,7 @@ eq "the two rows sum to the union of the two transcripts" "$summed" "$(union "$P
 eq "a shared uuid is claimed once" "$(grep -c '^u:ag-0003$' "$R/ai-factory/runs/.counted.s7")" "1"
 
 # --- 8. the task is the session's, the agent name is the agent's (AC12) ------------------------
-# The crossing the exploration measured: a `specifier` spawned under /t4:run. The row must say
+# The crossing the exploration measured: a `specifier` spawned under /fc:run. The row must say
 # `run,specifier` — the task from the session's task file, never from a static agent→task map, and
 # never the other way round.
 R=$(repo tasked)

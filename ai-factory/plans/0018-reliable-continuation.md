@@ -1,6 +1,6 @@
 # Plan 0018 — Reliable continuation
 
-**Goal:** Add `/t4:continue <delivery>` to inspect contract-backed evidence, explain the next supported action, and resume at most one existing workflow task safely.
+**Goal:** Add `/fc:continue <delivery>` to inspect contract-backed evidence, explain the next supported action, and resume at most one existing workflow task safely.
 
 **Spec:** [0018-reliable-continuation.md](../specs/0018-reliable-continuation.md)
 
@@ -23,7 +23,7 @@ Create:
 - `skills/ai-layout/templates/ai-factory/tasks/continue.md` — interactive continuation procedure, clarification loop, and one-action stopping boundary.
 - `skills/ai-layout/scripts/check-continuation.sh` — named regression groups for selector, validation, handoff and headless behavior.
 - `skills/ai-layout/fixtures/continuation/cases.md` — disposable delivery fixtures and required Claude/Codex transcript scenarios.
-- `commands/continue.md`, `codex-skills/t4-continue/SKILL.md` — generated host entry points for the shared procedure.
+- `commands/continue.md`, `codex-skills/fc-continue/SKILL.md` — generated host entry points for the shared procedure.
 
 Modify:
 
@@ -31,7 +31,7 @@ Modify:
 - `skills/ai-layout/templates/ai-factory/make/delivery-report.js` — expose existing collection/evaluation in memory without writing reports or running checks, if the current interface is insufficient.
 - `skills/ai-layout/templates/ai-factory/make/models.js` — include continuation in task dispatch policy and provide the existing destination-task directive path without letting the continuation result select arbitrary work.
 - `skills/ai-layout/templates/ai-factory/make/runner.js` — reject unsupported headless continuation before launching a task or creating run artifacts.
-- `skills/ai-layout/templates/ai-factory/make/sync-adapters.js` — add continue to the native-command exclusion set so Claude adapter sync does not duplicate the plugin's `/t4:continue`.
+- `skills/ai-layout/templates/ai-factory/make/sync-adapters.js` — add continue to the native-command exclusion set so Claude adapter sync does not duplicate the plugin's `/fc:continue`.
 - `skills/ai-layout/scripts/sync-claude-commands.js`, `sync-codex-skills.js` — generate the two new entries and preserve current direct-task behavior.
 - `skills/ai-layout/scripts/sync-self.js` — materialize the checkout's generated task link safely, without creating a regular file under protected `ai-factory/tasks/`.
 - Existing focused checks (`check-contracts.sh`, `check-delivery-report.sh`, `check-interactive-model-routing.sh`, `check-runner-security.sh`, `check-plugin-hosts.sh`, `check-manifest.sh`, `check-entrypoints.sh`, `check-start-routing.sh`, and `check-release-docs.sh`) — cover unchanged contracts/report behavior, dispatch policy, host/adoption discovery, and documentation/release requirements.

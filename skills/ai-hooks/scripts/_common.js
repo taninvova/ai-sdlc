@@ -11,7 +11,7 @@ function readEvent() {
 	}
 }
 // The layout directory, by name, newest first. 1.0.0 renamed `ai/` to `ai-factory/`. A repo that
-// has taken the plugin update and not yet run /t4:migrate-layout still carries the old name, and
+// has taken the plugin update and not yet run /fc:migrate-layout still carries the old name, and
 // must keep its dont-touch guard and its run log until it does — a rename that silently disarmed
 // the guard would look like nothing was wrong. Transitional, but not until 2.0.0: dropping it is
 // itself a silent break for any repo that never migrated (ADR 0008).
@@ -45,7 +45,7 @@ function aiDir(ev) {
 	}
 	return null;
 }
-// A /t4:loop worktree lives at <main>/<layout>/runs/tmp/worktrees/<name>. Inside one, the main
+// A /fc:loop worktree lives at <main>/<layout>/runs/tmp/worktrees/<name>. Inside one, the main
 // repository is found through the git common dir, so its run log and its dont-touch policy
 // govern; every other checkout, including a developer's own worktree, keeps its own. Returns
 // { root, ai, name } for the main repository, or null. Git runs only for a cwd on that path.
@@ -156,7 +156,7 @@ function appendJsonl(file, obj) {
 	safe.append(file, JSON.stringify(obj) + "\n");
 }
 // The task this session is running, as log-task.js last saw it: one line, keyed by session_id,
-// beside the run log. No file means the session has typed no `/t4:` command, and the column stays
+// beside the run log. No file means the session has typed no `/fc:` command, and the column stays
 // empty — a task is never inferred from the branch name, the agent type or the prompt text, because
 // a wrong attribution is worse than a missing one. First line only, so a file somehow holding more
 // cannot widen a row.

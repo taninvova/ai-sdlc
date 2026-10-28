@@ -14,15 +14,15 @@ Draft for planning option 3; implementation is not requested. The requested beha
 
 ### AC1 — Choose a preset
 
-Given an adopted repository, when a developer explicitly selects `light`, `standard`, or `strict`, then T4 resolves the preset into a consistent set of contract, verification, review, and completion requirements.
+Given an adopted repository, when a developer explicitly selects `light`, `standard`, or `strict`, then FC resolves the preset into a consistent set of contract, verification, review, and completion requirements.
 
 ### AC2 — Show effective settings
 
-Given a selected preset and existing configuration, when T4 displays or uses assurance settings, then it identifies the preset, effective requirements, and any configuration conflict; it never silently claims a stronger preset than it applies.
+Given a selected preset and existing configuration, when FC displays or uses assurance settings, then it identifies the preset, effective requirements, and any configuration conflict; it never silently claims a stronger preset than it applies.
 
 ### AC3 — Preserve existing repositories
 
-Given a repository with no selected preset, when it adopts or updates T4, then its existing configuration and behavior remain unchanged; selecting or changing a preset preserves existing delivery artifacts and evidence.
+Given a repository with no selected preset, when it adopts or updates FC, then its existing configuration and behavior remain unchanged; selecting or changing a preset preserves existing delivery artifacts and evidence.
 
 ### AC4 — Apply consistent requirements
 
@@ -30,7 +30,7 @@ Given an active preset, when an interactive task, headless task, review gate, or
 
 ### AC5 — Keep risk routing separate
 
-Given authorization changes, migrations, uncertain requirements, or another existing normal-workflow trigger, when `light` is selected, then T4 retains the normal workflow requirements; the preset cannot make the request eligible for a shortcut.
+Given authorization changes, migrations, uncertain requirements, or another existing normal-workflow trigger, when `light` is selected, then FC retains the normal workflow requirements; the preset cannot make the request eligible for a shortcut.
 
 ## Proposed design defaults
 

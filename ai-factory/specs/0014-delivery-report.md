@@ -7,7 +7,7 @@
 ## Scope and boundary
 
 - Entry points:
-  - `/t4:report` in Claude, `t4-report` in Codex;
+  - `/fc:report` in Claude, `fc-report` in Codex;
   - `make -f ai-factory/make/ai.mk delivery-report DELIVERY=<id>`.
 - Outputs: `ai-factory/reports/<id>/completion.{md,json}`.
 - The report only reads existing evidence and writes those two files. It never runs a check, edits a source artifact, posts to a tracker, opens an MR, commits, merges or deploys.

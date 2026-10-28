@@ -25,7 +25,7 @@ bash ai-factory/make/sync-adapters.sh --adapters=all > /dev/null
 [ "$before" = "$(adapter_hash)" ] || fail "sync-adapters is not idempotent"
 
 # A task whose name the plugin already registers as a native command (commands/<name>.md) takes no
-# Claude pointer: two /t4:<name> entries in one menu, described differently, is the bug this guards
+# Claude pointer: two /fc:<name> entries in one menu, described differently, is the bug this guards
 # against. Codex plugins ship no commands, so every task still gets a Codex skill.
 native=()
 for c in commands/*.md; do
@@ -33,9 +33,9 @@ for c in commands/*.md; do
   [ -f "ai-factory/tasks/$n.md" ] && native+=("$n")
 done
 tasks=$(ls ai-factory/tasks/*.md | wc -l | tr -d ' ')
-command_files=(.claude/commands/t4/*.md)
+command_files=(.claude/commands/fc/*.md)
 cmds=${#command_files[@]}
-skills=$(ls -d .codex/skills/t4-*/ 2>/dev/null | wc -l | tr -d ' ')
+skills=$(ls -d .codex/skills/fc-*/ 2>/dev/null | wc -l | tr -d ' ')
 [ "$((tasks - ${#native[@]}))" = "$cmds" ] \
   || fail "$tasks tasks, ${#native[@]} of them already native plugin commands, but $cmds claude commands"
 # A deprecated task name (models.js TASK_ALIASES) adds one thin Codex skill that runs the task it now
@@ -45,33 +45,33 @@ while IFS= read -r a; do [ -n "$a" ] && aliases+=("$a"); done < <(node -e 'const
 [ "$((tasks + ${#aliases[@]}))" = "$skills" ] || fail "$tasks tasks and ${#aliases[@]} deprecated names but $skills codex skills"
 for a in ${aliases[@]+"${aliases[@]}"}; do
   t=$(node -e 'console.log(require("./ai-factory/make/models.js").TASK_ALIASES[process.argv[1]])' "$a")
-  s=".codex/skills/t4-$a/SKILL.md"
+  s=".codex/skills/fc-$a/SKILL.md"
   [ -f "$s" ] || fail "missing $s for the deprecated name of $t"
-  grep -q "^name: t4-$a$" "$s" || fail "$s has the wrong name in its frontmatter"
-  grep -qF "is deprecated in favour of \$t4-$t" "$s" || fail "$s does not say it is deprecated in favour of \$t4-$t"
+  grep -q "^name: fc-$a$" "$s" || fail "$s has the wrong name in its frontmatter"
+  grep -qF "is deprecated in favour of \$fc-$t" "$s" || fail "$s does not say it is deprecated in favour of \$fc-$t"
   grep -qF "dispatch --host codex --task $t\`" "$s" || fail "$s does not dispatch the $t task"
   grep -q "ai-factory/tasks/$t.md" "$s" || fail "$s does not point at ai-factory/tasks/$t.md"
-  [ ! -f ".claude/commands/t4/$a.md" ] || fail ".claude/commands/t4/$a.md repeats the plugin's deprecated /t4:$a"
+  [ ! -f ".claude/commands/fc/$a.md" ] || fail ".claude/commands/fc/$a.md repeats the plugin's deprecated /fc:$a"
 done
 for n in ${native[@]+"${native[@]}"}; do
-  [ -f ".claude/commands/t4/$n.md" ] \
-    && fail ".claude/commands/t4/$n.md repeats the plugin's own /t4:$n — the menu would list it twice"
-  [ -f ".codex/skills/t4-$n/SKILL.md" ] || fail "missing .codex/skills/t4-$n/SKILL.md"
+  [ -f ".claude/commands/fc/$n.md" ] \
+    && fail ".claude/commands/fc/$n.md repeats the plugin's own /fc:$n — the menu would list it twice"
+  [ -f ".codex/skills/fc-$n/SKILL.md" ] || fail "missing .codex/skills/fc-$n/SKILL.md"
 done
 # A pointer left over from before the exclusion is removed by the next sync, not kept.
 if [ ${#native[@]} -gt 0 ]; then
-  mkdir -p .claude/commands/t4
+  mkdir -p .claude/commands/fc
   printf -- '---\ndescription: stale\n---\n@../../../ai-factory/tasks/%s.md\n' "${native[0]}" \
-    > ".claude/commands/t4/${native[0]}.md"
+    > ".claude/commands/fc/${native[0]}.md"
   bash ai-factory/make/sync-adapters.sh --adapters=claude > /dev/null
-  [ ! -f ".claude/commands/t4/${native[0]}.md" ] \
-    || fail "sync kept a pointer that repeats the plugin's /t4:${native[0]}"
+  [ ! -f ".claude/commands/fc/${native[0]}.md" ] \
+    || fail "sync kept a pointer that repeats the plugin's /fc:${native[0]}"
 fi
 
 for t in ai-factory/tasks/*.md; do
-  n=$(basename "$t" .md); s=".codex/skills/t4-$n/SKILL.md"
+  n=$(basename "$t" .md); s=".codex/skills/fc-$n/SKILL.md"
   [ -f "$s" ] || fail "missing $s"
-  grep -q "^name: t4-$n$" "$s" || fail "$s has the wrong name in its frontmatter"
+  grep -q "^name: fc-$n$" "$s" || fail "$s has the wrong name in its frontmatter"
   grep -q "ai-factory/tasks/$n.md" "$s" || fail "$s does not point at its task file"
   # A task that delegates must carry the note; one that does not must not.
   if grep -q 'Delegate to the `[a-z]*` subagent' "$t"; then
@@ -84,7 +84,7 @@ for t in ai-factory/tasks/*.md; do
 done
 
 for t in ai-factory/tasks/*.md; do
-  n=$(basename "$t" .md); c=".claude/commands/t4/$n.md"
+  n=$(basename "$t" .md); c=".claude/commands/fc/$n.md"
   [ -f "commands/$n.md" ] && continue   # the plugin's own command, asserted absent above
   [ -f "$c" ] || fail "missing $c"
   inc=$(sed -n 's/^@//p' "$c" | head -1)
@@ -98,7 +98,7 @@ done
 # and the user discovers the requirement only by running it. A task without a hint must not
 # gain an empty one.
 for t in ai-factory/tasks/*.md; do
-  n=$(basename "$t" .md); c=".claude/commands/t4/$n.md"
+  n=$(basename "$t" .md); c=".claude/commands/fc/$n.md"
   [ -f "commands/$n.md" ] && c="commands/$n.md"   # the plugin's own command carries the hint instead
   h=$(sed -n 's/^argument-hint: *//p' "$t" | head -1)
   g=$(sed -n 's/^argument-hint: *//p' "$c" | head -1)
@@ -119,7 +119,7 @@ for t in ai-factory/tasks/*.md; do
 done
 
 # A repo adopted under an older naming keeps its old command files unless sync removes them,
-# and then answers both /spec and /t4:spec. Reproduce that: a pre-0.5.0 bare command, a
+# and then answers both /spec and /fc:spec. Reproduce that: a pre-0.5.0 bare command, a
 # 0.5.0-era ai- command, a stale codex skill — and a hand-written command that must survive,
 # because the only thing separating it from ours is the include, not the name.
 printf -- '---\ndescription: stale\n---\n@../../ai/tasks/spec.md\n' > .claude/commands/spec.md  # path-scan-ok: reproducing the pre-1.0.0 name is the point
@@ -140,10 +140,10 @@ rm -f .claude/commands/spec-of-mine.md
 # forbidden: check, design and fleet legitimately describe JSON output of their own.
 BANNED='jira|atlassian|connector|base_url|https?://|\.yaml'
 # commands/*.md is in this list because a plugin command is read by a session exactly as a task
-# is, and /t4:doctor has to describe tracker state without knowing what a tracker is. ADR 0004
+# is, and /fc:doctor has to describe tracker state without knowing what a tracker is. ADR 0004
 # rule 3 names task prompts only; the seam is worth just as little if the plugin's own commands
 # leak around it.
-PROMPTS=(ai-factory/tasks/*.md commands/*.md .claude/commands/t4/*.md .codex/skills/t4-*/SKILL.md)
+PROMPTS=(ai-factory/tasks/*.md commands/*.md .claude/commands/fc/*.md .codex/skills/fc-*/SKILL.md)
 # scan_banned <pattern> <message> <file>... — fails on the first file matching the pattern,
 # naming the file and up to three matching lines with their numbers. Case-insensitive, so a
 # prompt cannot slip a term past it by capitalising.
@@ -211,7 +211,7 @@ for t in ai-factory/tasks/*.md; do
 done
 
 # The codex skill must not copy the prompt text — that would fork from ai-factory/tasks/.
-body=$(sed -n '/^---$/,/^---$/!p' .codex/skills/t4-spec/SKILL.md | wc -l | tr -d ' ')
+body=$(sed -n '/^---$/,/^---$/!p' .codex/skills/fc-spec/SKILL.md | wc -l | tr -d ' ')
 [ "$body" -lt 15 ] || fail "codex skills look like copies of the task, not pointers ($body lines)"
 
 echo "adapters ok — $tasks tasks → $cmds claude commands (${#native[@]} left to the plugin) + $skills codex skills (${#aliases[@]} deprecated), idempotent, agent notes correct"

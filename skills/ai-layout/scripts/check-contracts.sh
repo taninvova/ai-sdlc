@@ -46,7 +46,7 @@ function doc(dir, args = ["--all"], status) {
 	const result = run(dir, ["validate", ...args, "--json"]);
 	// JSON mode: stdout is exactly one document.
 	const value = JSON.parse(result.stdout);
-	assert.equal(value.schema, "t4-contract-diagnostics");
+	assert.equal(value.schema, "fc-contract-diagnostics");
 	assert.match(value.note, /Structural validation only/);
 	if (status !== undefined) assert.equal(result.status, status, `${args.join(" ")}\n${result.stdout}`);
 	return value;
@@ -132,7 +132,7 @@ async function main() {
 			fs.renameSync(path.join(dir, `ai-factory/specs/0001-csv-export${ext}`), path.join(dir, `ai-factory/specs/0001-renamed${ext}`));
 		assert.equal(doc(dir, [id], 0).status, "valid", "delivery_id survives renames and plans/done/");
 		ok("valid chain, summary, JSON, rename");
-		// Parser parity with /t4:state's step grammar.
+		// Parser parity with /fc:state's step grammar.
 		write(dir, "ai-factory/plans/done/0001-renamed.md", read(dir, "ai-factory/plans/done/0001-renamed.md").replace("- [x] **Step 2", "- [~] **Step 2").replace("- [x] **Step 3", "- [ ] **Step 3") + "\n**Result — Step 3 withdrawn; superseded.**\n- [label](https://example.invalid)\n");
 		const listed = execFileSync("bash", [path.resolve("skills/ai-layout/scripts/state.sh"), dir], { encoding: "utf8" })
 			.split("\n").filter((line) => line.startsWith("plan\t")).map((line) => line.split("\t")[4]);
@@ -153,7 +153,7 @@ async function main() {
 			["missing verification command", (dir) => { const v = json(dir, PLAN_SIDE); v.steps[1].verify = []; writeJson(dir, PLAN_SIDE, v); }, "E_NO_VERIFY", PLAN_SIDE],
 			["no final verification", (dir) => { const v = json(dir, PLAN_SIDE); v.steps[2].verify = v.steps[2].verify.filter((e) => e.phase !== "final"); writeJson(dir, PLAN_SIDE, v); }, "E_NO_VERIFY", PLAN_SIDE],
 			["malformed JSON", (dir) => write(dir, PLAN_SIDE, "{"), "E_MALFORMED", PLAN_SIDE],
-			["wrong schema", (dir) => { const v = json(dir, SPEC_SIDE); v.schema = "t4-contract/plan"; writeJson(dir, SPEC_SIDE, v); }, "E_MALFORMED", SPEC_SIDE],
+			["wrong schema", (dir) => { const v = json(dir, SPEC_SIDE); v.schema = "fc-contract/plan"; writeJson(dir, SPEC_SIDE, v); }, "E_MALFORMED", SPEC_SIDE],
 			["missing field", (dir) => { const v = json(dir, SPEC_SIDE); delete v.sha256; writeJson(dir, SPEC_SIDE, v); }, "E_MALFORMED", SPEC_SIDE],
 			["unsupported version", (dir) => { const v = json(dir, SPEC_SIDE); v.version = 99; writeJson(dir, SPEC_SIDE, v); }, "E_SCHEMA_VERSION", SPEC_SIDE],
 			["version zero", (dir) => { const v = json(dir, PLAN_SIDE); v.version = 0; writeJson(dir, PLAN_SIDE, v); }, "E_SCHEMA_VERSION", PLAN_SIDE],
@@ -281,7 +281,7 @@ async function main() {
 			value = doc(dir, [id], 1);
 			assert.ok(value.artifacts.some((a) => a.diagnostics.some((d) => d.code === "E_EVIDENCE_NOT_RUN" && /CI runner offline/.test(d.message))));
 			const plan = json(dir, PLAN_SIDE);
-			plan.steps[0].verify = [{ argv: ["t4-contract-fixture-no-such-command"], phase: "step" }];
+			plan.steps[0].verify = [{ argv: ["fc-contract-fixture-no-such-command"], phase: "step" }];
 			writeJson(dir, PLAN_SIDE, plan);
 			expect(run(dir, ["record", "--delivery", id, "--step", "S1"]), 1, "unavailable");
 			evidence = json(dir, `ai-factory/evidence/${id}/S1-step.json`);
@@ -593,7 +593,7 @@ let input='';process.stdin.on('data',c=>input+=c);process.stdin.on('end',()=>{
 			// check is the deprecated name of review: its command reads the review task.
 			const shared = task === "check" ? "review" : task;
 			assert.match(fs.readFileSync(path.join(plugin, "commands", `${task}.md`), "utf8"), new RegExp(`ai-factory/tasks/${shared}\\.md`), `Claude ${task} reads the shared task`);
-			assert.match(fs.readFileSync(path.join(plugin, "codex-skills", `t4-${task}`, "SKILL.md"), "utf8"), new RegExp(`ai-factory/agents/${agent}\\.md`), `Codex ${task} reads the shared procedure`);
+			assert.match(fs.readFileSync(path.join(plugin, "codex-skills", `fc-${task}`, "SKILL.md"), "utf8"), new RegExp(`ai-factory/agents/${agent}\\.md`), `Codex ${task} reads the shared procedure`);
 		}
 		assert.ok(fs.existsSync(path.join(ai, "make/contracts.js")) && fs.existsSync(path.join(ai, "contracts/README.md")));
 		assert.ok(!fs.existsSync(path.join(ai, "contracts/config.json")), "adoption alone does not opt in");

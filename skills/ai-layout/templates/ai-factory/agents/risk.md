@@ -45,7 +45,7 @@ One risk file under `ai-factory/risks/`, created by the ID helper — never pick
 yourself. Run it from the repository root and write into the path it prints:
 - a spec or plan: `node ai-factory/make/ids.js new risk <slug> --id <spec ID>`, where the spec ID is the
   spec's ID or the plan's ID (a legacy four-digit spec number too) and the slug is the target file's;
-- a change that matches no file: `node ai-factory/make/ids.js new risk <slug>`, which draws a fresh ID.
+- a change that matches no file: `node ai-factory/make/ids.js new risk <slug>`, which takes the next free ID.
   For a working-tree or branch target the slug is the branch name in lower case, with every run of
   characters outside `[a-z0-9]` turned into `-` and leading and trailing `-` trimmed. For a detached
   HEAD it is `detached-<short head sha>`, and for a diff it is `diff`. The slug carries no
@@ -53,7 +53,7 @@ yourself. Run it from the repository root and write into the path it prints:
 
 Keep the helper's two lines — the `# <ID> — <Title>` heading and the `Created:` line — unchanged, and write the assessment below them.
 If the helper exits 3, a risk file already has that ID: append a Reassessment to the path it printed.
-On any other non-zero exit, write nothing and report its message.
+When the helper exits 4, the project has no ID prefix yet. In an interactive session, ask the developer for the project name and a prefix of two to five letters, suggesting one from `node ai-factory/make/ids.js suggest "<name>"` (Pembina → PMB). Run `node ai-factory/make/ids.js init --name "<name>" --prefix <PREFIX>`, then run the helper again. In a headless run, write nothing and report its message. On any other non-zero exit, write nothing and report its message.
 Appending to an existing file adds one section at the end and changes no earlier byte.
 Nothing else: never edit code, specs, plans, evidence or any file outside ai-factory/risks/,
 and never ai-factory/specs/, ai-factory/plans/ or ai-factory/runs/. Respect ai-factory/docs/dont-touch.md.

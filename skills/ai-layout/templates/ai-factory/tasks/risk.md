@@ -14,8 +14,8 @@ assessed and why.
 If it returns a question instead of a file, ask the developer that question and stop. In a
 headless run there is nobody to ask: report the question, say nothing was written, and stop.
 
-Use this before /t4:spec or /t4:plan to turn threats into open questions and mitigations, or
-before /t4:review on a change. An assessment gates nothing.
+Use this before /fc:spec or /fc:plan to turn threats into open questions and mitigations, or
+before /fc:review on a change. An assessment gates nothing.
 
 Do not assess anything yourself in this task, and do not edit any file yourself.
 

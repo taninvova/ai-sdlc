@@ -32,8 +32,8 @@ const selected = new Set(
 		? ["claude", "codex", "cursor"]
 		: argument.slice(11).split(","),
 );
-// Task names the t4 plugin already registers as native Claude Code commands. A project pointer
-// for one of these puts a second /t4:<name> in the menu, with a different description and no way
+// Task names the fc plugin already registers as native Claude Code commands. A project pointer
+// for one of these puts a second /fc:<name> in the menu, with a different description and no way
 // for the user to tell which one runs. The plugin command wins: it works in strict mode, where no
 // pointer exists at all. Codex plugins ship no commands, so their skills are still generated.
 const nativeClaudeCommands = new Set([
@@ -63,7 +63,7 @@ const nativeClaudeCommands = new Set([
 	"spec",
 	"test",
 ]);
-// Agent names the plugin registers as `t4:<name>`, for the same reason: a pointer adds a second
+// Agent names the plugin registers as `fc:<name>`, for the same reason: a pointer adds a second
 // agent with the same role and description to the picker. An agent this project added to
 // ai-factory/agents/ is not in this set and still gets its pointer, which is the only way it
 // becomes selectable. Codex plugins ship no subagents; their task skills carry the procedure
@@ -103,7 +103,7 @@ const managed = (body) =>
 	body.includes(marker) ||
 	body.startsWith(models.TOML_MARKER) ||
 	/^\.\.\/\.\.\/(?:\.\.\/)?ai-factory\/(?:agents|skills)\//.test(body) ||
-	/^---\nname: (?:t4-|ai-)[a-z0-9-]+\n(?:[\s\S]*?\n)?---\nRead `(?:ai-factory|ai)\/tasks\/[a-z0-9-]+\.md`/.test(
+	/^---\nname: (?:fc-|ai-)[a-z0-9-]+\n(?:[\s\S]*?\n)?---\nRead `(?:ai-factory|ai)\/tasks\/[a-z0-9-]+\.md`/.test(
 		body,
 	) ||
 	/^---[\s\S]*?\n---\n@(?:\.\.\/)+(?:ai-factory|ai)\/tasks\/[a-z0-9-]+\.md\s*$/.test(
@@ -159,7 +159,7 @@ function cleanup(dir) {
 try {
 	if (selected.has("claude")) {
 		cleanup(".claude/commands");
-		cleanup(".claude/commands/t4");
+		cleanup(".claude/commands/fc");
 		// Sweeps the pointers an older sync generated for the plugin's own agents; the ones this
 		// project added are written back below. A hand-authored agent carries no marker and stays.
 		cleanup(".claude/agents");
@@ -203,14 +203,14 @@ try {
 		// instead of importing it.
 		if (selected.has("claude") && !nativeClaudeCommands.has(name))
 			put(
-				`.claude/commands/t4/${name}.md`,
+				`.claude/commands/fc/${name}.md`,
 				`---\ndescription: ${description}\n${hint ? `argument-hint: ${hint}\n` : ""}---\n${models.entryPreamble("claude", name)}\n\nUnless the directive routed the task to a worker, read \`ai-factory/tasks/${name}.md\` and follow it with the input below.\n\nTask input: $ARGUMENTS\n`,
 			);
 		if (selected.has("codex")) {
 			const agent = /Delegate to the `([a-z]+)` subagent/.exec(body)?.[1];
 			put(
-				`.codex/skills/t4-${name}/SKILL.md`,
-				`---\nname: t4-${name}\ndescription: ${description}\n---\n${models.entryPreamble("codex", name)}\n\nUnless the directive routed the task to a worker, read \`ai-factory/tasks/${name}.md\` and use the user's request as its input.\n${agent ? `Read the complete procedure in \`ai-factory/agents/${agent}.md\`. When native delegation is available, pass that procedure and task input to a delegate. Otherwise run it in this session and label review as a self-check rather than an independent review. This fallback applies only to the legacy and inherit directives.\n` : ""}`,
+				`.codex/skills/fc-${name}/SKILL.md`,
+				`---\nname: fc-${name}\ndescription: ${description}\n---\n${models.entryPreamble("codex", name)}\n\nUnless the directive routed the task to a worker, read \`ai-factory/tasks/${name}.md\` and use the user's request as its input.\n${agent ? `Read the complete procedure in \`ai-factory/agents/${agent}.md\`. When native delegation is available, pass that procedure and task input to a delegate. Otherwise run it in this session and label review as a self-check rather than an independent review. This fallback applies only to the legacy and inherit directives.\n` : ""}`,
 			);
 		}
 	}
@@ -224,8 +224,8 @@ try {
 			const body = fs.readFileSync(file, "utf8");
 			const agent = /Delegate to the `([a-z]+)` subagent/.exec(body)?.[1];
 			put(
-				`.codex/skills/t4-${alias}/SKILL.md`,
-				`---\nname: t4-${alias}\ndescription: Deprecated — use $t4-${name}. Runs the ${name} task under its old name\n---\n${models.aliasNotice("codex", alias)}\n\n${models.entryPreamble("codex", name)}\n\nUnless the directive routed the task to a worker, read \`ai-factory/tasks/${name}.md\` and use the user's request as its input.\n${agent ? `Read the complete procedure in \`ai-factory/agents/${agent}.md\`. When native delegation is available, pass that procedure and task input to a delegate. Otherwise run it in this session and label review as a self-check rather than an independent review. This fallback applies only to the legacy and inherit directives.\n` : ""}`,
+				`.codex/skills/fc-${alias}/SKILL.md`,
+				`---\nname: fc-${alias}\ndescription: Deprecated — use $fc-${name}. Runs the ${name} task under its old name\n---\n${models.aliasNotice("codex", alias)}\n\n${models.entryPreamble("codex", name)}\n\nUnless the directive routed the task to a worker, read \`ai-factory/tasks/${name}.md\` and use the user's request as its input.\n${agent ? `Read the complete procedure in \`ai-factory/agents/${agent}.md\`. When native delegation is available, pass that procedure and task input to a delegate. Otherwise run it in this session and label review as a self-check rather than an independent review. This fallback applies only to the legacy and inherit directives.\n` : ""}`,
 			);
 		}
 	if (selected.has("claude")) {

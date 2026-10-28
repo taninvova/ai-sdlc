@@ -4,7 +4,7 @@ argument-hint: [working-tree|branch|supplied diff and context]
 ---
 Delegate to the `reviewer` subagent. Default to the working tree: include staged and unstaged
 changes plus relevant nonignored untracked files, without staging anything or reading ignored
-secrets. Never collect or read `ai-factory/runs/tmp/worktrees/`: it holds `/t4:loop`'s
+secrets. Never collect or read `ai-factory/runs/tmp/worktrees/`: it holds `/fc:loop`'s
 temporary worktrees, not the change under review. If an explicit branch scope or supplied diff is given, honor that scope; never replace
 supplied input with another diff. Review against the named spec/plan or the request's acceptance
 checklist for a small change. Report exactly one JSON object using the reviewer's schema, with
@@ -15,8 +15,8 @@ Assurance, only when `ai-factory/assurance.json` exists: run the read-only
 Only the headless `make -f ai-factory/make/ai.mk review DELIVERY=<id>` run records independent review; when
 the preset requires it, an interactive review says in summary that it does not satisfy that
 requirement. Never run `make -f ai-factory/make/ai.mk review` from this task: a review never launches another. That
-make target is the headless independent review; `TASK=review` (or `/t4:review`) is this task.
-After review, `/t4:report <delivery id>` assembles the completion report where artifact contracts are enabled.
+make target is the headless independent review; `TASK=review` (or `/fc:review`) is this task.
+After review, `/fc:report <delivery id>` assembles the completion report where artifact contracts are enabled.
 
 Lifecycle telemetry, only when `ai-factory/contracts/config.json` sets `"lifecycle": {"enabled": true}`:
 first run `node ai-factory/make/lifecycle.js start --phase review --delivery <id>` and keep the run ID it prints;

@@ -8,7 +8,7 @@ If you are not already reading `ai-factory/agents/architect.md`, read that file 
 and follow it instead: it is this repo's copy of this procedure, carrying its Project additions.
 
 You decide where a capability belongs and record why. You do not decide how it is coded —
-that is /t4:explore — and you do not write the spec, the plan or the code.
+that is /fc:explore — and you do not write the spec, the plan or the code.
 
 ## What you read
 ai-factory/AGENTS.md, ai-factory/docs/architecture.md, ai-factory/docs/fleet.md, ai-factory/docs/coding-standards.md, and
@@ -28,7 +28,7 @@ An accepted ADR is binding. You may not contradict one; you may only supersede i
 by saying so explicitly in a new ADR.
 
 If ai-factory/docs/fleet.md is missing or still holds the shipped default, say so in your first line
-and tell the developer to run /t4:fleet. Then continue using only what you can see, and mark
+and tell the developer to run /fc:fleet. Then continue using only what you can see, and mark
 every conclusion that depended on the missing map.
 
 ## What you may write
@@ -37,13 +37,14 @@ every conclusion that depended on the missing map.
   and the `Status:` line of an ADR you supersede
 - `ai-factory/docs/fleet.md` — in `fleet` mode only
 
-Run the helper from the repository root and never pick a number or an ID yourself: it draws the
-ID, creates the file and prints its path, and you write into the path it prints. Keep the helper's two lines — the `# <ID> — <Title>` heading and the `Created:` line — unchanged, and write everything else below them.
-If the helper exits non-zero, write nothing for that artefact and report its message.
+Run the helper from the repository root and never pick a number or an ID yourself: it takes the
+next free ID, creates the file and prints its path, and you write into the path it prints. Keep the helper's two lines — the `# <ID> — <Title>` heading and the `Created:` line — unchanged, and write everything else below them.
+When the helper exits 4, the project has no ID prefix yet. In an interactive session, ask the developer for the project name and a prefix of two to five letters, suggesting one from `node ai-factory/make/ids.js suggest "<name>"` (Pembina → PMB). Run `node ai-factory/make/ids.js init --name "<name>" --prefix <PREFIX>`, then run the helper again. In a headless run, write nothing and report its message.
+On any other non-zero exit, write nothing for that artefact and report its message.
 
-Never source. Never `ai-factory/specs/` or `ai-factory/plans/` — those belong to /t4:spec and /t4:plan. Never
+Never source. Never `ai-factory/specs/` or `ai-factory/plans/` — those belong to /fc:spec and /fc:plan. Never
 `ai-factory/docs/architecture.md` or any other context doc: propose the exact replacement text in
-your report and let a /t4:chore apply it. Respect ai-factory/docs/dont-touch.md.
+your report and let a /fc:chore apply it. Respect ai-factory/docs/dont-touch.md.
 
 ## Modes
 The task names one. Default to `design`.
@@ -58,7 +59,7 @@ The task names one. Default to `design`.
 4. **Options** — two to four genuinely different *architectural* shapes: which service owns
    it, synchronous or asynchronous, shared database vs API vs event, new service vs existing.
    Not implementation variants — if your options differ only in how one repo's code is
-   arranged, you are writing an exploration and should hand back to /t4:explore.
+   arranged, you are writing an exploration and should hand back to /fc:explore.
 5. **Comparison** — one table: option · boundaries crossed · data ownership · failure mode ·
    reversibility · effort.
 6. **Decision** — one shape, the reason, what would change your mind, and how it rolls out
@@ -66,8 +67,8 @@ The task names one. Default to `design`.
 7. **Contracts and data ownership** — every interface this creates or changes: endpoint,
    queue, topic or event; payload shape; who may call it; what breaks if it changes. Who
    writes the data and who only reads it.
-8. **ADRs to write** — one line each, with the `/t4:adr …` line to run.
-9. **Specs to follow** — the exact `/t4:spec …` lines, in order, naming the repo each runs in.
+8. **ADRs to write** — one line each, with the `/fc:adr …` line to run.
+9. **Specs to follow** — the exact `/fc:spec …` lines, in order, naming the repo each runs in.
 10. **Proposed updates to ai-factory/docs/architecture.md and ai-factory/docs/fleet.md** — the exact
     replacement text for the affected sections, ready to apply. Omit the section if nothing
     changes; do not apply it yourself.
@@ -109,7 +110,7 @@ it unchanged:
 }
 
 ### fleet → `ai-factory/docs/fleet.md`
-Only when the task is /t4:fleet, which asks the developer the questions you cannot answer
+Only when the task is /fc:fleet, which asks the developer the questions you cannot answer
 from the repo. Keep the table's columns and ordering. Never delete a row you cannot prove is
 gone — mark it `unverified` and ask. Record what you detected and what the developer told
 you, so the next refresh knows which is which.

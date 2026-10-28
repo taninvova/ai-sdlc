@@ -10,7 +10,7 @@ needing steering in chat, the prompt is missing a line; fix the prompt, don't re
 Three opt-in layers sit on top of the loop and change nothing until a repo enables them in
 `ai-factory/contracts/config.json`:
 - **artifact contracts** — checked handoffs between steps, with recorded evidence;
-- **the completion report** — `/t4:report`, a status for handoff;
+- **the completion report** — `/fc:report`, a status for handoff;
 - **lifecycle telemetry** — duration, waits, retries, outcomes and attributed tokens.
 
 See *Artifact contracts* in section 4.
@@ -27,7 +27,7 @@ Host pointers are opt-in: `bash ai-factory/make/sync-adapters.sh --adapters=clau
 only those hosts. Default sync changes no external files and never overwrites a hand-authored
 adapter. Unsupported automatic discovery uses explicit invocation; do not invent host support.
 
-Use `/t4:start <request>` (Codex `$t4-start`) when you want T4 to choose the entry. It explains
+Use `/fc:start <request>` (Codex `$fc-start`) when you want FC to choose the entry. It explains
 one choice among quick, fix, chore, analyse, design, explore and spec, then hands the original
 request to that existing procedure. Unsettled business needs precede service placement, which
 precedes implementation exploration; existing artifacts may settle those decisions. Authorization,
@@ -36,7 +36,7 @@ on size. Explicit incompatible workflow choices get clarification. No automatic 
 whole-lifecycle chaining occurs. Empty input asks for the change and expected result; missing
 workspace/task reports adoption or drift guidance without repairs. Direct entries remain available.
 
-Use `/t4:continue <delivery id>` (Codex `$t4-continue`) to resume an interrupted planned delivery.
+Use `/fc:continue <delivery id>` (Codex `$fc-continue`) to resume an interrupted planned delivery.
 It is interactive-only. It needs artifact contracts enabled and accepts one contract delivery ID
 (`d-YYYYMMDD-xxxxxx`, from the spec's `.contract.json`) for a planned delivery. Spec or plan paths,
 quick deliveries, unknown IDs and contracts-disabled repos stop with the reason. Empty input asks
@@ -69,10 +69,10 @@ merged, deployed or published.
 **Handoff.** `continue.js handoff` validates the result, rechecks the fingerprint and dispatches
 exactly one destination under that task's own model policy. A change, rejection, failure or
 cancellation stops with no fallback, and success stops at the destination's boundary. Continue runs in
-the invoking session. It ignores `routing.tasks.continue`, which `/t4:doctor` flags, and refuses a
+the invoking session. It ignores `routing.tasks.continue`, which `/fc:doctor` flags, and refuses a
 concrete `--task-model`. Headless `TASK=continue` rejects before launch or run artifacts.
 
-Use `/t4:quick` for a small, understood local change: short acceptance checklist, implementation,
+Use `/fc:quick` for a small, understood local change: short acceptance checklist, implementation,
 meaningful coverage, affected/final checks, and a labeled self-review. No spec/plan/agent is
 required solely because behavior changes. Authorization, public contracts, migrations,
 dependencies, service boundaries and material uncertainty use the planned workflow below.
@@ -100,12 +100,12 @@ disable host protections or grant broad permissions to make tests pass.
 
 ```
 /plugin marketplace add git@github.com:taninvova/ai-sdlc.git  <!-- path-scan-ok -->
-/plugin install t4@sdlc
+/plugin install fc@sdlc
 ```
 
 Working on the plugin itself, from its repo root: `claude --plugin-dir .`.  <!-- path-scan-ok -->
 
-The installed plugin exposes 22 `/t4:*` commands in every repo, including all 16 project
+The installed plugin exposes 22 `/fc:*` commands in every repo, including all 16 project
 task entry points. No `.claude/commands/` pointers are needed for built-in workflows.
 The commands are visible before adoption; a project workflow reports a missing workspace
 or task instead of silently scaffolding it. Hooks stay silent outside an adopted repo.
@@ -116,13 +116,13 @@ configured with, whatever the provider.
 ## 2. Set a repo up, once per repo
 
 ```
-/t4:adopt-sdlc                 # detects your stack and its build/lint/test commands
-/t4:fleet                   # fills in ai-factory/docs/fleet.md by asking you
-/t4:setup-tracker           # optional — only if you want /t4:spec ABC-12 to work
-/t4:setup-knowledge         # optional — declare an external documentation source (MCP)
+/fc:adopt-sdlc                 # detects your stack and its build/lint/test commands
+/fc:fleet                   # fills in ai-factory/docs/fleet.md by asking you
+/fc:setup-tracker           # optional — only if you want /fc:spec ABC-12 to work
+/fc:setup-knowledge         # optional — declare an external documentation source (MCP)
 ```
 
-`/t4:adopt-sdlc` copies only `ai-factory/` and writes its manifest. External host pointers are opt-in. It refuses if `ai-factory/` already exists — use `/t4:sync-sdlc` there instead.
+`/fc:adopt-sdlc` copies only `ai-factory/` and writes its manifest. External host pointers are opt-in. It refuses if `ai-factory/` already exists — use `/fc:sync-sdlc` there instead.
 
 Then **fill in the prose it left as TBD**. This is the step people skip, and it is the step
 that decides whether any of the rest is worth running:
@@ -137,71 +137,71 @@ that decides whether any of the rest is worth running:
 
 An agent with a placeholder `architecture.md` produces placeholder-quality work.
 
-Restart the session (or `/reload-plugins`) after a plugin update to load all 25 `/t4:*` commands.
+Restart the session (or `/reload-plugins`) after a plugin update to load all 25 `/fc:*` commands.
 
 ---
 
 ## 3. Which command do I want?
 
 ```
-Is it a bug?                              → /t4:fix
-Is it a small chore, no behaviour change? → /t4:chore
+Is it a bug?                              → /fc:fix
+Is it a small chore, no behaviour change? → /fc:chore
 Is it a business description — actors,
-  rules, permissions, undecided policy?   → /t4:analyse  then /t4:spec
+  rules, permissions, undecided policy?   → /fc:analyse  then /fc:spec
 Does it cross a service boundary,
-  change a contract, or have no home yet? → /t4:design   then /t4:adr, then /t4:spec
-Could it be built more than one way?      → /t4:explore  then /t4:spec
-Otherwise                                 → /t4:spec
+  change a contract, or have no home yet? → /fc:design   then /fc:adr, then /fc:spec
+Could it be built more than one way?      → /fc:explore  then /fc:spec
+Otherwise                                 → /fc:spec
 ```
 
-`/t4:explore` is optional for small obvious changes and **mandatory** when the request could
+`/fc:explore` is optional for small obvious changes and **mandatory** when the request could
 be built more than one way, or touches a queue contract, a schema, or a public API.
 
-`/t4:design` sits above `/t4:explore`: design decides **where** a capability lives and what
+`/fc:design` sits above `/fc:explore`: design decides **where** a capability lives and what
 it exposes, explore decides **how** to build it in one repo whose home is already settled.
 
-`/t4:analyse` sits before both when the request is still a business description: it settles
+`/fc:analyse` sits before both when the request is still a business description: it settles
 **what** is needed — actors, permissions, rules, states, data, undecided policy — as a pack in
-`ai-factory/analyses/` that `/t4:spec` reads. A small, well-understood change does not need it.
+`ai-factory/analyses/` that `/fc:spec` reads. A small, well-understood change does not need it.
 
 ## 4. The main loop
 
 ```
-/t4:spec  →  /t4:plan  →  /t4:test red  →  /t4:run ×N  →  /t4:test gaps  →  /t4:review  (→ /t4:report)
+/fc:spec  →  /fc:plan  →  /fc:test red  →  /fc:run ×N  →  /fc:test gaps  →  /fc:review  (→ /fc:report)
 ```
 
 A worked example — adding CSV export to a reports page:
 
 ```
-/t4:explore let users export a report as CSV
+/fc:explore let users export a report as CSV
     → ai-factory/explorations/0003-csv-export.md — 3 options, a recommendation,
-      and the /t4:spec line to run next
+      and the /fc:spec line to run next
 
-/t4:spec add CSV export to the reports page
+/fc:spec add CSV export to the reports page
     → ai-factory/specs/0007-csv-export.md — AC1…AC5 as Given/When/Then, plus open questions.
       Answer the open questions before planning. A spec with open questions is not buildable.
 
-/t4:plan ai-factory/specs/0007-csv-export.md
+/fc:plan ai-factory/specs/0007-csv-export.md
     → ai-factory/plans/0007-csv-export.md — files to touch, then
       - [ ] Step 1 — …  - [ ] Step 2 — …  each naming the tests that prove it
 
-/t4:test red ai-factory/specs/0007-csv-export.md
+/fc:test red ai-factory/specs/0007-csv-export.md
     → tests for AC1…AC5, written from the spec by an agent that has not seen your
       implementation. They MUST fail, and fail for the right reason.
 
-/t4:run ai-factory/plans/0007-csv-export.md step 1
+/fc:run ai-factory/plans/0007-csv-export.md step 1
     → implements step 1 only, verifies the declared phase, ticks the verified checkbox
 
     …repeat per step, one at a time…
-      (or /t4:loop ai-factory/plans/0007-csv-export.md: every remaining step, then one /t4:review)
+      (or /fc:loop ai-factory/plans/0007-csv-export.md: every remaining step, then one /fc:review)
 
-/t4:test gaps ai-factory/specs/0007-csv-export.md
+/fc:test gaps ai-factory/specs/0007-csv-export.md
     → covers any AC that ended up with no test
 
-/t4:review
+/fc:review
     → the reviewer agent on the selected diff; JSON verdict
 
-/t4:report d-20260930-1a2b3c          (artifact contracts enabled)
+/fc:report d-20260930-1a2b3c          (artifact contracts enabled)
     → ai-factory/reports/d-20260930-1a2b3c/completion.md — ready, incomplete, blocked or
       unverified, each reason tied to its evidence, plus a draft MR description
 ```
@@ -210,11 +210,11 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
 
 ### The rules that make it work
 
-- **One named step per `/t4:run`.** It is told not to start the next one. Let it stop.
-- **`/t4:loop <plan>` is the one exception.** `/t4:loop` is the opt-in exception to one step per
-  `/t4:run`, recorded in [ADR ETT683](../adr/ETT683-loop-halt-and-commit-exceptions.md):
-  one invocation implements every unticked step of one plan, then runs `/t4:review` once.
-  `/t4:run` is unchanged and still stops after one step. The loop halts only on a failure, a
+- **One named step per `/fc:run`.** It is told not to start the next one. Let it stop.
+- **`/fc:loop <plan>` is the one exception.** `/fc:loop` is the opt-in exception to one step per
+  `/fc:run`, recorded in [ADR ETT683](../adr/ETT683-loop-halt-and-commit-exceptions.md):
+  one invocation implements every unticked step of one plan, then runs `/fc:review` once.
+  `/fc:run` is unchanged and still stops after one step. The loop halts only on a failure, a
   conflict or a timeout, and never commits on your branch. Its only commits sit on temporary
   branches in its own worktrees, and each step's change comes back to your tree uncommitted.
   - **Steps and dependencies.** A plan step may carry `Depends on: N, M`. A step without that
@@ -225,11 +225,11 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
     is not enforced there.
   - **Keep tools out of the worktrees.** Test, lint and typecheck tools must exclude
     `ai-factory/runs/tmp/worktrees/`, because a worktree holds a full copy of the repository.
-    `/t4:review`, the review scope and the hooks already skip it.
+    `/fc:review`, the review scope and the hooks already skip it.
   - **After a stop.** Worktrees kept after a failure, conflict or timeout are yours to inspect
-    and remove (`git worktree remove <path>`, then `git branch -D` its `t4-loop/…` branch). Resume
-    the plan one step at a time with `/t4:run`, or with `/t4:continue <delivery id>`.
-- **Back after time away? `/t4:state` before `/t4:run`.** It lists the specs and plans still
+    and remove (`git worktree remove <path>`, then `git branch -D` its `fc-loop/…` branch). Resume
+    the plan one step at a time with `/fc:run`, or with `/fc:continue <delivery id>`.
+- **Back after time away? `/fc:state` before `/fc:run`.** It lists the specs and plans still
   outstanding, each outstanding plan with its incomplete steps, so you pick the next step up from
   the artefacts on disk rather than from what you remember of the last session. Read-only — it
   names the work and starts none of it.
@@ -241,7 +241,7 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
   `--next`. `--spec <id>` lists one spec and the plans whose `**Spec:**` line names it — on
   its own whatever their state, so a finished spec is shown rather than answered with "nothing
   outstanding"; add `--done`, `--next`, `--specs` or `--plans` to narrow that further.
-  With contracts enabled, `/t4:state --delivery <id>` shows one delivery's evidence instead; see
+  With contracts enabled, `/fc:state --delivery <id>` shows one delivery's evidence instead; see
   *Delivery status* below.
 - **Plan when risk or uncertainty warrants it.** File count alone does not determine the workflow.
 - **Steering in chat for 20+ minutes with code changed?** Stop. Write the decision into the
@@ -263,18 +263,18 @@ git add ai-factory/contracts/config.json ai-factory/.sdlc.json
 ```
 
 Then set `code_scope` in `ai-factory/contracts/config.json` to the files that count as code,
-and exclude generated test output. `/t4:sync-sdlc` offers the same opt-in.
+and exclude generated test output. `/fc:sync-sdlc` offers the same opt-in.
 
 **Then work exactly as before.** The commands do the bookkeeping:
 
 | Command | Adds, when contracts are on |
 |---|---|
-| `/t4:spec` | numbered `AC1…` criteria; `contracts.js init spec` records the delivery ID (`d-YYYYMMDD-xxxxxx`) |
-| `/t4:plan` | each step names its ACs and ``Verify (red\|step\|final): `command` `` checks; `init plan` rejects uncovered ACs or missing checks |
-| `/t4:test … red` | `make verify DELIVERY=<id> STEP=S1 PHASE=red` proves the new tests fail |
-| `/t4:run … step N` | `make verify DELIVERY=<id> STEP=SN`; the box is ticked only on passing evidence; the last step adds `PHASE=final` |
-| `/t4:review` | reports every artifact that is not valid as a finding; headless `make review DELIVERY=<id>` records review evidence |
-| `/t4:quick` | the checklist goes to `ai-factory/quick/<slug>.md` as `QC1…` items, finished by `make verify DELIVERY=<id>` |
+| `/fc:spec` | numbered `AC1…` criteria; `contracts.js init spec` records the delivery ID (`d-YYYYMMDD-xxxxxx`) |
+| `/fc:plan` | each step names its ACs and ``Verify (red\|step\|final): `command` `` checks; `init plan` rejects uncovered ACs or missing checks |
+| `/fc:test … red` | `make verify DELIVERY=<id> STEP=S1 PHASE=red` proves the new tests fail |
+| `/fc:run … step N` | `make verify DELIVERY=<id> STEP=SN`; the box is ticked only on passing evidence; the last step adds `PHASE=final` |
+| `/fc:review` | reports every artifact that is not valid as a finding; headless `make review DELIVERY=<id>` records review evidence |
+| `/fc:quick` | the checklist goes to `ai-factory/quick/<slug>.md` as `QC1…` items, finished by `make verify DELIVERY=<id>` |
 
 (`make` here is `make -f ai-factory/make/ai.mk`.)
 
@@ -295,7 +295,7 @@ is not valid names a code and says what to do. The usual causes:
 
 Never edit a sidecar or an evidence file by hand.
 
-**The completion report.** `/t4:report <id>`, or `make -f ai-factory/make/ai.mk delivery-report
+**The completion report.** `/fc:report <id>`, or `make -f ai-factory/make/ai.mk delivery-report
 DELIVERY=<id>`, writes `ai-factory/reports/<id>/completion.md` and `.json`. It contains:
 - the status (`ready`, `incomplete`, `blocked` or `unverified`) with every reason and its evidence;
 - one row per criterion;
@@ -317,7 +317,7 @@ which finding severities block, and whether human attestations (`contracts.js at
 - **Reading it.** `make -f ai-factory/make/ai.mk lifecycle [DELIVERY=<id>] [JSON=1]` reports elapsed,
   waiting and active time, agent effort, retries, outcomes, tokens and priced/unpriced cost per
   delivery, plus unattributed activity. Anything not measured shows as unknown, never zero.
-- **In the completion report.** `/t4:report` includes these numbers when lifecycle is enabled.
+- **In the completion report.** `/fc:report` includes these numbers when lifecycle is enabled.
 
 **Repos with existing specs and plans.** `node ai-factory/make/contracts.js migrate` shows the
 drafts it would create; `--write` creates them. Drafts stay unverified until you review them
@@ -328,7 +328,7 @@ The full walkthrough, the diagnostic table and the file formats are in
 
 ### Delivery status
 
-`/t4:state --delivery <id>` (Codex `$t4-state --delivery <id>`) shows one artifact-contract
+`/fc:state --delivery <id>` (Codex `$fc-state --delivery <id>`) shows one artifact-contract
 delivery — planned or quick — as a compact, read-only `field`/`value` table. It needs contracts
 enabled (`node ai-factory/make/contracts.js enable`) and exactly one delivery ID of the form
 `d-YYYYMMDD-xxxxxx`. The default listing, `--done` and `--next` are unchanged; `--delivery` is a
@@ -337,7 +337,7 @@ separate mode that combines with neither.
 **How it reads.** `state.sh` hands the ID, as one literal argument, to the workspace's adopted
 `node ai-factory/make/delivery-status.js <id>`. The helper collects and evaluates the delivery
 once in memory through `delivery-report.js` — the same collector retries, guarded readers and
-readiness rules as `/t4:report` — and prints the table. It never generates or saves a report,
+readiness rules as `/fc:report` — and prints the table. It never generates or saves a report,
 never reads a saved report, runs no verification or review, starts no task or continuation,
 writes nothing and names no next action. The same files give the same table, interactively or
 headless. The command presents the rows as printed and adds no next step of its own.
@@ -384,9 +384,9 @@ given twice, `--delivery` with `--done` or `--next`, a malformed ID or a path, c
 enabled or an unreadable `ai-factory/contracts/config.json`, an unknown ID, an ID that only an evidence directory carries, and a duplicate identity
 (two sidecars of one kind, or quick and planned sidecars sharing the ID). A workspace missing
 `delivery-status.js` or the scripts it needs (`delivery-report.js`, `contracts.js`, `gate.js`,
-`safe-files.js`) is told to run `/t4:sync-sdlc` (or `/t4:adopt-sdlc`); nothing falls back to a
+`safe-files.js`) is told to run `/fc:sync-sdlc` (or `/fc:adopt-sdlc`); nothing falls back to a
 listing. A helper that crashes — an outdated copy, for instance — exits non-zero with its error
-line and the same `/t4:sync-sdlc` hint, so it is never mistaken for a status.
+line and the same `/fc:sync-sdlc` hint, so it is never mistaken for a status.
 
 **Worked examples.** Each was produced by running `state.sh --delivery` against a disposable
 fixture built from `skills/ai-layout/fixtures/contracts/planned` with `check-delivery-status.sh`'s
@@ -463,10 +463,10 @@ source	evidence ai-factory/evidence/d-20261006-1a2b3c/ (6 record(s))
 `(contracts: …)` is the raw result of `contracts.js validate`, the same as `make contracts`. That
 check is structural and knows nothing about completion policy, so any evidence file recorded as
 `not_run` or `unavailable` makes it `invalid`. Here that file is `S2-step.json`, written by
-`record --not-run`, which itself exits 1. The readiness word comes from the `/t4:report` evaluator
+`record --not-run`, which itself exits 1. The readiness word comes from the `/fc:report` evaluator
 (spec 0014). It applies the `completion` policy: with `allow_attestation` on, a step that could not
 run counts when allowed attestations cover every one of its criteria. It shows up as the `ATTESTED`
-limitation, and `/t4:report` gives `ready` for the same files. The status adds no rule of its own,
+limitation, and `/fc:report` gives `ready` for the same files. The status adds no rule of its own,
 in either direction. Without that attestation, or with `allow_attestation` off, the same files give
 `unverified`, as in the first example. If a `contracts: invalid` comes with no `ATTESTED` line,
 read `limitations` for the cause. Attested criteria stay in their own group, never under `verified`.
@@ -477,14 +477,14 @@ read `limitations` for the cause. Attested criteria stay in their own group, nev
 
 | Command | Use it when | Writes |
 |---|---|---|
-| `/t4:adopt-sdlc` | adding the layout to an existing repo | the whole `ai-factory/` layout + `ai-factory/.sdlc.json` |
-| `/t4:state` | coming back to a repo and asking what is left, before picking a step up; `--delivery <id>` for one contract delivery's evidence | nothing — terminal output only |
-| `/t4:sync-sdlc` | after pulling a new plugin version, or when `/t4:*` are missing | reports drift; generates selected host pointers only on explicit request |
+| `/fc:adopt-sdlc` | adding the layout to an existing repo | the whole `ai-factory/` layout + `ai-factory/.sdlc.json` |
+| `/fc:state` | coming back to a repo and asking what is left, before picking a step up; `--delivery <id>` for one contract delivery's evidence | nothing — terminal output only |
+| `/fc:sync-sdlc` | after pulling a new plugin version, or when `/fc:*` are missing | reports drift; generates selected host pointers only on explicit request |
 
 #### Taking the 1.0.0 rename
 
 1.0.0 renamed the layout: `ai/` became `ai-factory/`, and `specs/` and `docs/adr/` moved inside it.  <!-- path-scan-ok -->
-`/t4:migrate-layout` made that move, and **2.1.0 removed it** — a one-shot migration, kept for as
+`/fc:migrate-layout` made that move, and **2.1.0 removed it** — a one-shot migration, kept for as
 long as it was a command anyone here still needed. A repo that has not run it still can: check out
 ai-sdlc at 2.0.0 or earlier, point your tool at that copy, and run the command from there.
 Then commit what it leaves in **two** commits, in the order it prints — the moves first, the path
@@ -493,34 +493,34 @@ of its content loses its history; two commits make that independent of how big t
 
 Until you run it the hooks still work: they accept the old directory name until 3.0.0, so the
 dont-touch guard and the run log keep going. The prompts do not — they name `ai-factory/` only, so
-`/t4:spec` and the rest will look in a directory that is not there yet. `/t4:doctor` says which of
-the three states a repo is in, and `/t4:sync-sdlc` stops and points here rather than syncing.
+`/fc:spec` and the rest will look in a directory that is not there yet. `/fc:doctor` says which of
+the three states a repo is in, and `/fc:sync-sdlc` stops and points here rather than syncing.
 
 ### Project tasks — native commands backed by repo procedures
 
 | Command | Use it when | Writes | Never does |
 |---|---|---|---|
-| `/t4:fleet` | once per repo, then when a service or contract changes | `ai-factory/docs/fleet.md` | ask anything in CI — it fills what it can and marks the rest TBD |
-| `/t4:design <capability>` | the capability spans services or changes a contract | `ai-factory/designs/<ID>-*.md` | write specs, plans or code |
-| `/t4:design review <plan>` | a plan crosses a boundary or adds a dependency | nothing — JSON verdict | review correctness or style; that is `/t4:review` |
-| `/t4:adr <decision>` | any decision that outlives the change, **every new dependency** | `ai-factory/adr/<ID>-*.md` | reopen a decision an accepted ADR settled |
-| `/t4:analyse <feature description>` | the request is a business description — actors, rules, permissions, a lifecycle, undecided policy | `ai-factory/analyses/<ID>-*.md` | write specs, plans or code; invent policy, estimates or approvals; create anything outside the repo |
-| `/t4:explore <request>` | the request could be built more than one way | `ai-factory/explorations/<ID>-*.md` | change code |
-| `/t4:spec <feature>` | you know what to build, not yet how | `ai-factory/specs/<ID>-*.md` | write the plan or the code |
-| `/t4:plan <spec>` | the spec's open questions are answered | `ai-factory/plans/<ID>-*.md` | change code |
-| `/t4:risk <spec, plan or change>` | a spec, plan or change touches authorization, data, secrets, dependencies, migrations or rollback and you want its threats and delivery risks on record | `ai-factory/risks/<ID>-*.md` — a spec and its plan share the spec's ID; a later run appends a dated Reassessment | change code, accept a finding for you, or gate anything |
-| `/t4:test red <spec>` | before implementing | test files | touch production code — if a test needs a change there, it stops and says so |
-| `/t4:run <plan> step N` | implementing, one step at a time | code + tests | start step N+1 |
-| `/t4:loop <plan>` | every remaining step of one plan in one go, independent steps in parallel, then one `/t4:review` | code + tests, each step's change applied back uncommitted and ticked | commit on your branch, push, reset your tree, run `/t4:test` or remove a kept worktree |
-| `/t4:test gaps <spec>` | after the steps are done | test files | weaken an assertion to reach green |
-| `/t4:fix <bug>` | something is broken | a failing test first, then the fix | refactor anything unrelated |
-| `/t4:start <request>` | choose the appropriate existing entry | short explanation and one handoff with original input | implement in the classifier, resume or chain delivery phases |
-| `/t4:continue <delivery id>` | resume a contracts-enabled planned delivery | nothing itself — explains the next evidence-backed action and hands off to one existing task | write artifacts or evidence, run checks, reconcile a changed spec, or chain a second task |
-| `/t4:quick <change>` | a small understood local change | code, meaningful tests, checklist report | change public contracts or silently widen scope |
-| `/t4:chore <change>` | small maintenance, no behaviour change | code + tests | change behaviour beyond the request |
-| `/t4:review` | before committing | nothing — JSON verdict | fix anything it finds |
-| `/t4:check` | deprecated name of `/t4:review`; says so, then runs the review task | as `/t4:review` | as `/t4:review` |
-| `/t4:report <delivery id>` | after review, or any time you need to know where a delivery stands (contracts enabled) | `ai-factory/reports/<id>/completion.{md,json}` | run checks, edit artifacts or publish anything — its MR text is a draft |
+| `/fc:fleet` | once per repo, then when a service or contract changes | `ai-factory/docs/fleet.md` | ask anything in CI — it fills what it can and marks the rest TBD |
+| `/fc:design <capability>` | the capability spans services or changes a contract | `ai-factory/designs/<ID>-*.md` | write specs, plans or code |
+| `/fc:design review <plan>` | a plan crosses a boundary or adds a dependency | nothing — JSON verdict | review correctness or style; that is `/fc:review` |
+| `/fc:adr <decision>` | any decision that outlives the change, **every new dependency** | `ai-factory/adr/<ID>-*.md` | reopen a decision an accepted ADR settled |
+| `/fc:analyse <feature description>` | the request is a business description — actors, rules, permissions, a lifecycle, undecided policy | `ai-factory/analyses/<ID>-*.md` | write specs, plans or code; invent policy, estimates or approvals; create anything outside the repo |
+| `/fc:explore <request>` | the request could be built more than one way | `ai-factory/explorations/<ID>-*.md` | change code |
+| `/fc:spec <feature>` | you know what to build, not yet how | `ai-factory/specs/<ID>-*.md` | write the plan or the code |
+| `/fc:plan <spec>` | the spec's open questions are answered | `ai-factory/plans/<ID>-*.md` | change code |
+| `/fc:risk <spec, plan or change>` | a spec, plan or change touches authorization, data, secrets, dependencies, migrations or rollback and you want its threats and delivery risks on record | `ai-factory/risks/<ID>-*.md` — a spec and its plan share the spec's ID; a later run appends a dated Reassessment | change code, accept a finding for you, or gate anything |
+| `/fc:test red <spec>` | before implementing | test files | touch production code — if a test needs a change there, it stops and says so |
+| `/fc:run <plan> step N` | implementing, one step at a time | code + tests | start step N+1 |
+| `/fc:loop <plan>` | every remaining step of one plan in one go, independent steps in parallel, then one `/fc:review` | code + tests, each step's change applied back uncommitted and ticked | commit on your branch, push, reset your tree, run `/fc:test` or remove a kept worktree |
+| `/fc:test gaps <spec>` | after the steps are done | test files | weaken an assertion to reach green |
+| `/fc:fix <bug>` | something is broken | a failing test first, then the fix | refactor anything unrelated |
+| `/fc:start <request>` | choose the appropriate existing entry | short explanation and one handoff with original input | implement in the classifier, resume or chain delivery phases |
+| `/fc:continue <delivery id>` | resume a contracts-enabled planned delivery | nothing itself — explains the next evidence-backed action and hands off to one existing task | write artifacts or evidence, run checks, reconcile a changed spec, or chain a second task |
+| `/fc:quick <change>` | a small understood local change | code, meaningful tests, checklist report | change public contracts or silently widen scope |
+| `/fc:chore <change>` | small maintenance, no behaviour change | code + tests | change behaviour beyond the request |
+| `/fc:review` | before committing | nothing — JSON verdict | fix anything it finds |
+| `/fc:check` | deprecated name of `/fc:review`; says so, then runs the review task | as `/fc:review` | as `/fc:review` |
+| `/fc:report <delivery id>` | after review, or any time you need to know where a delivery stands (contracts enabled) | `ai-factory/reports/<id>/completion.{md,json}` | run checks, edit artifacts or publish anything — its MR text is a draft |
 
 ### The agents
 
@@ -529,14 +529,14 @@ loop steps, so that each step starts from its artefacts and not from the chat th
 them; the session keeps what only a session can do — refuse an empty argument, ask a question,
 resolve a tracker key, relay the report:
 
-- **`explorer`** — `/t4:explore`: reads the code the request touches, writes two to four
+- **`explorer`** — `/fc:explore`: reads the code the request touches, writes two to four
   options with a comparison and one recommendation to `ai-factory/explorations/`. Never code.
-- **`specifier`** — `/t4:spec`: builds on the exploration's chosen option and the analysis if
+- **`specifier`** — `/fc:spec`: builds on the exploration's chosen option and the analysis if
   either exists, writes Given/When/Then criteria to `ai-factory/specs/`; anything implicit is an open
   question, never a criterion. Never the plan or code.
-- **`planner`** — `/t4:plan`: turns one spec into steps sized for one `/t4:run`, each naming
+- **`planner`** — `/fc:plan`: turns one spec into steps sized for one `/fc:run`, each naming
   the tests that prove it, in `ai-factory/plans/`. Never code.
-- **`implementer`** — `/t4:run`: implements exactly one step, runs lint, typecheck and tests,
+- **`implementer`** — `/fc:run`: implements exactly one step, runs lint, typecheck and tests,
   ticks the box only when green. Red, or a test it cannot find: stops and explains. Never the
   next step, never a knowledge source, and the dont-touch guard blocks it like anyone else.
 
@@ -557,7 +557,7 @@ Five stand outside the loop's steps:
   scenarios and traceability. Labels every statement a supplied fact, assumption, proposal
   or open question and never lets one become another. Invents no policy, estimate, approval
   or existing architecture. Writes `ai-factory/analyses/` only.
-- **`risk`** — `/t4:risk`: assesses one spec, plan or change for security threats and delivery
+- **`risk`** — `/fc:risk`: assesses one spec, plan or change for security threats and delivery
   risk across eight categories, and records each finding with its severity, status, evidence
   and mitigation in `ai-factory/risks/`. It alone may run network dependency-audit tools
   ([ADR DJX496](../adr/DJX496-risk-agent-network-audit.md)); without them it records the
@@ -576,8 +576,8 @@ code and an accepted ADR, and a disagreement becomes an open question. Nothing i
 back. A source that cannot be reached — Codex, headless, not attached — is one line in the
 report; the loop never halts on it, unlike a ticket the tracker cannot resolve, because a ticket
 is input and knowledge is enrichment. `ai-factory/docs/knowledge.md` holds every detail; a repo that
-declares nothing sees no change at all. `/t4:adopt-sdlc` offers to declare one (default: skip);
-`/t4:setup-knowledge` declares one at any later time. `/t4:doctor` says whether a repo is configured.
+declares nothing sees no change at all. `/fc:adopt-sdlc` offers to declare one (default: skip);
+`/fc:setup-knowledge` declares one at any later time. `/fc:doctor` says whether a repo is configured.
 
 ---
 
@@ -603,7 +603,7 @@ Explicit `MODEL` wins; `MODEL=` requests CLI inheritance. Otherwise the review t
 not a shell fragment. Neither a root Makefile nor project adapters are required.
 
 **`TASK=loop`.** `make -f ai-factory/make/ai.mk ai TASK=loop INPUT="<plan number or path>"` runs
-`/t4:loop` headless. It asks no question: where an interactive loop would ask, it reports and
+`/fc:loop` headless. It asks no question: where an interactive loop would ask, it reports and
 stops. The runner starts the loop before launching a host, so a usage error or an invalid plan
 launches nothing, and an input naming no single plan prints the candidates and exits 0. The exit
 code comes from the loop's outcome record, never from the host's prose; a missing record exits 1,
@@ -666,7 +666,7 @@ The model is resolved once per task, first match wins:
 
 | # | Source | Headless | Interactive |
 |---|---|---|---|
-| 1 | explicit | `MODEL=<id>` | `/t4:plan --task-model=<id> -- <input>` |
+| 1 | explicit | `MODEL=<id>` | `/fc:plan --task-model=<id> -- <input>` |
 | 2 | explicit inherit | `MODEL=` on the command line | `--task-model=inherit` |
 | 3 | task default | `routing.tasks.<task>.<tool>`, when enabled and not blank | same |
 | 4 | review default | `review:`, for `review` only | same |
@@ -681,7 +681,7 @@ a failed login or a refused request is returned as the failure; nothing retries 
 
 **Headless.** `TASK=start` and `TASK=continue` are interactive-only and reject before provider launch or run artifacts; CI must name a destination task. Every run prints its selection to stderr — `model: plan / codex: gateway/planning-codex
 (task default)` — and writes `ai-factory/runs/<run>.json.model.json` (schema
-`t4.model-selection.v1`): task, tool, requested model, source, routing state, configuration digest,
+`fc.model-selection.v1`): task, tool, requested model, source, routing state, configuration digest,
 outcome, and any model identity the CLI output reported, kept separate. This is the *requested*
 model; a gateway alias can still resolve to something else behind the provider. `log.csv` is unchanged.
 
@@ -701,8 +701,8 @@ runs under its own mapping, so map `plan`, `test`, `run`, `review` or `report` i
 continue `--task-model=<id>` is blocked before inspection; `inherit` is accepted.
 
 **Interactive.** A routed task runs in a worker agent pinned to the selected model; the chat
-itself keeps its own model and only relays questions and results. Each `/t4:<task>` command and
-`$t4-<task>` skill first runs `node ai-factory/make/models.js dispatch`, which prints one directive:
+itself keeps its own model and only relays questions and results. Each `/fc:<task>` command and
+`$fc-<task>` skill first runs `node ai-factory/make/models.js dispatch`, which prints one directive:
 
 | Directive | What the session does |
 |---|---|
@@ -715,7 +715,7 @@ itself keeps its own model and only relays questions and results. Each `/t4:<tas
 The workers are generated agent files, one per task, written only by an explicit sync:
 
 ```
-bash ai-factory/make/sync-adapters.sh --adapters=routing   # or /t4:sync-sdlc --adapters=routing
+bash ai-factory/make/sync-adapters.sh --adapters=routing   # or /fc:sync-sdlc --adapters=routing
 ```
 
 Then restart the session: both hosts load agent files when a session starts. Each agent's name
@@ -728,13 +728,13 @@ Until the sync runs, a routed task stops with the sync command.
 letters, digits and `. _ : / @ + -`. Claude Code accepts only its own model aliases for a single
 call, such as `opus` or `haiku`. To route an arbitrary gateway alias on Claude, map it and sync.
 Codex offers only the models its spawn tool lists. Changing the chat's own model does not override
-a mapping. Dispatches are recorded in `ai-factory/runs/routing.jsonl` (schema `t4.model-dispatch.v1`),
-with the worker ID and the outcome added when the task ends. `/t4:doctor` reports invalid
+a mapping. Dispatches are recorded in `ai-factory/runs/routing.jsonl` (schema `fc.model-dispatch.v1`),
+with the worker ID and the outcome added when the task ends. `/fc:doctor` reports invalid
 configuration, mappings with no task file, missing or stale agents, and `CLAUDE_CODE_SUBAGENT_MODEL`.
 
 ## 7. Staying current
 
-`/t4:sync-sdlc` reports how `ai-factory/` compares to the installed templates. It generates
+`/fc:sync-sdlc` reports how `ai-factory/` compares to the installed templates. It generates
 external adapters only when explicitly requested:
 
 | It says | What to do |
@@ -759,16 +759,16 @@ require generating files into `.codex/`.
 
 | Capability | Claude Code | Codex |
 |---|---|---|
-| Interactive tasks | `/t4:<task>` through native plugin commands | `$t4-<task>` through bundled plugin skills |
-| Setup | `/t4:adopt-sdlc` | `$t4-adopt-sdlc` |
+| Interactive tasks | `/fc:<task>` through native plugin commands | `$fc-<task>` through bundled plugin skills |
+| Setup | `/fc:adopt-sdlc` | `$fc-adopt-sdlc` |
 | Headless | `make -f ai-factory/make/ai.mk ai TOOL=claude` | `make -f ai-factory/make/ai.mk ai TOOL=codex` |
 | Lifecycle hooks | `hooks/hooks.json` | `hooks/codex.json`; review and trust in `/hooks` |
 | Protected edits | Edit, Write, MultiEdit paths | Every apply_patch path, including rename destinations |
 | Agent procedure | Registered Claude agent | Native delegation when available; otherwise labeled inline self-check |
 | Usage | Claude transcript records | Codex response records or older cumulative snapshots |
-| Completion report | `/t4:report <delivery id>` | `$t4-report <delivery id>`; both run `make … delivery-report` |
+| Completion report | `/fc:report <delivery id>` | `$fc-report <delivery id>`; both run `make … delivery-report` |
 | Lifecycle session binding | Bash PostToolUse output shows `lifecycle.js start` | Unconfirmed: depends on the hook payload carrying command output; otherwise usage stays unattributed |
-| Per-task model routing | `.claude/agents/t4-route-<task>-<hash>.md` with `model:`, launched by the Agent tool without a per-call model | `.codex/agents/t4-route-<task>-<hash>.toml` with `model`, spawned by `agent_type` with `fork_turns` `none` |
+| Per-task model routing | `.claude/agents/fc-route-<task>-<hash>.md` with `model:`, launched by the Agent tool without a per-call model | `.codex/agents/fc-route-<task>-<hash>.toml` with `model`, spawned by `agent_type` with `fork_turns` `none` |
 | Routing override | Agent tool `model`, Claude aliases only | `spawn_agent` `model`, the models the host lists |
 | Routing blockers | `CLAUDE_CODE_SUBAGENT_MODEL` overrides every subagent; agent files load at session start | Agent files load at session start; a full-history fork inherits the parent agent type |
 
@@ -787,7 +787,7 @@ Routing adapter evidence (2026-09-30, Claude Code 2.1.285, Codex CLI 0.153.2):
 
 For Codex CLI, add this checkout as a marketplace with
 `codex plugin marketplace add /absolute/path/to/checkout`, then run
-`codex plugin add t4@sdlc`. In the desktop app, install t4 from the configured sdlc
+`codex plugin add fc@sdlc`. In the desktop app, install fc from the configured sdlc
 marketplace. Start a new session after installing or updating the plugin. Review changed
 hook definitions in `/hooks` before relying on automatic logging or edit guards.
 
@@ -814,7 +814,7 @@ Codex surface; host trust and local command-hook support remain deployment requi
 
 Claude discovery correction (2.3.2): the installed 2.3.1 package exposed only six native
 commands; the remaining task files required project pointers. A fresh Claude Code 2.1.277
-SDK initialization in an empty directory discovered six t4 commands from that installed
+SDK initialization in an empty directory discovered six fc commands from that installed
 package and all 18 from the updated checkout. No project adapters or model turns were used.
 This validates command registration, not every task's model-driven behavior. Explicit
 Claude adapter sync removes generated duplicates and retains pointers for custom tasks.
@@ -836,10 +836,10 @@ Silently, into `ai-factory/runs/` — nothing prints to your terminal:
   one session add up to what it spent rather than each restating a running total.
 - Tokens spent inside a subagent are in the log too, as their own rows. Every agent that
   concludes — the reviewer and tester, and the explorer, specifier, planner and implementer that
-  `/t4:explore`, `/t4:spec`, `/t4:plan` and `/t4:run` delegate to — adds a row summed from its own
+  `/fc:explore`, `/fc:spec`, `/fc:plan` and `/fc:run` delegate to — adds a row summed from its own
   transcript. The `source` column says which kind you are looking at: `session` for a turn, `agent`
   for a concluded subagent, `make` for a headless CI run. An `agent` row names the agent in the
-  `agent` column and carries the `/t4:` command the session was running in `task`, so you can ask
+  `agent` column and carries the `/fc:` command the session was running in `task`, so you can ask
   where the money went by agent, by task, by branch or by model — not just how much the repo spent.
   A record is counted once however many transcripts carry a copy of it, keyed on its message uuid;
   a record whose transcript format omits that key is counted every time instead, which over-counts
@@ -886,7 +886,7 @@ rows. Per-agent and per-task numbers are meaningful only for rows written by the
 change — older rows carry no `agent` column and an empty `task`, and appear under `(unattributed)`.
 
 What the log **cannot** see, at any effort, and which `make cost` therefore never shows:
-per-plan-step cost inside `/t4:run`, wall-clock duration, tool-call counts, lines changed, and
+per-plan-step cost inside `/fc:run`, wall-clock duration, tool-call counts, lines changed, and
 **anything from Cursor**, which has no local export of any kind. If Cursor is in use here, this is
 not a complete picture of spend and cannot be made into one.
 
@@ -914,17 +914,17 @@ is the point.
 
 ## 10. When something is wrong
 
-**Run `/t4:doctor` first.** It reports the layout, the adapters, the version this repo records
+**Run `/fc:doctor` first.** It reports the layout, the adapters, the version this repo records
 against the one the session loaded, drift, where the plugin is installed and whether older
 cached copies are still around — each with the command that fixes it. It changes nothing, so
 there is no reason not to run it before guessing.
 
-**If `/t4:doctor` itself does not exist, that is the diagnosis.** The plugin is not enabled in
+**If `/fc:doctor` itself does not exist, that is the diagnosis.** The plugin is not enabled in
 this repo, and no command can tell you so — in a repo without it, none of them are there to
 run. Install it at user scope, or enable it here:
 
 ```
-/plugin install t4@sdlc
+/plugin install fc@sdlc
 ```
 
 Then restart the session: commands and hooks are loaded at startup, so a plugin installed
@@ -932,27 +932,27 @@ mid-session is not yet running.
 
 | Symptom | Cause |
 |---|---|
-| No `/t4:*` commands | Verify the installed plugin and host discovery support. Strict mode can use explicit task paths; request the specific host adapter only if wanted. |
-| t4 skills missing in Codex | Install/update the Codex plugin and start a new session; use `$t4-<task>`. The local runner remains available. |
+| No `/fc:*` commands | Verify the installed plugin and host discovery support. Strict mode can use explicit task paths; request the specific host adapter only if wanted. |
+| fc skills missing in Codex | Install/update the Codex plugin and start a new session; use `$fc-<task>`. The local runner remains available. |
 | A command behaves oddly | read `ai-factory/tasks/<name>.md`; that text *is* the behaviour. Fix it there via MR |
 | An edit was blocked | it matched `ai-factory/docs/dont-touch.md`. Edit the source, not the generated copy |
-| `.claude/` looks wrong | never edit it — it is generated. Change `ai-factory/` and run `/t4:sync-sdlc` |
+| `.claude/` looks wrong | never edit it — it is generated. Change `ai-factory/` and run `/fc:sync-sdlc` |
 | The reviewer is too lenient | add project checks to `ai-factory/agents/reviewer.md` |
-| Tests pass but prove nothing | `/t4:test gaps` — it flags ACs whose tests would still pass if the behaviour were reverted |
+| Tests pass but prove nothing | `/fc:test gaps` — it flags ACs whose tests would still pass if the behaviour were reverted |
 | `make contracts` reports `stale` | Something upstream changed after it was checked. Rerun the `init` or `make verify` named in the hint; never edit a sidecar or evidence file by hand |
-| `/t4:report` says `unverified` but the work is done | Required evidence is missing or stale. The reasons table names each file and the command that records it |
+| `/fc:report` says `unverified` but the work is done | Required evidence is missing or stale. The reasons table names each file and the command that records it |
 | `make lifecycle` shows `unknown` | A run or wait was never ended, a clock went backwards, or no run was bound to the session. Unknown is deliberate; end the run with `lifecycle.js end` |
 | A task says `directive: blocked` | Routing cannot honor the selected model: fix the named `models.yaml` line, run `bash ai-factory/make/sync-adapters.sh --adapters=routing`, unset `CLAUDE_CODE_SUBAGENT_MODEL`, or restart the session, as the message says. Nothing ran on another model |
-| "Unknown agent type t4-route-…" | The session started before that agent file existed or changed. Restart it; the task did not run |
+| "Unknown agent type fc-route-…" | The session started before that agent file existed or changed. Restart it; the task did not run |
 
 ## 11. The short version
 
 ```
-once:      /t4:adopt-sdlc  →  /t4:fleet  →  fill in ai-factory/docs/*
-per change: /t4:design? → /t4:analyse? → /t4:explore? → /t4:spec → /t4:plan
-            → /t4:test red → /t4:run ×N → /t4:test gaps → /t4:review
-            → /t4:report (with contracts)  →  commit ai(<task>): …  →  MR labelled ai-assisted
-per dependency or lasting decision: /t4:adr
+once:      /fc:adopt-sdlc  →  /fc:fleet  →  fill in ai-factory/docs/*
+per change: /fc:design? → /fc:analyse? → /fc:explore? → /fc:spec → /fc:plan
+            → /fc:test red → /fc:run ×N → /fc:test gaps → /fc:review
+            → /fc:report (with contracts)  →  commit ai(<task>): …  →  MR labelled ai-assisted
+per dependency or lasting decision: /fc:adr
 opt-in:    node ai-factory/make/contracts.js enable  ·  "lifecycle": {"enabled": true} in contracts/config.json
            routing.enabled: true in ai-factory/models.yaml → sync-adapters.sh --adapters=routing → restart
 ```

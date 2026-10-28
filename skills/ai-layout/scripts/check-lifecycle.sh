@@ -23,7 +23,7 @@ const ok = (label) => {
 	if (process.env.VERBOSE) console.log(`ok: ${label}`);
 };
 const clean = { ...process.env };
-for (const key of ["JSON", "DELIVERY", "STEP", "PHASE", "T4_LIFECYCLE_RUN"]) delete clean[key];
+for (const key of ["JSON", "DELIVERY", "STEP", "PHASE", "FC_LIFECYCLE_RUN"]) delete clean[key];
 const D1 = "d-20260930-aaaaaa";
 const D2 = "d-20260930-bbbbbb";
 const T0 = Date.parse("2026-09-30T10:00:00.000Z");
@@ -34,7 +34,7 @@ function workspace(name, { enabled = true, completion } = {}) {
 	fs.mkdirSync(path.join(dir, "ai-factory/contracts"), { recursive: true });
 	fs.mkdirSync(path.join(dir, "ai-factory/runs"), { recursive: true });
 	execFileSync("git", ["init", "-q"], { cwd: dir });
-	fs.writeFileSync(path.join(dir, "ai-factory/contracts/config.json"), JSON.stringify({ schema: "t4-contracts-config", version: 1, code_scope: { include: ["**"] }, ...(enabled === null ? {} : { lifecycle: { enabled } }), ...(completion ? { completion } : {}) }));
+	fs.writeFileSync(path.join(dir, "ai-factory/contracts/config.json"), JSON.stringify({ schema: "fc-contracts-config", version: 1, code_scope: { include: ["**"] }, ...(enabled === null ? {} : { lifecycle: { enabled } }), ...(completion ? { completion } : {}) }));
 	return { dir, ai: path.join(dir, "ai-factory") };
 }
 const emit = (ai, fields) => store.emit(ai, { host: "cli", clock: wall, ...fields });
@@ -82,8 +82,8 @@ async function main() {
 		assert.equal(eventFiles(ai).length, 1);
 		for (const bad of [{ run_id: "../../x" }, { delivery_id: "d-1/../../x" }, { session_id: "a b" }, { phase: "Run Step" }, { reason: "x".repeat(201) }, { outcome: "maybe" }, { type: "guess" }])
 			assert.throws(() => emit(ai, { type: "run_started", run_id: "r-0000000000000002", phase: "run", ...bad }), /refused/, JSON.stringify(bad));
-		fs.writeFileSync(path.join(store.directory(ai), `${store.hashId("torn")}.json`), '{"schema":"t4-lifecycle-event"');
-		fs.writeFileSync(path.join(store.directory(ai), `${store.hashId("future")}.json`), JSON.stringify({ schema: "t4-lifecycle-event", version: 2, event_id: store.hashId("future") }));
+		fs.writeFileSync(path.join(store.directory(ai), `${store.hashId("torn")}.json`), '{"schema":"fc-lifecycle-event"');
+		fs.writeFileSync(path.join(store.directory(ai), `${store.hashId("future")}.json`), JSON.stringify({ schema: "fc-lifecycle-event", version: 2, event_id: store.hashId("future") }));
 		fs.writeFileSync(path.join(store.directory(ai), "notes.txt"), "x");
 		const read = store.read(ai);
 		assert.equal(read.events.length, 1);
@@ -323,7 +323,7 @@ async function main() {
 		const w = /wait (w-[0-9a-f]{16})/.exec(cli("wait-start", "--run", runId, "--reason", "review").stdout)[1];
 		assert.equal(cli("wait-end", "--run", runId, "--wait", w).status, 0);
 		// Disabled: recording commands exit 0 with a stderr note and write nothing.
-		fs.writeFileSync(path.join(ai, "contracts/config.json"), JSON.stringify({ schema: "t4-contracts-config", version: 1, code_scope: {} }));
+		fs.writeFileSync(path.join(ai, "contracts/config.json"), JSON.stringify({ schema: "fc-contracts-config", version: 1, code_scope: {} }));
 		const before = eventFiles(ai).length;
 		const off = cli("start", "--phase", "run");
 		assert.equal(off.status, 0);
@@ -335,11 +335,11 @@ async function main() {
 		// Report JSON: stdout is one document, diagnostics stay on stderr.
 		const json = cli("report", "--json");
 		assert.equal(json.status, 0);
-		assert.equal(JSON.parse(json.stdout).schema, "t4-lifecycle-report");
+		assert.equal(JSON.parse(json.stdout).schema, "fc-lifecycle-report");
 		ok("interactive binding via the command hook; CLI best effort, disabled no-op, JSON stdout");
 	}
 
-	// --- loop-parent-linkage (spec 0022 AC58): /t4:loop brackets itself, each step and its one review
+	// --- loop-parent-linkage (spec 0022 AC58): /fc:loop brackets itself, each step and its one review
 	{
 		const { dir, ai } = workspace("loop");
 		fs.mkdirSync(path.join(ai, "make"), { recursive: true });
@@ -354,7 +354,7 @@ async function main() {
 		for (const args of [stepArgs, checkArgs]) assert.equal(args[args.indexOf("--parent-run") + 1], "<loop run>", `${args.join(" ")} must name the loop run as its parent`);
 		assert.equal(stepArgs[stepArgs.indexOf("--step") + 1], "S<N>");
 		const fill = (args, values) => ["start", ...args.map((arg) => values[arg] ?? arg)];
-		// A headless TASK=loop child inherits T4_LIFECYCLE_RUN; an explicit --parent-run must still win.
+		// A headless TASK=loop child inherits FC_LIFECYCLE_RUN; an explicit --parent-run must still win.
 		const headlessRun = store.newId("r");
 		const cli = (args, env = {}) => {
 			const result = spawnSync(process.execPath, [path.join(ai, "make/lifecycle.js"), ...args], { cwd: dir, env: { ...clean, ...env }, encoding: "utf8" });
@@ -363,7 +363,7 @@ async function main() {
 			return result.stdout;
 		};
 		const started = (stdout) => /started run (r-[0-9a-f]{16})/.exec(stdout)[1];
-		const env = { T4_LIFECYCLE_RUN: headlessRun };
+		const env = { FC_LIFECYCLE_RUN: headlessRun };
 		const loopRun = started(cli(fill(loopArgs, { "<id>": D1 }), env));
 		const steps = ["S1", "S2"].map((step) => started(cli(fill(stepArgs, { "<id>": D1, "S<N>": step, "<loop run>": loopRun }), env)));
 		cli(["end", "--run", steps[1], "--outcome", "succeeded"]); // concurrent steps may end in any order
@@ -428,7 +428,7 @@ async function main() {
 		const fake = path.join(ai, "fake-cli");
 		fs.writeFileSync(fake, `#!/usr/bin/env node
 const fs=require('node:fs');let input='';process.stdin.on('data',c=>input+=c);process.stdin.on('end',()=>{
- fs.writeFileSync('ai-factory/runs/child-env.txt',String(process.env.T4_LIFECYCLE_RUN||''));
+ fs.writeFileSync('ai-factory/runs/child-env.txt',String(process.env.FC_LIFECYCLE_RUN||''));
  if(process.env.FAIL_CLI){process.exitCode=3;return;}
  process.stdout.write(JSON.stringify({session_id:'child-sess',num_turns:2,total_cost_usd:0.5,result:'done',usage:{input_tokens:40,output_tokens:4,cache_read_input_tokens:0,cache_creation_input_tokens:0}}));
 });
@@ -488,7 +488,7 @@ const fs=require('node:fs');let input='';process.stdin.on('data',c=>input+=c);pr
 		const exported = spawnSync(process.execPath, [path.join(ai, "make/lifecycle.js"), "export", "--json"], { cwd: dir, env: { ...clean, DELIVERY: D1 }, encoding: "utf8" });
 		assert.equal(exported.status, 0, exported.stderr);
 		const doc = JSON.parse(exported.stdout);
-		assert.deepEqual([doc.schema, doc.version, doc.coverage.measured, doc.coverage.total, doc.metrics.elapsed_s, doc.metrics.cost_usd], ["t4-delivery-telemetry", 1, 1, 1, 30, null]);
+		assert.deepEqual([doc.schema, doc.version, doc.coverage.measured, doc.coverage.total, doc.metrics.elapsed_s, doc.metrics.cost_usd], ["fc-delivery-telemetry", 1, 1, 1, 30, null]);
 		for (const value of Object.values(doc.metrics)) assert.ok(value === null || typeof value === "number");
 		assert.deepEqual(JSON.parse(fs.readFileSync(path.join(ai, `runs/telemetry/${D1}.json`), "utf8")), doc);
 		// Retention: D1 (with a saved report) keeps its old events; D2 loses them, recorded.

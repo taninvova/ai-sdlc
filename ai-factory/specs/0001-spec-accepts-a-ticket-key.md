@@ -1,6 +1,6 @@
-# 0001 — /t4:spec accepts a ticket key
+# 0001 — /fc:spec accepts a ticket key
 
-Summary: in a repo that has configured a tracker, `/t4:spec PROJ-123` drafts the spec from the
+Summary: in a repo that has configured a tracker, `/fc:spec PROJ-123` drafts the spec from the
 ticket instead of from typed prose, and records the key in the spec it writes.
 
 **The integration is optional and inert by default.** Every repo receives the seam document;
@@ -14,32 +14,32 @@ Implements spec 1 of `ai/designs/0002-jira-integration.md` §9. Bound by `docs/a
 (write-back — out of scope here, but the `Ticket:` line is what later makes it possible).
 
 ## User story
-As a developer whose work arrives as tickets, I want `/t4:spec` to take the ticket key I
+As a developer whose work arrives as tickets, I want `/fc:spec` to take the ticket key I
 already have, so that the spec starts from what the ticket actually says rather than from my
 paraphrase of it, and so the spec and the ticket stay findable from each other.
 
 ## Acceptance criteria
 
-- **AC1** Given a repo with no `ai/jira.yaml`, When a developer runs `/t4:spec UTF-8`, Then the
+- **AC1** Given a repo with no `ai/jira.yaml`, When a developer runs `/fc:spec UTF-8`, Then the
   session treats `UTF-8` as the feature request, drafts a spec about it, and at no point
   fetches a ticket, asks about a ticket, or writes a `Ticket:` line.
 - **AC2** Given a repo with `ai/jira.yaml` and a session that can reach the tracker, When a
-  developer runs `/t4:spec PROJ-123`, Then the session resolves the key by following
+  developer runs `/fc:spec PROJ-123`, Then the session resolves the key by following
   `ai/docs/tracker.md`, and writes `specs/<NNNN>-<slug>.md` containing a `Ticket: PROJ-123`
   line as the first line under the title.
 - **AC3** Given a repo with `ai/jira.yaml`, When a developer runs
-  `/t4:spec PROJ-123 but only the CSV part`, Then the whole argument is the feature request,
+  `/fc:spec PROJ-123 but only the CSV part`, Then the whole argument is the feature request,
   no ticket is fetched, and no `Ticket:` line is written.
 - **AC4** Given a repo with `ai/jira.yaml` and a session that cannot reach the tracker — Codex,
   or headless `make ai`, where `ai/docs/tracker.md` resolves to its stop-and-ask arm — When a
-  developer runs `/t4:spec PROJ-123`, Then the session reports that it cannot resolve the key
+  developer runs `/fc:spec PROJ-123`, Then the session reports that it cannot resolve the key
   and writes no spec file — asking how to proceed where there is someone to ask, and stopping
   there where there is not. `make ai` builds a prompt and runs it with no session behind it, so
   "ask" is not a behaviour available to it.
 - **AC5** Given a repo with `ai/jira.yaml` and a reachable tracker, When a developer runs
-  `/t4:spec PROJ-999` and no such ticket exists, Then the session reports that the key did not
+  `/fc:spec PROJ-999` and no such ticket exists, Then the session reports that the key did not
   resolve and writes no spec file, asking how to proceed only where there is someone to ask.
-- **AC6** Given any repo, When a developer runs `/t4:spec` with nothing after it, Then the
+- **AC6** Given any repo, When a developer runs `/fc:spec` with nothing after it, Then the
   session asks which feature to specify and stops — the behaviour shipped in 0.14.0, unchanged
   by this spec whether or not a tracker is configured.
 - **AC7** Given `skills/ai-layout/templates/ai/tasks/spec.md`, When it is read, Then the only
@@ -49,7 +49,7 @@ paraphrase of it, and so the spec and the ticket stay findable from each other.
   line, whose value is the key alone with no surrounding prose, so that a whole-token grep
   over `specs/` resolves it unambiguously.
 - **AC9** Given a repo with `ai/jira.yaml` whose tracker is reachable, When two specs already
-  carry `Ticket: PROJ-123` and a developer runs `/t4:spec PROJ-123`, Then the session reports
+  carry `Ticket: PROJ-123` and a developer runs `/fc:spec PROJ-123`, Then the session reports
   both paths and stops rather than choosing one.
 - **AC10** Given a resolvable ticket, When the session drafts the spec, Then the acceptance
   criteria are derived from the ticket's **description** field and from no other field.
@@ -63,16 +63,16 @@ paraphrase of it, and so the spec and the ticket stay findable from each other.
   previous release: no new prompt, no new question, no new failure, no `Ticket:` line, and no
   mention of a tracker in any output. Shipping the seam document activates nothing.
 - **AC13** Given `ai/jira.yaml` that is absent, empty, comment-only, unparseable, or parses to
-  something other than a mapping carrying `base_url`, When `/t4:spec PROJ-123` runs, Then the
+  something other than a mapping carrying `base_url`, When `/fc:spec PROJ-123` runs, Then the
   repo counts as unconfigured and AC1 applies — the argument is free text. A half-written or
   broken config fails closed into today's behaviour, never into AC4's stop-and-ask.
 
 ## Out of scope
-- Resolving a key in `/t4:plan`, `/t4:test`, `/t4:run`, `/t4:check` — design §9 spec 2.
+- Resolving a key in `/fc:plan`, `/fc:test`, `/fc:run`, `/fc:check` — design §9 spec 2.
 - Any write-back: comments and transitions — design §9 spec 3, `docs/adr/0006`.
 - `ai/make/jira.sh`, arm two of the seam. Until it exists AC4 is the normal path outside
   Claude Code, not an error case.
-- Teaching `/t4:explore`, `/t4:fix` or `/t4:chore` to take keys — design §11, deferred.
+- Teaching `/fc:explore`, `/fc:fix` or `/fc:chore` to take keys — design §11, deferred.
 
 ## Open questions
 A spec with open questions is not buildable. All three raised here have been answered; they are
@@ -108,7 +108,7 @@ No application data; this repo ships prompts and templates.
 
 ## Routes touched
 None — this repo exposes no routes. The equivalent surface is the command
-`/t4:spec`, whose contract changes for configured repos only.
+`/fc:spec`, whose contract changes for configured repos only.
 
 ## Components likely involved
 - `skills/ai-layout/scripts/check-adapters.sh` — AC7 is a static property of the generated

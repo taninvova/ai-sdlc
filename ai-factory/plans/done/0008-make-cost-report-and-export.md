@@ -160,9 +160,9 @@ no process that outlives the command, and no port.
   row after AC14 and AC15's exclusions makes both modes **say so explicitly, naming the file read and
   the row count found, and exit 0** (AC10) — an empty table with no explanation reads as a broken
   feature, and this is the workspace root's state today. Prove the same behaviour in a scratch repo
-  that has just taken `/t4:adopt-sdlc`, where the log is header-only (AC19).
+  that has just taken `/fc:adopt-sdlc`, where the log is header-only (AC19).
   *Proves:* AC10, AC19. *Tests:* the header-only fixture in both modes; a real
-  `/t4:adopt-sdlc` scratch repo with `make cost` run in it, recorded as the before/after run.
+  `/fc:adopt-sdlc` scratch repo with `make cost` run in it, recorded as the before/after run.
 
 - [x] **Step 8 — The target, the symlink, the manifest.** Add the `cost` target to
   `skills/ai-layout/templates/ai-factory/make/ai.mk` and list it in `.PHONY`, invoking
@@ -176,7 +176,7 @@ no process that outlives the command, and no port.
   four that exist. **Note for whoever runs this step:** `ai-factory/make/` is on
   `ai-factory/docs/dont-touch.md` and the `guard-paths` hook blocks an agent from writing there, and
   no script in the repo creates these symlinks — the four present were made by hand. So this one is
-  the developer's `ln -s`, not the implementer's, and `/t4:run` should stop and say so rather than
+  the developer's `ln -s`, not the implementer's, and `/fc:run` should stop and say so rather than
   attempt it.
   *Proves:* AC18, AC21. *Tests:* in a freshly adopted scratch repo,
   `node skills/ai-layout/scripts/manifest.js write <repo> <plugin>` **first**, then
@@ -245,14 +245,14 @@ no process that outlives the command, and no port.
 - **R5 — The dont-touch symlink.** An implementer that tries to create `ai-factory/make/cost.js` is
   blocked by `guard-paths`, and may then "work around" it by editing the template's consumer or
   weakening the rule. *Checked by:* Step 8 naming the symlink as the developer's action and requiring
-  `/t4:run` to stop rather than attempt it.
+  `/fc:run` to stop rather than attempt it.
 - **R6 — Stdout purity.** One stray diagnostic on stdout makes AC1 false and breaks every consumer
   parsing the document. *Checked by:* piping `make cost JSON=1` straight into a JSON parser in
   `check-cost.sh`, with any leading or trailing byte a failure.
 - **R7 — A decision quietly widened during implementation.** Nothing is blocked now, which moves the
   risk: the temptation is no longer to guess but to improve on a decision — adding a filter because it
   is three lines, bumping the version on an addition because that feels tidier, or making the coverage
-  line permanent. Each of those was considered and rejected on the record. *Checked by:* `/t4:check`
+  line permanent. Each of those was considered and rejected on the record. *Checked by:* `/fc:check`
   reading the diff against the spec's decision blocks, not only its ACs; and `check-cost.sh` asserting
   the two that are machine-checkable — no filter variable is honoured, and no coverage line appears
   when no row carries a value.
@@ -275,7 +275,7 @@ make -f ai-factory/make/ai.mk cost JSON=1 | node -e 'JSON.parse(require("fs").re
 git status --porcelain ai-factory/runs/                 # empty — AC16
 ```
 
-And in a scratch repo that has just taken `/t4:adopt-sdlc`, `make cost` printing the AC10 message for
+And in a scratch repo that has just taken `/fc:adopt-sdlc`, `make cost` printing the AC10 message for
 a header-only log (AC19) — recorded in the MR as the before/after run, which is how this repo proves
 behaviour per `ai-factory/docs/coding-standards.md` ("no test runner").
 

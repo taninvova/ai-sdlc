@@ -49,14 +49,14 @@ future ADR, not to configuration.
 ## Who consults a source
 
 Only in a configured repo, and only these executors: the `explorer`, `specifier`, `planner`,
-`analyst`, `architect`, `reviewer` and `risk` agents — so `/t4:explore`, `/t4:spec`,
-`/t4:plan`, `/t4:analyse`, `/t4:design`, `/t4:adr`, `/t4:review` and `/t4:risk` reach a source
+`analyst`, `architect`, `reviewer` and `risk` agents — so `/fc:explore`, `/fc:spec`,
+`/fc:plan`, `/fc:analyse`, `/fc:design`, `/fc:adr`, `/fc:review` and `/fc:risk` reach a source
 through the agent they delegate to.
 
 **The `tester` never does.** Its independence rule forbids input that may describe the
 implementation, and a knowledge base may. **The `implementer` never does either:** a source
 shapes what is built, and that was settled before the plan existed; a step is implemented
-from the plan it was given. `/t4:run`, `/t4:fix`, `/t4:chore` and `/t4:fleet` consult nothing.
+from the plan it was given. `/fc:run`, `/fc:fix`, `/fc:chore` and `/fc:fleet` consult nothing.
 
 An executor queries a source for what the request needs and what the row's `use` says, and
 no more. It does not read a source to fill a section the request did not ask for.
@@ -121,8 +121,8 @@ developer's alone.
 ## Setting up a source
 
 Optional, always. This repo's own `ai-factory/docs/`, its ADRs and its code are the knowledge base;
-a declared source only enriches them and never outranks them. `/t4:adopt-sdlc` offers this step
-once and skips it by default; `/t4:setup-knowledge` runs it at any later time. Both follow this
+a declared source only enriches them and never outranks them. `/fc:adopt-sdlc` offers this step
+once and skips it by default; `/fc:setup-knowledge` runs it at any later time. Both follow this
 section and name nothing themselves.
 
 1. **The source must already be attached.** Attaching a server — its address, its credentials —

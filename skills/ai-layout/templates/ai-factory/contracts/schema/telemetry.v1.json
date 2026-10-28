@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "t4-delivery-telemetry/v1",
+  "$id": "fc-delivery-telemetry/v1",
   "title": "Per-delivery telemetry export",
   "description": "ai-factory/runs/telemetry/<delivery_id>.json, written by `make lifecycle-export DELIVERY=<id>` (make/lifecycle.js). make delivery-report computes the same document from live lifecycle events when lifecycle is enabled, and otherwise reads this file if present. Its absence never blocks readiness and never reads as zero.",
   "type": "object",
@@ -13,7 +13,7 @@
   ],
   "properties": {
     "schema": {
-      "const": "t4-delivery-telemetry"
+      "const": "fc-delivery-telemetry"
     },
     "version": {
       "const": 1

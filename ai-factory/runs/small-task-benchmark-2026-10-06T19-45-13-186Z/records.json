@@ -234,8 +234,8 @@
     },
     "sourceHash": "576434ba5bd4026c85f5d8908a0f0fcfec023bec440336a72e791545e9e48737",
     "promptHash": "faf07b0e3bd757b77a9f81403cd5f41f682099579ba9e0968217ec3cc2abb1b9",
-    "fixturePath": "/Users/Volodymyr_Tanin/code/ai-sdlc/t4/ai-sdlc-plugin/ai-factory/runs/tmp/run-pMNzUS/bug-1-baseline",
-    "artifactPath": "/Users/Volodymyr_Tanin/code/ai-sdlc/t4/ai-sdlc-plugin/ai-factory/runs/small-task-benchmark-2026-10-06T19-45-13-186Z/bug-1-baseline"
+    "fixturePath": "/Users/Volodymyr_Tanin/code/ai-sdlc/fc/ai-sdlc-plugin/ai-factory/runs/tmp/run-pMNzUS/bug-1-baseline",
+    "artifactPath": "/Users/Volodymyr_Tanin/code/ai-sdlc/fc/ai-sdlc-plugin/ai-factory/runs/small-task-benchmark-2026-10-06T19-45-13-186Z/bug-1-baseline"
   },
   {
     "id": "bug-1-candidate",
@@ -474,7 +474,7 @@
     },
     "sourceHash": "576434ba5bd4026c85f5d8908a0f0fcfec023bec440336a72e791545e9e48737",
     "promptHash": "faf07b0e3bd757b77a9f81403cd5f41f682099579ba9e0968217ec3cc2abb1b9",
-    "fixturePath": "/Users/Volodymyr_Tanin/code/ai-sdlc/t4/ai-sdlc-plugin/ai-factory/runs/tmp/run-pMNzUS/bug-1-candidate",
-    "artifactPath": "/Users/Volodymyr_Tanin/code/ai-sdlc/t4/ai-sdlc-plugin/ai-factory/runs/small-task-benchmark-2026-10-06T19-45-13-186Z/bug-1-candidate"
+    "fixturePath": "/Users/Volodymyr_Tanin/code/ai-sdlc/fc/ai-sdlc-plugin/ai-factory/runs/tmp/run-pMNzUS/bug-1-candidate",
+    "artifactPath": "/Users/Volodymyr_Tanin/code/ai-sdlc/fc/ai-sdlc-plugin/ai-factory/runs/small-task-benchmark-2026-10-06T19-45-13-186Z/bug-1-candidate"
   }
 ]

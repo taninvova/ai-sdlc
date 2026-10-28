@@ -1,12 +1,12 @@
 # Workflow outcome evaluations
 
-Evaluate representative T4 tasks against a baseline using delivery quality, questions, completion time, and cost.
+Evaluate representative FC tasks against a baseline using delivery quality, questions, completion time, and cost.
 
 ## User story
-As a T4 maintainer, I want comparable evidence about workflow outcomes so that workflow changes are judged by their effect on delivery as well as regression checks.
+As a FC maintainer, I want comparable evidence about workflow outcomes so that workflow changes are judged by their effect on delivery as well as regression checks.
 
 ## Requested scope
-Plan option 5: run representative tasks through T4 and measure missed requirements, escaped defects, unnecessary questions, completion time, and cost. This document supports planning; no implementation or paid benchmark run is requested now.
+Plan option 5: run representative tasks through FC and measure missed requirements, escaped defects, unnecessary questions, completion time, and cost. This document supports planning; no implementation or paid benchmark run is requested now.
 
 ## Acceptance criteria
 ### AC1 — Representative outcomes
@@ -28,7 +28,7 @@ Given measured execution and usage records, when time and cost are reported, the
 These are bounded engineering recommendations, not additional user-approved requirements.
 - Extend `skills/ai-layout/scripts/benchmark-small-tasks.js` and its existing isolated fixture scenarios, paired baseline/candidate runs, snapshots, JSON records, and Markdown summary. Avoid a new orchestration system.
 - Keep real-model runs explicitly opt-in and bounded by selected scenarios, repetitions, timeout, and concurrency. Ordinary checks exercise deterministic evaluator fixtures without model calls.
-- Match the task inputs, starting fixture, model, reasoning settings, runtime, and evaluation criteria across each pair; record baseline revision and candidate snapshot. Label unmatched or unknown conditions and avoid attributing their differences to T4.
+- Match the task inputs, starting fixture, model, reasoning settings, runtime, and evaluation criteria across each pair; record baseline revision and candidate snapshot. Label unmatched or unknown conditions and avoid attributing their differences to FC.
 - Use a small fixed rubric outside the model's writable fixture for requirement coverage and post-completion defect checks. Distinguish seeded or fixture-detected escapes from real production defects; no production defect rate is claimed.
 - Store human question judgments alongside run evidence, with a short rubric and rationale. Do not infer necessity from question counts or a text-pattern match alone.
 - Reuse measured elapsed time and usage from benchmark records; use lifecycle output when available with reliable attribution. `make cost` currently reports tokens and turns, not money: preserve that interface. Monetary figures require recorded pricing/provenance or remain unknown; distinguish estimates from billed amounts.

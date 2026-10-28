@@ -10,7 +10,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 
-const SCHEMA = "t4-lifecycle-event";
+const SCHEMA = "fc-lifecycle-event";
 const VERSION = 1;
 const TYPES = [
 	"run_started",

@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "t4-contract-diagnostics/v1",
+  "$id": "fc-contract-diagnostics/v1",
   "title": "Validator output (contracts.js validate --json, or JSON=1 make contracts)",
   "type": "object",
   "required": ["schema", "version", "status", "delivery_id", "adopted", "note", "artifacts"],
   "properties": {
-    "schema": { "const": "t4-contract-diagnostics" },
+    "schema": { "const": "fc-contract-diagnostics" },
     "version": { "const": 1 },
     "status": { "$ref": "#/$defs/state" },
     "delivery_id": { "type": ["string", "null"] },

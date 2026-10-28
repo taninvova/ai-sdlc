@@ -4,15 +4,15 @@ Date: 2026-09-07 · Status: accepted 2026-09-07, together with its gate
 `docs/adr/0004-external-tracker-behind-one-seam.md`.
 
 ## Context
-`ai/designs/0002-jira-integration.md` §6 has `/t4:spec` fetch a ticket and four later tasks —
-`/t4:plan`, `/t4:test`, `/t4:run`, `/t4:check` — resolve the same key back to the work in
+`ai/designs/0002-jira-integration.md` §6 has `/fc:spec` fetch a ticket and four later tasks —
+`/fc:plan`, `/fc:test`, `/fc:run`, `/fc:check` — resolve the same key back to the work in
 flight. Something has to hold the key between them, and the candidates are not equivalent.
 
 Specs have no frontmatter today: `skills/ai-layout/templates/specs/0000-scaffold.md` opens
 `# NNNN — Title` and goes straight to prose. Introducing a `---` block changes the shape of the
 artefact every adopted repo produces — a contract change under `ai/docs/fleet.md` Boundaries —
 and, because the scaffold is a tracked template, editing it reports as `upstream changed` in
-every repo's next `/t4:sync-sdlc` (ADR 0001, ADR 0002), including the great majority with no
+every repo's next `/fc:sync-sdlc` (ADR 0001, ADR 0002), including the great majority with no
 tracker at all. Frontmatter also asserts a parse contract this plugin cannot honour: tasks are
 prompt files, not code (design §2), so there is no parser, no schema and no validator behind
 the fence — and Claude Code already reads frontmatter in `ai/tasks/*.md` as command metadata,
@@ -36,7 +36,7 @@ repo, so the wording of that label is a rule-3 question, not a matter of taste.
 
 ## Decision
 The key lives in the spec body, as a single line directly under the title and above the
-summary, written only by `/t4:spec` and only in a repo that has committed `ai/jira.yaml`:
+summary, written only by `/fc:spec` and only in a repo that has committed `ai/jira.yaml`:
 
     Ticket: PROJ-123
 
@@ -67,7 +67,7 @@ Resolution is `grep` over `specs/`, matching the key as a whole token so `PROJ-1
 
 **The key is an alias, never the only handle.** Every task still accepts a spec path exactly as
 it does today, so a missing, deleted or mistyped line degrades to current behaviour rather than
-blocking the loop. And a repo with no `ai/jira.yaml` gets no such line at all: `/t4:spec` there
+blocking the loop. And a repo with no `ai/jira.yaml` gets no such line at all: `/fc:spec` there
 emits the file it emits today, byte for byte, per ADR 0004 rule 2.
 
 What is written back to the ticket is `docs/adr/0006`, not this ADR.
@@ -96,5 +96,5 @@ human may one day write `Ticket: see the thread in Slack` on a hand-authored spe
 whole-value pattern above means such a line resolves to nothing rather than to something wrong,
 which is the failure we want, but it does mean the label alone is not proof of a key. And a
 line under the title is one more piece of the spec's shape that later tasks must leave in
-place — the reviewers of `/t4:plan` and `/t4:check` output should treat its silent
+place — the reviewers of `/fc:plan` and `/fc:check` output should treat its silent
 disappearance as a defect, not as tidying.

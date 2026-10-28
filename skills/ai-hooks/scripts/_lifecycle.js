@@ -16,7 +16,7 @@ function enabled(ai) {
 const host = (ev) => (ev.host === "codex" ? "codex" : "claude");
 const session = (ev) => (store.PATTERNS.session_id.test(String(ev.session_id || "")) ? ev.session_id : null);
 // A headless parent passes its run down; nothing else is trusted as an attribution.
-const inheritedRun = () => (store.PATTERNS.run_id.test(process.env.T4_LIFECYCLE_RUN || "") ? process.env.T4_LIFECYCLE_RUN : null);
+const inheritedRun = () => (store.PATTERNS.run_id.test(process.env.FC_LIFECYCLE_RUN || "") ? process.env.FC_LIFECYCLE_RUN : null);
 // The cost cell the row writer produced: "~0.0123" is an estimate at built-in rates, "0.0123" an
 // estimate at models.yaml rates, "" unknown. Unknown stays null; it is never read as zero.
 function cost(cell) {

@@ -25,7 +25,7 @@
   - an adopted workspace running `make delivery-report` for planned and quick deliveries.
 - **Contracts regression.** `check-contracts.sh` still passes 37 cases, and its schema drift check now covers the attestation schema.
 - **Commit layout.** Steps 2–4 and 6 share one commit because they live in one module, `make/delivery-report.js`.
-- **Not run.** Real-host smoke tests, meaning a live `/t4:report` in Claude and `t4-report` in Codex, were not run. Wrapper equivalence is checked statically. No telemetry producer exists yet; the reader is covered by fixture exports.
+- **Not run.** Real-host smoke tests, meaning a live `/fc:report` in Claude and `fc-report` in Codex, were not run. Wrapper equivalence is checked statically. No telemetry producer exists yet; the reader is covered by fixture exports.
 - **Structural only.** The report never runs checks, and its MR description is a draft.
 
 ## Implementation sequence

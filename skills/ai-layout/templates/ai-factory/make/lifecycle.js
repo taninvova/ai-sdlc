@@ -14,12 +14,12 @@ const { canonicalTask } = require("./models.js");
 const ENTRY_DIRECTORY =
 	require.main === module ? path.dirname(process.argv[1]) : __dirname;
 const ROOT = fs.realpathSync(path.resolve(ENTRY_DIRECTORY, "../.."));
-const REPORT = { schema: "t4-lifecycle-report", version: 1 };
-const TELEMETRY = { schema: "t4-delivery-telemetry", version: 1 };
+const REPORT = { schema: "fc-lifecycle-report", version: 1 };
+const TELEMETRY = { schema: "fc-delivery-telemetry", version: 1 };
 // What no host signal can tell us; reported with every aggregate so coverage is never implied.
 const GAPS = [
 	"Waiting is only what `lifecycle.js wait-start`/`wait-end` recorded; idle gaps are never guessed as waits.",
-	"Interactive usage is attributed only through an explicit session binding (the hook sees `lifecycle.js start`) or an inherited T4_LIFECYCLE_RUN; anything else stays unattributed.",
+	"Interactive usage is attributed only through an explicit session binding (the hook sees `lifecycle.js start`) or an inherited FC_LIFECYCLE_RUN; anything else stays unattributed.",
 	"A run whose process crashed stays open until `lifecycle.js end` records its outcome; no end time is invented.",
 ];
 class Invocation extends Error {}
@@ -378,7 +378,7 @@ function start(options) {
 	requireEnabled(ai);
 	// A deprecated name (`--phase check`) is recorded under the task's current name.
 	options = { ...options, phase: canonicalTask(options.phase), task: options.task ? canonicalTask(options.task) : options.task };
-	const parent = options.parentRun || (store.PATTERNS.run_id.test(process.env.T4_LIFECYCLE_RUN || "") ? process.env.T4_LIFECYCLE_RUN : null);
+	const parent = options.parentRun || (store.PATTERNS.run_id.test(process.env.FC_LIFECYCLE_RUN || "") ? process.env.FC_LIFECYCLE_RUN : null);
 	const runId = store.newId("r");
 	const attemptId = store.newId("a");
 	const common = { host: options.host || "cli", run_id: runId, delivery_id: options.delivery || null, parent_run_id: parent, phase: options.phase, step: options.step || null, task: options.task || null, session_id: options.session || null };
@@ -393,7 +393,7 @@ function end(options) {
 	const started = events.find((event) => event.type === "run_started");
 	if (!started) throw new Invocation(`lifecycle: no run_started event for ${options.run}`);
 	if (events.some((event) => event.type === "run_ended")) return { already: true };
-	// A run may learn its delivery only at the end (/t4:spec creates the ID); that is still explicit.
+	// A run may learn its delivery only at the end (/fc:spec creates the ID); that is still explicit.
 	const common = { host: options.host || started.host, run_id: options.run, delivery_id: started.delivery_id || options.delivery || null, phase: started.phase, step: started.step, outcome: options.outcome, reason: options.reason ? String(options.reason).slice(0, 200) : null };
 	const open = new Set(events.filter((e) => e.type === "phase_started").map((e) => e.attempt_id));
 	for (const e of events) if (e.type === "phase_ended") open.delete(e.attempt_id);

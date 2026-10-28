@@ -484,7 +484,7 @@ eq "TSV mode on an empty log is the header alone" \
   "$(TSV=1 node "$COST" "$FX/header-only.csv" | wc -l | tr -d ' ')" 1
 
 # AC19: usable from the moment the layout lands. A freshly adopted repo has an ai-factory/ layout
-# and no log yet, so this builds that state and runs the real entry point in it. The /t4:adopt-sdlc
+# and no log yet, so this builds that state and runs the real entry point in it. The /fc:adopt-sdlc
 # command itself needs the plugin installed, which is the same blocker as plan 0007 step 7; what is
 # proved here is the state a fresh adopt leaves behind, not the ceremony of adopting.
 FRESH=$SCRATCH/fresh

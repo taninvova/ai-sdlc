@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Pins which directory the hooks treat as the layout, and that they keep working in a repo that
-# has taken the 1.0.0 update without running /t4:migrate-layout yet.
+# has taken the 1.0.0 update without running /fc:migrate-layout yet.
 #
 # The rename of `ai/` to `ai-factory/` has one failure mode worth a fixture: detection follows the
 # new name, an unmigrated repo matches neither, and every hook no-ops. Nothing would appear to be
@@ -129,25 +129,25 @@ prompt() {   # prompt <repo> <prompt text>
 }
 for dir in ai-factory ai; do
   R=$TMP/task-$dir; mkdir -p "$R/$dir"
-  prompt "$R" "/t4:run step 5 of the plan"
+  prompt "$R" "/fc:run step 5 of the plan"
   T=$R/$dir/runs/.task.fixture-detect-task
   [ -f "$T" ] || fail "$dir: no task file written to $dir/runs/.task.<session_id>"
   [ "$(cat "$T")" = run ] || fail "$dir: the task file should hold the bare name, got '$(cat "$T")'"
 done
 # both: the task file goes under ai-factory/ only, the same preference the guard shows
 R=$TMP/task-both; mkdir -p "$R/ai-factory" "$R/ai"
-prompt "$R" "/t4:spec the thing"
+prompt "$R" "/fc:spec the thing"
 [ -f "$R/ai-factory/runs/.task.fixture-detect-task" ] || fail "both: no task file under ai-factory/"
 if [ -e "$R/ai/runs" ]; then fail "both: the old directory was written as well"; fi
 # neither: no file, no directory, no output
 R=$TMP/task-neither; mkdir -p "$R"
-prompt "$R" "/t4:plan it"
+prompt "$R" "/fc:plan it"
 [ "$(ls -A "$R")" = .git ] || fail "no layout: the UserPromptSubmit hook created $(ls -A "$R")"
 # and a prompt naming no command leaves the last task standing rather than clearing it
 R=$TMP/task-keep; mkdir -p "$R/ai-factory"
-prompt "$R" "/t4:plan the feature"
+prompt "$R" "/fc:plan the feature"
 prompt "$R" "now just a plain question"
 [ "$(cat "$R/ai-factory/runs/.task.fixture-detect-task")" = plan ] \
-  || fail "a prompt with no /t4: command changed the task file"
+  || fail "a prompt with no /fc: command changed the task file"
 
 echo "detect ok — ai-factory/ preferred, ai/ still guarded and logged for Stop, SubagentStop and UserPromptSubmit, neither is a silent no-op"

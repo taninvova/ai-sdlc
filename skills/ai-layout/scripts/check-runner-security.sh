@@ -196,7 +196,7 @@ async function asyncRun(extra = {}) {
     assert.deepEqual(flagValues(last(),flag),[expected[tool][task]],`${tool} ${task}: the model is one literal argument`);
     assert.ok(result.stderr.includes(`model: ${task} / ${tool}: ${expected[tool][task]} (task default)`),result.stderr);
     const record=sidecarOf(result);
-    assert.equal(record.schema,"t4.model-selection.v1");
+    assert.equal(record.schema,"fc.model-selection.v1");
     assert.deepEqual([record.task,record.tool,record.requested_model,record.source,record.routing_enabled,record.outcome,record.model_argument,record.reported_models],[task,tool,expected[tool][task],"task",true,"succeeded","passed",null]);
     assert.equal(fs.existsSync(marker),false);
    }

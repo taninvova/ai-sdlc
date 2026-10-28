@@ -18,7 +18,7 @@ review:
 #   review: my-review-alias
 
 # Per-task model routing — off until `enabled: true`. When on, it applies to headless runs AND
-# to interactive /t4:<task> commands and $t4-<task> skills: the task runs in a worker pinned to
+# to interactive /fc:<task> commands and $fc-<task> skills: the task runs in a worker pinned to
 # the selected model, never on the chat's own model instead. Resolution, first match wins:
 #   1. explicit MODEL=<id> (headless) or --task-model=<id> (interactive)
 #   2. explicit MODEL= (headless) or --task-model=inherit (interactive): the CLI's own model
@@ -36,7 +36,7 @@ review:
 routing:
   enabled: false
   tasks:
-    # /t4:risk: a threat assessment is worth the strongest model. codex: blank is the host default.
+    # /fc:risk: a threat assessment is worth the strongest model. codex: blank is the host default.
     risk:
       claude: claude-opus-5-5
       codex:

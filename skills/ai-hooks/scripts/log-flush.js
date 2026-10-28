@@ -29,7 +29,7 @@ require("./_common").runHook(() => {
 	const ev = readEvent();
 	const ai = aiDir(ev);
 	if (!ai) return;
-	// Inside a /t4:loop worktree the pending rows belong to the main repository, and a commit there
+	// Inside a /fc:loop worktree the pending rows belong to the main repository, and a commit there
 	// is the loop's own temporary one: flushing would edit and stage the developer's log.csv from
 	// another checkout. The rows wait for the developer's next commit in the main tree.
 	if (loopWorktree(ev)) return;

@@ -108,7 +108,7 @@ function lifecycleRun(env, task, tool, model) {
 		host: "headless",
 		run_id: lifecycleStore.newId("r"),
 		delivery_id: valid(P.delivery_id, env.DELIVERY),
-		parent_run_id: valid(P.run_id, env.T4_LIFECYCLE_RUN),
+		parent_run_id: valid(P.run_id, env.FC_LIFECYCLE_RUN),
 		phase: valid(P.phase, task),
 		task: valid(P.task, task),
 		step: valid(P.step, env.STEP),
@@ -212,7 +212,7 @@ function assurancePreflight(env = process.env) {
 // in-process, on INPUT (or INPUT_FILE) split at whitespace (data, never a shell, so no quoting: a
 // plan path with a space cannot be named): a usage error exits 2 and an invalid plan exits 3, with
 // no host launched and no run file written; a candidate listing is printed and exits 0. A started
-// loop hands its ID and T4_LOOP_RESULT to the host, and the exit code comes from the outcome record
+// loop hands its ID and FC_LOOP_RESULT to the host, and the exit code comes from the outcome record
 // `loop.js end` writes there, never from the host's prose; a valid record wins over a host that
 // exits non-zero after writing it.
 class LoopExit extends Error {
@@ -242,9 +242,9 @@ function loopInstructions(started, record) {
 	return [
 		"",
 		"## Headless loop",
-		`The runner has already run \`node ai-factory/make/loop.js start\` on the input above: do not run start again. Loop ID: ${started.loop_id} (also in T4_LOOP_ID). Plan: ${started.plan}.`,
+		`The runner has already run \`node ai-factory/make/loop.js start\` on the input above: do not run start again. Loop ID: ${started.loop_id} (also in FC_LOOP_ID). Plan: ${started.plan}.`,
 		"This is a headless run: ask no question and wait for no answer. Where the loop would ask, record the problem and stop as the loop procedure says.",
-		`Continue with \`node ai-factory/make/loop.js next ${started.loop_id}\` and always finish with \`node ai-factory/make/loop.js end ${started.loop_id}\`: it writes the outcome record named by T4_LOOP_RESULT (${record}), and the runner's exit code comes from that record alone.`,
+		`Continue with \`node ai-factory/make/loop.js next ${started.loop_id}\` and always finish with \`node ai-factory/make/loop.js end ${started.loop_id}\`: it writes the outcome record named by FC_LOOP_RESULT (${record}), and the runner's exit code comes from that record alone.`,
 		"",
 	].join("\n");
 }
@@ -260,7 +260,7 @@ function loopOutcome(file, loopId) {
 		return { code: 1, error: `no readable outcome record at ${path.relative(ROOT, file)} (${error.code || error.message}); the loop did not end with loop.js end` };
 	}
 	const problem =
-		record?.schema !== "t4-loop-outcome" ? "it is not a t4-loop-outcome record"
+		record?.schema !== "fc-loop-outcome" ? "it is not a fc-loop-outcome record"
 		: record.loop_id !== loopId ? `it names loop ${record.loop_id}, not ${loopId}`
 		: !Array.isArray(record.causes) ? "it carries no causes"
 		: ![0, 1, 4, 5].includes(record.code) ? `its code ${JSON.stringify(record.code)} is not 0, 1, 4 or 5`
@@ -290,7 +290,7 @@ async function run(options = {}) {
 	if (task === "start")
 		throw new Error("TASK=start requires an interactive session in v1; CI must name a destination task such as quick, fix, chore, analyse, design, explore or spec");
 	if (task === "continue")
-		throw new Error("TASK=continue requires an interactive session in v1: it may need answers from a developer and never waits for or guesses them. Run /t4:continue <delivery> interactively, or have CI name the destination task directly: plan, test, run, review or report");
+		throw new Error("TASK=continue requires an interactive session in v1: it may need answers from a developer and never waits for or guesses them. Run /fc:continue <delivery> interactively, or have CI name the destination task directly: plan, test, run, review or report");
 	if (!["claude", "codex"].includes(tool))
 		throw new Error(`Unsupported tool: ${tool}`);
 	if (!/^[a-z][a-z0-9-]*$/.test(task))
@@ -376,12 +376,12 @@ async function run(options = {}) {
 			safe.write(sidecar, "", { exclusive: true });
 			args.push("-o", sidecar, "-");
 		} else args.push("--output-format", "json");
-		// The child's hooks read T4_LIFECYCLE_RUN, so its usage links name this run explicitly.
+		// The child's hooks read FC_LIFECYCLE_RUN, so its usage links name this run explicitly.
 		// One launch only: a rejected model, failed login or refused request is the result.
 		launched = true;
 		const childEnv = lifecycle || loopRun ? { ...process.env } : process.env;
-		if (lifecycle) childEnv.T4_LIFECYCLE_RUN = lifecycle.id;
-		if (loopRun) Object.assign(childEnv, { T4_LOOP_ID: loopRun.loop_id, T4_LOOP_RESULT: loopRecord });
+		if (lifecycle) childEnv.FC_LIFECYCLE_RUN = lifecycle.id;
+		if (loopRun) Object.assign(childEnv, { FC_LOOP_ID: loopRun.loop_id, FC_LOOP_RESULT: loopRecord });
 		await launch(command, args, prompt, fd, childEnv);
 		fs.closeSync(fd);
 		fd = undefined;
@@ -473,7 +473,7 @@ function reviewInput(env = process.env) {
 		"--no-renames",
 		"--binary",
 	];
-	// /t4:loop's temporary worktrees are never part of the change under review, ignored or not.
+	// /fc:loop's temporary worktrees are never part of the change under review, ignored or not.
 	const excluded = [
 		"--",
 		`:(exclude)${path.relative(ROOT, path.join(RUNS, "tmp", "worktrees")).split(path.sep).join("/")}`,

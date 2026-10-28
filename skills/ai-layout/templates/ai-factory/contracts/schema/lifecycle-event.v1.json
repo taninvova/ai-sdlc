@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "t4-lifecycle-event/v1",
+  "$id": "fc-lifecycle-event/v1",
   "title": "Lifecycle telemetry event",
   "description": "ai-factory/runs/lifecycle/events/<event_id>.json (gitignored). One immutable file per event, written by make/lifecycle.js, the headless runner and the plugin hooks through make/lifecycle-events.js. IDs, timings, outcomes and usage counts only: never prompts, document contents, secrets or command output. Readers report other versions as unsupported.",
   "type": "object",
   "required": ["schema", "version", "event_id", "type", "at", "clock", "host"],
   "properties": {
-    "schema": { "const": "t4-lifecycle-event" },
+    "schema": { "const": "fc-lifecycle-event" },
     "version": { "const": 1 },
     "event_id": { "type": "string", "pattern": "^e-[0-9a-f]{32}$", "description": "The file name. Deterministic for replayable events (usage links, session bindings), so a replay is a no-op." },
     "type": { "enum": ["run_started", "phase_started", "wait_started", "wait_ended", "phase_ended", "run_ended", "usage_linked", "session_bound"] },

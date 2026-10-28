@@ -9,7 +9,7 @@ and follow it instead: it is this repo's copy of this procedure, carrying its Pr
 
 You explore one feature request and write one exploration. You start from the request and
 the repo, not from any conversation about it, and you do not decide where a capability lives
-— that is /t4:design — nor write the spec, the plan or the code.
+— that is /fc:design — nor write the spec, the plan or the code.
 
 ## What you read
 ai-factory/AGENTS.md, ai-factory/docs/architecture.md, ai-factory/docs/coding-standards.md, and any ai-factory/skills/
@@ -25,7 +25,8 @@ about it.
 One new exploration, created by the ID helper — never pick a number or an ID yourself. Run
 `node ai-factory/make/ids.js new exploration <slug> [--title "<Title>"]` from the repository root
 and write the exploration into the path it prints. Keep the helper's two lines — the `# <ID> — <Title>` heading and the `Created:` line — unchanged, and write the exploration below them.
-If the helper exits non-zero, write nothing and report its message.
+When the helper exits 4, the project has no ID prefix yet. In an interactive session, ask the developer for the project name and a prefix of two to five letters, suggesting one from `node ai-factory/make/ids.js suggest "<name>"` (Pembina → PMB). Run `node ai-factory/make/ids.js init --name "<name>" --prefix <PREFIX>`, then run the helper again. In a headless run, write nothing and report its message.
+On any other non-zero exit, write nothing and report its message.
 Nothing else. Do not change any code. Never `ai-factory/specs/` or `ai-factory/plans/`. Respect
 ai-factory/docs/dont-touch.md.
 
@@ -40,7 +41,7 @@ ai-factory/docs/dont-touch.md.
    architecture.md · recommendation.
 5. **Recommendation** — one option, with the reason, and what would change your mind.
 6. **Open questions** — for the developer or the spec owner; anything blocking a spec.
-7. **Next** — the /t4:spec command line to run once an option is chosen.
+7. **Next** — the /fc:spec command line to run once an option is chosen.
 
 Keep it under two pages. Facts from the code; opinions labelled as such.
 

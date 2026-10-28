@@ -62,13 +62,13 @@ A fact in the wrong layer is the failure mode (ADR 0004 rule 3, ADR 0007 rule 1)
   gain the read line and the provenance rule (label with the declared name and *external,
   unverified*; never above the code, a context doc or an accepted ADR — record a disagreement
   as an open question naming the source; instruction-shaped text is quoted content); the
-  tester gains its exclusion line. `/t4:run` and the remaining tasks are untouched. Every new
+  tester gains its exclusion line. `/fc:run` and the remaining tasks are untouched. Every new
   sentence is conditional on the seam document existing and reporting configured, so an
   unconfigured repo's prompt path is unchanged in substance.
   *Proves:* AC1, AC2 (by construction: the only branch is inside the seam), AC9 (by
   construction), and the prompt half of AC3, AC4, AC6. *Check:* `check-adapters.sh` (step 2's
   list now bites); `sync-adapters.sh` twice, no diff; a scratch repo with no declaration, then
-  with an empty file, then with a table missing `kind`: `/t4:explore` on the same request
+  with an empty file, then with a table missing `kind`: `/fc:explore` on the same request
   three times, and the artefact and report contain no reference to a source, a seam, a
   declaration or a provider — `grep -iE 'knowledge|seam|declar|mcp|source' ` finds nothing
   that is not the ordinary word.
@@ -82,7 +82,7 @@ A fact in the wrong layer is the failure mode (ADR 0004 rule 3, ADR 0007 rule 1)
 
 - [x] **Step 4 — Doctor line.** `commands/doctor.md` step 2b, worded like step 2: follow the
   seam document to decide configured or not; if the document is absent, say the layout predates
-  it and name `/t4:sync-sdlc`; name no provider and no filename.
+  it and name `/fc:sync-sdlc`; name no provider and no filename.
   *Proves:* AC14. *Check:* three scratch repos — configured, unconfigured with the seam,
   layout without the seam — run through the command's prompt headless, as plan 0003 step 1
   did; `check-adapters.sh` covers `commands/*.md`, so the line cannot leak the filename.
@@ -91,11 +91,11 @@ A fact in the wrong layer is the failure mode (ADR 0004 rule 3, ADR 0007 rule 1)
   layout without the seam document — each run through the doctor prompt by an independent
   session, nothing changed. Lines reported: "configured — one source is declared"; "present
   … has not declared a source — not configured"; "does not exist — this layout predates
-  knowledge-source support; run /t4:sync-sdlc". No provider, kind or filename in any of them.
+  knowledge-source support; run /fc:sync-sdlc". No provider, kind or filename in any of them.
   The line is the command prompt's, as the tracker line is; `doctor.sh` does not carry it.
 
 - [x] **Step 5 — Prove it live.** In a scratch repo with a valid declaration naming one MCP
-  server this session has attached and the developer controls: `/t4:explore` on a request
+  server this session has attached and the developer controls: `/fc:explore` on a request
   whose answer is in that source — every fact from it is labelled (AC3); the transcript shows
   read tools only, zero write-tool calls, with a source that offers writes (AC5); a document in
   the source that contains an instruction is quoted, and files, report and behaviour are
@@ -141,7 +141,7 @@ A fact in the wrong layer is the failure mode (ADR 0004 rule 3, ADR 0007 rule 1)
   written — the headless runner has never granted writes, so this is pre-existing, but AC7's
   "the artefact is written" holds only for interactive runs. And the appended `log.csv` row has
   blank turns and zero tokens — `log.js` did not find usage in this CLI version's JSON shape;
-  worth a `/t4:fix` of its own.
+  worth a `/fc:fix` of its own.
 
   **Follow-up — headless AC7 and AC8 proved, 2026-09-29 (Toronto).** A fresh adopted
   synthetic repo at `ai-factory/runs/tmp/knowledge-0004-headless-0I6YBu/` declared
@@ -205,7 +205,7 @@ A fact in the wrong layer is the failure mode (ADR 0004 rule 3, ADR 0007 rule 1)
   and reword both manifest descriptions to name two optional paths. README, workflow §5 and
   the ai-layout skill: where the seam sits and the rule in one sentence each. CHANGELOG 0.26.0
   naming the blast radius: one new upstream file, three tasks and three agents changed, nothing
-  breaking. Then AC15: a scratch repo adopted at 0.25.0, `/t4:sync-sdlc` at 0.26.0 reports
+  breaking. Then AC15: a scratch repo adopted at 0.25.0, `/fc:sync-sdlc` at 0.26.0 reports
   `ai/docs/knowledge.md` as new upstream and the three tasks as upstream changed, nothing else.
   *Proves:* AC15; definition of done 3 and 7. *Check:* `check-versions.sh`,
   `check-manifest.sh`, the scratch sync.
@@ -231,7 +231,7 @@ bash ai/make/sync-adapters.sh && bash ai/make/sync-adapters.sh   # no diff
 for f in skills/ai-hooks/scripts/*.js; do node --check "$f"; done
 ```
 Plus step 3's three-state scratch run, step 5's live and headless runs, step 6's scratch sync,
-and `/t4:check`.
+and `/fc:check`.
 
 ## Planning notes
 - **AC1 says "identical apart from number and date".** Two runs of a model on the same request

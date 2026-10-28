@@ -6,8 +6,8 @@ document differ the ADR wins — 0005 changed the label and 0006 narrowed the tr
 and both corrections are folded in below.
 
 ## 1. Capability
-`/t4:spec PROJ-123` drafts a spec from a Jira ticket instead of from typed prose. The ticket
-key is then recorded, so `/t4:plan`, `/t4:test`, `/t4:run` and `/t4:check` can be given the
+`/fc:spec PROJ-123` drafts a spec from a Jira ticket instead of from typed prose. The ticket
+key is then recorded, so `/fc:plan`, `/fc:test`, `/fc:run` and `/fc:check` can be given the
 same key and resolve it to the work already in flight. Each of those tasks comments its
 artefact back to the ticket, and may move the ticket's status if the repo has configured it.
 
@@ -31,7 +31,7 @@ artefact back to the ticket, and may move the ticket's status if the repo has co
   plugin commands do. There is no function to put a seam in. Any indirection has to be a
   document the prompts point at.
 - **Template changes reach every adopted repo.** `ai/docs/coding-standards.md` and fleet.md
-  Boundaries. Adding a `Ticket:` line to what `/t4:spec` writes changes the output of every
+  Boundaries. Adding a `Ticket:` line to what `/fc:spec` writes changes the output of every
   adopter, including those with no Jira at all.
 - **`ai/tasks/*.md` are symlinks into `skills/ai-layout/templates/`**, so a task edit is one
   edit, not two. Adding a *new* template file is a drift event for every adopted repo
@@ -43,8 +43,8 @@ artefact back to the ticket, and may move the ticket's status if the repo has co
 
 ## 3. Today
 No Jira anywhere: no mention in any tracked file, no `jira`/`acli` binary on PATH, no
-`JIRA_*` environment, no `mcpServers` in either plugin manifest. `/t4:spec` takes free text
-and asks for it when absent. `/t4:plan` takes a spec path. Nothing links a spec to anything
+`JIRA_*` environment, no `mcpServers` in either plugin manifest. `/fc:spec` takes free text
+and asks for it when absent. `/fc:plan` takes a spec path. Nothing links a spec to anything
 outside the repo.
 
 ## 4. Options
@@ -58,7 +58,7 @@ outside the repo.
 
 ### Linkage
 - **D. Key recorded in the spec.** One fetch point; four resolvers; write-back knows its target.
-- **E. `/t4:spec` only.** Smallest change; nothing downstream can comment or transition,
+- **E. `/fc:spec` only.** Smallest change; nothing downstream can comment or transition,
   because nothing downstream knows the ticket.
 
 ### Write-back
@@ -87,12 +87,12 @@ outside the repo.
   defines the resolution order — MCP if the session has it, else `ai/make/jira.sh` if the repo
   has it, else stop and ask. Only the third arm exists in Codex and CI today; adding the
   second is then a new file plus a paragraph, with no task edited.
-- **Linkage: `/t4:spec` writes the key into the spec it creates**, as a `Ticket: PROJ-123`
+- **Linkage: `/fc:spec` writes the key into the spec it creates**, as a `Ticket: PROJ-123`
   line under the title. The label is vendor-neutral per `docs/adr/0005`: `ai/tasks/spec.md`
   carries it verbatim, so `Jira:` — this design's first wording — would have been the vendor
   named in a task prompt, which ADR 0004 rule 3 forbids. Specs stay frontmatter-free; this is
-  body text, greppable, and survives a human editing the file. `/t4:plan`, `/t4:test`,
-  `/t4:run` and `/t4:check` accept either a path (as today) or a key, resolving a key by
+  body text, greppable, and survives a human editing the file. `/fc:plan`, `/fc:test`,
+  `/fc:run` and `/fc:check` accept either a path (as today) or a key, resolving a key by
   grepping `specs/`.
 - **Write-back: comment always, transition only when every runtime can.** Each task comments
   the artefact it produced, on every run. `docs/adr/0006` narrows what this design proposed:
@@ -106,7 +106,7 @@ outside the repo.
    a key only if the whole of it matches `[A-Z][A-Z0-9]+-[0-9]+`, so "PROJ-123 but only the
    CSV part" is not silently reduced to the ticket. The first draft of this design made the
    pattern itself the trigger, which cannot work: `UTF-8`, `ISO-8601`, `RFC-7231` and `HTTP-2`
-   all match it end to end, so `/t4:spec UTF-8` in a repo with no Jira would have stopped to
+   all match it end to end, so `/fc:spec UTF-8` in a repo with no Jira would have stopped to
    ask about a ticket that cannot exist — precisely the new failure mode rule 5 promises
    Jira-less adopters never see. Corrected per `docs/adr/0004` rule 2, which supersedes the
    original wording.
@@ -125,7 +125,7 @@ outside the repo.
 | Thing | Owner | Written by | Notes |
 |---|---|---|---|
 | `ai/jira.yaml` | the adopting repo | a human | base URL, optional transition map. Never generated. |
-| `Ticket:` line in a spec | the spec file | `/t4:spec` | body text under the title, not frontmatter; vendor-neutral (ADR 0005) |
+| `Ticket:` line in a spec | the spec file | `/fc:spec` | body text under the title, not frontmatter; vendor-neutral (ADR 0005) |
 | `ai/docs/tracker.md` | ai-sdlc template | plugin release | the seam: resolution order and write-back contract |
 | Ticket comments | Jira | any task, via the seam | additive; ai-sdlc owns none of it |
 | Ticket status | Jira | opt-in **and** arm two present (ADR 0006) | the repo names the states; ai-sdlc names none |
@@ -149,10 +149,10 @@ outside the repo.
   through a different door.
 
 ## 9. Specs to follow
-1. `/t4:spec` accepts a ticket key, fetches it, writes the `Ticket:` line. Gated on
+1. `/fc:spec` accepts a ticket key, fetches it, writes the `Ticket:` line. Gated on
    `ai/jira.yaml` being present (ADR 0004 rule 2), not on the argument's shape; includes the
    whole-argument match rule *within* a configured repo, and the stop-on-unresolvable rule.
-2. Key resolution in `/t4:plan`, `/t4:test`, `/t4:run`, `/t4:check`.
+2. Key resolution in `/fc:plan`, `/fc:test`, `/fc:run`, `/fc:check`.
 3. Write-back: comments from spec/plan/check, plus `ai/jira.yaml` and transitions.
 
 Spec 1 is useful alone. 2 and 3 are not useful without 1.
@@ -178,7 +178,7 @@ Spec 1 is useful alone. 2 and 3 are not useful without 1.
   closes ADR 0004 rule 3 cleanly and costs nothing while none of this is built. Left unchanged
   here on purpose: it amends an ADR under review, which is the accepter's call, not a design
   edit.
-- **Should `/t4:explore`, `/t4:fix` and `/t4:chore` take keys too?** They take requests, so it
+- **Should `/fc:explore`, `/fc:fix` and `/fc:chore` take keys too?** They take requests, so it
   is natural. Deferred: they produce no spec, so there is nowhere to record the key.
 - ~~**Does the base URL come from `ai/jira.yaml` or from the connector?**~~ **Resolved:** from
   `ai/jira.yaml`, which must carry `base_url` — its presence is also what makes a repo count as

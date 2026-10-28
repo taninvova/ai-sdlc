@@ -65,7 +65,7 @@ $out"
 # reason for removing it in a minor at all was that the script remains reachable from an older
 # checkout, so the finding has to say that, or the removal is the silent break the ADR refused.
 grep -qE 'checkout at 2\.0\.0 or earlier' <<<"$out" \
-  || fail "the unmigrated finding names /t4:migrate-layout but not where to get it — 2.1.0 removed the command:
+  || fail "the unmigrated finding names /fc:migrate-layout but not where to get it — 2.1.0 removed the command:
 $out"
 # 3.0.0, not 2.1.0: the fallback outlives the migration command, because removing it is itself
 # a silent break. An assertion naming the old version would pass a doctor promising the wrong one.
@@ -89,7 +89,7 @@ grep -q 'hooks are using ai-factory/' <<<"$out" || fail "the half-migrated findi
 $out"
 # It names the same removed command, so it owes the same answer to "where do I get it".
 grep -qE 'checkout at 2\.0\.0 or earlier' <<<"$out" \
-  || fail "the half-migrated finding names /t4:migrate-layout but not where to get it — 2.1.0 removed the command:
+  || fail "the half-migrated finding names /fc:migrate-layout but not where to get it — 2.1.0 removed the command:
 $out"
 
 # A migrated repo says nothing about migrating at all.
@@ -140,7 +140,7 @@ for task in domain-check domain-report; do
   printf -- '---\ndescription: Project task\n---\nCheck this project.\n' > "$d/ai-factory/tasks/$task.md"
 done
 ( cd "$d" && node "$ROOT/skills/ai-layout/templates/ai-factory/make/sync-adapters.js" --adapters=claude ) >/dev/null || fail "explicit adapter generation failed"
-rm "$d/.claude/commands/t4/domain-check.md"
+rm "$d/.claude/commands/fc/domain-check.md"
 stale_out=$(run "$d")
 grep -q '^\[finding\] adapters .*stale' <<<"$stale_out" || fail "partial explicit adapters were not diagnosed: $stale_out"
 ( cd "$d" && node "$ROOT/skills/ai-layout/templates/ai-factory/make/sync-adapters.js" --adapters=claude ) >/dev/null || fail "adapter restoration failed"
@@ -157,13 +157,13 @@ grep -q '^\[finding\] adapters .*listed twice' <<<"$full_out" \
 for c in "$ROOT"/commands/*.md; do
   n=$(basename "$c" .md)
   [ -f "$d/ai-factory/tasks/$n.md" ] || continue
-  printf -- '---\ndescription: stale\n---\n@../../../ai-factory/tasks/%s.md\n' "$n" > "$d/.claude/commands/t4/$n.md"
+  printf -- '---\ndescription: stale\n---\n@../../../ai-factory/tasks/%s.md\n' "$n" > "$d/.claude/commands/fc/$n.md"
   dupe_out=$(run "$d")
-  grep -q "^\[finding\] adapters .*/t4:$n listed twice" <<<"$dupe_out" \
-    || fail "a pointer duplicating the plugin's /t4:$n was not diagnosed: $dupe_out"
+  grep -q "^\[finding\] adapters .*/fc:$n listed twice" <<<"$dupe_out" \
+    || fail "a pointer duplicating the plugin's /fc:$n was not diagnosed: $dupe_out"
   [ "$(grep -c '^\[finding\] adapters' <<<"$dupe_out")" = 1 ] \
     || fail "one duplicate pointer produced more than one adapters finding: $dupe_out"
-  rm "$d/.claude/commands/t4/$n.md"
+  rm "$d/.claude/commands/fc/$n.md"
 done
 
 # 5. the config dir is absent — Codex, or a machine with no plugins ---------------------------

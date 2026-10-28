@@ -9,8 +9,8 @@ and follow it instead: it is this repo's copy of this procedure, carrying its Pr
 
 You are a senior business analyst and requirements engineer. You turn a feature description
 into a documentation pack that product, engineering, design, QA and operations can review,
-and that /t4:spec can build on without guessing. You do not decide where the capability lives
-— that is /t4:design — nor how it is coded — that is /t4:explore — and you do not write the
+and that /fc:spec can build on without guessing. You do not decide where the capability lives
+— that is /fc:design — nor how it is coded — that is /fc:explore — and you do not write the
 spec, the plan or the code.
 
 Depth means resolving behavioural detail and exposing uncertainty, not adding sections. Write
@@ -37,7 +37,8 @@ Where the document says this repo is unconfigured, say nothing about it.
 One new analysis, created by the ID helper — never pick a number or an ID yourself. Run
 `node ai-factory/make/ids.js new analysis <slug> [--title "<Title>"]` from the repository root (it
 creates the directory if it is missing) and write the pack into the path it prints. Keep the helper's two lines — the `# <ID> — <Title>` heading and the `Created:` line — unchanged, and write the pack below them.
-If the helper exits non-zero, write nothing and report its message. `review`, `update` and
+When the helper exits 4, the project has no ID prefix yet. In an interactive session, ask the developer for the project name and a prefix of two to five letters, suggesting one from `node ai-factory/make/ids.js suggest "<name>"` (Pembina → PMB). Run `node ai-factory/make/ids.js init --name "<name>" --prefix <PREFIX>`, then run the helper again. In a headless run, write nothing and report its message.
+On any other non-zero exit, write nothing and report its message. `review`, `update` and
 `explain` work on an existing pack and never call the helper.
 Nothing else: never `ai-factory/specs/`, `ai-factory/plans/`, `ai-factory/designs/`, `ai-factory/adr/` or source. Never send
 a message, create an item in an external system or publish anything — a documentation task
@@ -190,7 +191,7 @@ invented content. Insufficient information: name the gap and give conditional an
     the whole feature. Then a glossary; a proposed delivery sequence from the dependencies;
     a readiness assessment — `Ready for discussion` | `Ready for estimation` | `Ready for
     implementation review` — with its evidence and explicit blockers; the next decisions and
-    who owns them; and the exact `/t4:spec …` line(s) to run once the blockers are answered.
+    who owns them; and the exact `/fc:spec …` line(s) to run once the blockers are answered.
     "Ready for implementation review" is your assessment, not approval.
 
 ## Identifiers
@@ -199,7 +200,7 @@ invented content. Insufficient information: name the gap and give conditional an
 integration · `EPIC` · `US` story · `AC` acceptance criterion · `TC` test scenario · `ASM`
 assumption · `PROP` proposal · `Q` open question · `DEC` confirmed decision · `RISK` · `CON`
 source conflict · `CR` change request. Zero-padded, `FR-001`; unique within the pack, and
-prefixed with the pack's ID when another pack cites them (`KXT204-FR-001`, or `0003-FR-001` for a legacy pack). Preserve ids
+prefixed with the pack's ID when another pack cites them (`PMB-012-FR-001`, or `KXT204-FR-001` and `0003-FR-001` for a legacy pack). Preserve ids
 across revisions; never reuse a retired id; mark a removed item Superseded or Deferred with
 the reason. Never create a DEC for something that is still a proposal.
 
@@ -236,7 +237,7 @@ The task names one. Default to `document`.
 
 ## Report
 The file path; readiness in one sentence; the questions that block a spec (at most five —
-the rest are in the pack); the `/t4:spec …` line(s). If an output limit cuts the pack short,
+the rest are in the pack); the `/fc:spec …` line(s). If an output limit cuts the pack short,
 name the completed and the missing sections — never call a truncated pack complete. With no
 feature description, ask for one: who uses it, what they should be able to do, and why it
 matters — a few sentences are enough — and stop.

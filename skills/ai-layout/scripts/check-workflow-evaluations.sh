@@ -23,7 +23,7 @@ const rubric = JSON.parse(fs.readFileSync(rubricFile, "utf8"));
 const synthetic = JSON.parse(fs.readFileSync(path.join(fixtures, "results.json"), "utf8"));
 const results = synthetic.records;
 const pairing = synthetic.pairing;
-const base = fs.mkdtempSync(path.join(os.tmpdir(), "t4-evaluations-"));
+const base = fs.mkdtempSync(path.join(os.tmpdir(), "fc-evaluations-"));
 const sha = (value) => crypto.createHash("sha256").update(value).digest("hex");
 const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
 	entry.isDirectory() ? walk(path.join(dir, entry.name)) : [path.join(dir, entry.name)]);
@@ -382,7 +382,7 @@ check("pairing", "partial-cost-unknown-total", () => {
 	}
 	assert.equal(costs["enhancement-1-baseline"].status, "unknown", "an unlinked run keeps its unknown cost");
 	assert.throws(() => linkLifecycleCost(records, pairing.lifecycle, [{ run: "no-such-run", lifecycleRun: "r-known", session: "s" }]), /unknown benchmark run/);
-	assert.throws(() => linkLifecycleCost(records, { schema: "t4-delivery-telemetry", version: 1 }, []), /t4-lifecycle-report/);
+	assert.throws(() => linkLifecycleCost(records, { schema: "fc-delivery-telemetry", version: 1 }, []), /fc-lifecycle-report/);
 });
 
 check("pairing", "duplicate-usage-source", () => {
@@ -947,7 +947,7 @@ check("harness", "report-regeneration", () => {
 	const before = JSON.parse(liveReport);
 	assert.equal(rowOf(before, "docs-1-candidate").metrics.unnecessaryQuestions.count, null, "unreviewed questions are unknown");
 	fs.writeFileSync(path.join(output, "judgments.json"), JSON.stringify({
-		schema: "t4-workflow-judgments", version: 1,
+		schema: "fc-workflow-judgments", version: 1,
 		reviews: [{ run: "docs-1-candidate", transcript: "docs-1-candidate/final.txt", reviewer: "maintainer", complete: true }],
 		questions: [], completion: [],
 	}, null, 2));

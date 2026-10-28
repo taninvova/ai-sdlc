@@ -18,7 +18,7 @@ runs only because someone ran it there.
 
 Decided, and not reopened below: the directory is named `ai-factory/`; the workflow doc lands at
 `ai-factory/docs/workflow.md`; the fallback to the old paths is granted to the hooks and withheld
-from the prompts; the migration refuses to run with tracked changes in flight; `/t4:doctor` reports a
+from the prompts; the migration refuses to run with tracked changes in flight; `/fc:doctor` reports a
 half-migrated repo; this ships as **1.0.0**; and both the migration command and the hook fallback
 are transitional: the command goes in 1.1.0, the fallback in 2.0.0.
 
@@ -54,7 +54,7 @@ hand-editing prompts in every repo that adopted.
   lines `skills/ai-hooks/SKILL.md` prescribes name `ai-factory/runs/*.json`,
   `ai-factory/runs/*.jsonl`, `ai-factory/runs/log.pending.csv` and
   `ai-factory/runs/log.csv merge=union`.
-- **AC3** Given a scratch repo with no layout, When `/t4:adopt-sdlc` is run in it, Then the repo
+- **AC3** Given a scratch repo with no layout, When `/fc:adopt-sdlc` is run in it, Then the repo
   gains `ai-factory/` and nothing else but `AGENTS.md`, `CLAUDE.md` and `Makefile`;
   `ai-factory/.sdlc.json` is written and tracks every received file at its `ai-factory/` path;
   `bash ai-factory/make/sync-adapters.sh` generates `.claude/`, `.cursor/` and `.codex/`; and
@@ -113,8 +113,8 @@ hand-editing prompts in every repo that adopted.
 - **AC10** Given the release, When `bash ai-factory/make/sync-adapters.sh` is run twice, Then
   the first run exits 0, the second produces no diff, `bash
   skills/ai-layout/scripts/check-adapters.sh` passes, and the generated
-  `.claude/commands/t4/*.md` and `.codex/skills/t4-*/SKILL.md` name `ai-factory/` — including
-  `t4-adr` naming `ai-factory/adr/` and the Codex inline notes naming
+  `.claude/commands/fc/*.md` and `.codex/skills/fc-*/SKILL.md` name `ai-factory/` — including
+  `fc-adr` naming `ai-factory/adr/` and the Codex inline notes naming
   `ai-factory/agents/<name>.md`.
 - **AC11** Given the release, When `ai-factory/docs/dont-touch.md` is read, Then its rules name
   `ai-factory/runs/`, `ai-factory/tasks/`, `ai-factory/agents/` and `ai-factory/make/`; and When
@@ -128,13 +128,13 @@ hand-editing prompts in every repo that adopted.
 
 ### The migration
 
-- **AC13** Given the release, When the plugin's commands are listed, Then `/t4:migrate-layout`
+- **AC13** Given the release, When the plugin's commands are listed, Then `/fc:migrate-layout`
   exists, is described as the move an adopted repo makes when it takes this update, and is
   backed by `skills/ai-layout/scripts/migrate-layout.sh`. And When `adopt-sdlc.md`,
   `sync-sdlc.md`, `hooks/hooks.json` and every task prompt are read, Then none of them invokes
   it: it runs only because a developer ran it.
 - **AC14** Given a repo with `ai/`, a non-empty `specs/`, a non-empty `docs/adr/`, a clean
-  working tree and `ai/.sdlc.json` written by 0.27.1, When `/t4:migrate-layout` is run in it,
+  working tree and `ai/.sdlc.json` written by 0.27.1, When `/fc:migrate-layout` is run in it,
   Then afterwards: `ai-factory/` holds what `ai/` held, plus `ai-factory/specs/` and
   `ai-factory/adr/` holding what those two directories held, all reachable by `git log
   --follow`; `docs/` is gone if nothing else was in it and untouched if something was; every
@@ -144,25 +144,25 @@ hand-editing prompts in every repo that adopted.
   by `manifest.js write`; nothing is committed; and the command has printed every path it moved
   and every file it rewrote.
 - **AC15** Given a repo where the migration cannot be applied cleanly, When
-  `/t4:migrate-layout` is run, Then it moves and rewrites nothing, exits non-zero, and names
+  `/fc:migrate-layout` is run, Then it moves and rewrites nothing, exits non-zero, and names
   the reason — for each of: neither `ai/` nor `ai-factory/` present (pointing at
-  `/t4:adopt-sdlc`); both present; both `specs/` and `ai-factory/specs/` non-empty; both
+  `/fc:adopt-sdlc`); both present; both `specs/` and `ai-factory/specs/` non-empty; both
   `docs/adr/` and `ai-factory/adr/` non-empty; and uncommitted changes to tracked files, so the
   move is reviewable as its own commit. An untracked file is not among them: it cannot affect the
   move, and refusing for one blocked a real migration over a scratch directory an MCP server had
   made. It is named in the output instead, since the second commit's `git add -A` would take it.
-- **AC16** Given a repo already on the new layout, When `/t4:migrate-layout` is run, Then it
+- **AC16** Given a repo already on the new layout, When `/fc:migrate-layout` is run, Then it
   exits 0, reports that there is nothing to move, and leaves the working tree byte-identical —
   running it twice in a row is the same as running it once.
-- **AC17** Given a repo still holding `ai/`, When `/t4:sync-sdlc` is run in it, Then it says the
-  layout has been renamed, tells the developer to run `/t4:migrate-layout`, and syncs nothing —
+- **AC17** Given a repo still holding `ai/`, When `/fc:sync-sdlc` is run in it, Then it says the
+  layout has been renamed, tells the developer to run `/fc:migrate-layout`, and syncs nothing —
   generating adapters from a directory the prompts no longer name would be worse than doing
-  nothing. `/t4:sync-sdlc` still changes nothing under the layout directory and moves nothing.
+  nothing. `/fc:sync-sdlc` still changes nothing under the layout directory and moves nothing.
   The drift report must be short-circuited too, and not because it would be long: measured, the
   per-file report is unreachable. `MANIFEST` moved to `ai-factory/.sdlc.json` in 1.0.0, so a repo
   holding a perfectly good `ai/.sdlc.json` looks like it has none, and the no-manifest branch
   tells it "adopted before manifests existed" (false), sends it to a baseline write that refuses
-  for want of an `ai-factory/`, and from there to `/t4:adopt-sdlc`, which would scaffold a SECOND
+  for want of an `ai-factory/`, and from there to `/fc:adopt-sdlc`, which would scaffold a SECOND
   layout beside the first. Three wrong answers in a row, replaced by one instruction.
 - **AC18** Given a migrated repo whose `ai-factory/.sdlc.json` was refreshed by AC14, When
   `node skills/ai-layout/scripts/manifest.js check <repo> <plugin>` is run, Then it exits 0 and
@@ -186,14 +186,14 @@ hand-editing prompts in every repo that adopted.
   which ADR 0003 prefers, since the version lives in one place and a pin exists only where the
   format demands one. `bash skills/ai-layout/scripts/check-versions.sh` passes, and
   the CHANGELOG entry marks the change breaking, tells an adopted repo to run
-  `/t4:migrate-layout`, states that the hooks keep working in the meantime (AC6), and tells the
+  `/fc:migrate-layout`, states that the hooks keep working in the meantime (AC6), and tells the
   developer to grep their own CI, deployment and tooling config for `ai/` — paths the plugin
   cannot see and does not touch.
 
-- **AC22** Given `/t4:doctor` run in a repo that holds both `ai/` and `ai-factory/`, or that
+- **AC22** Given `/fc:doctor` run in a repo that holds both `ai/` and `ai-factory/`, or that
   holds only `ai/` with this plugin installed, Then it reports the layout as renamed and the repo
   as half-migrated or unmigrated, names which directory the hooks are actually using (AC6), and
-  tells the developer to run `/t4:migrate-layout`; and given a fully migrated repo, Then it
+  tells the developer to run `/fc:migrate-layout`; and given a fully migrated repo, Then it
   reports the layout healthy and says nothing about migrating. `check-doctor.sh` pins both cases
   against synthetic repos, as it already pins the install and cache branches.
 - **AC23** Given the migration run of AC14, When the resulting diff of the repo's own files is
@@ -202,9 +202,9 @@ hand-editing prompts in every repo that adopted.
   arrives with the migration; and the command's report separates what it moved from what it
   rewrote, so the rewrite can be reviewed, and reverted, on its own.
 - **AC24** Given the release, When `ai-factory/adr/0008-*.md` is read, Then it records the AC14
-  rewrite as a bounded exception to `/t4:sync-sdlc`'s rule that taking an upstream change is a
+  rewrite as a bounded exception to `/fc:sync-sdlc`'s rule that taking an upstream change is a
   separate reviewable edit — bounded by AC23 to path strings, and taken because without it the
-  move orphans every prompt in the repo — and records both `/t4:migrate-layout` and the AC6 hook
+  move orphans every prompt in the repo — and records both `/fc:migrate-layout` and the AC6 hook
   fallback as transitional — the command removed in 1.1.0, the fallback not before 2.0.0, because
   dropping it is itself a silent break. And When the CHANGELOG entry for 1.0.0 is
   read, Then it carries that deprecation notice.
@@ -214,7 +214,7 @@ hand-editing prompts in every repo that adopted.
   stay, and `CLAUDE.md` keeps its single `@` import, now `@ai-factory/AGENTS.md`.
 - `README.md`, `CHANGELOG.md`, `LICENSE` — plugin-level documentation and licence, which belong
   at the root of any repo. Their *contents* change where they name a moved path (AC7).
-- The plugin's own name and its skill names: `ai-sdlc`, `ai-layout`, `ai-hooks`, the `t4:`
+- The plugin's own name and its skill names: `ai-sdlc`, `ai-layout`, `ai-hooks`, the `fc:`
   command prefix and the `make ai` target all stay. This renames a directory in adopted repos,
   not the product.
 - The plugin's own source layout: `agents/`, `commands/`, `skills/`, `hooks/`,
@@ -244,10 +244,10 @@ None. All nine are settled, and where each landed:
    refused: it cannot affect the move, and refusing for one blocked a real migration over a
    scratch directory an MCP server had created.
 5. Settled with 1 above.
-6. Yes — `/t4:doctor` reports all three states and says which directory the hooks are reading
+6. Yes — `/fc:doctor` reports all three states and says which directory the hooks are reading
    (AC22).
 7. 1.0.0.
-8. They do not expire together. `/t4:migrate-layout` goes in 1.1.0; the hooks' fallback waits for
+8. They do not expire together. `/fc:migrate-layout` goes in 1.1.0; the hooks' fallback waits for
    2.0.0, because removing it disarms the guard silently in any repo that never migrated.
 9. `ai-factory`, confirmed before the rename began.
 
@@ -277,12 +277,12 @@ changes is paths:
   `skills/ai-layout/scripts/check-migrate.sh`, `ai-factory/adr/0008-*.md`, one CHANGELOG entry,
   and the AC5 scan's check script (open question 1).
 - Unchanged: the 16 columns of `runs/log.csv`, `models.yaml`'s keys, `plugin.json`'s `name`, the
-  `t4:` prefix, the `make ai` target name, and every task prompt's behaviour.
+  `fc:` prefix, the `make ai` target name, and every task prompt's behaviour.
 
 ## Routes touched
-None. The surfaces are the twelve `/t4:*` task commands plus `/t4:adopt-sdlc`, `/t4:sync-sdlc`,
-`/t4:doctor` and `/t4:setup-tracker`, all regenerated from the prompts by `sync-adapters.sh`
-(AC10). One command is added: `/t4:migrate-layout` (AC13). None is removed. The five hook
+None. The surfaces are the twelve `/fc:*` task commands plus `/fc:adopt-sdlc`, `/fc:sync-sdlc`,
+`/fc:doctor` and `/fc:setup-tracker`, all regenerated from the prompts by `sync-adapters.sh`
+(AC10). One command is added: `/fc:migrate-layout` (AC13). None is removed. The five hook
 events in `hooks/hooks.json` are unchanged; only what they detect moves (AC6).
 
 ## Components likely involved

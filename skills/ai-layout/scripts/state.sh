@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The scan behind /t4:state: lists this repo's outstanding specs and plans, one row per listed
+# The scan behind /fc:state: lists this repo's outstanding specs and plans, one row per listed
 # thing, and exits 0 whatever it finds. It reports only — it creates nothing, edits nothing and
 # ticks nothing (AC8, AC9). The prompt renders these rows; it does not decide which items are
 # outstanding (AC14).
@@ -19,7 +19,7 @@
 #               adopted ai-factory/make/delivery-status.js with the ID as one literal argument
 #               and prints its `field<TAB>value` table unchanged. It does not combine with
 #               --done or --next, takes exactly one ID, and a missing helper is answered with
-#               /t4:sync-sdlc guidance — all one-line refusals with exit 0. The helper's own
+#               /fc:sync-sdlc guidance — all one-line refusals with exit 0. The helper's own
 #               refusals pass through the same way; a helper runtime failure exits non-zero.
 #               --specs and --plans narrow a listing to one kind of row, and --spec <id>
 #               narrows it to one spec and the plans paired to it. They choose WHICH artefacts are
@@ -34,7 +34,8 @@
 #   kind  id  state  path  step  detail
 #
 # `id` is the ID an artefact's file name starts with (spec 0024): a legacy four-digit number as it
-# stands, or a letter-and-digit ID such as DHW631, written uppercase whatever the file's case.
+# stands, or a prefixed ID such as PMB-001 or a legacy letter-and-digit ID such as DHW631, written
+# uppercase whatever the file's case.
 #
 # One row builder, one sort and one header serve both listings: every artefact becomes a row
 # carrying its state, and the flag chooses which states are printed. The two listings are
@@ -116,7 +117,7 @@ PLUGIN=${PLUGIN:-${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../../.." && pwd)}}
 # 2026-09-29): asked for together they are refused rather than silently reduced to one of them.
 #
 # Both refusals print ONE line and exit 0, and neither prints a row. A refused result is an
-# answer, not a crash — the same treatment an unknown flag gets, and the reason /t4:state can be
+# answer, not a crash — the same treatment an unknown flag gets, and the reason /fc:state can be
 # run before anyone knows what the repo holds.
 #
 # They are two messages, not one, because they are two situations. `--done --next` is a pair of
@@ -128,8 +129,9 @@ PLUGIN=${PLUGIN:-${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/../../.." && pwd)}}
 MODE=default
 # The spec ID --spec was given, in the form id_of below reads off an artefact's name. Two forms
 # exist (spec 0024). A legacy number may be bare, zero-padded, a spec's basename or its path, and
-# all of them name the same four-digit spec. A letter-and-digit ID may be the ID, a basename or a
-# path, in any case, and is compared uppercase.
+# all of them name the same four-digit spec. A prefixed ID (PMB-001) or a letter-and-digit ID
+# (DHW631) may be the ID, a basename or a path, in any case, and is compared uppercase; a prefixed
+# ID's number may drop its zeros, so PMB-1, PMB-01 and PMB-001 name one spec.
 SPEC_ID=""
 if [ "$HAS_SPEC" = 1 ] && [ "$SPEC_MISSING" = 0 ]; then
   spec_base=${SPEC_ARG##*/}
@@ -137,14 +139,20 @@ if [ "$HAS_SPEC" = 1 ] && [ "$SPEC_MISSING" = 0 ]; then
   if [ -n "$SPEC_ID" ]; then
     SPEC_ID=$(printf '%04d' "$SPEC_ID")
   else
-    SPEC_ID=$(printf '%s' "$spec_base" | sed -n 's/^\([A-Za-z][A-Za-z][A-Za-z][0-9][0-9][0-9]\)\(-.*\)\{0,1\}$/\1/p' \
-               | tr '[:lower:]' '[:upper:]')
+    spec_prefix=$(printf '%s' "$spec_base" | sed -n 's/^\([A-Za-z]\{2,5\}\)-\([0-9][0-9]*\)\(-.*\)\{0,1\}$/\1/p')
+    if [ -n "$spec_prefix" ]; then
+      spec_number=$(printf '%s' "$spec_base" | sed -n 's/^[A-Za-z]\{2,5\}-\([0-9][0-9]*\).*$/\1/p' | sed 's/^0*\([0-9]\)/\1/')
+      SPEC_ID="$(printf '%s' "$spec_prefix" | tr '[:lower:]' '[:upper:]')-$(printf '%03d' "$spec_number")"
+    else
+      SPEC_ID=$(printf '%s' "$spec_base" | sed -n 's/^\([A-Za-z][A-Za-z][A-Za-z][0-9][0-9][0-9]\)\(-.*\)\{0,1\}$/\1/p' \
+                 | tr '[:lower:]' '[:upper:]')
+    fi
   fi
 fi
 if [ -n "$UNKNOWN" ]; then
   # An unrecognised token: say what it is, and what this command does take. The rules for --done
   # and --next are settled and implemented, so this line no longer claims anything is undecided.
-  echo "'$UNKNOWN' is not a flag /t4:state takes — it takes --done, which lists what is finished instead of what is outstanding, or --next, which names the single item to pick up next, or --specs or --plans, which list only that kind, or --spec <id>, which lists one spec with its plans, or --delivery <id>, which shows one contract delivery's status; with no flag at all it lists everything outstanding. Nothing was listed."
+  echo "'$UNKNOWN' is not a flag /fc:state takes — it takes --done, which lists what is finished instead of what is outstanding, or --next, which names the single item to pick up next, or --specs or --plans, which list only that kind, or --spec <id>, which lists one spec with its plans, or --delivery <id>, which shows one contract delivery's status; with no flag at all it lists everything outstanding. Nothing was listed."
   exit 0
 elif [ "$HAS_DELIVERY" -gt 0 ] && [ "$DELIVERY_MISSING" = 1 ]; then
   # --delivery with nothing after it, or with a flag where its ID belongs. The flag exists, so this
@@ -167,13 +175,13 @@ elif [ "$HAS_DELIVERY" = 1 ] && { [ "$HAS_SPECS" = 1 ] || [ "$HAS_PLANS" = 1 ] |
   echo "--delivery does not combine with --specs, --plans or --spec — --delivery shows one contract delivery's status, while those narrow a listing of specs and plans, so ask one at a time. Nothing was listed or shown."
   exit 0
 elif [ "$HAS_SPEC" -gt 0 ] && [ "$SPEC_MISSING" = 1 ]; then
-  echo "--spec needs a spec ID after it — name one spec, as in --spec DHW631. Nothing was listed."
+  echo "--spec needs a spec ID after it — name one spec, as in --spec PMB-001. Nothing was listed."
   exit 0
 elif [ "$HAS_SPEC" -gt 1 ]; then
-  echo "--spec was given more than once — it lists one spec with its plans, so ask about one spec ID at a time, as in --spec DHW631. Nothing was listed."
+  echo "--spec was given more than once — it lists one spec with its plans, so ask about one spec ID at a time, as in --spec PMB-001. Nothing was listed."
   exit 0
 elif [ "$HAS_SPEC" = 1 ] && [ -z "$SPEC_ID" ]; then
-  echo "'$SPEC_ARG' is not a spec ID — --spec takes the ID a spec's file name starts with, as in --spec DHW631, or a legacy four-digit number. Nothing was listed."
+  echo "'$SPEC_ARG' is not a spec ID — --spec takes the ID a spec's file name starts with, as in --spec PMB-001, or a legacy ID such as DHW631 or a four-digit number. Nothing was listed."
   exit 0
 elif [ "$HAS_SPECS" = 1 ] && [ "$HAS_PLANS" = 1 ]; then
   # Both kinds is the unfiltered listing under another name; refused rather than guessed at.
@@ -205,7 +213,7 @@ cd "$REPO" || { echo "nothing to list — cannot enter that directory"; exit 0; 
 # --- --delivery: one contract delivery's status, from the workspace's adopted helper ----------
 # Plan 0019, Step 3. The listing code below is never reached in this mode, and this block is never
 # reached by a listing, so the two cannot change each other's answers (AC6). The helper is the
-# repo's own copy, received through adoption and kept current by /t4:sync-sdlc; nothing here
+# repo's own copy, received through adoption and kept current by /fc:sync-sdlc; nothing here
 # creates, repairs or substitutes it, and its absence is never answered with a listing instead.
 #
 # The ID is handed over as one literal argv element — never through a shell string — and the
@@ -221,7 +229,7 @@ if [ "$HAS_DELIVERY" = 1 ]; then
     [ -f "$f" ] || missing="${missing:+$missing, }$f"
   done
   if [ -n "$missing" ]; then
-    echo "--delivery needs the workspace's delivery-status helper, and this workspace is missing $missing — run /t4:sync-sdlc to receive the current ai-factory/make/ scripts (or /t4:adopt-sdlc if this repo was never adopted). Nothing was shown."
+    echo "--delivery needs the workspace's delivery-status helper, and this workspace is missing $missing — run /fc:sync-sdlc to receive the current ai-factory/make/ scripts (or /fc:adopt-sdlc if this repo was never adopted). Nothing was shown."
     exit 0
   fi
   command -v node >/dev/null 2>&1 \
@@ -242,7 +250,7 @@ if [ "$HAS_DELIVERY" = 1 ]; then
       # A crash prints a stack; keep its error line, on one line and without tabs.
       line=$(printf '%s' "$err" | tr '\t\r' '  ' | grep -E '^[[:space:]]*[A-Za-z]*Error([: ]|$)|^delivery-status:' | head -1)
       [ -n "$line" ] || line=$(printf '%s' "$err" | tr '\t\r' '  ' | grep -v '^[[:space:]]*$' | head -1)
-      echo "state --delivery: $helper failed (exit $rc): ${line:-no diagnostic} — this is a runtime failure, not a status or a refusal; if the workspace's ai-factory/make/ scripts are outdated, /t4:sync-sdlc updates them." >&2
+      echo "state --delivery: $helper failed (exit $rc): ${line:-no diagnostic} — this is a runtime failure, not a status or a refusal; if the workspace's ai-factory/make/ scripts are outdated, /fc:sync-sdlc updates them." >&2
       exit "$rc" ;;
   esac
 fi
@@ -264,14 +272,14 @@ created_of() {
 }
 
 # order_of <path> <id> — "<band><TAB><key>", where an artefact sits in its directory's listing
-# (spec 0024, AC36). Band 0 holds every file whose name carries no letter-and-digit ID — the legacy
+# (spec 0024, AC36). Band 0 holds every file whose name carries no prefixed or letter-and-digit ID — the legacy
 # numbers, and anything else — keyed by its name, so a tree with no new-style ID lists exactly as
 # it did before. Band 1 holds new-style IDs with a valid Created: line, by that instant and then the
 # ID; band 2 holds the rest of the new-style IDs, by ID.
 order_of() {
   local c
   case "$2" in
-    [A-Z][A-Z][A-Z][0-9][0-9][0-9]) ;;
+    [A-Z][A-Z][A-Z][0-9][0-9][0-9]|[A-Z][A-Z]*-[0-9][0-9][0-9]*) ;;
     *) printf '0%s%s' "$TAB" "${1##*/}"; return 0 ;;
   esac
   c=$(created_of "$1")
@@ -300,12 +308,16 @@ clean() {
 }
 
 # id_of <path> — the ID an artefact's basename starts with, or "-". A legacy four-digit number is
-# returned as it stands. A letter-and-digit ID (three letters, three digits, then `-`, `.` or the
+# returned as it stands. A prefixed ID (two to five letters, `-`, three or more digits) or a
+# letter-and-digit ID (three letters, three digits), then `-`, `.` or the
 # end of the name) is returned uppercase, so a lowercase file name and an uppercase one agree.
 # Never assume IDs are dense or ordered: this is read off the name, never counted.
 id_of() {
   local b=${1##*/} n
   n=$(printf '%s' "$b" | sed -n 's/^\([0-9][0-9][0-9][0-9]\).*/\1/p')
+  [ -n "$n" ] || n=$(printf '%s' "$b" \
+    | sed -n 's/^\([A-Za-z]\{2,5\}-[0-9]\{3,\}\)\([-.].*\)\{0,1\}$/\1/p' \
+    | tr '[:lower:]' '[:upper:]')
   [ -n "$n" ] || n=$(printf '%s' "$b" \
     | sed -n 's/^\([A-Za-z][A-Za-z][A-Za-z][0-9][0-9][0-9]\)\([-.].*\)\{0,1\}$/\1/p' \
     | tr '[:lower:]' '[:upper:]')
@@ -654,7 +666,7 @@ if [ "$MODE" = next ]; then
   rank_of() {
     local c
     case "$2" in
-      [A-Z][A-Z][A-Z][0-9][0-9][0-9]) ;;
+      [A-Z][A-Z][A-Z][0-9][0-9][0-9]|[A-Z][A-Z]*-[0-9][0-9][0-9]*) ;;
       *) printf '2 %s' "$2"; return 0 ;;
     esac
     c=$(created_of "$1")

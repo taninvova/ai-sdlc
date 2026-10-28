@@ -70,7 +70,7 @@ require("./_common").runHook(() => {
 					"session",
 					user(cwd),
 					branch(cwd),
-					// `task` is the `/t4:` command this session last ran, from the file log-task.js writes, and
+					// `task` is the `/fc:` command this session last ran, from the file log-task.js writes, and
 					// empty when it ran none. `agent` is empty on a session row: the subagent rows carry their own
 					// name.
 					taskName,

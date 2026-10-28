@@ -3,7 +3,7 @@
 # each carrying a clause a later edit can quietly drop:
 #
 #   ai-factory/adr/0008     the decision, the blast radius, the bounded exception to
-#                           /t4:sync-sdlc's rule that taking an upstream change is a separate
+#                           /fc:sync-sdlc's rule that taking an upstream change is a separate
 #                           reviewable edit, and the two removal versions (AC8, AC24);
 #   CHANGELOG.md            its 2.0.0 entry, found by version wherever that entry has drifted to
 #                           in the file: breaking, run the migration, the hooks keep working
@@ -78,27 +78,27 @@ con=$(section "$ADR" '^## Consequences')
 [ -n "$con" ] || fail "$ADR's Consequences section is empty"
 says "$con" 'breaking' \
   "$ADR's Consequences does not say the change is breaking for every adopted repo"
-says "$con" '/t4:migrate-layout' \
-  "$ADR's Consequences does not name /t4:migrate-layout as the move an adopted repo makes"
+says "$con" '/fc:migrate-layout' \
+  "$ADR's Consequences does not name /fc:migrate-layout as the move an adopted repo makes"
 says "$con" 'hooks[^.]*(work|accept|keep|still)' \
   "$ADR's Consequences does not say the hooks keep working until a repo migrates — the reason nothing breaks silently in between"
 
 # The exception this decision makes to the sync rule, and what bounds it (AC24).
 exc=$(section "$ADR" '[Ee]xception')
 [ -n "$exc" ] \
-  || fail "$ADR records no exception to /t4:sync-sdlc's rule that taking an upstream change is a separate reviewable edit — the migration rewrites a repo's own prompts and that has to be recorded"
+  || fail "$ADR records no exception to /fc:sync-sdlc's rule that taking an upstream change is a separate reviewable edit — the migration rewrites a repo's own prompts and that has to be recorded"
 says "$exc" 'sync-sdlc.*reviewable' \
-  "$ADR does not attribute the separate-reviewable-edit rule to /t4:sync-sdlc, so what the exception is an exception TO is not recorded"
+  "$ADR does not attribute the separate-reviewable-edit rule to /fc:sync-sdlc, so what the exception is an exception TO is not recorded"
 says "$exc" 'path strings' \
-  "$ADR does not bound the exception to path strings — unbounded, it is /t4:sync-sdlc in disguise"
+  "$ADR does not bound the exception to path strings — unbounded, it is /fc:sync-sdlc in disguise"
 says "$exc" '(no longer exist|does not exist|orphan)' \
   "$ADR does not record why the exception is taken: without the rewrite the move leaves every prompt in the repo pointing at a directory that is gone"
 
 # Both transitional pieces, and they do not expire together (AC24).
 says "$adr" 'transitional' \
-  "$ADR does not record /t4:migrate-layout and the hooks' fallback as transitional"
+  "$ADR does not record /fc:migrate-layout and the hooks' fallback as transitional"
 says "$adr" '(command|migrate-layout)[^.]*2\.1\.0' \
-  "$ADR does not say that /t4:migrate-layout goes in 2.1.0"
+  "$ADR does not say that /fc:migrate-layout goes in 2.1.0"
 says "$adr" 'fallback[^.]*3\.0\.0' \
   "$ADR does not say that the hooks' fallback is kept until 3.0.0 — dropping it sooner is itself a silent break"
 
@@ -157,18 +157,18 @@ lines=$(grep -c '' <<<"$rec")
 
 says "$rec" 'breaking' \
   "CHANGELOG.md's $RENAME_ENTRY entry does not mark the change breaking"
-says "$rec" '(run|in each|each repo)[^.]*/t4:migrate-layout' \
-  "CHANGELOG.md's $RENAME_ENTRY entry does not tell an adopted repo to run /t4:migrate-layout"
+says "$rec" '(run|in each|each repo)[^.]*/fc:migrate-layout' \
+  "CHANGELOG.md's $RENAME_ENTRY entry does not tell an adopted repo to run /fc:migrate-layout"
 says "$rec" 'hooks[^.]*(accept|keep)[^.]*(old directory name|unmigrated repo)[^.]*(guard|log)' \
   "CHANGELOG.md's $RENAME_ENTRY entry does not say the hooks keep working in the meantime — with the dont-touch guard and the run log they carry"
 says "$rec" 'grep[^.]*(CI|pipeline|tooling)' \
   "CHANGELOG.md's $RENAME_ENTRY entry does not tell the developer to grep their own CI, pipeline and tooling config — paths the plugin cannot see and does not touch"
 says "$rec" '(command|migrate-layout)[^.]*2\.1\.0' \
-  "CHANGELOG.md's $RENAME_ENTRY entry does not carry the deprecation notice for /t4:migrate-layout, removed in 2.1.0"
+  "CHANGELOG.md's $RENAME_ENTRY entry does not carry the deprecation notice for /fc:migrate-layout, removed in 2.1.0"
 says "$rec" 'fallback[^.]*3\.0\.0' \
   "CHANGELOG.md's $RENAME_ENTRY entry does not carry the deprecation notice for the hooks' fallback, kept until 3.0.0"
 
-# --- 3. /t4:sync-sdlc stops a repo that has not migrated (AC17) -------------------------------
+# --- 3. /fc:sync-sdlc stops a repo that has not migrated (AC17) -------------------------------
 SYNC=commands/sync-sdlc.md
 [ -f "$SYNC" ] || fail "$SYNC is missing"
 
@@ -181,8 +181,8 @@ branch=$(awk -v pat="$OLD/tasks/" '
 ' "$SYNC")
 [ -n "$branch" ] \
   || fail "$SYNC has no branch for a repo still on the pre-1.0.0 layout — it would generate adapters from a directory the prompts no longer name, and report drift on every path at once"
-says "$branch" '/t4:migrate-layout' \
-  "$SYNC's old-layout branch does not point at /t4:migrate-layout"
+says "$branch" '/fc:migrate-layout' \
+  "$SYNC's old-layout branch does not point at /fc:migrate-layout"
 grep -q 'STOP' <<<"$branch" \
   || fail "$SYNC's old-layout branch does not STOP — the prompt carries on and syncs anyway"
 says "$branch" '(not sync|without syncing|instead of syncing)' \
@@ -208,7 +208,7 @@ cites=$(grep -rn "ai-factory/adr/[0-9]" skills/ai-layout/templates/ 2>/dev/null 
 $cites"
 
 # --- 5. nothing invokes the migration (AC13) ---------------------------------------------------
-# Recommending /t4:migrate-layout is what doctor.sh, sync-sdlc.md and the release notes are for —
+# Recommending /fc:migrate-layout is what doctor.sh, sync-sdlc.md and the release notes are for —
 # now with the checkout it has to be run from, because 2.1.0 removed the command and its script.
 # Invoking migrate-layout.sh is the thing that must never happen on its own: it moves directories.
 # The two are told apart by which name is used — the command, or the script. Until 2.1.0 the
@@ -294,7 +294,7 @@ $out"
   #
   # Whichever entry the cut leaves on top is the version this fixture's manifests must ship. That
   # was 1.0.0 while 2.0.0 was the newest release, and hard-coding it meant the first release to
-  # land ABOVE the record — 2.1.0, which removed /t4:migrate-layout — made this case fail on the
+  # land ABOVE the record — 2.1.0, which removed /fc:migrate-layout — made this case fail on the
   # version-drift assertion instead of the missing-record one it exists to prove. Derived, it
   # follows the file. Everything else about the case is unchanged.
   b=$(repo no-record)
@@ -317,10 +317,10 @@ $out"
   # (d) The six, one at a time. S1..S6 are the six statements, one line each, in the order section
   # 2 asserts them; no line satisfies any assertion but its own, so removing one names one.
   S1='**Breaking for every adopted repo.**'
-  S2='Run `/t4:migrate-layout` once, in each repo.'
+  S2='Run `/fc:migrate-layout` once, in each repo.'
   S3='The hooks still accept the old directory name, so an unmigrated repo keeps its dont-touch guard and its run log.'
   S4='**Grep your own CI, pipeline config and tooling** for the old directory name.'
-  S5='- `/t4:migrate-layout` — **removed in 2.1.0.**'
+  S5='- `/fc:migrate-layout` — **removed in 2.1.0.**'
   S6="- The hooks' fallback to the old directory name — **kept until 3.0.0.**"
   # record <root> <statement to omit, or 0 for none> — the purpose-made CHANGELOG, written to
   # <root>. Fourteen lines with all six present, so every variant clears the ten-line floor and a
@@ -345,10 +345,10 @@ $out"
 
   wanted=(
     "does not mark the change breaking"
-    "does not tell an adopted repo to run /t4:migrate-layout"
+    "does not tell an adopted repo to run /fc:migrate-layout"
     "does not say the hooks keep working in the meantime"
     "does not tell the developer to grep their own CI"
-    "does not carry the deprecation notice for /t4:migrate-layout, removed in 2.1.0"
+    "does not carry the deprecation notice for /fc:migrate-layout, removed in 2.1.0"
     "does not carry the deprecation notice for the hooks' fallback, kept until 3.0.0"
   )
   for i in 1 2 3 4 5 6; do
@@ -392,4 +392,4 @@ NODE
   SELFTEST_NOTE=" (and the CHANGELOG bindings proved over 13 scratch fixtures)"
 fi
 
-echo "release docs ok — ${ADR#ai-factory/adr/} records the decision, the bounded exception and both removal versions; CHANGELOG's top entry $ver is the version the manifests ship, and its $RENAME_ENTRY entry still carries breaking, the migration, the fallback and the CI warning wherever it now sits; /t4:sync-sdlc stops an unmigrated repo before it syncs or reports drift; no template cites an ADR by path; no prompt, hook or template names the migration script 2.1.0 removed${SELFTEST_NOTE:-}"
+echo "release docs ok — ${ADR#ai-factory/adr/} records the decision, the bounded exception and both removal versions; CHANGELOG's top entry $ver is the version the manifests ship, and its $RENAME_ENTRY entry still carries breaking, the migration, the fallback and the CI warning wherever it now sits; /fc:sync-sdlc stops an unmigrated repo before it syncs or reports drift; no template cites an ADR by path; no prompt, hook or template names the migration script 2.1.0 removed${SELFTEST_NOTE:-}"

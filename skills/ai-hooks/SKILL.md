@@ -19,7 +19,7 @@ between cumulative snapshots. Mirrored snapshots are ignored when response recor
 Cached input is separated from total input; reasoning output is already included in output.
 Codex cost stays empty because rollouts do not report a price. Transcript formats are
 version-specific; keep `fixtures/check-codex.sh` and a host smoke run with any format change.
-Task attribution accepts `/t4:<task>`, `$t4-<task>` and `$t4:t4-<task>`.
+Task attribution accepts `/fc:<task>`, `$fc-<task>` and `$fc:fc-<task>`.
 
 
 The plugin registers these hooks globally (hooks/hooks.json). Every script:
@@ -32,7 +32,7 @@ The plugin registers these hooks globally (hooks/hooks.json). Every script:
 | Event | Script | Writes |
 |---|---|---|
 | SessionStart | session-start.js | ai-factory/runs/sessions.jsonl: session_id, ts, user, branch, plan_in_flight |
-| UserPromptSubmit | log-task.js | ai-factory/runs/.task.&lt;session_id&gt;: the bare name of the `/t4:` command the prompt carried (`spec`, not `/t4:spec`; a deprecated name is written as the task it now names, so `/t4:check` writes `review`), for the rows written later; nothing at all when it carried none |
+| UserPromptSubmit | log-task.js | ai-factory/runs/.task.&lt;session_id&gt;: the bare name of the `/fc:` command the prompt carried (`spec`, not `/fc:spec`; a deprecated name is written as the task it now names, so `/fc:check` writes `review`), for the rows written later; nothing at all when it carried none |
 | PreToolUse Edit/Write | guard-paths.js | nothing; exit 2 + stderr reason when the target matches ai-factory/docs/dont-touch.md |
 | PreToolUse Bash | log-flush.js | on `git commit` only: moves the rows in ai-factory/runs/log.pending.csv into ai-factory/runs/log.csv and stages it |
 | PostToolUse Edit/Write | log-edit.js | ai-factory/runs/edits.jsonl: session_id, ts, file |
@@ -66,9 +66,9 @@ ts,session_id,source,user,branch,task,tool,agent,model,turns,input_tokens,output
 SubagentStop hook, one per concluded subagent) or `make` (ai-factory/make/log.js, headless). All
 three write these 17 columns; each blanks what it cannot know — a headless run has no separate turn
 accounting beyond `num_turns`, and only an `agent` row names an `agent`, the other two write it
-empty. `task` is the bare name of the last `/t4:` command the session submitted, and it is the
-*session's* task on an agent row too, so a specifier spawned under `/t4:run` is `run,specifier`
-rather than a fixed agent-to-task map; a prompt carrying two `/t4:` commands is attributed to the
+empty. `task` is the bare name of the last `/fc:` command the session submitted, and it is the
+*session's* task on an agent row too, so a specifier spawned under `/fc:run` is `run,specifier`
+rather than a fixed agent-to-task map; a prompt carrying two `/fc:` commands is attributed to the
 first match, and a prompt carrying none leaves the last task standing rather than clearing it.
 `accepted` is filled by the developer at commit time (y/n/partial). `user` is $GITLAB_USER or
 `git config user.name`.
@@ -137,7 +137,7 @@ write lifecycle events through `_lifecycle.js`:
   the unique records the row counted, so a replay or a copied transcript links nothing twice.
 - **The Bash PostToolUse hook** writes a `session_bound` event when it sees `lifecycle.js start`
   print a run ID.
-- **A headless parent** passes its run down as `T4_LIFECYCLE_RUN`.
+- **A headless parent** passes its run down as `FC_LIFECYCLE_RUN`.
 
 The rows themselves are byte-for-byte what they were. A lifecycle failure is one stderr line,
 never a lost row or a failed hook. `_lifecycle-events.js` must stay identical to

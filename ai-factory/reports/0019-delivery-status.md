@@ -6,7 +6,7 @@ No release/version bump.
 
 ## Result
 
-Claude `/t4:state --delivery <id>` and Codex `$t4-state --delivery <id>` show one artifact-contract
+Claude `/fc:state --delivery <id>` and Codex `$fc-state --delivery <id>` show one artifact-contract
 delivery, planned or quick, as a two-column `field`/`value` table. The repo must have contracts
 enabled, and the ID uses the form `d-YYYYMMDD-xxxxxx`. `state.sh` parses the mode on its own path.
 It passes the ID as one literal argument to the workspace's adopted `make/delivery-status.js`, which
@@ -21,11 +21,11 @@ the existing `readiness`, `steps`/`checks` as recorded progress only, criteria g
 ties by ascending path, `unknown` when any timestamp or evidence file cannot be read), `review`,
 `blockers`, `limitations` and `source` paths. The default listing, `--done` and `--next` are
 unchanged. `--delivery` combines with neither and refuses missing, repeated, malformed, unknown or
-duplicated IDs in one line. A missing helper is answered with `/t4:sync-sdlc` guidance.
+duplicated IDs in one line. A missing helper is answered with `/fc:sync-sdlc` guidance.
 
 ## Documentation
 
-- `README.md`: the `/t4:state` command entry names `--delivery`, and a new *Delivery status*
+- `README.md`: the `/fc:state` command entry names `--delivery`, and a new *Delivery status*
   section covers the contracts requirement, the ID form, rows, progress labels, chronology,
   refusals, sync guidance and the read-only guarantee.
 - `ai-factory/docs/workflow.md`: a new *Delivery status* subsection in section 4, with tables for
@@ -35,7 +35,7 @@ duplicated IDs in one line. A missing helper is answered with `/t4:sync-sdlc` gu
 - `CHANGELOG.md`: *Unreleased — delivery 0019 (no version bump)*, with template upgrade impact.
 - `skills/ai-layout/SKILL.md`: the `ai-factory/make/` inventory now lists `delivery-status.js`
   and `continue.js` (a gap flagged in Step 3).
-- Neither `ai-factory/AGENTS.md` nor the template `AGENTS.md` describes `/t4:state`. Both are left
+- Neither `ai-factory/AGENTS.md` nor the template `AGENTS.md` describes `/fc:state`. Both are left
   unchanged, and no command count changed (no new command).
 
 The worked examples (missing evidence, stale review, attested criterion) are real output. Each
@@ -110,9 +110,9 @@ in a disposable contracts-enabled Git repo. The repo was built from
 no final verification and no review, delivery `d-20261006-3fa111`. *Before* is the cached plugin
 2.8.0. *After* is this working tree.
 
-- Claude: `claude -p "/t4:state <args>" --plugin-dir <plugin> --allowedTools Bash Read`.
-- Codex: `codex exec "$t4-state <args>"` with an isolated `CODEX_HOME`, where t4 was installed
-  through `codex plugin marketplace add <plugin>` and `codex plugin add t4@sdlc`. The user's own
+- Claude: `claude -p "/fc:state <args>" --plugin-dir <plugin> --allowedTools Bash Read`.
+- Codex: `codex exec "$fc-state <args>"` with an isolated `CODEX_HOME`, where fc was installed
+  through `codex plugin marketplace add <plugin>` and `codex plugin add fc@sdlc`. The user's own
   Codex configuration was untouched.
 
 Before and after every run, the scratch repo's `git status --porcelain` and a SHA-256 tree
@@ -120,7 +120,7 @@ snapshot were taken. The snapshot covered everything outside `.git/` and `ai-fac
 
 | Host | Invocation | Before (2.8.0) | After (this tree) |
 |---|---|---|---|
-| Claude | `--delivery <id>` | one-line refusal: `'--delivery d-20261006-3fa111' is not a flag /t4:state takes …` | ran `state.sh . <plugin> --delivery d-20261006-3fa111`; showed the 17-line field/value table as a two-column table, rows in order, `source` repeated, no extra lines |
+| Claude | `--delivery <id>` | one-line refusal: `'--delivery d-20261006-3fa111' is not a flag /fc:state takes …` | ran `state.sh . <plugin> --delivery d-20261006-3fa111`; showed the 17-line field/value table as a two-column table, rows in order, `source` repeated, no extra lines |
 | Claude | `--delivery <id> --done` | — | one-line `--delivery does not combine with --done …` passed through |
 | Claude | `--delivery ../x` | — | one-line `delivery-status: expected one contract delivery ID of the form d-YYYYMMDD-xxxxxx` passed through |
 | Claude | none / `--done` / `--next` | 3 outstanding rows / `nothing finished yet …` / `Step 2` | identical rows and selection |
@@ -152,7 +152,7 @@ Observations:
 Raw transcripts (stream-JSON for Claude, `codex exec` output for Codex) were kept in session
 scratch space and not committed, because they contain local absolute paths.
 
-Review: **independent `t4:reviewer` pass on 85e4ace..HEAD plus this working tree. Verdict:
+Review: **independent `fc:reviewer` pass on 85e4ace..HEAD plus this working tree. Verdict:
 approve, with three minor findings:**
 
 1. `progress` reads `review-pending` for any unmet review, including requested changes and
@@ -185,6 +185,6 @@ Host transcripts and the independent review are now recorded (see *Live behavior
 
 ## Upgrade impact
 
-Adopted workspaces need the new `make/delivery-status.js`, received through `/t4:sync-sdlc` or
+Adopted workspaces need the new `make/delivery-status.js`, received through `/fc:sync-sdlc` or
 adoption. Until then `--delivery` answers with sync guidance and writes nothing, and the listing
 modes are unaffected. Repos without contracts see no change. No dependency is added.

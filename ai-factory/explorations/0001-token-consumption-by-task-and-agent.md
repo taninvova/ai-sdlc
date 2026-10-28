@@ -2,8 +2,8 @@
 
 ## Request
 
-The factory should be able to say how many tokens — and therefore how much money — each t4
-task (`/t4:explore`, `/t4:spec`, `/t4:plan`, `/t4:run`, …) and each agent (`explorer`,
+The factory should be able to say how many tokens — and therefore how much money — each fc
+task (`/fc:explore`, `/fc:spec`, `/fc:plan`, `/fc:run`, …) and each agent (`explorer`,
 `specifier`, `planner`, `implementer`, `reviewer`, `tester`, `architect`, `analyst`) consumed,
 per run, across the tools this plugin vends adapters for. Today `ai-factory/runs/log.csv` has
 16 columns including `task`, tokens and `cost_usd`, but for an interactive session `task` is
@@ -35,7 +35,7 @@ accounting needs new pricing code.
 2. *No agent dimension at all.* `ai-factory/analyses/0001` already records this: **FR-020**
    (cost accounting — document the under-count), **DEC-010**, **Q-006** ("`tool` column for a
    delegated step: still `claude`/`codex` with no per-agent attribution?") and **PROP-013**
-   ("have `/t4:explore` consider a SubagentStop hook … to recover subagent token usage").
+   ("have `/fc:explore` consider a SubagentStop hook … to recover subagent token usage").
    This exploration is that PROP-013.
 3. *Rows are cumulative, not deltas, and cannot be summed.* Stop fires after every turn and
    `session-stop.js` re-sums the whole transcript each time. All 19 rows in
@@ -48,9 +48,9 @@ codex-cli 0.155.1, from `~/.claude/projects/` and `~/.codex/sessions/`):
 
 | | per-session tokens | per-task | per-agent | cost |
 |---|---|---|---|---|
-| Claude Code, interactive | yes — `message.usage` per turn in the main transcript; already summed | not a field, but the transcript carries a `<command-name>/t4:spec</command-name>` marker on the user turn, and `UserPromptSubmit` sees the typed text | **yes** — each subagent writes `<project>/<session_id>/subagents/agent-<agentId>.jsonl` plus `agent-<agentId>.meta.json` (`agentType`, `description`, `toolUseId`, `spawnDepth`, `requestShape`) | none reported; priced locally from `models.yaml` |
+| Claude Code, interactive | yes — `message.usage` per turn in the main transcript; already summed | not a field, but the transcript carries a `<command-name>/fc:spec</command-name>` marker on the user turn, and `UserPromptSubmit` sees the typed text | **yes** — each subagent writes `<project>/<session_id>/subagents/agent-<agentId>.jsonl` plus `agent-<agentId>.meta.json` (`agentType`, `description`, `toolUseId`, `spawnDepth`, `requestShape`) | none reported; priced locally from `models.yaml` |
 | Claude Code, `claude -p --output-format json` | yes — `usage`, `num_turns`, and a provider-reported `total_cost_usd` | yes, `make ai TASK=` already passes it | **counts but no tokens**: the result carries `subagent_stats` (`spawned`, `requested.{background,foreground,unset}`, `started_in_background`, `completed`, `failed`, `by_type`), so agent *types* and counts are there and per-agent spend is not — hooks do fire here (EXD-002 was run in this mode), so a hook-based answer covers this path too | yes, `total_cost_usd` |
-| Codex, `codex exec --json` | yes — `turn.completed.usage`, parsed by `log.js:90-101`; rollouts also carry a `token_count` event with `total_token_usage` | yes, via `TASK` / the `t4-<task>` skill name | **impossible by construction** — `sync-adapters.sh` tells Codex "plugins cannot ship subagents … read `ai-factory/agents/<x>.md` and follow it yourself, in this session". One session is the task *and* the agent | none; `cost_usd` is deliberately left empty |
+| Codex, `codex exec --json` | yes — `turn.completed.usage`, parsed by `log.js:90-101`; rollouts also carry a `token_count` event with `total_token_usage` | yes, via `TASK` / the `fc-<task>` skill name | **impossible by construction** — `sync-adapters.sh` tells Codex "plugins cannot ship subagents … read `ai-factory/agents/<x>.md` and follow it yourself, in this session". One session is the task *and* the agent | none; `cost_usd` is deliberately left empty |
 | Cursor | **no local export** — the whole adapter is `.cursor/rules/ai.mdc`, an always-apply rule | no | no | no; usage exists only in Cursor's own dashboard/admin API |
 
 Three measured facts that decide the options:
@@ -69,13 +69,13 @@ Three measured facts that decide the options:
   `hooks/hooks.json` registers neither (SessionStart, PreToolUse ×2, PostToolUse ×2, Stop only).
 - **Agent → task attribution is derivable and exact.** Joining each `.meta.json`'s `toolUseId`
   to the `Agent` tool-use block in the main transcript, then back to the nearest preceding
-  `<command-name>`, resolved **18 of 18** agents in session `25860e5f` (`explorer`→`/t4:explore`,
-  `specifier`→`/t4:spec`, `planner`→`/t4:plan`, ten `implementer`s→`/t4:run`, `architect`→`/t4:adr`).
-  Note the one crossing: a `specifier` was spawned under `/t4:run`, so a static agent→task map
+  `<command-name>`, resolved **18 of 18** agents in session `25860e5f` (`explorer`→`/fc:explore`,
+  `specifier`→`/fc:spec`, `planner`→`/fc:plan`, ten `implementer`s→`/fc:run`, `architect`→`/fc:adr`).
+  Note the one crossing: a `specifier` was spawned under `/fc:run`, so a static agent→task map
   would have mis-filed it.
 
 Reading the `Agent` tool *result* is a dead end: it carried `agentType`/`totalTokens`/`usage`
-only for **synchronous** agents and only the final iteration; every t4 step agent observed runs
+only for **synchronous** agents and only the final iteration; every fc step agent observed runs
 `requestShape: background`, and those results carry no usage at all.
 
 **No dependencies anywhere in the machinery.** Measured: the plugin has no `package.json`, and
@@ -100,9 +100,9 @@ does, price it with the same `models.yaml` logic, append one row with `source=ag
 the same time: make `session-stop.js` emit the session's *delta* since its last row, or dedupe
 on `session_id` at flush.
 
-Task attribution: a `UserPromptSubmit` hook writes the `/t4:<name>` it sees to
+Task attribution: a `UserPromptSubmit` hook writes the `/fc:<name>` it sees to
 `ai-factory/runs/.task.<session_id>` (gitignored); Stop and SubagentStop read it. Cheap,
-silent, and — unlike a static agent→task map — right when `/t4:run` spawns a `specifier`.
+silent, and — unlike a static agent→task map — right when `/fc:run` spawns a `specifier`.
 
 *Changes:* `hooks/hooks.json`, one new script, `_log-schema.js` HEADER (+`agent`),
 the hand-copied header and guard in `templates/ai-factory/make/log.js`,
@@ -116,7 +116,7 @@ CHANGELOG. `stop_hook_active` must be honoured so a resumed agent is not double-
 The firing risk is **gone** — see EXD-002 below: both events fire for both request shapes, and
 the `SubagentStop` payload carries `agent_transcript_path`, so the row is computable at Stop
 without touching the parent transcript.
-*Later:* makes per-agent budgets and a `/t4:cost` report trivial; adds a second hook event to
+*Later:* makes per-agent budgets and a `/fc:cost` report trivial; adds a second hook event to
 keep working across Claude Code versions.
 *ADR:* none — no new dependency; a documented hook event of a tool already required.
 
@@ -200,7 +200,7 @@ design) counted as *not priced* rather than as zero.
 Needs the collection fix: **per task** (blank interactively), **per agent** (no column), and
 **any sum across runs** (cumulative rows). Marked as such in the report until it lands.
 
-Not obtainable from `log.csv` at all, at any effort: per-plan-**step** cost inside `/t4:run`
+Not obtainable from `log.csv` at all, at any effort: per-plan-**step** cost inside `/fc:run`
 (`ai-factory/plans/` is not joined to the log); wall-clock (`totalDurationMs` exists in the
 transcripts, no column carries it); tool-call counts and lines changed (`toolStats` in
 transcripts, `edits.jsonl`/`cmds.jsonl` per session but gitignored); anything about **Cursor**.
@@ -421,7 +421,7 @@ writes "". A by-branch view is therefore blank for every non-repo layout, which 
 opinion, it is an accepted decision in this repo. `ai-factory/designs/0001-layout-version-and-drift.md`
 §6: "ai-sdlc keeps no registry and **never reaches into another repo** — which is precisely what
 the standalone rule requires. Option 'central registry', already rejected, is now forbidden";
-and "`/t4:fleet` may not enumerate adopted repos from this repo — that is knowledge of other
+and "`/fc:fleet` may not enumerate adopted repos from this repo — that is knowledge of other
 repos … an adopted repo records its own version, and **whoever wants a fleet-wide view collects
 it**." A walker shipped in the template would be the plugin enumerating other repos, i.e. the
 forbidden thing wearing a Makefile. So:
@@ -456,7 +456,7 @@ with status **Rejected** rather than deleted:
 | Id | Surface | Status |
 |---|---|---|
 | RS-001 | A local Next.js app started on demand (`make report`, served on localhost, live drill-down per run and agent) | **Rejected** by the developer, 2026-09-25: too heavy. It would be the plugin's first dependency, first lockfile, first build step and first long-running process, and so needs an ADR that would have to amend `.claude-plugin/plugin.json`'s advertised "Standalone — no dependency on any other repo and no runtime dependency", `ai-factory/AGENTS.md`'s "No application code, no build step" and `architecture.md`'s "Nothing runs as a service". Measured, all three are literally true today: no `package.json`, and only `fs`/`path`/`child_process` in every script. An on-demand `npx` invocation does **not** rescue it — a Next app needs its own `package.json`, so something is installed somewhere on first run, it needs network, and without a lockfile two developers resolve different trees, turning a declared dependency into an undeclared one. The web-page requirement is met by R2 instead: one generated file, opened from disk, no server. **If an interactive dashboard is ever genuinely wanted it belongs in the consuming workspace, not here** — `webapp/storefront` in the parent workspace (`base-shop`) already runs `next ^14.2.23`, and a dashboard inherently wants every repo's `log.csv` at once — see *The fleet path*, and it would consume R3's contract like any other fleet view. Kept for the record. |
-| RS-002 | A `/t4:cost` task that has a model read `log.csv` and write a markdown report into `ai-factory/runs/` | **Not recommended** (opinion): no dependency and no code, but a model summing a CSV is non-deterministic and unverifiable, and arithmetic is the one thing a 30-line script does better and cheaper. Kept for the record. |
+| RS-002 | A `/fc:cost` task that has a model read `log.csv` and write a markdown report into `ai-factory/runs/` | **Not recommended** (opinion): no dependency and no code, but a model summing a CSV is non-deterministic and unverifiable, and arithmetic is the one thing a 30-line script does better and cheaper. Kept for the record. |
 
 ## Comparison
 
@@ -565,7 +565,7 @@ artefact rather than a target a developer runs.
     `merge=union` to survive two branches.
 11. **Who writes the workspace walker, and does it wait for EPIC-004?** The fleet target is the
     workspace's work, not this repo's, but the workspace root is also the subject of EPIC-004
-    (workspace-root mode), which `analyses/0001` marks "needs the extending ADR and `/t4:design`
+    (workspace-root mode), which `analyses/0001` marks "needs the extending ADR and `/fc:design`
     first". Building the walker now in the root `Makefile` is small and independent; building it
     *as part of* root mode is not. Not blocking either spec below.
 12. **Does the fleet export carry money or only tokens?** Nine of the ten logs are in layouts that
@@ -578,11 +578,11 @@ Three specs, in this order — the second is worthless before the first, and the
 the second's export.
 
 ```
-/t4:spec per-agent and per-task token accounting in ai-factory/runs/log.csv: a SubagentStop hook writes one row per agent with agent_type, tokens and cost; a UserPromptSubmit hook fills the task column for interactive sessions; session rows become deltas — closes ai-factory/analyses/0001 FR-020, Q-006, PROP-013
+/fc:spec per-agent and per-task token accounting in ai-factory/runs/log.csv: a SubagentStop hook writes one row per agent with agent_type, tokens and cost; a UserPromptSubmit hook fills the task column for interactive sessions; session rows become deltas — closes ai-factory/analyses/0001 FR-020, Q-006, PROP-013
 ```
 
 ```
-/t4:spec a make cost target that reports spend by task, agent, branch and day from ai-factory/runs/log.csv — a dependency-free Node script in the shape of make/log.js, whose versioned JSON/TSV export (the fleet contract) is specified before the rendered table it also prints, plus an optional single-file HTML report written to ai-factory/runs/ and opened from disk; no server, no walker (RS-001 rejected, EXD-001)
+/fc:spec a make cost target that reports spend by task, agent, branch and day from ai-factory/runs/log.csv — a dependency-free Node script in the shape of make/log.js, whose versioned JSON/TSV export (the fleet contract) is specified before the rendered table it also prints, plus an optional single-file HTML report written to ai-factory/runs/ and opened from disk; no server, no walker (RS-001 rejected, EXD-001)
 ```
 
 Third, and **not in this repo** — the fleet walker is the workspace's, per `designs/0001` §6. Run
@@ -590,7 +590,7 @@ this one from the parent workspace directory (which has its own adopted layout a
 `specs/`), after the export above exists:
 
 ```
-/t4:spec a root-level make cost that walks every LAYOUT directory carrying {ai-factory,ai}/runs/log.csv — not every repo: infra/, svc/ and the root are layouts and are not git repos, and layouts nest above adopted children. Discovery by that file rather than by .sdlc.json or REPOS; a parent layout is a peer row, never a roll-up of its children; sessions de-duplicated by session_id across logs, attributed to the log holding the maximum snapshot with the other layouts listed as also-touched; never-adopted repos omitted; adopted-but-empty listed as no data; ai/sdlc included as one row; the coverage hole for unadopted repos disclosed in the output
+/fc:spec a root-level make cost that walks every LAYOUT directory carrying {ai-factory,ai}/runs/log.csv — not every repo: infra/, svc/ and the root are layouts and are not git repos, and layouts nest above adopted children. Discovery by that file rather than by .sdlc.json or REPOS; a parent layout is a peer row, never a roll-up of its children; sessions de-duplicated by session_id across logs, attributed to the log holding the maximum snapshot with the other layouts listed as also-touched; never-adopted repos omitted; adopted-but-empty listed as no data; ai/sdlc included as one row; the coverage hole for unadopted repos disclosed in the output
 ```
 
 **Nothing now blocks the first spec** — EXD-002 closed the one gate, so it is written against

@@ -7,7 +7,7 @@ Read ai-factory/AGENTS.md, ai-factory/docs/architecture.md, ai-factory/docs/codi
 ai-factory/skills/ and the code the request would touch; create the exploration with
 `node ai-factory/make/ids.js new exploration <slug>` and write into the path it prints, keeping
 its first two lines unchanged, with the request restated, what exists today, two to four genuinely different options, a comparison
-table, one recommendation, open questions and the /t4:spec line to run next; change no code.
+table, one recommendation, open questions and the /fc:spec line to run next; change no code.
 Return its report unchanged: the file path and the recommended option in one sentence.
 
 If it returns a question instead of a file, ask the developer that question and stop. In a

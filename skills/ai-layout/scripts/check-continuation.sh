@@ -15,7 +15,7 @@ const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 const contracts = require("./skills/ai-layout/templates/ai-factory/make/contracts.js");
 const continuation = require("./skills/ai-layout/templates/ai-factory/make/continue.js");
-const base = fs.mkdtempSync(path.join(os.tmpdir(), "t4-continue-"));
+const base = fs.mkdtempSync(path.join(os.tmpdir(), "fc-continue-"));
 const fixture = path.resolve("skills/ai-layout/fixtures/contracts/planned");
 const root = path.join(base, "project");
 fs.cpSync(fixture, root, { recursive: true });
@@ -23,7 +23,7 @@ fs.mkdirSync(path.join(root, "ai-factory/make"), { recursive: true });
 for (const file of ["contracts.js", "delivery-report.js", "safe-files.js", "gate.js"])
 	fs.copyFileSync(path.resolve(`skills/ai-layout/templates/ai-factory/make/${file}`), path.join(root, "ai-factory/make", file));
 fs.mkdirSync(path.join(root, "ai-factory/contracts"), { recursive: true });
-fs.writeFileSync(path.join(root, "ai-factory/contracts/config.json"), JSON.stringify({ schema: "t4-contracts-config", version: 1, code_scope: { include: ["**"], exclude: [] } }));
+fs.writeFileSync(path.join(root, "ai-factory/contracts/config.json"), JSON.stringify({ schema: "fc-contracts-config", version: 1, code_scope: { include: ["**"], exclude: [] } }));
 execFileSync("git", ["init", "-q"], { cwd: root });
 const ctx = contracts.context(root);
 const spec = "ai-factory/specs/0001-csv-export.md";
@@ -90,7 +90,7 @@ function project({ plan: withPlan = true } = {}) {
 	for (const file of ["contracts.js", "delivery-report.js", "safe-files.js", "gate.js"])
 		fs.copyFileSync(path.resolve(`skills/ai-layout/templates/ai-factory/make/${file}`), path.join(dir, "ai-factory/make", file));
 	fs.mkdirSync(path.join(dir, "ai-factory/contracts"), { recursive: true });
-	fs.writeFileSync(path.join(dir, "ai-factory/contracts/config.json"), JSON.stringify({ schema: "t4-contracts-config", version: 1, code_scope: { include: ["**"], exclude: [] } }));
+	fs.writeFileSync(path.join(dir, "ai-factory/contracts/config.json"), JSON.stringify({ schema: "fc-contracts-config", version: 1, code_scope: { include: ["**"], exclude: [] } }));
 	execFileSync("git", ["init", "-q"], { cwd: dir });
 	const c = contracts.context(dir);
 	contracts.init("spec", spec, { ctx: c });
@@ -208,8 +208,8 @@ async function phases() {
 		assert.equal(unsure.outcome, "question", JSON.stringify(unsure));
 		assert.equal(unsure.clarify, "red:S1");
 	});
-	// Spec 0022 AC61: a /t4:loop that stopped after Steps 1–2 leaves its state and a kept worktree
-	// under ai-factory/runs/tmp/; /t4:continue offers exactly one /t4:run handoff, for Step 3.
+	// Spec 0022 AC61: a /fc:loop that stopped after Steps 1–2 leaves its state and a kept worktree
+	// under ai-factory/runs/tmp/; /fc:continue offers exactly one /fc:run handoff, for Step 3.
 	await checkAsync("stopped-loop-resumes-one-step", async () => {
 		const { dir, id } = project();
 		await record(dir, id, { step: "S1", phase: "red" });
@@ -306,7 +306,7 @@ function workspace({ spec: specText } = {}) {
 	fs.cpSync(TEMPLATE, path.join(dir, "ai-factory"), { recursive: true });
 	fs.cpSync(fixture, dir, { recursive: true });
 	if (specText) fs.appendFileSync(path.join(dir, spec), specText);
-	fs.writeFileSync(path.join(dir, "ai-factory/contracts/config.json"), JSON.stringify({ schema: "t4-contracts-config", version: 1, code_scope: { include: ["**"], exclude: [] } }));
+	fs.writeFileSync(path.join(dir, "ai-factory/contracts/config.json"), JSON.stringify({ schema: "fc-contracts-config", version: 1, code_scope: { include: ["**"], exclude: [] } }));
 	execFileSync("git", ["init", "-q"], { cwd: dir });
 	const c = contracts.context(dir);
 	contracts.init("spec", spec, { ctx: c });
@@ -524,7 +524,7 @@ async function handoffs() {
 			const r = cli(dir, ["handoff", "--host", host, id], JSON.stringify(result));
 			assert.equal(r.status, 0, r.stdout + r.stderr);
 			assert.match(r.stdout, /directive: route/);
-			assert.match(r.stdout, /t4-route-test-[0-9a-f]{10}/);
+			assert.match(r.stdout, /fc-route-test-[0-9a-f]{10}/);
 			assert.doesNotMatch(r.stdout, /continue-(claude|codex)/, "the continuation's own mapping never selects the destination's model");
 			const added = routing(dir).slice(before);
 			assert.equal(added.length, 1, "exactly one destination dispatch is recorded");
@@ -552,7 +552,7 @@ async function handoffs() {
 }
 // --- integration (Step 4): host entries, adoption and headless rejection ---------------------
 const models = require(path.join(TEMPLATE, "make/models.js"));
-const ENTRIES = { claude: "commands/continue.md", codex: "codex-skills/t4-continue/SKILL.md" };
+const ENTRIES = { claude: "commands/continue.md", codex: "codex-skills/fc-continue/SKILL.md" };
 const readIf = (file) => (fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "");
 // One host's entry: generated from the shared task, routing step first, the selector and the one
 // handoff in this session, and a procedure that never waits unattended or guesses an answer.
@@ -596,11 +596,11 @@ function entry(host) {
 	const sync = spawnSync(process.execPath, ["ai-factory/make/sync-adapters.js", "--adapters=routing"], { cwd: dir, encoding: "utf8" });
 	assert.equal(sync.status, 0, sync.stderr);
 	const agents = path.join(dir, models.ADAPTER_DIRS[host]);
-	assert.deepEqual((fs.existsSync(agents) ? fs.readdirSync(agents) : []).filter((n) => n.startsWith("t4-route-continue-")), [], "no continuation route agent is generated");
+	assert.deepEqual((fs.existsSync(agents) ? fs.readdirSync(agents) : []).filter((n) => n.startsWith("fc-route-continue-")), [], "no continuation route agent is generated");
 	const before = routing(dir).length;
 	const r = spawnSync(process.execPath, ["ai-factory/make/models.js", "dispatch", "--host", host, "--task", "continue"], { cwd: dir, encoding: "utf8", env: { ...process.env, CLAUDE_CODE_SUBAGENT_MODEL: "" } });
 	assert.equal(r.status, 0, r.stdout + r.stderr);
-	assert.doesNotMatch(r.stdout, /directive: route|subagent_type|spawn_agent|t4-route-/, "continuation is never routed to a worker");
+	assert.doesNotMatch(r.stdout, /directive: route|subagent_type|spawn_agent|fc-route-/, "continuation is never routed to a worker");
 	assert.ok(r.stdout.includes(`gateway/continue-${host} is not used`), "the ignored continue mapping is named, not silently applied");
 	assert.match(r.stdout, /directive: session/);
 	assert.ok(r.stdout.includes(`continue.js handoff --host ${host}`), r.stdout);
@@ -630,11 +630,11 @@ async function integrations() {
 		assert.equal(written.status, 0, written.stderr);
 		const files = JSON.parse(fs.readFileSync(path.join(app, "ai-factory/.sdlc.json"))).files;
 		for (const file of ["ai-factory/tasks/continue.md", "ai-factory/make/continue.js"]) assert.ok(files[file], `manifest does not discover ${file}`);
-		// Adapter sync: the plugin's native /t4:continue wins on Claude; Codex gets its skill.
+		// Adapter sync: the plugin's native /fc:continue wins on Claude; Codex gets its skill.
 		const sync = spawnSync(process.execPath, ["ai-factory/make/sync-adapters.js", "--adapters=claude,codex"], { cwd: app, encoding: "utf8" });
 		assert.equal(sync.status, 0, sync.stderr);
-		assert.equal(fs.existsSync(path.join(app, ".claude/commands/t4/continue.md")), false, "a project pointer would duplicate the plugin's /t4:continue");
-		const skill = readIf(path.join(app, ".codex/skills/t4-continue/SKILL.md"));
+		assert.equal(fs.existsSync(path.join(app, ".claude/commands/fc/continue.md")), false, "a project pointer would duplicate the plugin's /fc:continue");
+		const skill = readIf(path.join(app, ".codex/skills/fc-continue/SKILL.md"));
 		assert.ok(skill.includes(models.entryPreamble("codex", "continue")), "the adopted Codex skill carries the continue preamble");
 		// This checkout's workspace links reach the same task and helper through sync-self.
 		for (const [file, target] of [["ai-factory/tasks/continue.md", "skills/ai-layout/templates/ai-factory/tasks/continue.md"], ["ai-factory/make/continue.js", "skills/ai-layout/templates/ai-factory/make/continue.js"]]) {
@@ -686,7 +686,7 @@ async function docs() {
 		const readme = flat("README.md");
 		const workflow = flat("ai-factory/docs/workflow.md");
 		for (const [name, text] of [["README.md", readme], ["ai-factory/docs/workflow.md", workflow]]) {
-			assert.ok(text.includes("/t4:continue") && text.includes("$t4-continue"), `${name} does not name both host entries`);
+			assert.ok(text.includes("/fc:continue") && text.includes("$fc-continue"), `${name} does not name both host entries`);
 			assert.ok(text.includes("d-YYYYMMDD-xxxxxx"), `${name} does not state the delivery ID format`);
 			for (const answer of ["gaps_tested=yes|no", "red:S<N>=proceed"]) {
 				assert.ok(text.includes(answer), `${name} does not document --answer ${answer}`);
@@ -707,10 +707,10 @@ async function docs() {
 		}
 		const commands = fs.readdirSync("commands").filter((n) => n.endsWith(".md")).length;
 		assert.ok(readme.includes(`ships all ${commands} Claude`), `README.md's command count does not match the ${commands} files in commands/`);
-		assert.ok(workflow.includes(`load all ${commands} \`/t4:*\` commands`), `workflow.md's command count does not match the ${commands} files in commands/`);
+		assert.ok(workflow.includes(`load all ${commands} \`/fc:*\` commands`), `workflow.md's command count does not match the ${commands} files in commands/`);
 		for (const file of ["ai-factory/AGENTS.md", path.join(TEMPLATE, "AGENTS.md")]) {
 			const text = flat(file);
-			assert.ok(text.includes("/t4:continue") && text.includes("TASK=continue"), `${file} does not document continue and its headless limit`);
+			assert.ok(text.includes("/fc:continue") && text.includes("TASK=continue"), `${file} does not document continue and its headless limit`);
 		}
 		const changelog = readIf("CHANGELOG.md");
 		const entry = changelog.split("**Delivery 0018**")[1]?.split(/\n\*\*|\n## /)[0] || "";

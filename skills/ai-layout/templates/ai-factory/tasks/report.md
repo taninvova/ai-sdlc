@@ -23,7 +23,7 @@ Do not rerun checks to change the result, do not edit the report, and publish no
 comment, no MR, no commit. The MR description inside the report is a draft for the developer.
 When the status is not `ready`, name the command that addresses each reason (`make … verify`,
 `make … review DELIVERY=<id>`, `contracts.js init …`) and stop. If
-`ai-factory/make/delivery-report.js` is missing, report that `/t4:sync-sdlc` shows the template
+`ai-factory/make/delivery-report.js` is missing, report that `/fc:sync-sdlc` shows the template
 drift, and stop.
 
 Delivery: $ARGUMENTS

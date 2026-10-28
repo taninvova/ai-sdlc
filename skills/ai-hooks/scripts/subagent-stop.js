@@ -70,8 +70,8 @@ require("./_common").runHook(() => {
 					"agent",
 					user(cwd),
 					branch(cwd),
-					// `task` is the session's, not the agent's: attribution follows the `/t4:` command the session
-					// is running, so a specifier spawned under /t4:run is `run,specifier` and never a static
+					// `task` is the session's, not the agent's: attribution follows the `/fc:` command the session
+					// is running, so a specifier spawned under /fc:run is `run,specifier` and never a static
 					// agent→task map. Empty when the session has run no command. `agent` is the payload's
 					// agent_type verbatim, and `tool` still carries `claude` alone, unsplit and unqualified.
 					taskName,

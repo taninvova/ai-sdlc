@@ -29,7 +29,7 @@
 
 - **Identity.** Each run, attempt, wait and event has a unique ID, and delegated work carries an explicit parent run ID. A run's delivery is taken only from an explicit `--delivery`, the headless `DELIVERY`, or its parent run.
 - **Attribution.** Usage is attributed in only two ways:
-  - a `T4_LIFECYCLE_RUN` inherited from a headless parent;
+  - a `FC_LIFECYCLE_RUN` inherited from a headless parent;
   - a session binding that the command hook observes when `lifecycle.js start` runs, combined with overlapping record timestamps.
 
   Anything else stays unattributed.

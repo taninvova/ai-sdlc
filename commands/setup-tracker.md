@@ -3,14 +3,14 @@ description: Configure this repo's tracker, confirm it with you, and prove it re
 allowed-tools: Bash, Read, Write, Edit
 argument-hint: [site url]
 ---
-Set this repo up so `/t4:spec ABC-12` can draft from a ticket. Ask before writing, write one
+Set this repo up so `/fc:spec ABC-12` can draft from a ticket. Ask before writing, write one
 file, then prove it works. **Never write to the tracker itself** — this reads, and nothing here
 comments on or moves anything.
 
 Refuse early, before reading or writing anything:
 
 1. **No `ai-factory/docs/tracker.md`?** Stop. Say this repo's layout predates tracker support, and that
-   `/t4:sync-sdlc` will report it as an upstream file to take. Do not create the file yourself —
+   `/fc:sync-sdlc` will report it as an upstream file to take. Do not create the file yourself —
    it is a template, and writing a local copy would fork it from the one that ships.
 
 2. **Not an interactive session?** Stop, and say the command is interactive. Every step below

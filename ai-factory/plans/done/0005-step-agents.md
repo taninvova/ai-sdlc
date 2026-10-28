@@ -69,28 +69,28 @@ sees the chat it was meant not to see.
 
 - [x] **Step 4 — Prove the four steps live.** Scratch repo built from the templates with a
   small fake project and two specs. Under Claude Code, through the task prompts:
-  `/t4:explore` (explorer in the transcript; report = path and option), `/t4:spec` (specifier;
-  path and open questions), `/t4:plan` (planner; path and ambiguities), `/t4:run … step 1`
+  `/fc:explore` (explorer in the transcript; report = path and option), `/fc:spec` (specifier;
+  path and open questions), `/fc:plan` (planner; path and ambiguities), `/fc:run … step 1`
   (implementer; files, tests, what the plan got wrong). Then the empty argument for each: the
-  session asks, lists the two specs for `/t4:plan`, and no agent appears in the transcript.
+  session asks, lists the two specs for `/fc:plan`, and no agent appears in the transcript.
   Then one headless `make ai TASK=explore` in the same repo, reported either way (decision 4).
   *Proves:* AC4, AC5, and the headless measurement. *Check:* transcript greps for the agent
   names; report shapes compared with a pre-change run of the same request.
 
   **Result — AC4 and AC5 proved; headless measured.** Scratch repo from the release templates
   (a Node library with two functions and two tests), the plugin loaded from this working tree,
-  each command run as a real headless Claude Code session (`claude -p "/t4:<task> …"`,
+  each command run as a real headless Claude Code session (`claude -p "/fc:<task> …"`,
   stream-json transcript kept). Same feature through all four steps:
-  `/t4:explore` → `explorer` in the transcript, `ai/explorations/0001-export-report-csv.md`,
-  report = path and recommended option. `/t4:spec` → `specifier`, `specs/0001-…md`, report =
-  path and open questions. `/t4:plan` → `planner`, `ai/plans/0001-…md`, report = path and what
+  `/fc:explore` → `explorer` in the transcript, `ai/explorations/0001-export-report-csv.md`,
+  report = path and recommended option. `/fc:spec` → `specifier`, `specs/0001-…md`, report =
+  path and open questions. `/fc:plan` → `planner`, `ai/plans/0001-…md`, report = path and what
   made planning ambiguous — and it found a real defect in the scratch scaffold: on Node 22
-  `node --test test/` treats the argument as a glob and fails before any change. `/t4:run …
+  `node --test test/` treats the argument as a glob and fails before any change. `/fc:run …
   step 1` → `implementer`: added `renderCsv` and its tests, tests pass by direct path, and it
   left the checkbox unticked with an explanation because the plan's own `npm test` command
   cannot go green — decision 3's behaviour, unprompted. No session edited a file itself.
   **AC5 pass:** all four commands with nothing after the name → the session asked and stopped;
-  no `subagent_type` in any of the four transcripts; `/t4:plan` listed the three spec paths.
+  no `subagent_type` in any of the four transcripts; `/fc:plan` listed the three spec paths.
   **Headless reach (decision 4): yes.** `make ai TASK=explore` invoked the `explorer` inside
   `claude -p`; as before, the runner's `Write` was denied so the exploration came back in the
   result text. The hooks also fired in every headless session: `ai/runs/sessions.jsonl` and
@@ -100,7 +100,7 @@ sees the chat it was meant not to see.
 - [x] **Step 5 — Questions come back; red stays red; the guard holds.** In the scratch repo:
   a plan step whose test cannot go green → the implementer stops, box unticked, explanation
   (AC7); a plan step naming a test file that does not exist → stop and explain, naming what it
-  tried (decision 3); `/t4:plan` with two specs and none named → the session asks (AC6). Then
+  tried (decision 3); `/fc:plan` with two specs and none named → the session asks (AC6). Then
   AC8: add `prisma/migrations/` to the scratch repo's `ai/docs/dont-touch.md`, give the
   implementer a step that writes there, and confirm the guard's message
   ("Blocked by ai/docs/dont-touch.md …") appears in the transcript and the file is absent.
@@ -115,7 +115,7 @@ sees the chat it was meant not to see.
   — the implementer wrote the test, saw 13 pass / 1 fail, deleted it, left the box unticked and
   explained the contradiction. **Decision 3 pass:** a step naming `npm run e2e`, which does
   not exist — it stopped, quoted the npm error, named what it tried, invented nothing.
-  **AC6:** the two-specs case was proved in step 4 (`/t4:plan` listed the paths and asked); the
+  **AC6:** the two-specs case was proved in step 4 (`/fc:plan` listed the paths and asked); the
   implementer's two stops above came back to the session as explanations, not guesses. The
   unresolvable-tracker-key case was not run — no tracker is configured in the scratch repo and
   that path did not change in this plan.
@@ -165,11 +165,11 @@ bash ai/make/sync-adapters.sh && bash ai/make/sync-adapters.sh   # no diff
 for f in skills/ai-hooks/scripts/*.js; do node --check "$f"; done
 git diff --stat -- agents/reviewer.md agents/tester.md agents/architect.md agents/analyst.md   # empty (AC10)
 ```
-Plus steps 4–5's scratch runs and `/t4:check`.
+Plus steps 4–5's scratch runs and `/fc:check`.
 
 ## Planning notes
 - **Step 1 before step 3, deliberately.** An agent must exist before a prompt delegates to it;
-  the reverse order leaves a window where `/t4:spec` delegates to nothing.
+  the reverse order leaves a window where `/fc:spec` delegates to nothing.
 - **AC8 is the gate.** Everything else in this plan is a move; AC8 is the one thing that could
   make the release unsafe. It is in step 5, before the docs and the version, so a failure is
   cheap to stop on.

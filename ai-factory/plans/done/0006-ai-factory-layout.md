@@ -7,10 +7,10 @@ run log while it is half-done.
 
 **Spec:** `specs/0006-ai-factory-layout.md` · **Settled there:** the name `ai-factory`;
 `ai-factory/docs/workflow.md`; hooks get the old-path fallback and prompts do not; the migration
-refuses a dirty tree; `/t4:doctor` reports a half-migrated repo; 1.0.0; the migration command and
+refuses a dirty tree; `/fc:doctor` reports a half-migrated repo; 1.0.0; the migration command and
 the hook fallback are both transitional. **Settled here:** open question 1 — the AC5 scan gets its
 own script, `skills/ai-layout/scripts/check-paths.sh` (step 4). **Settled in step 10:** the migration refuses on tracked changes only, naming untracked files
-rather than refusing for them; `/t4:migrate-layout` goes in 1.1.0 and the hooks' fallback not
+rather than refusing for them; `/fc:migrate-layout` goes in 1.1.0 and the hooks' fallback not
 before 2.0.0.
 
 ## The shape of the work, measured
@@ -59,7 +59,7 @@ before 2.0.0.
 Not applicable — no application code. The split that matters is **what the plugin ships** versus
 **what the migration rewrites inside someone else's repo**. Everything in the first is ours to
 change freely; everything in the second is bounded by AC23 to path strings, because a migration
-that also delivered new prompt text would be `/t4:sync-sdlc` wearing a disguise.
+that also delivered new prompt text would be `/fc:sync-sdlc` wearing a disguise.
 
 ## Steps
 
@@ -91,7 +91,7 @@ that also delivered new prompt text would be `/t4:sync-sdlc` wearing a disguise.
   gone. In this repo the same, plus `docs/workflow.md` → `ai-factory/docs/workflow.md`, then
   `docs/` is gone. Recreate the ADR template symlink. Rewrite what still names the old three
   paths, history excluded. Regenerate adapters.
-  *Proves:* AC1, AC4, AC7, AC10 including `t4-adr` naming `ai-factory/adr/`. *Check:* AC5's grep
+  *Proves:* AC1, AC4, AC7, AC10 including `fc-adr` naming `ai-factory/adr/`. *Check:* AC5's grep
   returns nothing; `git log --follow` on one moved spec, one moved ADR and
   `ai-factory/docs/workflow.md` reaches each file's first commit; sync twice, no diff.
 
@@ -118,25 +118,25 @@ that also delivered new prompt text would be `/t4:sync-sdlc` wearing a disguise.
   leaving no temp dir and touching nothing outside it.
 
 - [x] **Step 7 — Tell the developer where they are.** `sync-sdlc.md` short-circuits on an
-  old-layout repo to "run `/t4:migrate-layout`" instead of printing one removed-plus-added line
+  old-layout repo to "run `/fc:migrate-layout`" instead of printing one removed-plus-added line
   per file (AC17). `doctor.sh` reports unmigrated, half-migrated and healthy, naming which
   directory the hooks are using; `check-doctor.sh` gains those cases.
   *Proves:* AC17, AC22. *Check:* `check-doctor.sh`; a synthetic old-layout repo run through the
   sync prompt's own steps.
 
-- [x] **Step 8 — Prove both paths live, under Claude Code.** In a scratch repo: `/t4:adopt-sdlc`
+- [x] **Step 8 — Prove both paths live, under Claude Code.** In a scratch repo: `/fc:adopt-sdlc`
   from nothing, then confirm only `ai-factory/` plus the three root files arrived, the manifest
   tracks `ai-factory/` paths, `sync-adapters.sh` writes all three adapter trees and `make -n ai
   TASK=spec` resolves its include. Then a second scratch repo adopted at 0.27.1, with real specs
-  and ADRs and a hand-edited prompt, taken through `/t4:migrate-layout` end to end; transcripts
+  and ADRs and a hand-edited prompt, taken through `/fc:migrate-layout` end to end; transcripts
   kept for the MR.
   *Proves:* AC3, and AC14/AC18 as a run rather than a fixture. *Check:* the transcripts; `git log
   --follow` inside the scratch repo; `manifest.js check` reporting up to date afterwards.
 
   **Result — AC3, AC14 and AC18 proved as runs.** Two scratch repos, the plugin loaded from this
-  working tree, each command a real headless session (`claude -p "/t4:<cmd>" --plugin-dir …`,
+  working tree, each command a real headless session (`claude -p "/fc:<cmd>" --plugin-dir …`,
   stream-json transcripts kept).
-  **Adopt (AC3):** a small Node library with no layout. `/t4:adopt-sdlc --owner dev` detected the
+  **Adopt (AC3):** a small Node library with no layout. `/fc:adopt-sdlc --owner dev` detected the
   stack from package.json, and the repo gained `ai-factory/` plus `AGENTS.md`, `CLAUDE.md`,
   `Makefile`, the two git files and the three generated adapter trees — 12 Claude commands, 12
   Codex skills, 1 Cursor rule — and no top-level `ai/`, `specs/` or `docs/`.
@@ -159,10 +159,10 @@ that also delivered new prompt text would be `/t4:sync-sdlc` wearing a disguise.
   through. Left strict, as decided.
 
 - [x] **Step 9 — ADR 0008, docs, 1.0.0.** ADR 0008: the decision, the bounded exception to
-  `/t4:sync-sdlc`'s separate-reviewable-edit rule with its reason, both transitional pieces and
+  `/fc:sync-sdlc`'s separate-reviewable-edit rule with its reason, both transitional pieces and
   1.1.0 (AC8, AC24). Finish the prose: `README.md`, both `SKILL.md`, `workflow.md`'s own links,
   and `coding-standards.md`'s "no-op when `ai/` is absent" line, which is now two names.
-  CHANGELOG 1.0.0 — breaking, run `/t4:migrate-layout`, the hooks keep working meanwhile, grep
+  CHANGELOG 1.0.0 — breaking, run `/fc:migrate-layout`, the hooks keep working meanwhile, grep
   your own CI. Version 1.0.0 in all four manifests.
   *Proves:* AC7, AC8, AC9, AC21, AC24; definition of done 3 and 7. *Check:* `check-versions.sh`;
   `check-paths.sh`; `check-manifest.sh`; README's command table against what ships.
@@ -194,17 +194,17 @@ nothing after it should be committed until they are settled.
   created. Naming it still matters, because the second commit's `git add -A` would sweep it in.
   `check-migrate.sh` gained the case, and it fails if the warning is dropped.
   **(b) Split, not confirmed.** The two transitional pieces do not expire together, because
-  removing them fails in different ways. `/t4:migrate-layout` goes in **1.1.0**: its absence is a
+  removing them fails in different ways. `/fc:migrate-layout` goes in **1.1.0**: its absence is a
   missing slash command, which is loud, and the script survives in any older checkout. The hooks'
   fallback waits for **2.0.0**: removing it disarms the dont-touch guard and stops the run log in any
   repo that never migrated, silently — the exact failure the fallback was added to prevent, and not
   something to do in a minor release. Updated in all fifteen places the promise appears.
 
-- [x] **Step 11 — `/t4:test ai-factory/specs/0006-ai-factory-layout.md gaps`.** Close the ACs no
+- [x] **Step 11 — `/fc:test ai-factory/specs/0006-ai-factory-layout.md gaps`.** Close the ACs no
   check asserts, and record the ones that cannot be closed by a script. Known gaps, so the tester
   need not rediscover them: **AC8/AC24** — ADR 0008 exists and says what it must (assertable:
   grep the ADR for the decision, the bounded exception, and the removal version); **AC17** — the
-  `/t4:sync-sdlc` prompt's own old-layout branch (the `manifest.js` half is already pinned by
+  `/fc:sync-sdlc` prompt's own old-layout branch (the `manifest.js` half is already pinned by
   `check-manifest.sh`); **AC21** — the CHANGELOG carries the migration instruction, the breaking
   note and the CI warning; **AC2** — the three root entry points in the templates. **AC4** cannot
   be asserted before step 14.
@@ -227,7 +227,7 @@ nothing after it should be committed until they are settled.
   because it excludes a preceding `/` to protect `~/code/ai/ai-sdlc` — and records, ADRs
   included, are stated to be out of the scanned set, which removes the contradiction of asking a
   scan to pass over the ADR that decides the rename. AC17's rationale is replaced by the measured
-  failure: not a long report, but three wrong answers in a row, ending at `/t4:adopt-sdlc`
+  failure: not a long report, but three wrong answers in a row, ending at `/fc:adopt-sdlc`
   scaffolding a second layout. Open questions closed, each recording where it landed rather than
   being deleted. AC numbering unbroken at 24; `check-paths.sh` unaffected, specs being records.
 
@@ -246,7 +246,7 @@ nothing after it should be committed until they are settled.
   two seam copies stay byte-identical, as `check-adapters.sh` requires. This repo's own `fleet.md`
   keeps its paths — there they resolve.
   **Two gaps the tester found and left to me, both closed.** AC13's "none of them invokes it" had no
-  assertion: it is now a grep separating *recommending* `/t4:migrate-layout`, which doctor and sync
+  assertion: it is now a grep separating *recommending* `/fc:migrate-layout`, which doctor and sync
   must do, from naming `migrate-layout.sh`, which only its own command may. AC1's inventory was
   unasserted beyond one clause — a file dropped from the templates would ship to every future adopter
   with no drift check able to notice, since `manifest.js` tracks only what a repo received. All 13
@@ -254,7 +254,7 @@ nothing after it should be committed until they are settled.
   **Still blocked on step 14:** AC9 and AC4's `git log --follow` clause — nothing is committed, so
   there is no history to follow and no "before" to diff.
 
-- [x] **Step 13 — `/t4:check`.** Independent read-only review of the whole diff against the spec,
+- [x] **Step 13 — `/fc:check`.** Independent read-only review of the whole diff against the spec,
   the plan, the coding standards and the dont-touch rules. Do it after 11 and 12 so the reviewer
   reads a correct spec and the finished test set.
   *Proves:* definition of done 5. *Check:* no `blocker` findings open.
@@ -280,7 +280,7 @@ nothing after it should be committed until they are settled.
   before step 10(b) split the versions, so it would have passed a doctor promising the wrong one — and
   its pragma sat inside the failure message, printing to the developer; two comments were garbled by
   splicing new text mid-sentence, one of them in a file adopted repos receive verbatim; `cmdWrite`
-  still sent an unmigrated repo to `/t4:adopt-sdlc`, the advice AC17 identifies as dangerous, reachable
+  still sent an unmigrated repo to `/fc:adopt-sdlc`, the advice AC17 identifies as dangerous, reachable
   by hand; `manifest.js write` failures were swallowed while the report claimed "refreshed"; and only
   one of AC14's two `docs/` clauses was asserted, so an `rm -rf` there would have deleted an adopted
   repo's own documentation unnoticed.
@@ -338,7 +338,7 @@ nothing after it should be committed until they are settled.
   `ai/ai-factory-layout` into `main`. The description names the blast radius rather than leaving it in
   the CHANGELOG: breaking for every adopted repo, one command to migrate, the hooks working meanwhile,
   the two deprecations with their different end dates, and grep your own CI. It links the spec, the
-  plan and ADR 0008, states why the two commits are two, and records what `/t4:check` found — the
+  plan and ADR 0008, states why the two commits are two, and records what `/fc:check` found — the
   blocker and the major both being mine.
 
 ## Risks
@@ -349,7 +349,7 @@ nothing after it should be committed until they are settled.
 | The 22 symlinks break. `sed` cannot edit a link target, so a rewrite pass looks like it worked and leaves 22 dangling links. | `test -e` on every one of the 22 in step 2, and again after step 3 for the ADR template. |
 | A blanket rewrite eats history — 23 files whose whole value is recording what was true then. | Explicit exclusion; `git diff -M --stat` over those paths must show renames and zero content change (AC9). |
 | The rewrite hits an `ai/`-shaped substring it must not: `ai-sdlc`, `ai-layout`, `ai-hooks`, `.agents/`, or a URL like `claude.ai/`. | AC5's guarded pattern for both the scan and the rewrite; no such URL is in this tree today, but `migrate-layout.sh` runs in repos that may have one, so it uses the same guard. |
-| `sync-adapters.sh` stops recognising already-generated adapters, which point at `ai/tasks/`, and leaves orphans behind in every migrated repo. | Step 2 makes the cleanup regexes accept both names; step 6's fixture asserts no `.claude/commands/t4/*.md` still points at `ai/tasks/` after migrating. |
+| `sync-adapters.sh` stops recognising already-generated adapters, which point at `ai/tasks/`, and leaves orphans behind in every migrated repo. | Step 2 makes the cleanup regexes accept both names; step 6's fixture asserts no `.claude/commands/fc/*.md` still points at `ai/tasks/` after migrating. |
 | The migration smuggles upstream prompt text into an adopted repo under cover of a rename. | AC23's path-only assertion, measured on a fixture diff in step 6. |
 | An adopted repo's CI, pipeline or tooling names `ai/` where the plugin cannot see it. | Not fixable here. AC21's CHANGELOG line tells the developer to grep; step 9. |
 | Hooks and commands are read from the loaded plugin, so mid-plan behaviour may lag the working tree until the session reloads. | Steps 1, 5 and 7 are verified by running the scripts directly, not only through a slash command. |
@@ -376,7 +376,7 @@ git diff -M --name-status HEAD~2 HEAD -- 'ai/plans/*' 'ai-factory/plans/*' \
   'specs/000[1-5]*' 'ai-factory/specs/000[1-5]*' 'docs/adr/000[1-7]*' 'ai-factory/adr/000[1-7]*'
 ```
 
-Plus steps 8's two scratch-repo transcripts, and `/t4:check`.
+Plus steps 8's two scratch-repo transcripts, and `/fc:check`.
 
 ## Planning notes
 

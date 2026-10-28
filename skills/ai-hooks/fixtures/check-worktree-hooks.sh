@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Hooks inside a /t4:loop worktree (spec 0022, AC35-AC38), with real `git worktree` fixtures.
+# Hooks inside a /fc:loop worktree (spec 0022, AC35-AC38), with real `git worktree` fixtures.
 # A loop worktree lives at <main>/ai-factory/runs/tmp/worktrees/<loop-id>-S<N>. The guard allows
 # edits inside it unless the worktree-relative path matches dont-touch.md; every other path under
 # runs/ stays blocked; run-log rows, task markers and lifecycle events land in the main repo's
@@ -32,7 +32,7 @@ function setup(name) {
     'ai-factory/docs/dont-touch.md': policy,
     'ai-factory/runs/log.csv': 'tracked\n',
     'ai-factory/plans/0001-a.md': '# A\n\n- [ ] Step 1 — a\n',
-    'ai-factory/contracts/config.json': JSON.stringify({ schema: 't4-contracts-config', version: 1, code_scope: { include: ['**'] }, lifecycle: { enabled: true } }),
+    'ai-factory/contracts/config.json': JSON.stringify({ schema: 'fc-contracts-config', version: 1, code_scope: { include: ['**'] }, lifecycle: { enabled: true } }),
     'src/a.js': 'module.exports = 1;\n',
     'LICENSE': 'MIT\n',
   };
@@ -43,7 +43,7 @@ function setup(name) {
   git(main, 'add', '-A');
   git(main, 'commit', '-q', '--no-verify', '-m', 'fixture');
   const wt = path.join(main, 'ai-factory/runs/tmp/worktrees/L1-S1');
-  git(main, 'worktree', 'add', '-q', '-b', 't4-loop/L1/S1', wt, 'HEAD');
+  git(main, 'worktree', 'add', '-q', '-b', 'fc-loop/L1/S1', wt, 'HEAD');
   assert.equal(fs.lstatSync(path.join(wt, '.git')).isFile(), true, 'worktree .git must be a file');
   return { main, wt };
 }
@@ -134,7 +134,7 @@ test('guard-blocks-traversal', () => {
 test('guard-uses-main-policy', () => {
   // A worktree's own dont-touch.md is a snapshot an implementer can edit; the main one decides.
   const { main, wt } = setup('policy');
-  fs.writeFileSync(path.join(wt, 'ai-factory/docs/dont-touch.md'), '<!-- t4:allow-empty-policy -->\n');
+  fs.writeFileSync(path.join(wt, 'ai-factory/docs/dont-touch.md'), '<!-- fc:allow-empty-policy -->\n');
   guard(wt, '.env', 2);
   guard(main, 'ai-factory/runs/tmp/worktrees/L1-S1/.env', 2);
 });
@@ -145,7 +145,7 @@ test('logs-land-in-main', () => {
   const before = listing(wtRuns);
   const base = { cwd: wt, session_id: 'wt-session' };
   logHook('session-start.js', base);
-  logHook('log-task.js', { ...base, prompt: '/t4:run step 1' });
+  logHook('log-task.js', { ...base, prompt: '/fc:run step 1' });
   logHook('log-edit.js', { ...base, tool_name: 'Write', tool_input: { file_path: 'src/a.js' } });
   logHook('log-cmd.js', { ...base, tool_input: { command: 'npm test' } });
   logHook('session-stop.js', { ...base, transcript_path: path.join(fixtures, 'transcript-uuid.jsonl') });
@@ -159,7 +159,7 @@ test('logs-land-in-main', () => {
   assert.match(fs.readFileSync(path.join(mainRuns, 'cmds.jsonl'), 'utf8'), /"cmd":"npm test"/);
   const rows = fs.readFileSync(path.join(mainRuns, 'log.pending.csv'), 'utf8').trim().split('\n');
   assert.equal(rows.length, 3, `expected header + session + agent rows, got ${rows.length}`);
-  assert.match(rows[1], /,wt-session,session,.*,t4-loop\/L1\/S1,run,claude,,/);
+  assert.match(rows[1], /,wt-session,session,.*,fc-loop\/L1\/S1,run,claude,,/);
   assert.match(rows[2], /,wt-agent,agent,/);
   const events = fs.readdirSync(path.join(mainRuns, 'lifecycle/events')).filter((f) => f.endsWith('.json'));
   assert.equal(events.length, 2, `expected two usage_linked events in main, got ${events.length}`);
@@ -185,7 +185,7 @@ test('no-worktree-scan', () => {
   const base = { cwd: main, session_id: 'main-session' };
   logHook('session-start.js', base);
   assert.equal(JSON.parse(fs.readFileSync(path.join(main, 'ai-factory/runs/sessions.jsonl'), 'utf8')).plan_in_flight, '0001-a.md');
-  logHook('log-task.js', { ...base, prompt: '/t4:review' });
+  logHook('log-task.js', { ...base, prompt: '/fc:review' });
   logHook('log-edit.js', { ...base, tool_name: 'Write', tool_input: { file_path: 'src/a.js' } });
   logHook('log-cmd.js', { ...base, tool_input: { command: 'npm test' } });
   logHook('session-stop.js', { ...base, transcript_path: path.join(fixtures, 'transcript-uuid.jsonl') });
@@ -200,7 +200,7 @@ test('stdout-empty', () => {
   // Every hook, through both entry points, with the worktree as cwd; then a repo without the layout.
   const { wt } = setup('stdout');
   const transcript = path.join(fixtures, 'transcript-uuid.jsonl');
-  const ev = { cwd: wt, session_id: 'quiet', prompt: '/t4:run', transcript_path: transcript, agent_transcript_path: transcript,
+  const ev = { cwd: wt, session_id: 'quiet', prompt: '/fc:run', transcript_path: transcript, agent_transcript_path: transcript,
     agent_id: 'q', tool_name: 'Write', tool_input: { file_path: 'src/a.js', command: 'npm test && git commit -m x' } };
   const names = ['session-start', 'log-task', 'guard-paths', 'log-flush', 'log-edit', 'log-cmd', 'session-stop', 'subagent-stop'];
   for (const name of names) {

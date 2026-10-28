@@ -18,9 +18,9 @@ const ENTRY_DIRECTORY =
 	require.main === module ? path.dirname(process.argv[1]) : __dirname;
 const ROOT = fs.realpathSync(path.resolve(ENTRY_DIRECTORY, "../.."));
 
-const SCHEMA = "t4-assurance";
-const POLICY_SCHEMA = "t4-assurance-policy";
-const SETUP_SCHEMA = "t4-assurance-setup";
+const SCHEMA = "fc-assurance";
+const POLICY_SCHEMA = "fc-assurance-policy";
+const SETUP_SCHEMA = "fc-assurance-setup";
 const VERSION = 1;
 const SELECTION = "ai-factory/assurance.json";
 const CONFIG = "ai-factory/contracts/config.json";

@@ -15,7 +15,7 @@ const template = path.resolve("skills/ai-layout/templates/ai-factory");
 const m = require(path.join(template, "make/models.js"));
 const group = process.argv[2];
 assert.ok(["dispatch", "entry", "headless"].includes(group), "unknown test group");
-const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "t4-start-")));
+const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "fc-start-")));
 const failures = [];
 function check(name, fn) { try { fn(); console.log(`PASS ${name}`); } catch (e) { failures.push(name); console.error(`FAIL ${name}: ${e.message}`); } }
 try {
@@ -52,7 +52,7 @@ process.stdin.on('end', () => {
    }
   });
  } else if (group === "entry") {
-  const entries = m.TOOLS.map(host => ({ host, file: host === "claude" ? "commands/start.md" : "codex-skills/t4-start/SKILL.md" }));
+  const entries = m.TOOLS.map(host => ({ host, file: host === "claude" ? "commands/start.md" : "codex-skills/fc-start/SKILL.md" }));
   const read = file => fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
   check("start-wrapper-handoff", () => {
    for (const { host, file } of entries) {
@@ -86,12 +86,12 @@ process.stdin.on('end', () => {
   check("direct-entries-unchanged", () => {
    const direct = [
     ...fs.readdirSync("commands").filter(f => f.endsWith(".md") && !["start.md", "continue.md"].includes(f)).map(f => ({ host: "claude", task: f.slice(0, -3), file: path.join("commands", f) })),
-    ...fs.readdirSync("codex-skills").filter(d => d.startsWith("t4-") && !["t4-start", "t4-continue"].includes(d)).map(d => ({ host: "codex", task: d.slice(3), file: path.join("codex-skills", d, "SKILL.md") })),
+    ...fs.readdirSync("codex-skills").filter(d => d.startsWith("fc-") && !["fc-start", "fc-continue"].includes(d)).map(d => ({ host: "codex", task: d.slice(3), file: path.join("codex-skills", d, "SKILL.md") })),
    ].filter(({ file }) => read(file).includes("ai-factory/make/models.js dispatch"));
    assert.ok(direct.length >= 2 * 13, "expected routed direct entries on both hosts");
    for (const { host, task: entry, file } of direct) {
     const text = read(file);
-    // A deprecated entry (/t4:check, $t4-check) dispatches the task it now names, and says so first.
+    // A deprecated entry (/fc:check, $fc-check) dispatches the task it now names, and says so first.
     const task = m.canonicalTask(entry);
     if (task !== entry) assert.ok(text.includes(m.aliasNotice(host, entry)), `${file} does not say it is deprecated`);
     assert.doesNotMatch(text, /validate-start|retained original input|destination dispatch|tasks\/start\.md/, file);

@@ -1,6 +1,6 @@
 # Spec 0016 — Automatic model selection for CLI and interactive sessions
 
-**Summary:** Let a repo name a default model per task and tool in `ai-factory/models.yaml`, and enforce it before the task's work starts. That covers headless runs (`make ai`, `make review`, the runner) and interactive tasks (Claude `/t4:<task>`, Codex `$t4-<task>`). Routing is opt-in. Existing overrides and configurations keep working. A selection that cannot be honored stops the task; it never runs silently on another model.
+**Summary:** Let a repo name a default model per task and tool in `ai-factory/models.yaml`, and enforce it before the task's work starts. That covers headless runs (`make ai`, `make review`, the runner) and interactive tasks (Claude `/fc:<task>`, Codex `$fc-<task>`). Routing is opt-in. Existing overrides and configurations keep working. A selection that cannot be honored stops the task; it never runs silently on another model.
 
 **Source:** The owner's "Automatic model selection for CLI and interactive sessions" implementation plan (2026-09-30).
 
@@ -30,7 +30,7 @@
 | AC8 | Given an executable stub, when runs execute through Make, then the model arrives as exactly one argument and is never shell-expanded. Consecutive plan and test runs each resolve their own model. |
 | AC9 | Given a rejected model or a failed CLI, when the run ends, then it fails with one launch, nothing retries on another model, and no success row is written. |
 | AC10 | Given the change, when existing procedures, cost exports, pricing, provider configuration and workspace boundaries are exercised, then they behave as before. |
-| AC11 | Given the documentation and `/t4:doctor`, when a user looks for enablement, precedence, supported hosts or reload rules, then they are described. Doctor reports invalid routing, mappings without tasks, stale agents and host overrides, without network calls. |
+| AC11 | Given the documentation and `/fc:doctor`, when a user looks for enablement, precedence, supported hosts or reload rules, then they are described. Doctor reports invalid routing, mappings without tasks, stale agents and host overrides, without network calls. |
 | AC12 | Given a headless run, when it completes or fails, then its stderr line, its metadata sidecar and the captured CLI arguments agree, and the requested model and any host-reported identity are recorded separately. |
 | AC13 | Given one Claude session and one Codex session, when planning and then testing are invoked, then each dispatches a worker whose host configuration pins that task's model. |
 | AC14 | Given no current worker agent, an unsupported override, a host-wide subagent model override or invalid configuration, when a routed task is invoked, then it stops before any task work, and the chat does not do the work itself. |
@@ -65,8 +65,8 @@
   - Values are limited to model-id characters.
   - Claude accepts its own per-call aliases only; Codex accepts the models its spawn tool lists. An arbitrary gateway alias is routed by mapping it.
 - **Records.**
-  - Headless: `<run>.json.model.json`, schema `t4.model-selection.v1`.
-  - Interactive: `ai-factory/runs/routing.jsonl`, schema `t4.model-dispatch.v1`.
+  - Headless: `<run>.json.model.json`, schema `fc.model-selection.v1`.
+  - Interactive: `ai-factory/runs/routing.jsonl`, schema `fc.model-dispatch.v1`.
   - Both stay local and gitignored. The run log schema is unchanged.
 
 ## Data, routes and components touched

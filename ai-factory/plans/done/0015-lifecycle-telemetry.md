@@ -33,7 +33,7 @@
 
 - [x] **Step 1 — Specify identity propagation and fixtures.** AC2, AC6.
   - Run, attempt, wait and event IDs; explicit parent runs.
-  - `DELIVERY`/`STEP` for headless runs, `T4_LIFECYCLE_RUN` for children, and explicit `lifecycle.js start` for interactive tasks.
+  - `DELIVERY`/`STEP` for headless runs, `FC_LIFECYCLE_RUN` for children, and explicit `lifecycle.js start` for interactive tasks.
   - **Verify:** the attribution cases in `check-lifecycle.sh`.
 - [x] **Step 2 — Build the event writer and reader.** AC5, AC8, AC9.
   - `make/lifecycle-events.js`, with its hook mirror: one immutable, idempotent, atomically staged file per event, and a tolerant reader.
@@ -50,7 +50,7 @@
   - `make/lifecycle.js`: interval unions, retries, outcomes, coverage and cost provenance.
   - **Verify:** hand-calculated fixtures.
 - [x] **Step 6 — Add exports and report integration.** AC1, AC7.
-  - `make lifecycle` (human output and `t4-lifecycle-report` v1 JSON) and `make lifecycle-export` (telemetry v1).
+  - `make lifecycle` (human output and `fc-lifecycle-report` v1 JSON) and `make lifecycle-export` (telemetry v1).
   - `make delivery-report` consumes live numbers.
   - **Verify:** JSON stdout, the export contract, completion-report integration and unchanged `make cost`.
 - [x] **Step 7 — Document retention and validate hosts.** AC1–AC9.

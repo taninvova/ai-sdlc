@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pins state.sh — the scan behind /t4:state — against fixture repos whose answers are known by
+# Pins state.sh — the scan behind /fc:state — against fixture repos whose answers are known by
 # construction.
 #
 # Written before state.sh exists. Until Step 2 of plan 0010 lands, this check is red on purpose,
@@ -416,18 +416,18 @@ for itself which items are outstanding, so that one invocation is the whole seam
 $(cat "$ROOT/$PROMPT")"
 
 sed 's/\*//g' "$ROOT/$PROMPT" | grep -qi -- 'change nothing' \
-  || fail "$PROMPT carries no explicit change-nothing instruction. /t4:state lists work and never
+  || fail "$PROMPT carries no explicit change-nothing instruction. /fc:state lists work and never
 does any — no file edited, no checkbox ticked, no plan moved between plans/ and done/, no step
 started — and the prompt is the only place that can say so to the session reading it (AC8, AC9):
 $(cat "$ROOT/$PROMPT")"
 
 # Three — the prompt must forbid delegating and must end the turn after the table. "Change
-# nothing" alone did not stop a session deep in a run of /t4:run hand-offs from launching an
+# nothing" alone did not stop a session deep in a run of /fc:run hand-offs from launching an
 # implementer straight after the listing: the edit was the subagent's, so the session read its
 # own call as not changing anything. Both sentences are pinned so neither can be trimmed away.
 sed 's/\*//g' "$ROOT/$PROMPT" | grep -qi -- 'launch no agent' \
   || fail "$PROMPT does not say to launch no agent. A listing of outstanding steps invites the
-session to delegate the next one, and a subagent's edit is still /t4:state changing the repo (AC8, AC9):
+session to delegate the next one, and a subagent's edit is still /fc:state changing the repo (AC8, AC9):
 $(cat "$ROOT/$PROMPT")"
 grep -qi -- 'then end your turn' "$ROOT/$PROMPT" \
   || fail "$PROMPT does not end the turn after the table. Nothing may follow the listing until the
@@ -437,7 +437,7 @@ $(cat "$ROOT/$PROMPT")"
 # --- 9. the command is named where a developer will find it (AC16, the docs half) -------------
 # A command nobody can find is not shipped. README.md is the plugin's own inventory of what it
 # provides, and ai-factory/docs/workflow.md is the document every repo is pointed at to learn what
-# the commands are and the order to run them in. A /t4:state that appears in neither is invisible
+# the commands are and the order to run them in. A /fc:state that appears in neither is invisible
 # to the developer it was built for, however well the script behind it works.
 #
 # These two assertions run against this repo's own files rather than a fixture — the one place in
@@ -447,7 +447,7 @@ $(cat "$ROOT/$PROMPT")"
 # moves, while these two files move only when someone edits them.
 #
 # Deliberately NOT asserted: where in either file the mention sits, what it says, or that §5's
-# plugin-level table is complete. That table already omits /t4:doctor and /t4:setup-tracker;
+# plugin-level table is complete. That table already omits /fc:doctor and /fc:setup-tracker;
 # widening it is a separate chore (plan 0010, Step 4), and asserting its contents here would
 # quietly make that chore this check's business.
 #
@@ -460,8 +460,8 @@ $(cat "$ROOT/$PROMPT")"
 for doc in README.md ai-factory/docs/workflow.md; do
   [ -f "$ROOT/$doc" ] || fail "$doc does not exist, so the assertion below would pass over nothing
 rather than prove anything about it (AC16, the docs half)."
-  grep -qF -- '/t4:state' "$ROOT/$doc" \
-    || fail "$doc does not name /t4:state. A command missing from the file a developer reads to
+  grep -qF -- '/fc:state' "$ROOT/$doc" \
+    || fail "$doc does not name /fc:state. A command missing from the file a developer reads to
 find out which commands exist cannot be found by the developer it is for (AC16, the docs half)."
 done
 
@@ -653,7 +653,7 @@ fi
 # --- 13. the prompt hands the developer's argument to the script (AC14) -----------------------
 # Found during Step 3 and added to Step 5's scope: nothing in the plan ever forwarded the
 # developer's argument. The prompt fixes the invocation as `state.sh . "${CLAUDE_PLUGIN_ROOT}"`,
-# so without this the script could grow --done, --next and their refusal while `/t4:state --done`
+# so without this the script could grow --done, --next and their refusal while `/fc:state --done`
 # typed by a developer still rendered the default listing — half-wired, with every check green,
 # because no assertion covered the seam between the two halves.
 #
@@ -675,7 +675,7 @@ window=$(sed -n "${from},$(( inv_line + 8 ))p" "$ROOT/$PROMPT")
 
 grep -qi -- 'argument' <<<"$window" \
   || fail "$PROMPT runs $STATE without ever mentioning the developer's argument beside it, so
-\`/t4:state --done\` would render the default listing however well the script handles the flag. The
+\`/fc:state --done\` would render the default listing however well the script handles the flag. The
 prompt is the only place that seam can be wired (AC14):
 $window"
 grep -qF -- 'Context' <<<"$window" \
@@ -1253,7 +1253,7 @@ printf '# 0004 — withdrawn remainder\n'  > "$GOLD/ai-factory/specs/0004-withdr
 { printf '# Plan 0005 — no rule covers these\n\n## Steps\n\n'
   printf -- '- [?] **Step 1 — the marker nothing defines.**\n'
 } > "$GOLD/ai-factory/plans/0005-no-rule.md"
-printf '{"schema":"t4-contract/spec","version":1,"delivery_id":"d-20260101-abcdef"}\n' \
+printf '{"schema":"fc-contract/spec","version":1,"delivery_id":"d-20260101-abcdef"}\n' \
   > "$GOLD/ai-factory/specs/0002-partly-built.contract.json"
 printf '{"status":"passed"}\n' > "$GOLD/ai-factory/evidence/d-20260101-abcdef/final.json"
 GOLD_SENTINEL=$TMP/golden-helper-ran

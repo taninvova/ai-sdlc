@@ -59,7 +59,7 @@ fs.symlinkSync('loop', path.join(root, 'loop'));
 probe('link loop fails closed', root, 'loop/file', 2);
 const nestedLayout = path.join(root, 'src/ai-factory/docs');
 fs.mkdirSync(nestedLayout, { recursive: true });
-fs.writeFileSync(path.join(nestedLayout, 'dont-touch.md'), '<!-- t4:allow-empty-policy -->');
+fs.writeFileSync(path.join(nestedLayout, 'dont-touch.md'), '<!-- fc:allow-empty-policy -->');
 probe('nested layout cannot override repo policy', path.join(root, 'src'), '../secrets/token', 2);
 const child = path.join(root, 'child');
 execFileSync('git', ['init', '-q', child]);
@@ -79,11 +79,11 @@ if (process.getuid?.() !== 0) {
   probe('unreadable policy permissions', root, 'src/okay.js', 2, /readable, valid policy/);
   fs.chmodSync(policy, 0o600);
 }
-for (const malformed of ['', '# No rules', '- `secret', '- secrets/', '- `../escape/`', '- `/absolute`', '- `secrets/*`', '- `secrets/`\n- malformed', '<!-- t4:allow-empty-policy -->\n- `secrets/`']) {
+for (const malformed of ['', '# No rules', '- `secret', '- secrets/', '- `../escape/`', '- `/absolute`', '- `secrets/*`', '- `secrets/`\n- malformed', '<!-- fc:allow-empty-policy -->\n- `secrets/`']) {
   fs.writeFileSync(policy, malformed);
   probe('malformed policy', root, 'src/okay.js', 2, /valid policy/);
 }
-fs.writeFileSync(policy, '<!-- t4:allow-empty-policy -->\n');
+fs.writeFileSync(policy, '<!-- fc:allow-empty-policy -->\n');
 probe('explicit empty policy', root, 'secrets/token', 0);
 fs.writeFileSync(policy, policyText);
 fs.mkdirSync(path.join(root, 'protected folder'));
