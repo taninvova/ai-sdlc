@@ -4,8 +4,8 @@ description: "FC AI SDLC core: a cross-role agent workflow from requirements to 
 owner: FC platform
 authors:
   - "Volodymyr Tanin <taninvova@gmail.com>"
-install_script: "git clone git@github.com:taninvova/ai-sdlc.git && claude --plugin-dir ./ai-sdlc-plugin"
-install_script_unix: "git clone git@github.com:taninvova/ai-sdlc.git && claude --plugin-dir ./ai-sdlc-plugin"
+install_script: "git clone git@github.com:taninvova/ai-sdlc.git && claude --plugin-dir ./ai-sdlc"
+install_script_unix: "git clone git@github.com:taninvova/ai-sdlc.git && claude --plugin-dir ./ai-sdlc"
 sdlc_phase: Accelerated Feature Development
 support_level: Self-Serve
 use_cases:
@@ -216,10 +216,10 @@ Claude Code:
 
 ```
 git clone git@github.com:taninvova/ai-sdlc.git
-claude --plugin-dir ./ai-sdlc-plugin
+claude --plugin-dir ./ai-sdlc
 ```
 
-Codex: `codex plugin marketplace add /absolute/path/to/ai-sdlc-plugin`, then
+Codex: `codex plugin marketplace add /absolute/path/to/ai-sdlc`, then
 `codex plugin add fc@sdlc`, and restart the session.
 
 Then, once per repo: `/fc:adopt-sdlc` to add the `ai-factory/` layout, `/fc:doctor` to
