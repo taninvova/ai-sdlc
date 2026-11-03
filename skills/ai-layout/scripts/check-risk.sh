@@ -822,8 +822,8 @@ test("consumers", "plan-task-unchanged", () => {
 // ---- start (plan 0023 Step 8, AC29) -------------------------------------------------------
 // Static reads of the start task: rule 3 names /fc:risk as an optional next step only when a
 // risk trigger is present, and the "never return commands" sentence states that one mention as
-// its only exception. The JSON contract is unchanged: the allowlist and validateStartResult stay
-// as on `main`. That the classifier obeys is proved by the host runs of plan 0023 Step 10.
+// its only exception. The JSON contract is unchanged: the allowlist stays as on `main`, and
+// validateStartResult behaves as on `main` apart from the optional `effort` key (ASD-001). That the classifier obeys is proved by the host runs of plan 0023 Step 10.
 const START = `${TEMPLATES}/ai-factory/tasks/start.md`;
 const START_MODELS = `${TEMPLATES}/ai-factory/make/models.js`;
 function startText() {
@@ -891,12 +891,27 @@ test("start", "start-allowlist-unchanged", () => {
 		return JSON.parse(match[1]);
 	};
 	assert.deepEqual(allowlist(fs.readFileSync(START_MODELS, "utf8")), allowlist(atMain(START_MODELS)), "START_TASKS differs from main");
-	const validator = (source) => {
-		const match = /^function validateStartResult\(value\) \{\n[\s\S]*?\n\}\n/m.exec(source);
-		assert.ok(match, "models.js has no validateStartResult function");
-		return match[0];
-	};
-	assert.equal(validator(fs.readFileSync(START_MODELS, "utf8")), validator(atMain(START_MODELS)), "validateStartResult differs from main");
+	// Spec ASD-001 AC38 adds one optional key, `effort`, so the validator is no longer byte-equal
+	// to main. It must still behave as main's on every legacy shape, and `effort` (S, M, L or XL)
+	// must be the only key it newly accepts. Main's function is run with main's allowlist.
+	const mainSource = atMain(START_MODELS);
+	const match = /^function validateStartResult\(value\) \{\n[\s\S]*?\n\}\n/m.exec(mainSource);
+	assert.ok(match, "models.js on main has no validateStartResult function");
+	const legacy = new Function("START_TASKS", `${match[0]}\nreturn validateStartResult;`)(allowlist(mainSource));
+	const outcome = (fn, value) => { try { return { ok: fn(value) }; } catch { return { threw: true }; } };
+	const shapes = [null, [], {}, "route", { status: "route" }, { status: "done", reason: "x" },
+		{ status: "route", task: "run", reason: "x" }, { status: "route", task: "risk", reason: "x" }, { status: "route", task: "../quick", reason: "x" },
+		{ status: "route", task: "quick", reason: "" }, { status: "route", task: "quick", reason: " " }, { status: "route", task: "quick", reason: 1 },
+		{ status: "blocked", reason: "x".repeat(1000) }, { status: "blocked", reason: "x".repeat(1001) }, { status: "question", task: "quick", reason: "x" }];
+	for (const task of allowlist(mainSource)) shapes.push({ status: "route", task, reason: "x" });
+	for (const status of ["question", "blocked"]) shapes.push({ status, reason: "x" });
+	for (const key of ["command", "model", "input", "next", "chain", "Effort"]) shapes.push({ status: "route", task: "quick", reason: "x", [key]: "M" }, { status: "question", reason: "x", [key]: "M" });
+	for (const value of shapes)
+		assert.deepEqual(outcome(m.validateStartResult, value), outcome(legacy, value), `validateStartResult differs from main on ${JSON.stringify(value)}`);
+	for (const base of [{ status: "route", task: "spec", reason: "x" }, { status: "question", reason: "x" }, { status: "blocked", reason: "x" }]) {
+		for (const effort of ["S", "M", "L", "XL"]) assert.deepEqual(m.validateStartResult({ ...base, effort }), { ...base, effort }, "effort is not passed through");
+		for (const effort of ["XXL", "m", 1, null]) assert.throws(() => m.validateStartResult({ ...base, effort }), /invalid start result/, `effort ${JSON.stringify(effort)} is accepted`);
+	}
 });
 
 // ---- docs (plan 0023 Step 9: AC3, the AC20 citation, AC34, AC35) ---------------------------

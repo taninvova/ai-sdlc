@@ -578,7 +578,7 @@ let input='';process.stdin.on('data',c=>input+=c);process.stdin.on('end',()=>{
 		// The procedures every host reads carry the same contract commands.
 		const procedures = {
 			"agents/specifier.md": ["contracts.js init spec"],
-			"agents/planner.md": ["contracts.js init plan", "Verify (red|step|final)"],
+			"agents/planner.md": ["contracts.js init plan", "Verify (red|step|final)", "Effort: <S|M|L|XL> · Estimate: dev <range> h, /fc:run ~<range> min (assumption: <what it rests on>)"],
 			"agents/tester.md": ["verify DELIVERY=<id> STEP=S<N> PHASE=red", "contracts DELIVERY=<id>"],
 			"agents/implementer.md": ["verify DELIVERY=<id> STEP=S<N>", "PHASE=final", "contracts DELIVERY=<id>"],
 			"agents/reviewer.md": ["contracts.js validate"],

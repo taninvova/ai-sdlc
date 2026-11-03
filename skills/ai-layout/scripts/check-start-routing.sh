@@ -147,6 +147,93 @@ process.stdin.on('end', () => {
   const spec = m.workerSpec(root, "quick"); assert.equal(spec.readOnly, false); assert.match(m.workerInstructions(spec), /never hand this task to another agent or back to the session/);
   for (const host of m.TOOLS) assert.match(m.directiveText(dispatch(host, "quick", "builder")), /Relay the worker's final report unchanged/);
  });
+ // ---- effort (spec ASD-001 AC32–AC40) ----------------------------------------------------
+ // Static reads of start.md rule 7 and the cases.md host rows; classification itself is proved
+ // only by host runs. The validator cases run the real validateStartResult and validate-start.
+ const START_MD = path.join(template, "tasks/start.md");
+ const CASES_MD = "skills/ai-layout/fixtures/start-routing/cases.md";
+ const flat = text => text.replace(/\s+/g, " ");
+ const startText = () => { assert.ok(fs.existsSync(START_MD), `${START_MD} does not exist`); return fs.readFileSync(START_MD, "utf8"); };
+ // A numbered rule, from "N. " at a line start to the next rule, a blank line or the end.
+ const startRule = (text, n) => {
+  const match = new RegExp(`^${n}\\. [\\s\\S]*?(?=\\n\\d+\\. |\\n\\s*\\n|(?![\\s\\S]))`, "m").exec(text);
+  assert.ok(match, `start.md has no rule ${n}`);
+  return flat(match[0]).trim();
+ };
+ // The commit before plan ASD-001. Rules 1–6 are compared with it, never with HEAD, so that
+ // committing the delivery does not turn the comparison into one of the file with itself.
+ // The full SHA, as check-risk.sh's BASELINE: an abbreviation can turn ambiguous as history grows.
+ const PRE_ASD001 = "1111ef8f0b422bf5d87f0bd9ffc75a554c1a39f5";
+ const baseStart = () => {
+  const present = spawnSync("git", ["cat-file", "-e", `${PRE_ASD001}^{commit}`], { encoding: "utf8" });
+  assert.equal(present.status, 0, `commit ${PRE_ASD001} (the commit before plan ASD-001) is not in this clone; a shallow clone lacks it, so fetch it (git fetch --unshallow) and run again`);
+  const shown = spawnSync("git", ["show", `${PRE_ASD001}:skills/ai-layout/templates/ai-factory/tasks/start.md`], { encoding: "utf8" });
+  assert.equal(shown.status, 0, `git show ${PRE_ASD001} start.md failed: ${shown.stderr}`);
+  return shown.stdout;
+ };
+ check("start-effort-source", () => {
+  const rule = startRule(startText(), 7);
+  assert.match(rule, /\beffort rating only from a spec or exploration whose path the request names\b/, "rule 7 does not limit the source to a named spec or exploration path");
+  assert.match(rule, /\bnever from any other artifact\b/, "rule 7 does not exclude every other artifact");
+  assert.match(rule, /\bwhen both are named, the spec's rating wins\b/, "rule 7 does not let the spec's rating win over the exploration's (AC33)");
+ });
+ check("start-effort-after-rule3", () => {
+  const text = startText(), base = baseStart();
+  for (let n = 1; n <= 6; n++) assert.equal(startRule(text, n), startRule(base, n), `rule ${n} differs from ${PRE_ASD001}`);
+  // The control: one word changed in rule 3 must be caught by the same comparison.
+  const changed = text.replace(/^3\. (\S+)/m, "3. Changed $1");
+  assert.notEqual(changed, text, "the control could not change rule 3");
+  assert.notEqual(startRule(changed, 3), startRule(base, 3), `the control: a changed rule 3 still equals ${PRE_ASD001}'s`);
+  const rule = startRule(text, 7);
+  assert.ok(text.indexOf("\n7. ") > text.indexOf("\n6. "), "rule 7 does not follow rule 6");
+  assert.match(rule, /^7\. Apply effort only after rule 3, so a present risk trigger still routes to planned work whatever the rating\./, "rule 7 does not say it applies only after rule 3 (AC34)");
+  assert.doesNotMatch(rule, /\/fc:risk/, "rule 7 names /fc:risk");
+ });
+ check("start-effort-large", () => {
+  const rule = startRule(startText(), 7);
+  assert.match(rule, /\bA rating of L or XL never routes to quick or chore; fix stays allowed\./, "rule 7 does not rule out quick and chore for L/XL while allowing fix (AC35)");
+  assert.match(rule, /\bchoose spec when a spec already exists for the request, otherwise explore\b/, "rule 7 does not name spec, else explore, as the replacement (AC37)");
+ });
+ check("start-effort-small-neutral", () => {
+  const rule = startRule(startText(), 7);
+  assert.match(rule, /\bA rating of S or M changes nothing: choose what you would choose with no rating\./, "rule 7 does not keep S/M neutral (AC36)");
+ });
+ check("start-effort-field", () => {
+  const text = flat(startText());
+  assert.match(text, /Use only these fields, plus "effort" \(S, M, L or XL\) on any of them only when rule 7 read a rating; omit it otherwise\./, "start.md does not name the optional effort field");
+  assert.match(text, /Never return commands, rewritten input, model options, or a next-phase chain\. The one exception is the optional \/fc:risk mention that rule 3 allows in reason; it is never the routed task\./, "the 'Never return commands' sentence changed");
+  const legacy = [{ status: "route", task: "quick", reason: "local" }, { status: "question", reason: "Need details" }, { status: "blocked", reason: "Missing layout" }];
+  for (const base of legacy) {
+   assert.deepEqual(m.validateStartResult(base), base, "a result without effort changed");
+   assert.equal("effort" in m.validateStartResult(base), false, "a result without effort gained an effort key");
+   for (const effort of ["S", "M", "L", "XL"]) assert.deepEqual(m.validateStartResult({ ...base, effort }), { ...base, effort }, `effort ${effort} on ${base.status} is not accepted and returned`);
+   for (const effort of ["XXL", "m", 1, null, "", undefined]) assert.throws(() => m.validateStartResult({ ...base, effort }), /invalid start result/, `effort ${JSON.stringify(effort)} on ${base.status} is accepted`);
+  }
+  for (const value of [{ status: "route", task: "quick", reason: "x", effort: "L", command: "touch pwned" }, { status: "route", task: "quick", reason: "x", effort: "L", model: "other" }, { status: "question", task: "quick", reason: "x", effort: "S" }, { status: "route", task: "run", reason: "x", effort: "M" }, { status: "route", task: "quick", reason: "", effort: "M" }])
+   assert.throws(() => m.validateStartResult(value), /invalid start result/, `accepted ${JSON.stringify(value)}`);
+  const cli = input => spawnSync(process.execPath, [path.join(root, "ai-factory/make/models.js"), "validate-start"], { input, encoding: "utf8" });
+  const good = cli('{"status":"route","task":"spec","reason":"Rated L","effort":"L"}');
+  assert.equal(good.status, 0, good.stderr);
+  assert.deepEqual(JSON.parse(good.stdout), { status: "route", task: "spec", reason: "Rated L", effort: "L" });
+  const plain = cli('{"status":"question","reason":"Which file?"}');
+  assert.equal(plain.status, 0, plain.stderr);
+  assert.deepEqual(JSON.parse(plain.stdout), { status: "question", reason: "Which file?" });
+  for (const bad of ['"XXL"', '"m"', "1", "null"]) assert.notEqual(cli(`{"status":"route","task":"quick","reason":"x","effort":${bad}}`).status, 0, `validate-start accepts effort ${bad}`);
+ });
+ check("start-effort-reason", () => {
+  const rule = startRule(startText(), 7);
+  assert.match(rule, /\bWhen the rating changed the destination, reason mentions the rating; otherwise reason need not mention it\./, "rule 7 does not require reason to mention a rating that changed the destination (AC39)");
+  assert.match(rule, /\bReturn the rating read in effort\./, "rule 7 does not return the rating in effort (AC38)");
+ });
+ check("start-effort-host-cases", () => {
+  assert.ok(fs.existsSync(CASES_MD), `${CASES_MD} does not exist`);
+  const rows = new Map(fs.readFileSync(CASES_MD, "utf8").split("\n").filter(line => /^\| [a-z0-9-]+ \|/.test(line)).map(line => [line.split("|")[1].trim(), line]));
+  const expected = { "effort-spec-wins": /\bM\b.*\bXL\b.*effort M/, "effort-large-no-quick": /\bL\b.*spec; effort L; never quick or chore/, "effort-large-fix": /\bXL\b.*fix; effort XL/, "effort-small": /\bS\b.*quick; effort S/, "effort-large-explore": /\bL\b.*explore; effort L/, "effort-reason": /reason names the L rating/ };
+  for (const [id, pattern] of Object.entries(expected)) {
+   assert.ok(rows.has(id), `${CASES_MD} has no ${id} row`);
+   assert.match(rows.get(id), pattern, `${CASES_MD} row ${id} does not state its expected decision`);
+  }
+ });
 }
 } finally { fs.rmSync(root, { recursive: true, force: true }); }
 if (failures.length) process.exitCode = 1;

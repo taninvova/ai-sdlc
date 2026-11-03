@@ -2139,6 +2139,18 @@ test("procedures", "planner-depends-on", () => {
 test("procedures", "plan-template-depends-on", () => {
 	assertDependsOn("tasks/plan.md", fs.readFileSync("skills/ai-layout/templates/ai-factory/tasks/plan.md", "utf8"));
 });
+test("procedures", "planner-effort-line", () => {
+	// Spec ASD-001 AC25/AC30: the planner and the plan template define the step's effort line in
+	// one format, in the step's indented body and never in its `- [ ] Step N` title line.
+	const format = "`Effort: <S|M|L|XL> · Estimate: dev <range> h, /fc:run ~<range> min (assumption: <what it rests on>)`";
+	const copies = [...agentCopies("planner"), ["tasks/plan.md", fs.readFileSync("skills/ai-layout/templates/ai-factory/tasks/plan.md", "utf8")]];
+	for (const [rel, text] of copies) {
+		const rule = passage(text, /`Effort: <S\|M\|L\|XL> · Estimate:/).replace(/\s+/g, " ");
+		assert.ok(rule.includes(format), `${rel} does not define the step line as ${format}`);
+		assert.match(rule, /indented body/, `${rel}: the step line is not placed in the step's indented body`);
+		assert.match(rule, /never in the `- \[ \] Step N` title line/, `${rel}: the step line may go in the title line`);
+	}
+});
 test("procedures", "implementer-worktree-line", () => {
 	// AC57: exactly one added line against the commit before plan 0022 (64ad3bc), in the source
 	// and in the adopted copy. Not `main`: once 0022 merged, main already holds the line.

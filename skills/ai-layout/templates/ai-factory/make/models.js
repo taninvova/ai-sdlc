@@ -13,6 +13,7 @@ const crypto = require("node:crypto");
 
 const TOOLS = ["claude", "codex"];
 const START_TASKS = ["quick", "fix", "chore", "analyse", "design", "explore", "spec"];
+const START_EFFORTS = ["S", "M", "L", "XL"];
 const TASK_NAME = /^[a-z][a-z0-9-]*$/;
 // Deprecated task names and the task each now names. `check` was renamed `review`: the plugin keeps
 // a thin /fc:check command and $fc-check skill that run the review task, TASK=check still runs it
@@ -400,15 +401,21 @@ function aliasNotice(host, alias) {
 }
 
 // Classifier output is data, never executable instructions. No task input is accepted here.
+// `effort` is the one optional key, on any status, present only when start read a rating.
 function validateStartResult(value) {
 	if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("start result must be an object");
 	const keys = value.status === "route" ? ["status", "task", "reason"] : ["status", "reason"];
+	const rated = Object.keys(value).includes("effort");
+	if (rated) keys.push("effort");
 	if (!["route", "question", "blocked"].includes(value.status) ||
 		Object.keys(value).length !== keys.length || Object.keys(value).some(key => !keys.includes(key)) ||
 		typeof value.reason !== "string" || !value.reason.trim() || value.reason.length > 1000 ||
-		(value.status === "route" && !START_TASKS.includes(value.task)))
-		throw new Error("invalid start result: require status, bounded reason, and an allowlisted task only for route");
-	return value.status === "route" ? { status: value.status, task: value.task, reason: value.reason } : { status: value.status, reason: value.reason };
+		(value.status === "route" && !START_TASKS.includes(value.task)) ||
+		(rated && !START_EFFORTS.includes(value.effort)))
+		throw new Error("invalid start result: require status, bounded reason, an allowlisted task only for route, and effort only as S, M, L or XL");
+	const result = value.status === "route" ? { status: value.status, task: value.task, reason: value.reason } : { status: value.status, reason: value.reason };
+	if (rated) result.effort = value.effort;
+	return result;
 }
 
 function startHandoff(host) {

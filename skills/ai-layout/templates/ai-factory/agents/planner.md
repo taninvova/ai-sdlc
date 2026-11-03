@@ -42,8 +42,32 @@ Nothing else. Do not change any code. Never `ai-factory/specs/`. Respect ai-fact
 - An optional `Depends on: N, M` line in a step's indented body, step numbers only, names the
   steps it needs; a step without it waits for all earlier steps. Write it where steps are
   independent, referring only to existing earlier step numbers and never forming a cycle
+- Every step's indented body carries one
+  `Effort: <S|M|L|XL> · Estimate: dev <range> h, /fc:run ~<range> min (assumption: <what it rests on>)`
+  line, as the first line of that body. The step is rated with the same Effort rubric as the
+  feature, applied to the step's own scope. The line goes in the indented body, never in the
+  `- [ ] Step N` title line, and never contains `AC<n>` or `Verify`. Both estimates are ranges,
+  labelled as assumptions; they are never summed into a feature total or turned into a date
 - Risks and how each is checked
 - Verification: exact commands, phase (`red`, `step`, `final`), covered ACs and expected-red test identities/causes. Final completion requires all required checks.
+
+## Effort rubric
+Effort has two dimensions, size and uncertainty, each rated S, M, L or XL against the tables
+below. The final effort is the higher of the two: size M with uncertainty L is effort L.
+
+| Size | Definition |
+|---|---|
+| S | 1 file, under 50 lines, no new tests |
+| M | 2–5 files, with tests |
+| L | more than 5 files, or a new artefact or check |
+| XL | cross-cutting work, or work that needs an ADR or a migration |
+
+| Uncertainty | Definition |
+|---|---|
+| S | a known pattern with no unknowns |
+| M | a known pattern with minor unknowns |
+| L | a new pattern or several unknowns |
+| XL | unknowns that need an exploration or a spike |
 
 ## Artifact contracts
 Only when `ai-factory/contracts/config.json` exists: name the ACs each step covers in its line,

@@ -12,7 +12,12 @@ steps as `- [ ] Step N — …` each small enough for one `/fc:run`, naming the 
 it and its verification phase (`red`, `step`, or `final`). An optional `Depends on: N, M` line
 in a step's indented body, step numbers only, names the steps it needs; a step without it waits
 for all earlier steps. Write it where steps are independent, referring only to existing earlier
-step numbers and never forming a cycle. Record expected-red test identities
+step numbers and never forming a cycle. Every step's indented body carries one
+`Effort: <S|M|L|XL> · Estimate: dev <range> h, /fc:run ~<range> min (assumption: <what it rests on>)`
+line, its effort rated with the planner's Effort rubric on the step's own scope; it goes in the
+indented body, never in the `- [ ] Step N` title line, and never contains `AC<n>` or `Verify`.
+Both estimates are ranges, labelled as assumptions, and are never summed into a feature total
+or turned into a date. Record expected-red test identities
 and causes; scope red tests to the next step unless whole-plan coverage was requested. Include
 risks and how each is checked, and the exact verification commands; change no code. Return
 its report unchanged: the plan path and anything in the spec that made planning ambiguous.

@@ -50,7 +50,10 @@ Start classifies into `quick`, `fix`, `chore`, `analyse`, `design`, `explore` or
 original request text to that project procedure. It considers uncertainty and risk before size;
 a one-line authorization or public-contract change still needs the normal workflow. Existing
 artifacts can settle prerequisites. Start does not resume a delivery or chain its remaining phases.
-All direct commands remain available.
+All direct commands remain available. Effort comes after risk: start reads an effort rating only
+from a spec or exploration whose path the request names (the spec's wins). L or XL never routes to
+quick or chore; S or M changes nothing. The result then carries the optional `effort` field (S, M,
+L or XL).
 
 Start is interactive-only: headless `TASK=start` stops before launching a CLI or creating run
 artifacts. CI must name a destination task. Empty input asks for the change and expected result;

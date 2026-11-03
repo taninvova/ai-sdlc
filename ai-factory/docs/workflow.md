@@ -35,6 +35,10 @@ public contracts, migrations, dependencies and ownership changes cannot take a s
 on size. Explicit incompatible workflow choices get clarification. No automatic continuation or
 whole-lifecycle chaining occurs. Empty input asks for the change and expected result; missing
 workspace/task reports adoption or drift guidance without repairs. Direct entries remain available.
+Effort comes after risk: start reads an effort rating only from a spec or exploration whose path
+the request names (the spec's wins when both are). L or XL never routes to quick or chore, and
+picks spec when a spec exists, otherwise explore; S or M changes nothing. The result then carries
+the optional `effort` field (S, M, L or XL) beside status, task and reason.
 
 Use `/fc:continue <delivery id>` (Codex `$fc-continue`) to resume an interrupted planned delivery.
 It is interactive-only. It needs artifact contracts enabled and accepts one contract delivery ID
@@ -218,7 +222,11 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
   conflict or a timeout, and never commits on your branch. Its only commits sit on temporary
   branches in its own worktrees, and each step's change comes back to your tree uncommitted.
   - **Steps and dependencies.** A plan step may carry `Depends on: N, M`. A step without that
-    line waits for every earlier step. The whole plan is validated before any step starts.
+    line waits for every earlier step. The whole plan is validated before any step starts. Each
+    step's indented body also carries one
+    `Effort: <S|M|L|XL> · Estimate: dev <range> h, /fc:run ~<range> min (assumption: <what it rests on>)`
+    line, never in the title line; its ranges are never summed or turned into a date, and the
+    loop reads the plan the same with or without it.
   - **Worktrees.** Ready steps run concurrently, up to `--max-parallel` (1–8, default 3), each in
     a git worktree under `ai-factory/runs/tmp/worktrees/`. A step running alone runs in the main
     tree. On Codex the steps run one at a time, and `--step-timeout` (1–240 minutes, default 30)

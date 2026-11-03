@@ -1,0 +1,73 @@
+{
+  "spec_path": "ai-factory/specs/ASD-901-csv-export.md",
+  "risk_path": "ai-factory/risks/ASD-901-csv-export.md",
+  "cases": [
+    {
+      "name": "unnamed-new-id",
+      "covers": ["AC17"],
+      "request": "Spec the CSV export of invoices from exploration ASD-901",
+      "spec": "spec-present.md",
+      "risk": null,
+      "helper_exit": 3,
+      "outcome": "new-id",
+      "helper_path": "ai-factory/specs/ASD-901-csv-export.md"
+    },
+    {
+      "name": "cites-other-spec-new-id",
+      "covers": ["AC16", "AC17", "review fix 1"],
+      "request": "Spec the CSV export of invoices from exploration ASD-901, in the same column layout as ai-factory/specs/ASD-850-pdf-export.md",
+      "spec": "spec-present.md",
+      "risk": null,
+      "helper_exit": 3,
+      "helper_path": "ai-factory/specs/ASD-901-csv-export.md",
+      "outcome": "new-id"
+    },
+    {
+      "name": "named-no-risk-file",
+      "covers": ["AC18"],
+      "request": "Revise ai-factory/specs/ASD-901-csv-export.md",
+      "spec": "spec-present.md",
+      "risk": null,
+      "outcome": "unchanged",
+      "report": "run-risk"
+    },
+    {
+      "name": "named-no-risk-file-all-absent",
+      "covers": ["AC14", "review fix 2"],
+      "request": "Revise ai-factory/specs/ASD-901-csv-export.md",
+      "spec": "spec-absent.md",
+      "risk": null,
+      "outcome": "unchanged",
+      "report": "nothing-to-revise"
+    },
+    {
+      "name": "named-reassessed",
+      "covers": ["AC19", "AC20", "AC21", "AC22"],
+      "request": "Revise ai-factory/specs/ASD-901-csv-export.md now that its risk file exists",
+      "spec": "spec-present.md",
+      "risk": "risk-reassessed.md",
+      "outcome": "revised",
+      "expected": "spec-revised-reassessed.md",
+      "added": ["R2", "R5"]
+    },
+    {
+      "name": "named-initial-body",
+      "covers": ["AC19", "AC20", "AC21"],
+      "request": "Revise ai-factory/specs/ASD-901-csv-export.md now that its risk file exists",
+      "spec": "spec-present.md",
+      "risk": "risk-initial.md",
+      "outcome": "revised",
+      "expected": "spec-revised-initial.md",
+      "added": ["R1"]
+    },
+    {
+      "name": "named-no-run-risk-line",
+      "covers": ["plan ASD-001 Ambiguity 5"],
+      "request": "Revise ai-factory/specs/ASD-901-csv-export.md",
+      "spec": "spec-absent.md",
+      "risk": "risk-initial.md",
+      "outcome": "unchanged",
+      "report": "nothing-to-revise"
+    }
+  ]
+}

@@ -15,7 +15,8 @@ Return exactly one JSON object, without Markdown fences or surrounding prose:
 - Route: {"status":"route","task":"quick","reason":"Short explanation"}
 - Clarification: {"status":"question","reason":"Smallest necessary question"}
 - Cannot proceed: {"status":"blocked","reason":"Problem and adoption or drift guidance"}
-Use only these fields. Reason is nonempty and at most 1000 characters. Never return commands,
+Use only these fields, plus "effort" (S, M, L or XL) on any of them only when rule 7 read a
+rating; omit it otherwise. Reason is nonempty and at most 1000 characters. Never return commands,
 rewritten input, model options, or a next-phase chain. The one exception is the optional
 /fc:risk mention that rule 3 allows in reason; it is never the routed task.
 
@@ -41,6 +42,13 @@ rewritten input, model options, or a next-phase chain. The one exception is the 
 6. Only quick, fix, chore, analyse, design, explore and spec are allowed destinations. Confirm the
    selected ai-factory/tasks/<task>.md exists. Explain the choice briefly in reason, separately
    from the original request. The selected task stops at its own normal boundary.
+7. Apply effort only after rule 3, so a present risk trigger still routes to planned work whatever
+   the rating. Read an effort rating only from a spec or exploration whose path the request names,
+   never from any other artifact; when both are named, the spec's rating wins. A rating of L or XL
+   never routes to quick or chore; fix stays allowed. Where it rules them out, choose spec when a
+   spec already exists for the request, otherwise explore. A rating of S or M changes nothing:
+   choose what you would choose with no rating. When the rating changed the destination, reason
+   mentions the rating; otherwise reason need not mention it. Return the rating read in effort.
 
 Report only the JSON result; no file was written. Include unresolved issues in reason.
 

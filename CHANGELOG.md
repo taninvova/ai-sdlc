@@ -7,6 +7,40 @@ project-prefixed sequential IDs (`PMB-001`) from `ai-factory/project.json`. **Br
 and adopted repos:** reinstall the plugin as `fc@sdlc`, take the renamed templates with
 `/fc:sync-sdlc`, and name the project once with `ids.js init` before the next new artefact.
 
+**Unreleased — effort rubric and risk-trigger triage (spec ASD-001, no version bump)**
+
+**Breaking for adopted repos.** The explorer, specifier and planner agents and the `spec`, `plan`
+and `start` task templates change what explorations, specs and plans carry and what `/fc:start`
+returns. Take the change with `/fc:sync-sdlc` and preserve local edits to those files. Host runs
+for this change were waived; `ai-factory/reports/ASD-001-mr-notes.md` records which acceptance
+criteria rest on static checks only.
+
+- **One shared effort rubric.** The explorer, specifier and planner each carry the same
+  `## Effort rubric` section: size and uncertainty, each rated S, M, L or XL, and the final effort
+  is the higher of the two. An exploration rates each option's effort with a reason (S/M/L becomes
+  S/M/L/XL) and adds an `Effort and risk` subsection for the recommended option, with no time
+  figure; a present risk trigger recommends `/fc:risk` once the spec exists.
+- **The spec's `## Effort and risk` section.** Placed before Open questions, it holds one effort
+  rating for the feature and labelled dev-hours and `/fc:run` ranges, plus a triage of the eight
+  risk categories and the six `/fc:start` risk triggers, each `present` or `absent` with one line
+  of evidence and no severity. When an item is present and no risk assessment exists yet, Open
+  questions contain "Run `/fc:risk <spec path>`".
+- **The spec re-run.** `/fc:spec` asked to revise an existing spec, by its path, revises that spec
+  in place instead of creating a new one: with a risk assessment present it drops the
+  "Run `/fc:risk`" line and adds the latest open blocker and major findings, citing the assessment;
+  without one it leaves the spec unchanged, and reports that `/fc:risk` is still due only when the
+  spec asks for it. A request that names no spec path, or cites one only as context, still gets a
+  new ID, as before.
+- **The plan step line.** Every plan step's indented body carries
+  `Effort: <S|M|L|XL> · Estimate: dev <range> h, /fc:run ~<range> min (assumption: <what it rests on>)`,
+  never in the title line; the ranges are never summed or turned into a date. The plan parsers,
+  `/fc:loop` and `/fc:state` read plans as before.
+- **`/fc:start` reads effort.** A new rule 7, applied after the risk rule, reads a rating only from
+  a spec or exploration whose path the request names (the spec's wins). L or XL never routes to
+  quick or chore; S or M changes nothing. The result gains an optional `effort` field (S, M, L or
+  XL), which `validateStartResult` and `models.js validate-start` accept on any status and pass
+  through; every other key and value is validated as before.
+
 **The plugin prefix is renamed `t4` → `fc`**
 
 **Breaking for installs and adopted repos.** The plugin is now named `fc`: every command is

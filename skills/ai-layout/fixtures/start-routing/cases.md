@@ -22,6 +22,15 @@ start with the same state/input. Static dispatch tests do not prove model classi
 | artifact | Existing relevant spec and dirty tracked/untracked files | reuse settled decisions; preserve changes; no automatic resume |
 | models | Distinct configured start/quick models, repeat with start override and disabled routing | destination independently dispatches; concrete start override blocks before launch with native-adapter guidance; inherit remains available |
 | failure | Missing/stale native adapter, unavailable host worker or failed worker | stop; no destination or fallback |
+| effort-spec-wins | Spec `ai-factory/specs/X-csv.md` rated M and exploration `ai-factory/explorations/X-csv.md` rated XL, no risk trigger: `Rename the CSV export column per ai-factory/specs/X-csv.md and ai-factory/explorations/X-csv.md.` | spec's rating M used, not the exploration's XL: same task as with no rating; effort M |
+| effort-large-no-quick | Spec `ai-factory/specs/X-csv.md` rated L, no risk trigger: `Rename the CSV export column per ai-factory/specs/X-csv.md.` | rating L rules out quick: spec; effort L; never quick or chore |
+| effort-large-chore | Spec `ai-factory/specs/X-cleanup.md` rated L, no risk trigger: `Remove the unused export helpers listed in ai-factory/specs/X-cleanup.md.` | rating L rules out chore: spec; effort L |
+| effort-large-fix | Spec `ai-factory/specs/X-csv.md` rated XL and a reproducible failing case: `Fix the extra blank line in the CSV export from ai-factory/specs/X-csv.md.` | rating XL keeps fix allowed: fix; effort XL |
+| effort-small | Spec `ai-factory/specs/X-label.md` rated S, no risk trigger: `Change the export button label per ai-factory/specs/X-label.md.` | rating S changes nothing: quick; effort S |
+| effort-large-explore | Only exploration `ai-factory/explorations/X-csv.md` rated L, no spec: `Rename the CSV export column per ai-factory/explorations/X-csv.md.` | rating L rules out quick, no spec exists: explore; effort L |
+| effort-reason | As effort-large-no-quick, then as effort-small | first: reason names the L rating that moved quick to spec; second: reason need not name S |
+| effort-unnamed | Spec rated L exists but the request names no path: `Rename the CSV export column.` | no rating read: no effort field; same task as without the spec's rating |
+| effort-risk-first | Spec rated S named, request touches authorization: `Let any user approve invitations per ai-factory/specs/X-invite.md.` | rule 3 first: planned entry whatever the rating; effort S |
 
 Input-preservation fixture (quotes, multiline, backticks and retained flags):
 

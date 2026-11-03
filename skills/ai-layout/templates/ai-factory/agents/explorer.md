@@ -35,15 +35,43 @@ ai-factory/docs/dont-touch.md.
 2. **What exists today** — the modules, routes, models, queues or components involved,
    with file paths; how a similar thing is done elsewhere in this repo or the fleet.
 3. **Options** — two to four genuinely different approaches (not variations of one).
-   For each: what it changes (files/areas), effort (S/M/L with a reason), risks,
-   what it makes easier or harder later, and any dependency, migration or ADR it needs.
+   For each: what it changes (files/areas), effort (S, M, L or XL, rated against the Effort
+   rubric below, with a reason), risks, what it makes easier or harder later, and any
+   dependency, migration or ADR it needs.
 4. **Comparison** — one table: option · effort · risk · reversibility · fits
    architecture.md · recommendation.
 5. **Recommendation** — one option, with the reason, and what would change your mind.
-6. **Open questions** — for the developer or the spec owner; anything blocking a spec.
-7. **Next** — the /fc:spec command line to run once an option is chosen.
+6. **Effort and risk** — a `### Effort and risk` subsection of the Recommendation, for the
+   recommended option only: its effort (S, M, L or XL) against the Effort rubric, and a
+   risk-trigger triage marking each `/fc:start` risk trigger (uncertain requirements,
+   authorization, public contracts, migrations, dependencies, service ownership) `present` or
+   `absent`, with one line of evidence each. The triage carries no severity, status or
+   mitigation; the full assessment is `/fc:risk`'s. No time figure: no hours, minutes or dates
+   in an exploration. When any trigger is `present`, name each present trigger and recommend
+   running `/fc:risk` once the spec exists; add nothing about `/fc:risk` or the triage to Open
+   questions.
+7. **Open questions** — for the developer or the spec owner; anything blocking a spec.
+8. **Next** — the /fc:spec command line to run once an option is chosen.
 
 Keep it under two pages. Facts from the code; opinions labelled as such.
+
+## Effort rubric
+Effort has two dimensions, size and uncertainty, each rated S, M, L or XL against the tables
+below. The final effort is the higher of the two: size M with uncertainty L is effort L.
+
+| Size | Definition |
+|---|---|
+| S | 1 file, under 50 lines, no new tests |
+| M | 2–5 files, with tests |
+| L | more than 5 files, or a new artefact or check |
+| XL | cross-cutting work, or work that needs an ADR or a migration |
+
+| Uncertainty | Definition |
+|---|---|
+| S | a known pattern with no unknowns |
+| M | a known pattern with minor unknowns |
+| L | a new pattern or several unknowns |
+| XL | unknowns that need an exploration or a spike |
 
 ## When you cannot proceed
 You cannot ask the developer. If the request is empty, or so ambiguous that no option can be

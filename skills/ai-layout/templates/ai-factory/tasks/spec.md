@@ -20,9 +20,19 @@ create the spec with `node ai-factory/make/ids.js new spec <slug>`, passing `--i
 new-style parent's ID as the specifier's procedure says, and write into the path it prints,
 keeping its first two lines unchanged: a summary, `Ticket: <key>` only when a key was
 handed over, the user story, Given/When/Then criteria numbered AC1… that each stand on their
-own, out of scope, open questions, and data, routes and components touched; what a description
+own, out of scope, an `Effort and risk` section (the feature's effort, its labelled time
+ranges and the risk triage), open questions, and data, routes and components touched; what a description
 leaves implicit is an open question, never a criterion; write no code and no plan. Return its
 report unchanged: the file path and the open questions.
+
+Hand the request over unchanged, any spec path included. A run is a re-run only when the
+argument names an existing spec's path and that spec is the one being revised: the argument asks
+to revise or re-run that spec, or it is the spec that already holds the parent's ID. Then the
+specifier revises that spec in place as its procedure's `Re-run on an existing spec` says and
+creates no new spec. A spec path cited only as context makes no re-run: the specifier writes a
+new spec, and when the ID helper exits 3 because another spec already has the parent's ID, it
+keeps today's behaviour: it runs the helper again without `--id`, takes the next free ID and
+cites the parent's path.
 
 If it returns a question instead of a file, ask the developer that question and stop. In a
 headless run there is nobody to ask: report the question, say nothing was written, and stop.
