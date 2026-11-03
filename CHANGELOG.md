@@ -1,13 +1,12 @@
 # Changelog
 
-## 4.0.0 — 2026-10-28
+## 5.0.0 — 2026-10-30
 
-Releases the work merged since 3.0.0: the plugin is renamed `t4` → `fc`, and new artefacts get
-project-prefixed sequential IDs (`PMB-001`) from `ai-factory/project.json`. **Breaking for installs
-and adopted repos:** reinstall the plugin as `fc@sdlc`, take the renamed templates with
-`/fc:sync-sdlc`, and name the project once with `ids.js init` before the next new artefact.
+Releases the work merged since 4.0.0: explorations, specs and plans carry a shared S/M/L/XL effort
+rubric, specs triage risk triggers and point at `/fc:risk`, and `/fc:start` reads effort.
+**Breaking for adopted repos:** take the changed agent and task templates with `/fc:sync-sdlc`.
 
-**Unreleased — effort rubric and risk-trigger triage (spec ASD-001, no version bump)**
+**Effort rubric and risk-trigger triage (spec ASD-001)**
 
 **Breaking for adopted repos.** The explorer, specifier and planner agents and the `spec`, `plan`
 and `start` task templates change what explorations, specs and plans carry and what `/fc:start`
@@ -40,6 +39,13 @@ criteria rest on static checks only.
   quick or chore; S or M changes nothing. The result gains an optional `effort` field (S, M, L or
   XL), which `validateStartResult` and `models.js validate-start` accept on any status and pass
   through; every other key and value is validated as before.
+
+## 4.0.0 — 2026-10-28
+
+Releases the work merged since 3.0.0: the plugin is renamed `t4` → `fc`, and new artefacts get
+project-prefixed sequential IDs (`PMB-001`) from `ai-factory/project.json`. **Breaking for installs
+and adopted repos:** reinstall the plugin as `fc@sdlc`, take the renamed templates with
+`/fc:sync-sdlc`, and name the project once with `ids.js init` before the next new artefact.
 
 **The plugin prefix is renamed `t4` → `fc`**
 

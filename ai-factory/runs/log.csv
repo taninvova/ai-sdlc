@@ -330,3 +330,7 @@ ts,session_id,source,user,branch,task,tool,agent,model,turns,input_tokens,output
 2026-10-30T00:21:11.203Z,7db0077e-c8cc-4c38-951e-b84bd3780c38,session,Volodymyr Tanin,main,risk,claude,,claude-opus-5-5,5,10,4178,390828,98944,0.80,0.5510,
 2026-10-30T00:21:42.551Z,7db0077e-c8cc-4c38-951e-b84bd3780c38,agent,Volodymyr Tanin,main,risk,claude,fc:specifier,claude-opus-5-5,8,14,7137,93729,40957,0.70,0.2888,
 2026-10-30T00:22:00.447Z,7db0077e-c8cc-4c38-951e-b84bd3780c38,session,Volodymyr Tanin,main,risk,claude,,claude-opus-5-5,2,6,544,139996,6591,0.95,0.0749,
+2026-10-30T00:37:21.296Z,7db0077e-c8cc-4c38-951e-b84bd3780c38,session,Volodymyr Tanin,feat/effort-and-risk-triage,risk,claude,,claude-opus-5-5,11,26,5444,856702,13874,0.98,0.3908,
+2026-10-30T13:10:39.976Z,7db0077e-c8cc-4c38-951e-b84bd3780c38,session,Volodymyr Tanin,feat/effort-and-risk-triage,risk,claude,,claude-opus-5-5,6,12,2331,418839,86333,0.83,0.4844,
+2026-10-30T13:11:15.438Z,7db0077e-c8cc-4c38-951e-b84bd3780c38,session,Volodymyr Tanin,main,risk,claude,,claude-opus-5-5,4,12,900,339026,1304,1.00,0.1201,
+2026-10-30T13:52:35.470Z,7db0077e-c8cc-4c38-951e-b84bd3780c38,session,Volodymyr Tanin,main,risk,claude,,claude-opus-5-5,7,20,10078,601105,4646,0.99,0.3490,

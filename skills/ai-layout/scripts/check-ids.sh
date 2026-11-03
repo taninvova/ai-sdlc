@@ -1328,16 +1328,19 @@ test("procedures", "no-number-counting", () => {
 });
 
 // ---- docs: the migration note and the --spec <id> flag (AC51, AC34) ----------------------
-// The CHANGELOG's top entry must hold a block for this change (Unreleased or released): its bold heading line
-// names the IDs, and the block runs to the next bold heading line or version heading.
+// A CHANGELOG release entry must hold a block for this change (Unreleased or released; it sits under
+// 4.0.0 and drifts down as later releases land): its bold heading line names the IDs, and the block
+// runs to the next bold heading line or version heading.
 function idsChangelogBlock() {
 	const text = fs.readFileSync("CHANGELOG.md", "utf8");
 	const lines = text.split("\n");
 	const versions = lines.flatMap((line, i) => (/^## /.test(line) ? [i] : []));
 	assert.ok(versions.length >= 1, "CHANGELOG.md has no version entry");
-	const top = lines.slice(versions[0], versions[1] ?? lines.length);
-	const start = top.findIndex((line) => /^\*\*[^*]*\bIDs?\b[^*]*\*\*$/.test(line));
-	assert.ok(start >= 0, "the CHANGELOG's top entry has no IDs block");
+	const isIds = (line) => /^\*\*[^*]*\bIDs?\b[^*]*\*\*$/.test(line);
+	const entries = versions.map((v, k) => lines.slice(v, versions[k + 1] ?? lines.length));
+	const top = entries.find((entry) => entry.some(isIds)) || [];
+	const start = top.findIndex(isIds);
+	assert.ok(start >= 0, "no CHANGELOG release entry has an IDs block");
 	const rest = top.slice(start + 1);
 	const end = rest.findIndex((line) => /^\*\*[^*].*\*\*$/.test(line) && !/^\*\*Breaking/.test(line));
 	return [top[start], ...(end < 0 ? rest : rest.slice(0, end))].join("\n");

@@ -804,21 +804,24 @@ test("readers", "readers-drift", () => {
 });
 
 // ---- docs (plan ASD-001 Step 7: AC42, and the docs that describe start's result and a step) --
-// The CHANGELOG entry sits inside the top `## <version>` entry, never under a bare `## Unreleased`
-// heading: check-release-docs.sh needs the top `## ` entry to be the version plugin.json ships.
+// The CHANGELOG block for this change sits inside a `## <version>` entry, never under a bare
+// `## Unreleased` heading: check-release-docs.sh needs the top `## ` entry to be the version
+// plugin.json ships. While unreleased it sat in the top entry; released, it sits under 5.0.0 and
+// drifts down as later releases land, so it is found in whichever entry holds it.
 const CHANGELOG = "CHANGELOG.md";
-const ENTRY_TITLE = "**Unreleased — effort rubric and risk-trigger triage (spec ASD-001, no version bump)**";
-// The top `## ` entry of the CHANGELOG, and the block of it that records this change: from its
-// bold title to the next bold title line or the end of the entry.
+const ENTRY_TITLE = /^\*\*(?:Unreleased — effort|Effort) rubric and risk-trigger triage \(spec ASD-001(?:, no version bump)?\)\*\*$/;
+// The `## <version>` entry holding this change's block, and the block itself: from its bold title
+// to the next bold title line or the end of the entry.
 function changelogEntry(text) {
 	const lines = text.split("\n");
-	const top = lines.findIndex((line) => line.startsWith("## "));
-	assert.ok(top >= 0, `${CHANGELOG} has no versioned entry`);
-	assert.match(lines[top], /^## \d+\.\d+\.\d+ /, `${CHANGELOG}: the top entry is not a version (${lines[top]})`);
+	const heads = lines.flatMap((line, i) => (line.startsWith("## ") ? [i] : []));
+	assert.ok(heads.length >= 1, `${CHANGELOG} has no versioned entry`);
+	const top = heads.find((h, k) => lines.slice(h, heads[k + 1] ?? lines.length).some((line) => ENTRY_TITLE.test(line)));
+	assert.ok(top !== undefined, `${CHANGELOG} has no release entry with the ASD-001 block`);
+	assert.match(lines[top], /^## \d+\.\d+\.\d+ /, `${CHANGELOG}: the entry holding the block is not a version (${lines[top]})`);
 	const end = lines.findIndex((line, i) => i > top && line.startsWith("## "));
 	const entry = lines.slice(top, end < 0 ? lines.length : end);
-	const at = entry.indexOf(ENTRY_TITLE);
-	assert.ok(at >= 0, `${CHANGELOG}'s top entry (${lines[top]}) has no '${ENTRY_TITLE}' block`);
+	const at = entry.findIndex((line) => ENTRY_TITLE.test(line));
 	const next = entry.findIndex((line, i) => i > at && /^\*\*[^*]+\*\*$/.test(line));
 	return flatten(entry.slice(at, next < 0 ? entry.length : next).join("\n"));
 }
@@ -830,7 +833,7 @@ function paragraph(rel, text, needle) {
 }
 
 test("docs", "changelog-breaking", () => {
-	// AC42: the entry exists in the top entry, says breaking for adopted repos, and names the
+	// AC42: the block exists in a release entry, says breaking for adopted repos, and names the
 	// rubric, the spec section and its re-run, the plan step line and start's optional effort.
 	const block = changelogEntry(read(CHANGELOG));
 	assert.match(block, /Breaking for adopted repos\./, `${CHANGELOG}: the entry is not marked breaking for adopted repos`);
@@ -841,7 +844,7 @@ test("docs", "changelog-breaking", () => {
 	assert.ok(block.includes(STEP_LINE), `${CHANGELOG}: the entry does not name the plan step line ${STEP_LINE}`);
 	assert.match(block, /optional `effort` field/, `${CHANGELOG}: the entry does not name start's optional effort field`);
 	// The control: the same file without the block must fail, so the lookup cannot pass over nothing.
-	assert.throws(() => changelogEntry(read(CHANGELOG).replace(ENTRY_TITLE, "**Something else**")), /has no/, "the control: a CHANGELOG without the block still yields an entry");
+	assert.throws(() => changelogEntry(read(CHANGELOG).split("\n").map((line) => (ENTRY_TITLE.test(line) ? "**Something else**" : line)).join("\n")), /has no/, "the control: a CHANGELOG without the block still yields an entry");
 });
 test("docs", "docs-start-effort", () => {
 	// Where the docs describe /fc:start's result, they name the optional effort field and the
