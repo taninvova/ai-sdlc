@@ -42,7 +42,13 @@ skills=$(ls -d .codex/skills/fc-*/ 2>/dev/null | wc -l | tr -d ' ')
 # names; Claude gets none, because the plugin ships that command natively.
 aliases=()
 while IFS= read -r a; do [ -n "$a" ] && aliases+=("$a"); done < <(node -e 'const m=require("./ai-factory/make/models.js");for(const [a,t] of Object.entries(m.TASK_ALIASES))if(require("fs").existsSync(`ai-factory/tasks/${t}.md`))console.log(a)')
-[ "$((tasks + ${#aliases[@]}))" = "$skills" ] || fail "$tasks tasks and ${#aliases[@]} deprecated names but $skills codex skills"
+# A shortcut (models.js TASK_SHORTCUTS) adds one Codex skill too, while its target task exists; it is
+# a stable name, not a deprecated one.
+shortcuts=()
+while IFS= read -r a; do [ -n "$a" ] && shortcuts+=("$a"); done < <(node -e 'const m=require("./ai-factory/make/models.js");for(const [a,t] of Object.entries(m.TASK_SHORTCUTS||{}))if(require("fs").existsSync(`ai-factory/tasks/${t}.md`))console.log(a)')
+[ ${#shortcuts[@]} -gt 0 ] || fail "models.js TASK_SHORTCUTS names no shortcut whose target task exists"
+[ "$((tasks + ${#aliases[@]} + ${#shortcuts[@]}))" = "$skills" ] \
+  || fail "$tasks tasks, ${#aliases[@]} deprecated names and ${#shortcuts[@]} shortcuts but $skills codex skills"
 for a in ${aliases[@]+"${aliases[@]}"}; do
   t=$(node -e 'console.log(require("./ai-factory/make/models.js").TASK_ALIASES[process.argv[1]])' "$a")
   s=".codex/skills/fc-$a/SKILL.md"
@@ -52,6 +58,29 @@ for a in ${aliases[@]+"${aliases[@]}"}; do
   grep -qF "dispatch --host codex --task $t\`" "$s" || fail "$s does not dispatch the $t task"
   grep -q "ai-factory/tasks/$t.md" "$s" || fail "$s does not point at ai-factory/tasks/$t.md"
   [ ! -f ".claude/commands/fc/$a.md" ] || fail ".claude/commands/fc/$a.md repeats the plugin's deprecated /fc:$a"
+done
+# A shortcut skill runs its target exactly as $fc-<target> does and says nothing about deprecation:
+# the alias-skill body without the notice (AC8, AC9, R6).
+for a in ${shortcuts[@]+"${shortcuts[@]}"}; do
+  t=$(node -e 'console.log(require("./ai-factory/make/models.js").TASK_SHORTCUTS[process.argv[1]])' "$a")
+  s=".codex/skills/fc-$a/SKILL.md"
+  [ -f "$s" ] || fail "missing $s for the shortcut of $t"
+  grep -q "^name: fc-$a$" "$s" || fail "$s has the wrong name in its frontmatter"
+  d=$(sed -n 's/^description: //p' "ai-factory/tasks/$t.md" | head -1)
+  grep -qxF "description: Shortcut for \$fc-$t — $d" "$s" \
+    || fail "$s description is not 'Shortcut for \$fc-$t — $d'"
+  grep -qF "dispatch --host codex --task $t\`" "$s" || fail "$s does not dispatch the $t task"
+  grep -q "ai-factory/tasks/$t.md" "$s" || fail "$s does not point at ai-factory/tasks/$t.md"
+  if grep -q 'Delegate to the `[a-z]*` subagent' "ai-factory/tasks/$t.md"; then
+    ag=$(sed -n 's/.*Delegate to the `\([a-z]*\)` subagent.*/\1/p' "ai-factory/tasks/$t.md" | head -1)
+    grep -q "ai-factory/agents/$ag.md" "$s" || fail "$s does not name ai-factory/agents/$ag.md"
+  fi
+  if grep -qiF "deprecated" "$s"; then fail "$s calls the shortcut deprecated"; fi
+  # Every fixed phrase of the notice (the text between its $fc- names) must be absent.
+  while IFS= read -r piece; do
+    if grep -qF -- "$piece" "$s"; then fail "$s carries the aliasNotice text: '$piece'"; fi
+  done < <(node -e 'const m=require("./ai-factory/make/models.js");for(const a of Object.keys(m.TASK_ALIASES))for(const p of m.aliasNotice("codex",a).split(/\$fc-[a-z0-9-]+/))if(p.trim().length>=12)console.log(p.trim())')
+  [ ! -f ".claude/commands/fc/$a.md" ] || fail ".claude/commands/fc/$a.md repeats the plugin's /fc:$a"
 done
 for n in ${native[@]+"${native[@]}"}; do
   [ -f ".claude/commands/fc/$n.md" ] \
@@ -214,4 +243,46 @@ done
 body=$(sed -n '/^---$/,/^---$/!p' .codex/skills/fc-spec/SKILL.md | wc -l | tr -d ' ')
 [ "$body" -lt 15 ] || fail "codex skills look like copies of the task, not pointers ($body lines)"
 
-echo "adapters ok — $tasks tasks → $cmds claude commands (${#native[@]} left to the plugin) + $skills codex skills (${#aliases[@]} deprecated), idempotent, agent notes correct"
+# AC11: a project task file named like a shortcut would collide with the plugin's /fc:<shortcut>
+# and its own skill, so sync refuses before writing anything. Run on a scratch copy of the template
+# layout, so this repo's adapters are never at stake.
+scratch=$(mktemp -d "$TMPDIR/adapters-clash.XXXXXX")
+cp -R skills/ai-layout/templates/ai-factory "$scratch/ai-factory"
+s0=$(node -e 'const m=require("./ai-factory/make/models.js");const [s,t]=Object.entries(m.TASK_SHORTCUTS).find(([,t])=>t==="explore")||Object.entries(m.TASK_SHORTCUTS)[0];console.log(s+" "+t)')
+read -r short target <<<"$s0"
+( cd "$scratch" && bash ai-factory/make/sync-adapters.sh --adapters=all > /dev/null ) \
+  || fail "sync-adapters fails on a clean copy of the template layout"
+scratch_hash() { (cd "$scratch" && adapter_hash); }
+pre=$(scratch_hash)
+printf -- '---\ndescription: my own %s\n---\nMy own %s task.\n' "$short" "$short" > "$scratch/ai-factory/tasks/$short.md"
+if out=$(cd "$scratch" && bash ai-factory/make/sync-adapters.sh --adapters=all 2>&1); then
+  fail "sync-adapters accepted a task file named $short.md, the shortcut name of $target"
+fi
+grep -qF "Task $short.md uses the shortcut name of $target; rename the task file" <<<"$out" \
+  || fail "the $short.md refusal does not say 'Task $short.md uses the shortcut name of $target; rename the task file': $out"
+[ "$pre" = "$(scratch_hash)" ] || fail "sync-adapters changed adapters before refusing the $short.md task"
+rm -rf "$scratch"
+
+# AC12 (option b, ASD-004 R2): a project task file named like a deprecated name (check.md) is not
+# refused by the adopted repo's sync. Its own task skill wins: $fc-check comes from the project's
+# check.md, the alias skill for it is skipped, and nothing on the output speaks of deprecation.
+scratch=$(mktemp -d "$TMPDIR/adapters-alias.XXXXXX")
+cp -R skills/ai-layout/templates/ai-factory "$scratch/ai-factory"
+s0=$(node -e 'const m=require("./ai-factory/make/models.js");const [a,t]=Object.entries(m.TASK_ALIASES).find(([a])=>a==="check")||Object.entries(m.TASK_ALIASES)[0];console.log(a+" "+t)')
+read -r old renamed <<<"$s0"
+[ -f "$scratch/ai-factory/tasks/$renamed.md" ] || fail "the template layout has no $renamed.md task for the $old.md case"
+printf -- '---\ndescription: my own %s task\n---\nMy own %s task.\n' "$old" "$old" > "$scratch/ai-factory/tasks/$old.md"
+out=$(cd "$scratch" && bash ai-factory/make/sync-adapters.sh --adapters=all 2>&1) \
+  || fail "sync-adapters refused a task file named $old.md, the deprecated name of $renamed: $out"
+if grep -qiF "deprecated" <<<"$out"; then fail "sync-adapters wrote a deprecation message for the $old.md task: $out"; fi
+s="$scratch/.codex/skills/fc-$old/SKILL.md"
+[ -f "$s" ] || fail "sync-adapters wrote no .codex/skills/fc-$old/ for the project $old.md task"
+grep -q "^name: fc-$old$" "$s" || fail "$s has the wrong name in its frontmatter"
+grep -q "^description: my own $old task$" "$s" || fail "$s does not take its description from the project $old.md task"
+grep -qF "dispatch --host codex --task $old\`" "$s" || fail "$s does not dispatch the project $old task"
+grep -qF "ai-factory/tasks/$old.md" "$s" || fail "$s does not point at the project ai-factory/tasks/$old.md"
+if grep -qiF "deprecated" "$s"; then fail "$s is the alias skill for $renamed, not the project $old.md task skill"; fi
+if grep -qF "ai-factory/tasks/$renamed.md" "$s"; then fail "$s points at $renamed.md, not the project $old.md task"; fi
+rm -rf "$scratch"
+
+echo "adapters ok — $tasks tasks → $cmds claude commands (${#native[@]} left to the plugin) + $skills codex skills (${#aliases[@]} deprecated, ${#shortcuts[@]} shortcuts), idempotent, agent notes correct, shortcut task file refused"

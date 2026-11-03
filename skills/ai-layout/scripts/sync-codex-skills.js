@@ -3,7 +3,12 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const root = path.resolve(__dirname, "../../..");
-const { entryPreamble, aliasNotice, TASK_ALIASES } = require(path.join(
+const {
+	entryPreamble,
+	aliasNotice,
+	TASK_ALIASES,
+	TASK_SHORTCUTS,
+} = require(path.join(
 	root,
 	"skills/ai-layout/templates/ai-factory/make/models.js",
 ));
@@ -46,6 +51,10 @@ for (const file of fs
 		throw new Error(
 			`Task ${file} uses the deprecated name of ${TASK_ALIASES[name]}; rename the task file`,
 		);
+	if (Object.hasOwn(TASK_SHORTCUTS, name))
+		throw new Error(
+			`Task ${file} uses the shortcut name of ${TASK_SHORTCUTS[name]}; rename the task file`,
+		);
 	const text = fs.readFileSync(path.join(root, tasks, file), "utf8");
 	add(
 		`fc-${name}`,
@@ -61,6 +70,16 @@ for (const [alias, name] of Object.entries(TASK_ALIASES)) {
 		`fc-${alias}`,
 		`Deprecated — use $fc-${name}. Runs the ${name} task under its old name`,
 		taskBody(name, text, `${aliasNotice("codex", alias)}\n\n${entryPreamble("codex", name)}`),
+	);
+}
+// A shortcut (models.js TASK_SHORTCUTS) is a stable second name, not a deprecated one: its skill runs
+// the target task with the target's preamble and no notice. Also added before the command loop.
+for (const [shortcut, name] of Object.entries(TASK_SHORTCUTS)) {
+	const text = fs.readFileSync(path.join(root, tasks, `${name}.md`), "utf8");
+	add(
+		`fc-${shortcut}`,
+		`Shortcut for $fc-${name} — ${/^description: (.+)$/m.exec(text)?.[1] || name}`,
+		taskBody(name, text, entryPreamble("codex", name)),
 	);
 }
 for (const file of fs

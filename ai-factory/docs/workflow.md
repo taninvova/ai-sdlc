@@ -109,7 +109,7 @@ disable host protections or grant broad permissions to make tests pass.
 
 Working on the plugin itself, from its repo root: `claude --plugin-dir .`.  <!-- path-scan-ok -->
 
-The installed plugin exposes 25 `/fc:*` commands in every repo, including all 18 project
+The installed plugin exposes 28 `/fc:*` commands in every repo, including all 18 project
 task entry points. No `.claude/commands/` pointers are needed for built-in workflows.
 The commands are visible before adoption; a project workflow reports a missing workspace
 or task instead of silently scaffolding it. Hooks stay silent outside an adopted repo.
@@ -141,7 +141,7 @@ that decides whether any of the rest is worth running:
 
 An agent with a placeholder `architecture.md` produces placeholder-quality work.
 
-Restart the session (or `/reload-plugins`) after a plugin update to load all 25 `/fc:*` commands.
+Restart the session (or `/reload-plugins`) after a plugin update to load all 28 `/fc:*` commands.
 
 ---
 
@@ -528,6 +528,7 @@ the three states a repo is in, and `/fc:sync-sdlc` stops and points here rather 
 | `/fc:chore <change>` | small maintenance, no behaviour change | code + tests | change behaviour beyond the request |
 | `/fc:review` | before committing | nothing — JSON verdict | fix anything it finds |
 | `/fc:check` | deprecated name of `/fc:review`; says so, then runs the review task | as `/fc:review` | as `/fc:review` |
+| `/fc:ba`, `/fc:analyze`, `/fc:scout` | shortcuts, not deprecated: `/fc:ba` and `/fc:analyze` run `/fc:analyse`, `/fc:scout` runs `/fc:explore` (`$fc-ba`, `$fc-analyze`, `$fc-scout` on Codex), with no notice | as the target | as the target |
 | `/fc:report <delivery id>` | after review, or any time you need to know where a delivery stands (contracts enabled) | `ai-factory/reports/<id>/completion.{md,json}` | run checks, edit artifacts or publish anything — its MR text is a draft |
 
 ### The agents
@@ -600,7 +601,8 @@ make -f ai-factory/make/ai.mk review # staged, unstaged and nonignored untracked
 `TASK=review` runs the review task on the input you give it, like any other task. The `review`
 target is the independent review: it selects the change itself, runs the same task, gates the
 verdict and, with `DELIVERY=<id>`, records review evidence. `TASK=check`, the deprecated name,
-still runs the review task and says so on stderr.
+still runs the review task and says so on stderr. The shortcuts `TASK=ba` and `TASK=analyze` run
+`analyse`, and `TASK=scout` runs `explore`, with no notice.
 
 Set `REVIEW_SCOPE=branch` for committed branch review. Supplied input wins over automatic
 selection. The run records the reviewed scope and paths; the gate consumes that exact output.
@@ -667,7 +669,9 @@ routing:
 
 Task names are the files in `ai-factory/tasks/`, custom ones included. `make review` and
 `TASK=review` both run the `review` task, so map `review`. `check`, its deprecated name, is still
-read as `review` and doctor suggests the rename; mapping both is an error. Aliases are passed verbatim and
+read as `review` and doctor suggests the rename; mapping both is an error. A shortcut key (`ba` or
+`analyze` for `analyse`, `scout` for `explore`) is read as its target and doctor says so without a
+finding; map the canonical key, since mapping a target and its shortcut is an error too. Aliases are passed verbatim and
 select a model, not a provider — endpoints, keys and gateways stay in each tool's own configuration.
 
 The model is resolved once per task, first match wins:

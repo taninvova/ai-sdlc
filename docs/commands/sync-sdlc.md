@@ -36,7 +36,7 @@ See also: [Installation: stay current](../installation.md#4-stay-current-fcsync-
 Nothing by default: drift is reported only. With `--adapters=…` it writes the selected host pointers, and only those:
 
 - `claude`: pointers in `.claude/agents/` and `.claude/skills/` for the agents and skills this project added (the plugin's own commands and agents are native, so they get none), plus the routing agents. Generated pointers it no longer needs, in `.claude/commands/` and `.claude/agents/`, are removed.
-- `codex`: `.codex/skills/fc-<name>/SKILL.md` for each task, `fc-check` for the deprecated alias of `review`, plus the routing agents.
+- `codex`: `.codex/skills/fc-<name>/SKILL.md` for each task, `fc-check` for the deprecated alias of `review`, `fc-ba`, `fc-analyze` and `fc-scout` for the shortcuts of `analyse` and `explore` (no notice, and no Claude pointer since the plugin ships those commands), plus the routing agents.
 - `cursor`: `.cursor/rules/ai.mdc`.
 - `routing`: `.claude/agents/fc-route-*.md` and `.codex/agents/fc-route-*.toml` only.
 

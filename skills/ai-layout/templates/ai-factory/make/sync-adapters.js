@@ -157,6 +157,14 @@ function cleanup(dir) {
 	}
 }
 try {
+	// A task file named like a shortcut (models.js TASK_SHORTCUTS) would collide with the plugin's
+	// own /fc:<shortcut> and the shortcut skill written below. Refuse before anything is queued or
+	// written, so that file gets no entry point and the previous adapters stay as they were.
+	for (const [shortcut, name] of Object.entries(models.TASK_SHORTCUTS))
+		if (fs.existsSync(path.join(tasksDir, `${shortcut}.md`)))
+			throw new Error(
+				`Task ${shortcut}.md uses the shortcut name of ${name}; rename the task file`,
+			);
 	if (selected.has("claude")) {
 		cleanup(".claude/commands");
 		cleanup(".claude/commands/fc");
@@ -226,6 +234,21 @@ try {
 			put(
 				`.codex/skills/fc-${alias}/SKILL.md`,
 				`---\nname: fc-${alias}\ndescription: Deprecated — use $fc-${name}. Runs the ${name} task under its old name\n---\n${models.aliasNotice("codex", alias)}\n\n${models.entryPreamble("codex", name)}\n\nUnless the directive routed the task to a worker, read \`ai-factory/tasks/${name}.md\` and use the user's request as its input.\n${agent ? `Read the complete procedure in \`ai-factory/agents/${agent}.md\`. When native delegation is available, pass that procedure and task input to a delegate. Otherwise run it in this session and label review as a self-check rather than an independent review. This fallback applies only to the legacy and inherit directives.\n` : ""}`,
+			);
+		}
+	// A shortcut (models.js TASK_SHORTCUTS) is a stable, non-deprecated short name: its Codex skill is
+	// the alias skill without the notice, while the target task exists. Claude needs no pointer: the
+	// plugin ships /fc:<shortcut> natively. A task file with the shortcut's name was refused above.
+	if (selected.has("codex"))
+		for (const [shortcut, name] of Object.entries(models.TASK_SHORTCUTS)) {
+			const file = path.join(tasksDir, `${name}.md`);
+			if (!fs.existsSync(file)) continue;
+			const body = fs.readFileSync(file, "utf8");
+			const description = /^description: (.*)$/m.exec(body)?.[1] || name;
+			const agent = /Delegate to the `([a-z]+)` subagent/.exec(body)?.[1];
+			put(
+				`.codex/skills/fc-${shortcut}/SKILL.md`,
+				`---\nname: fc-${shortcut}\ndescription: Shortcut for $fc-${name} — ${description}\n---\n${models.entryPreamble("codex", name)}\n\nUnless the directive routed the task to a worker, read \`ai-factory/tasks/${name}.md\` and use the user's request as its input.\n${agent ? `Read the complete procedure in \`ai-factory/agents/${agent}.md\`. When native delegation is available, pass that procedure and task input to a delegate. Otherwise run it in this session and label review as a self-check rather than an independent review. This fallback applies only to the legacy and inherit directives.\n` : ""}`,
 			);
 		}
 	if (selected.has("claude")) {

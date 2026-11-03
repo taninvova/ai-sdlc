@@ -28,8 +28,10 @@ review:
 #   6. the CLI's own configuration
 # Task names are the files in ai-factory/tasks/ (plan, test, run, review, quick, fix, …). `check`,
 # the deprecated name of review, is still read as review (doctor suggests the rename); mapping both
-# is an error. A missing or blank entry falls back and says so. Model aliases are passed
-# verbatim: they select a model, not a provider — endpoints and keys stay in the tool.
+# is an error. A shortcut key (`ba` or `analyze` for analyse, `scout` for explore) is read as its
+# target, but map the target's own key: mapping a shortcut and its target is an error too. A
+# missing or blank entry falls back and says so. Model aliases are passed verbatim: they select a
+# model, not a provider — endpoints and keys stay in the tool.
 # After changing routing, run `bash ai-factory/make/sync-adapters.sh --adapters=routing` and
 # restart the session; interactive tasks stop with that instruction until you do.
 # Supported syntax: this layout, two spaces per level, `enabled: true|false`, one scalar per tool.

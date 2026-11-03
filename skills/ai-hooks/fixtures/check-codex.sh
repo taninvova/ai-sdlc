@@ -61,10 +61,35 @@ check('a deprecated task name attributes the task it now names', () => {
   }
   hook('log-task', { prompt: '$fc-review' });
   assert.equal(fs.readFileSync(path.join(ai, 'runs/.task.codex-live'), 'utf8'), 'review\n');
-  // The hook's table is the template's TASK_ALIASES, not a drifting copy.
+  // The hook's table is the union of the template's TASK_ALIASES and TASK_SHORTCUTS, not a
+  // drifting copy (AC22).
   const hookSource = fs.readFileSync(path.join(process.cwd(), 'skills/ai-hooks/scripts/log-task.js'), 'utf8');
-  const { TASK_ALIASES } = require(path.join(process.cwd(), 'skills/ai-layout/templates/ai-factory/make/models.js'));
-  assert.ok(hookSource.includes(`const ALIASES = ${JSON.stringify(TASK_ALIASES).replace(/"([a-z-]+)":/g, '$1: ').replace(/,/g, ', ').replace(/^\{/, '{ ').replace(/\}$/, ' }')};`), 'log-task.js ALIASES differs from models.js TASK_ALIASES');
+  const { TASK_ALIASES, TASK_SHORTCUTS } = require(path.join(process.cwd(), 'skills/ai-layout/templates/ai-factory/make/models.js'));
+  assert.ok(TASK_ALIASES && TASK_SHORTCUTS, 'models.js must export TASK_ALIASES and TASK_SHORTCUTS');
+  const union = { ...TASK_ALIASES, ...TASK_SHORTCUTS };
+  const pinned = `const ALIASES = ${JSON.stringify(union).replace(/"([a-z-]+)":/g, '$1: ').replace(/,/g, ', ').replace(/^\{/, '{ ').replace(/\}$/, ' }')};`;
+  assert.ok(hookSource.includes(pinned), 'log-task.js ALIASES differs from the union of models.js TASK_ALIASES and TASK_SHORTCUTS; expected ' + pinned);
+  hook('log-task', { prompt: '/fc:run 0007' }); // the rows below are attributed to run
+});
+check('a shortcut name attributes its target', () => {
+  // Every AC21 form: a shortcut is not deprecated, but its rows still carry the task it runs.
+  const cases = [
+    ['/fc:ba', 'analyse'], ['/fc:analyze', 'analyse'], ['$fc-ba', 'analyse'], ['$fc-analyze', 'analyse'], ['$fc:fc-ba', 'analyse'],
+    ['/fc:scout', 'explore'], ['$fc-scout', 'explore'], ['$fc:fc-scout', 'explore'],
+    ['/fc:check', 'review'], ['$fc-check', 'review'],
+  ];
+  for (const [prompt, want] of cases) {
+    hook('log-task', { prompt: '/fc:run 0007' });
+    const result = hook('log-task', { prompt: prompt + ' some input' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout, '', prompt + ' must print nothing');
+    assert.equal(fs.readFileSync(path.join(ai, 'runs/.task.codex-live'), 'utf8'), want + '\n', prompt);
+  }
+  // The target names themselves still write as they are.
+  for (const name of ['analyse', 'explore']) {
+    hook('log-task', { prompt: '/fc:' + name });
+    assert.equal(fs.readFileSync(path.join(ai, 'runs/.task.codex-live'), 'utf8'), name + '\n');
+  }
   hook('log-task', { prompt: '/fc:run 0007' }); // the rows below are attributed to run
 });
 const transcript = path.join(root, 'rollout.jsonl');

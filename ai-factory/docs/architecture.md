@@ -53,10 +53,13 @@ there means the tool's own configured model, so no provider is assumed. `make/mo
 (spec 0016) is its only parser and resolver: the headless runner, interactive dispatch, adapter
 sync and doctor all call it. Opt-in routing reaches interactive tasks only through generated,
 content-addressed worker agents (`.claude/agents/`, `.codex/agents/`) written by an explicit sync.
-Owns the deprecated task names: `TASK_ALIASES` in `make/models.js` (`check` → `review`) is the one
-table. The command and skill generators emit a thin deprecated `/fc:check` / `$fc-check` from it;
-the runner, routing, lifecycle and `make cost` read the old name as `review`, so recorded data is
-never rewritten. The `log-task.js` hook carries a pinned copy because a hook cannot load templates.
+Owns the task-name aliases: `make/models.js` holds the one alias table, in two kinds. Deprecated
+names, `TASK_ALIASES` (`check` → `review`), and shortcuts, `TASK_SHORTCUTS` (`ba` and `analyze` →
+`analyse`, `scout` → `explore`). The command and skill generators emit a thin `/fc:<name>` /
+`$fc-<name>` for each; only a deprecated name gets the deprecation notice, and a shortcut is a
+stable, non-deprecated name for its target. `canonicalTask` resolves both kinds, so the runner,
+routing, lifecycle and `make cost` read either name as its target and recorded data is never
+rewritten. The `log-task.js` hook pins the union of both kinds because a hook cannot load templates.
 
 ## Environments
 Developer machines and CI. `make ai` / `make review` are the headless path; developers use

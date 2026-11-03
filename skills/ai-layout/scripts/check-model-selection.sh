@@ -41,7 +41,7 @@ try {
  // --- AC1: the shipped template, and every value form ----------------------------------------
  const template=fs.readFileSync("skills/ai-layout/templates/ai-factory/models.yaml","utf8");
  const shipped=models.parseModels(template);
- assert.deepEqual(shipped.routing,{present:true,enabled:false,tasks:{risk:{claude:"claude-opus-5-5",codex:""}},aliased:[]},"the template must ship routing disabled, with only the risk entry (spec 0023 AC32)");
+ assert.deepEqual(shipped.routing,{present:true,enabled:false,tasks:{risk:{claude:"claude-opus-5-5",codex:""}},aliased:[],shortcuts:[]},"the template must ship routing disabled, with only the risk entry (spec 0023 AC32)");
  // Spec 0023 AC33: the shipped risk entry has no effect while routing is disabled.
  configure(template);
  for(const tool of ["claude","codex"]) {
@@ -148,6 +148,56 @@ try {
  assert.ok(!models.doctor(scratch,{}).some(([,,text])=>/deprecated name/.test(text)),"no finding for a current key");
  fs.rmSync(path.join(payload,"tasks"),{recursive:true});
 
+ // --- ASD-004: shortcut names (ba, analyze -> analyse; scout -> explore) ----------------------
+ // AC1: one frozen table beside TASK_ALIASES, which keeps only the deprecated name.
+ assert.ok(models.TASK_SHORTCUTS!==undefined,"models.js must export TASK_SHORTCUTS (ASD-004 AC1)");
+ assert.ok(Object.isFrozen(models.TASK_SHORTCUTS),"TASK_SHORTCUTS is frozen");
+ assert.deepEqual({...models.TASK_SHORTCUTS},{ba:"analyse",analyze:"analyse",scout:"explore"});
+ assert.ok(Object.isFrozen(models.TASK_ALIASES),"TASK_ALIASES is frozen");
+ assert.deepEqual({...models.TASK_ALIASES},{check:"review"},"TASK_ALIASES is unchanged");
+ // AC2: both kinds resolve to their task; any other name is itself.
+ for(const [name,task] of [["ba","analyse"],["analyze","analyse"],["scout","explore"],["check","review"],["spec","spec"],["analyse","analyse"],["explore","explore"],["my-custom-task","my-custom-task"]])
+  assert.equal(models.canonicalTask(name),task,`canonicalTask(${name})`);
+ // AC3: a shortcut is not deprecated, so it has no notice; check keeps its line.
+ for(const host of ["claude","codex"]) {
+  for(const name of ["ba","analyze","scout"])
+   assert.throws(()=>models.aliasNotice(host,name),/is not a deprecated task name/,`aliasNotice(${host},${name})`);
+  assert.match(models.aliasNotice(host,"check"),/is deprecated: it is the old name of .* and runs the same review task/);
+ }
+ // AC16: a shortcut key alone is stored under its target, recorded as a shortcut, not as deprecated.
+ const scoutOnly=`claude: tool/claude\nrouting:\n  enabled: true\n  tasks:\n    scout:\n      claude: gateway/explore-claude\n    plan:\n      claude: gateway/planning-claude\n`;
+ const scoutParsed=models.parseModels(scoutOnly);
+ assert.deepEqual(scoutParsed.routing.tasks,{explore:{claude:"gateway/explore-claude"},plan:{claude:"gateway/planning-claude"}},"scout: is stored as explore");
+ assert.deepEqual(scoutParsed.routing.aliased,[],"a shortcut key is not a deprecated alias");
+ assert.deepEqual(scoutParsed.routing.shortcuts,["scout"]);
+ assert.deepEqual(parsed.routing.shortcuts,[],"current names record no shortcut");
+ assert.deepEqual(legacyParsed.routing.shortcuts,[],"a deprecated key records no shortcut");
+ configure(scoutOnly);
+ for(const task of ["explore","scout"]) {
+  const s=select("claude",task);
+  assert.deepEqual([s.task,s.model,s.source],["explore","gateway/explore-claude","task"],`${task} under a scout: key`);
+ }
+ // AC18: doctor says how the key is read, as ok, never deprecated or rename.
+ fs.mkdirSync(path.join(payload,"tasks"),{recursive:true});
+ for(const task of ["explore","plan","review","analyse"]) fs.writeFileSync(path.join(payload,`tasks/${task}.md`),`${task}.\n`);
+ const scoutDoctor=models.doctor(scratch,{});
+ assert.ok(scoutDoctor.some(([level,area,text])=>level==="ok"&&area==="routing"&&text==="routing.tasks.scout read as explore"),`doctor has the shortcut ok line: ${JSON.stringify(scoutDoctor)}`);
+ assert.ok(!scoutDoctor.some(([level,,text])=>level==="finding"&&/scout|routing\.tasks\.explore/.test(text)),`no finding for a shortcut key: ${JSON.stringify(scoutDoctor)}`);
+ assert.ok(!scoutDoctor.some(([,,text])=>/deprecated|rename/i.test(text)),"the shortcut line is not a deprecation");
+ // The line stands while routing is off, like the deprecated finding: the key is still read.
+ configure(scoutOnly.replace("enabled: true","enabled: false"));
+ assert.ok(models.doctor(scratch,{}).some(([level,,text])=>level==="ok"&&text==="routing.tasks.scout read as explore"));
+ // AC19: a duplicate shortcut key is a models finding carrying the parse error.
+ configure("routing:\n  enabled: true\n  tasks:\n    analyse:\n      claude: x\n    ba:\n      codex: y\n");
+ const dupDoctor=models.doctor(scratch,{});
+ assert.ok(dupDoctor.some(([level,area,text])=>level==="finding"&&area==="models"&&/line 6: duplicate task `analyse`: `ba` is its shortcut name, so map only `analyse`/.test(text)),`doctor carries the parse error: ${JSON.stringify(dupDoctor)}`);
+ // AC20: the deprecated key's finding is unchanged, and it gets no shortcut line.
+ configure(legacy);
+ const legacyDoctor=models.doctor(scratch,{});
+ assert.ok(legacyDoctor.some(([level,area,text])=>level==="finding"&&area==="routing"&&text==="routing.tasks.check uses the deprecated name of review and is read as routing.tasks.review — rename the key to review"),`check finding unchanged: ${JSON.stringify(legacyDoctor)}`);
+ assert.ok(!legacyDoctor.some(([,,text])=>/read as review$/.test(text)),"a deprecated key gets no shortcut ok line");
+ fs.rmSync(path.join(payload,"tasks"),{recursive:true});
+
  // --- AC7: invalid configuration names its line and never selects a model -------------------
  const invalid=[
   ["routing:\n  enabled: ture\n",/line 2: routing.enabled must be true or false/],
@@ -165,6 +215,11 @@ try {
   ["routing: { enabled: true }\n",/line 1: routing must be an indented mapping/],
   ["routing:\n  tasks:\n    review:\n      claude: x\n    check:\n      codex: y\n",/line 5: duplicate task `review`: `check` is its deprecated name, so map only `review`/],
   ["routing:\n  tasks:\n    check:\n      claude: x\n    review:\n      codex: y\n",/line 5: duplicate task `review`/],
+  // ASD-004 AC17: a target and its shortcut, in either order, or two shortcuts of one target.
+  ["routing:\n  tasks:\n    ba:\n      claude: x\n    analyse:\n      codex: y\n",/line 5: duplicate task `analyse`: `ba` is its shortcut name, so map only `analyse`/],
+  ["routing:\n  tasks:\n    analyse:\n      claude: x\n    ba:\n      codex: y\n",/line 5: duplicate task `analyse`: `ba` is its shortcut name, so map only `analyse`/],
+  ["routing:\n  tasks:\n    ba:\n      claude: x\n    analyze:\n      codex: y\n",/line 5: duplicate task `analyse`: `analyze` is its shortcut name, so map only `analyse`/],
+  ["routing:\n  tasks:\n    explore:\n      claude: x\n    scout:\n      codex: y\n",/line 5: duplicate task `explore`: `scout` is its shortcut name, so map only `explore`/],
   ["routing:\n  tasks:\n    Plan:\n      claude: x\n",/line 3: invalid task name/],
   ["routing:\n  tasks:\n    plan:\n      claude: [a, b]\n",/Unsupported model syntax on line 4/],
   ["routing:\n  tasks:\n    plan:\n      claude: |\n",/Unsupported model syntax on line 4/],
@@ -190,6 +245,6 @@ try {
  // Missing is not invalid: a task mapping that is absent falls back; a missing file inherits.
  fs.unlinkSync(path.join(payload,"models.yaml"));
  assert.deepEqual([select("codex","plan").model,select("codex","plan").source,select("codex","plan").routing_enabled],["","cli-default",false]);
- console.log("PASS: parser (template with the risk entry, quoting, comments, custom tasks, pricing kept), 13-row enabled matrix with fallback sources, deprecated check key read as review with a doctor finding, overrides, disabled and absent routing unchanged, 29 invalid configurations rejected by line");
+ console.log("PASS: parser (template with the risk entry, quoting, comments, custom tasks, pricing kept), 13-row enabled matrix with fallback sources, deprecated check key read as review with a doctor finding, shortcut keys (ba, analyze, scout) read as their target with a doctor ok line, overrides, disabled and absent routing unchanged, 33 invalid configurations rejected by line");
 } finally {fs.rmSync(scratch,{recursive:true,force:true});}
 NODE

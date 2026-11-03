@@ -50,7 +50,7 @@ The `review` target selects the change itself, runs the review task headless and
 | unset or `0` | Advisory. The verdict is reported; the job does not fail on it. |
 | `1` (or the `strict` assurance preset) | Passes only on a schema-valid `approve` with no blockers. `request_changes`, a malformed verdict or a missing one fails. |
 
-`TASK=check`, the deprecated name, still runs the review task and says so on stderr.
+`TASK=check`, the deprecated name, still runs the review task and says so on stderr. The shortcuts `TASK=ba` and `TASK=analyze` run `analyse`, and `TASK=scout` runs `explore`, with no notice on stderr.
 
 ## `TASK=loop` exit codes
 

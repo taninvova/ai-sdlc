@@ -28,7 +28,7 @@ The file-edit guard is defense in depth; arbitrary shell commands remain governe
 
 `/fc:migrate-layout`, which moved a repo adopted before 1.0.0 onto `ai-factory/`, was **removed in 2.1.0**. A repo that never ran it runs it from an ai-sdlc checkout at 2.0.0 or earlier; its hooks keep working until then, because the fallback to the old directory name stays until 3.0.0.
 
-Claude Code and Codex use the same canonical task files. The plugin ships all 25 Claude
+Claude Code and Codex use the same canonical task files. The plugin ships all 28 Claude
 slash commands and the matching Codex workflow skills; strict mode needs no project
 pointers for built-in tasks. Explicit `--adapters=claude` sync removes old generated
 pointers for native commands and creates pointers only for project-specific tasks.
@@ -43,7 +43,7 @@ analyst, architect, reviewer and risk agents then read it and cite what they use
 unverified; an unreachable source is one report line, never a halt. `ai-factory/docs/knowledge.md` is the
 only file that knows how; a repo that declares nothing sees nothing.
 
-Native project-workflow commands: `/fc:fleet /fc:design /fc:adr /fc:analyse /fc:explore /fc:spec /fc:plan /fc:risk /fc:test /fc:run /fc:loop /fc:fix /fc:chore /fc:review /fc:report`, plus `/fc:quick` listed above. Each loads the matching `ai-factory/tasks/<name>.md` from the user's repo, preserving project customizations. `/fc:check` (`$fc-check` on Codex) is the deprecated name of `/fc:review`: it says so and runs the review task. The commands are discoverable immediately after plugin installation; executing a project task requires an adopted workspace.
+Native project-workflow commands: `/fc:fleet /fc:design /fc:adr /fc:analyse /fc:explore /fc:spec /fc:plan /fc:risk /fc:test /fc:run /fc:loop /fc:fix /fc:chore /fc:review /fc:report`, plus `/fc:quick` listed above. Each loads the matching `ai-factory/tasks/<name>.md` from the user's repo, preserving project customizations. `/fc:check` (`$fc-check` on Codex) is the deprecated name of `/fc:review`: it says so and runs the review task. Shortcuts, not deprecated: `/fc:ba` and `/fc:analyze` (`$fc-ba`, `$fc-analyze`) run `/fc:analyse`, and `/fc:scout` (`$fc-scout`) runs `/fc:explore`, with no notice; in `ai-factory/models.yaml` map the canonical key (`analyse`, `explore`), since a shortcut key is read as its target and mapping both is an error. The commands are discoverable immediately after plugin installation; executing a project task requires an adopted workspace.
 
 ### Start with a request
 

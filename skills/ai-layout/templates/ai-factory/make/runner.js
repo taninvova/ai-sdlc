@@ -283,9 +283,10 @@ async function run(options = {}) {
 	const env = options.env || process.env;
 	const tool = options.tool || env.TOOL || "claude";
 	const requested = options.task || env.TASK || "chore";
-	// A deprecated task name runs the task it now names, and says so.
+	// A deprecated task name (TASK_ALIASES) runs the task it now names, and says so. A shortcut
+	// (TASK_SHORTCUTS) runs its target silently: it is a stable name, not a deprecated one.
 	const task = models.canonicalTask(requested);
-	if (task !== requested)
+	if (Object.hasOwn(models.TASK_ALIASES, requested))
 		process.stderr.write(`runner: TASK=${requested} is deprecated; running TASK=${task}\n`);
 	if (task === "start")
 		throw new Error("TASK=start requires an interactive session in v1; CI must name a destination task such as quick, fix, chore, analyse, design, explore or spec");

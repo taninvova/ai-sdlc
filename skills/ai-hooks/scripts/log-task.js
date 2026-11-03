@@ -29,10 +29,11 @@ require("./_common").runHook(() => {
 		String(ev.prompt || ""),
 	);
 	if (!m) return;
-	// A deprecated command runs the task it now names, so its rows carry that name: /fc:check and
-	// $fc-check are the old names of review. The same table as TASK_ALIASES in the template's
-	// make/models.js, which a hook cannot load; check-codex.sh pins the two together.
-	const ALIASES = { check: "review" };
+	// A deprecated command or a shortcut runs another task, so its rows carry that task's name:
+	// /fc:check and $fc-check are the old names of review; /fc:ba and /fc:analyze are shortcuts of
+	// analyse and /fc:scout of explore. One table, the union of TASK_ALIASES and TASK_SHORTCUTS in
+	// the template's make/models.js, which a hook cannot load; check-codex.sh pins them together.
+	const ALIASES = { check: "review", ba: "analyse", analyze: "analyse", scout: "explore" };
 	const name = Object.hasOwn(ALIASES, m[1]) ? ALIASES[m[1]] : m[1];
 	const file = path.join(ai, "runs", ".task." + identifier(ev.session_id));
 	withLogLock(ai, (safe) => {

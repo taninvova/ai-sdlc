@@ -14,7 +14,7 @@ command, `../choosing-a-workflow.md` for a narrative page and
 |---|---|
 | [Entry and resume](#entry-and-resume) | `start`, `continue`, `state` |
 | [Setup and maintenance](#setup-and-maintenance) | `adopt-sdlc`, `doctor`, `sync-sdlc`, `fleet`, `setup-tracker`, `setup-knowledge` |
-| [Decide before building](#decide-before-building) | `analyse`, `design`, `adr`, `explore`, `risk` |
+| [Decide before building](#decide-before-building) | `analyse`, `ba` (shortcut), `analyze` (shortcut), `design`, `adr`, `explore`, `scout` (shortcut), `risk` |
 | [Specify and plan](#specify-and-plan) | `spec`, `plan` |
 | [Build and verify](#build-and-verify) | `test`, `run`, `loop`, `fix`, `chore`, `quick` |
 | [Review and hand off](#review-and-hand-off) | `review`, `check` (deprecated), `report` |

@@ -26,7 +26,11 @@ const SCRIPTS_REL = "skills/ai-layout/scripts";
 const SYNC = path.resolve(SCRIPTS_REL, "sync-docs.js");
 const READER = path.resolve(SCRIPTS_REL, "_frontmatter.js");
 const TASKS_REL = "skills/ai-layout/templates/ai-factory/tasks";
-const BASELINE = "86cf595";
+// The commit before plan ASD-004 (main at the ASD-003 merge, release 5.0.1). The deprecated entry
+// points are compared with it, never with `main` or HEAD, so the check needs no local `main` ref and
+// committing the delivery does not turn the comparison into one of the file with itself. The full
+// SHA, as check-start-routing.sh's PRE_ASD001: an abbreviation can turn ambiguous as history grows.
+const PRE_ASD004 = "84ea88b258766994c200d0bd6b24c6bc8b4b8a10";
 const scratch = boundary(path.resolve("ai-factory")).scratch(path.resolve("ai-factory/runs/tmp"));
 const selected = process.env.SYNC_DOCS_GROUP;
 const want = (name) => selected === "all" || selected === name;
@@ -84,15 +88,18 @@ const notes = (name, extra = "") =>
 		``,
 	].join("\n");
 
-// Five commands: three project tasks (run, review, quick) and two plugin-level (check, doctor).
-// quick's command has no argument-hint, so its arguments come from the task frontmatter; doctor
-// has neither and its page says "none". ghost has a task template but no command, so no page.
+// Six commands: three project tasks (run, review, quick), the deprecated alias check (of review),
+// the shortcut ba (of run) and one plugin-level command (doctor). An alias or shortcut has no task
+// file of its own; its kind comes from its target's (ASD-004 AC27). quick's command has no
+// argument-hint, so its arguments come from the task frontmatter; ba's come from run's task;
+// doctor has neither and its page says "none". ghost has a task template but no command, so no page.
 const COMMANDS = {
 	run: { description: "Implement one step of a plan", hint: "<plan path> <step>" },
 	review: { description: "Review the change against the spec and the definition of done", hint: "[working tree or branch]" },
 	quick: { description: "Complete a small well-understood change" },
 	check: { description: "Deprecated — use /fc:review. Runs the review task under its old name", hint: "[working tree or branch]" },
 	doctor: { description: "Report what is wrong with this setup" },
+	ba: { description: "Shortcut for /fc:run — Implement one step of a plan" },
 };
 const TASKS = {
 	run: { description: "Implement one step of a plan", hint: "<plan path> <step>" },
@@ -105,7 +112,7 @@ const GROUPS = [
 	"| Group | Commands |",
 	"|---|---|",
 	"| [Setup and maintenance](#setup-and-maintenance) | `doctor` |",
-	"| [Build and verify](#build-and-verify) | `run`, `quick` |",
+	"| [Build and verify](#build-and-verify) | `run`, `quick`, `ba` |",
 	"| [Review and hand off](#review-and-hand-off) | `review`, `check` (deprecated) |",
 	"",
 ].join("\n");
@@ -237,12 +244,19 @@ test("reader", "AC10-sync-uses-reader", () => {
 	assert.match(page(root, "run"), /Implement one step of a plan VIA-READER/, "docs/commands/run.md: the description did not come through _frontmatter.js");
 });
 test("reader", "AC11-sync-scripts-untouched", () => {
+	// ASD-004 (AC4, AC7) changes both generators to add shortcut entry points, so they are no longer
+	// compared with ASD-003's baseline. What must hold: each one's output is current, and the
+	// deprecated entry points it already wrote stay byte-identical to PRE_ASD004 (ASD-004 AC6).
 	for (const script of ["sync-claude-commands.js", "sync-codex-skills.js"]) {
 		const rel = `${SCRIPTS_REL}/${script}`;
-		const diff = spawnSync("git", ["diff", "--quiet", BASELINE, "--", rel], { encoding: "utf8" });
-		assert.equal(diff.status, 0, `${rel} differs from ${BASELINE}`);
 		const check = spawnSync(process.execPath, [rel, "--check"], { encoding: "utf8" });
 		assert.equal(check.status, 0, `${rel} --check exited ${check.status}: ${(check.stderr || check.stdout || "").trim().split("\n")[0]}`);
+	}
+	const present = spawnSync("git", ["cat-file", "-e", `${PRE_ASD004}^{commit}`], { encoding: "utf8" });
+	assert.equal(present.status, 0, `commit ${PRE_ASD004} (the commit before plan ASD-004) is not in this clone; a shallow clone lacks it, so fetch it (git fetch --unshallow) and run again`);
+	for (const rel of ["commands/check.md", "codex-skills/fc-check/SKILL.md"]) {
+		const diff = spawnSync("git", ["diff", "--quiet", PRE_ASD004, "--", rel], { encoding: "utf8" });
+		assert.equal(diff.status, 0, `${rel} differs from ${PRE_ASD004} (status ${diff.status}): ${(diff.stderr || "").trim().split("\n")[0]}`);
 	}
 });
 
@@ -286,8 +300,9 @@ test("generate", "AC13-page-fields", () => {
 		run: { kind: /project task/i, args: "<plan path> <step>" },
 		review: { kind: /project task/i, args: "[working tree or branch]" },
 		quick: { kind: /project task/i, args: "<change and expected result>" }, // from the task frontmatter
-		check: { kind: /plugin-level/i, args: "[working tree or branch]" },
+		check: { kind: /project task/i, args: "[working tree or branch]" }, // kind from review (ASD-004 AC27)
 		doctor: { kind: /plugin-level/i, args: null }, // no hint anywhere: "none"
+		ba: { kind: /project task/i, args: "<plan path> <step>" }, // kind and arguments from run's task
 	};
 	for (const [name, want] of Object.entries(expect)) {
 		const rel = `docs/commands/${name}.md`;
@@ -321,7 +336,42 @@ test("generate", "AC16-check-deprecated", () => {
 	const text = page(root, "check");
 	assert.match(text, /deprecated/i, "docs/commands/check.md does not mark /fc:check as deprecated");
 	assert.match(text, /\]\((\.\/)?review\.md(#[^)]*)?\)/, "docs/commands/check.md does not link the /fc:review page (review.md)");
-	assert.match(line(text, /\bkind\b/i, "docs/commands/check.md"), /plugin-level/i, "docs/commands/check.md is not plugin-level");
+	assert.doesNotMatch(text, /\*\*Shortcut\.\*\*/, "docs/commands/check.md is marked as a shortcut; it is deprecated");
+});
+// ASD-004 AC27: a shortcut page is marked as one, links its target, and takes its kind from the
+// target's task file; so does the index row, and the index sentence counts it apart from both the
+// project tasks and the plugin-level commands.
+test("generate", "AC27-shortcut-page", () => {
+	needSync();
+	const root = fixture();
+	generate(root);
+	const rel = "docs/commands/ba.md";
+	const text = page(root, "ba");
+	assert.match(text, /^> \*\*Shortcut\.\*\* Runs \[`\/fc:run`\]\(run\.md\) under a shorter name\.$/m, `${rel} does not mark /fc:ba as a shortcut of /fc:run with a link to run.md`);
+	assert.doesNotMatch(text, /deprecated/i, `${rel} calls the shortcut deprecated`);
+	const kind = line(text, /\bkind\b/i, rel);
+	assert.match(kind, /project task/i, `${rel}: kind line "${kind.trim()}" is not taken from run (a project task)`);
+	assert.doesNotMatch(kind, /plugin-level/i, `${rel}: kind line "${kind.trim()}" says plugin-level`);
+	assert.ok(kind.includes("`ai-factory/tasks/run.md`"), `${rel}: kind line "${kind.trim()}" does not name the target's task file`);
+	assert.ok(!kind.includes("tasks/ba.md"), `${rel}: kind line "${kind.trim()}" names a ba task file, which does not exist`);
+	const index = read(root, "docs/commands.md");
+	const row = line(index, /\[`\/fc:ba`\]/, "docs/commands.md");
+	assert.match(row, /\| Project task \|/, `docs/commands.md: the /fc:ba row "${row}" is not a project task`);
+	const summary = line(index, /The plugin ships/, "docs/commands.md");
+	for (const want of ["**6**", "The 3 project tasks", "2 more are shortcut or deprecated names that run one of them; the other 1 are plugin-level"])
+		assert.ok(summary.includes(want), `docs/commands.md: summary "${summary}" lacks "${want}"`);
+});
+test("generate", "AC27-deprecated-kind-from-target", () => {
+	needSync();
+	const root = fixture();
+	generate(root);
+	const rel = "docs/commands/check.md";
+	const kind = line(page(root, "check"), /\bkind\b/i, rel);
+	assert.match(kind, /project task/i, `${rel}: kind line "${kind.trim()}" is not taken from review (a project task)`);
+	assert.doesNotMatch(kind, /plugin-level/i, `${rel}: kind line "${kind.trim()}" says plugin-level`);
+	assert.ok(kind.includes("`ai-factory/tasks/review.md`"), `${rel}: kind line "${kind.trim()}" does not name review's task file`);
+	const row = line(read(root, "docs/commands.md"), /\[`\/fc:check`\]/, "docs/commands.md");
+	assert.match(row, /\| Project task \|/, `docs/commands.md: the /fc:check row "${row}" is not a project task`);
 });
 test("generate", "AC18-workflow-link-kept", () => {
 	needSync();
@@ -542,6 +592,30 @@ test("notes", "AC25-check-usage-only-ok", () => {
 	touch(root, notesRel("check"), "## Usage\n\n  \n");
 	generate(root);
 	failsNaming(checkRun(root), [notesRel("check"), "## Usage"]);
+});
+// ASD-004 AC29: a shortcut, like a deprecated alias, needs only a non-empty ## Usage.
+test("notes", "AC29-shortcut-usage-only-ok", () => {
+	needSync();
+	const root = fixture();
+	touch(root, notesRel("ba"), "## Usage\n\nThe same task as [`/fc:run`](run.md), under a shorter name.\n");
+	generate(root);
+	passesCheck(checkRun(root));
+	touch(root, notesRel("ba"), "## Usage\n\n  \n");
+	generate(root);
+	const { run, lines } = notesFailures(root);
+	failsNaming(run, [notesRel("ba"), "## Usage"]);
+	assert.equal(lines.length, 1, `expected only the empty ## Usage of ba; got: ${lines.join(" | ")}`);
+});
+test("notes", "AC29-non-shortcut-still-needs-four", () => {
+	needSync();
+	const root = fixture();
+	touch(root, notesRel("ba"), "## Usage\n\nThe same task as [`/fc:run`](run.md).\n");
+	touch(root, notesRel("check"), "## Usage\n\nDeprecated: run [`/fc:review`](review.md) instead.\n");
+	edit(root, notesRel("review"), (t) => dropSection(t, "Examples"));
+	generate(root);
+	const { run, lines } = notesFailures(root);
+	failsNaming(run, [notesRel("review"), "## Examples"]);
+	assert.equal(lines.length, 1, `expected only review's missing ## Examples; got: ${lines.join(" | ")}`);
 });
 test("notes", "AC18-no-workflow-link-ok", () => {
 	needSync();

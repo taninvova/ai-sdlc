@@ -15,14 +15,23 @@ const TOOLS = ["claude", "codex"];
 const START_TASKS = ["quick", "fix", "chore", "analyse", "design", "explore", "spec"];
 const START_EFFORTS = ["S", "M", "L", "XL"];
 const TASK_NAME = /^[a-z][a-z0-9-]*$/;
-// Deprecated task names and the task each now names. `check` was renamed `review`: the plugin keeps
-// a thin /fc:check command and $fc-check skill that run the review task, TASK=check still runs it
-// headless, and old data that says `check` (routing keys, lifecycle phases, run-log rows) is read
-// as `review`. The command and skill generators read this table; nothing else lists the aliases.
+// Task names that stand for another task, in two kinds. Deprecated names (TASK_ALIASES): `check` was
+// renamed `review`; the plugin keeps a thin /fc:check command and $fc-check skill that run the review
+// task with a deprecation notice, TASK=check still runs it headless with a notice, and old data that
+// says `check` (routing keys, lifecycle phases, run-log rows) is read as `review`. Shortcuts
+// (TASK_SHORTCUTS) are stable, non-deprecated short names: /fc:ba, TASK=scout or a `scout:` routing
+// key run and read as their target, with no notice. Retire a shortcut by moving it to TASK_ALIASES.
+// Ask `Object.hasOwn(TASK_ALIASES, name)` to decide "deprecated?" — never `canonicalTask(name) !==
+// name`, which is true for shortcuts too. The command and skill generators read these tables;
+// nothing else lists the names.
 const TASK_ALIASES = Object.freeze({ check: "review" });
-// The task a name stands for: an alias resolves to its task, any other name is itself.
+const TASK_SHORTCUTS = Object.freeze({ ba: "analyse", analyze: "analyse", scout: "explore" });
+// The task a name stands for: a deprecated name or a shortcut resolves to its task, any other name
+// is itself.
 function canonicalTask(task) {
-	return Object.hasOwn(TASK_ALIASES, task || "") ? TASK_ALIASES[task] : task;
+	if (Object.hasOwn(TASK_ALIASES, task || "")) return TASK_ALIASES[task];
+	if (Object.hasOwn(TASK_SHORTCUTS, task || "")) return TASK_SHORTCUTS[task];
+	return task;
 }
 // Tasks that always run in the invoking session and are never routed to a worker: continue
 // performs the one destination dispatch, and loop delegates every step to its own implementer,
@@ -88,7 +97,7 @@ function model(raw, line) {
 // naming its line, so a typo can never quietly select a different model.
 function parseModels(content) {
 	const result = {
-		routing: { present: false, enabled: false, tasks: {}, aliased: [] },
+		routing: { present: false, enabled: false, tasks: {}, aliased: [], shortcuts: [] },
 		digest: digest(content),
 	};
 	const seen = new Set();
@@ -97,6 +106,8 @@ function parseModels(content) {
 	let inTasks = false;
 	let task = null;
 	let taskKeys;
+	// The key that first mapped each task, so a duplicate can name the shortcut whichever came first.
+	let taskKeyNames;
 	const fail = (line, message) => {
 		throw new Error(`models.yaml line ${line}: ${message}`);
 	};
@@ -144,26 +155,40 @@ function parseModels(content) {
 					fail(n, "routing.enabled must be true or false");
 				result.routing.enabled = value === "true";
 			} else if (value) fail(n, "routing.tasks must be an indented mapping");
-			else taskKeys = new Set();
+			else {
+				taskKeys = new Set();
+				taskKeyNames = new Map();
+			}
 		} else if (indent.length === 4) {
 			if (!inTasks) fail(n, "unexpected indentation");
 			const match = line.match(/^ {4}([^\s:#]+):(?:\s+(.*))?$/);
 			if (!match) fail(n, "expected `<task>:` under routing.tasks");
 			const [, name, raw = ""] = match;
 			if (!TASK_NAME.test(name)) fail(n, `invalid task name \`${name}\``);
-			// A deprecated name maps the task it now names; mapping both is ambiguous.
+			// A deprecated name or a shortcut maps the task it stands for; mapping both is ambiguous.
 			const canonical = canonicalTask(name);
-			if (taskKeys.has(canonical))
+			if (taskKeys.has(canonical)) {
+				const first = taskKeyNames.get(canonical);
+				const shortcut = Object.hasOwn(TASK_SHORTCUTS, name)
+					? name
+					: Object.hasOwn(TASK_SHORTCUTS, first)
+						? first
+						: null;
 				fail(
 					n,
-					canonical === name
-						? `duplicate task \`${name}\``
-						: `duplicate task \`${canonical}\`: \`${name}\` is its deprecated name, so map only \`${canonical}\``,
+					shortcut
+						? `duplicate task \`${canonical}\`: \`${shortcut}\` is its shortcut name, so map only \`${canonical}\``
+						: canonical === name
+							? `duplicate task \`${name}\``
+							: `duplicate task \`${canonical}\`: \`${name}\` is its deprecated name, so map only \`${canonical}\``,
 				);
+			}
 			if (raw.trim() && !raw.trim().startsWith("#"))
 				fail(n, `routing.tasks.${name} must be an indented mapping of tool: model`);
 			taskKeys.add(canonical);
-			if (canonical !== name) result.routing.aliased.push(name);
+			taskKeyNames.set(canonical, name);
+			if (Object.hasOwn(TASK_ALIASES, name)) result.routing.aliased.push(name);
+			if (Object.hasOwn(TASK_SHORTCUTS, name)) result.routing.shortcuts.push(name);
 			task = canonical;
 			result.routing.tasks[canonical] = {};
 		} else if (indent.length === 6) {
@@ -191,7 +216,11 @@ function readModels(file) {
 		content = fs.readFileSync(file, "utf8");
 	} catch (error) {
 		if (error.code === "ENOENT")
-			return { routing: { present: false, enabled: false, tasks: {}, aliased: [] }, digest: null, missing: true };
+			return {
+				routing: { present: false, enabled: false, tasks: {}, aliased: [], shortcuts: [] },
+				digest: null,
+				missing: true,
+			};
 		throw error;
 	}
 	return parseModels(content);
@@ -716,6 +745,9 @@ function doctor(root, env = process.env) {
 	}
 	for (const name of config.routing.aliased)
 		out.push(["finding", "routing", `routing.tasks.${name} uses the deprecated name of ${canonicalTask(name)} and is read as routing.tasks.${canonicalTask(name)} — rename the key to ${canonicalTask(name)}`]);
+	// A shortcut key is a supported name, not a mistake: say how it is read, as ok.
+	for (const name of config.routing.shortcuts)
+		out.push(["ok", "routing", `routing.tasks.${name} read as ${canonicalTask(name)}`]);
 	if (!config.routing.enabled) {
 		out.push(["ok", "routing", `model routing is off${config.routing.present ? " (routing.enabled is false; mappings kept)" : ""}`]);
 		return out;
@@ -837,6 +869,7 @@ if (require.main === module) {
 module.exports = {
 	TOOLS,
 	TASK_ALIASES,
+	TASK_SHORTCUTS,
 	canonicalTask,
 	MARKER,
 	TOML_MARKER,

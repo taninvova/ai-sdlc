@@ -1,6 +1,6 @@
 # FC AI factory: documentation
 
-> For fc ai-sdlc 5.0.1.
+> For fc ai-sdlc 5.1.0.
 
 The `fc` plugin (repo `ai-sdlc`) is a Claude Code and Codex plugin that adds an operating model for AI-assisted delivery to any repo. It installs one directory, `ai-factory/`, and a set of `/fc:*` commands (`$fc-*` skills on Codex). Each command runs a procedure written in a file you can read and change. Narrow agents (explorer, specifier, planner, tester, implementer, reviewer and others) do the work. They hand off through files on disk, not through chat, so every step can be reviewed, re-run and diffed.
 
@@ -37,7 +37,7 @@ For versions and breaking changes, see [CHANGELOG](../CHANGELOG.md).
 
 | Page | What it covers |
 |---|---|
-| [Commands](commands.md) | Every `/fc:*` command (25), grouped by purpose, with its arguments, kind and description. Each command's own page says what it writes. |
+| [Commands](commands.md) | Every `/fc:*` command (28), grouped by purpose, with its arguments, kind and description. Each command's own page says what it writes. |
 | [Headless runs and CI](headless-ci.md) | `make -f ai-factory/make/ai.mk` targets, the review gate, `/fc:loop` exit codes, contract gates. |
 
 ## Deeper sources

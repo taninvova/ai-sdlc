@@ -14,7 +14,7 @@ Adapter sync (this repo): `bash ai-factory/make/sync-adapters.sh`
 Checks (all of them): `for f in skills/ai-layout/scripts/check-*.sh skills/ai-hooks/fixtures/check-*.sh; do bash "$f" || echo "FAIL $f"; done`
   — never pipe one to `tail`: the pipeline's status is `tail`'s, and a failure reads as a pass
 Hook fixtures: `node skills/ai-hooks/scripts/session-stop.js < skills/ai-hooks/fixtures/stop.json`
-Slash commands: /fc:start /fc:continue /fc:fleet /fc:design /fc:adr /fc:analyse /fc:explore /fc:spec /fc:plan /fc:risk /fc:test /fc:run /fc:loop /fc:fix /fc:chore /fc:quick /fc:review /fc:report
+Slash commands: /fc:start /fc:continue /fc:fleet /fc:design /fc:adr /fc:analyse /fc:explore /fc:spec /fc:plan /fc:risk /fc:test /fc:run /fc:loop /fc:fix /fc:chore /fc:quick /fc:review /fc:report · shortcuts: /fc:ba and /fc:analyze for /fc:analyse, /fc:scout for /fc:explore
 Headless (CI only): make ai TASK=<name> INPUT="…"
 
 ## This repo is its own template

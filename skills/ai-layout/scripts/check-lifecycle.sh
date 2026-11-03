@@ -418,6 +418,32 @@ async function main() {
 		ok("deprecated phase: old check events read as review, --phase check recorded as review");
 	}
 
+	// --- shortcut phase and task names (ASD-004 AC23) --------------------------------------------
+	// `scout` is a shortcut of explore, `ba` and `analyze` of analyse. They are not deprecated, so
+	// nothing is written to stderr, but they are recorded and read under their target, as `check` is.
+	{
+		const { dir, ai } = workspace("shortcut-phase");
+		fs.mkdirSync(path.join(ai, "make"), { recursive: true });
+		for (const file of ["lifecycle.js", "lifecycle-events.js", "safe-files.js", "models.js"]) fs.copyFileSync(path.join(MAKE, file), path.join(ai, "make", file));
+		const old = store.newId("r");
+		emit(ai, { type: "run_started", run_id: old, delivery_id: D2, phase: "ba", task: "analyze", at: at(0) });
+		const cli = (...args) => spawnSync(process.execPath, [path.join(ai, "make/lifecycle.js"), ...args], { cwd: dir, env: clean, encoding: "utf8" });
+		const started = cli("start", "--phase", "scout", "--task", "ba", "--delivery", D1);
+		assert.equal(started.status, 0, started.stderr);
+		assert.equal(started.stderr, "", "a shortcut phase name is recorded silently");
+		const fresh = /started run (r-[0-9a-f]{16})/.exec(started.stdout)[1];
+		assert.equal(cli("end", "--run", fresh, "--outcome", "succeeded").status, 0);
+		const written = store.read(ai).events.filter((event) => event.run_id === fresh && event.type === "run_started");
+		assert.deepEqual(written.map((event) => [event.phase, event.task]), [["explore", "analyse"]], "--phase scout --task ba is written as explore / analyse");
+		const raw = store.read(ai).events.filter((event) => event.run_id === old);
+		assert.deepEqual(raw.map((event) => [event.phase, event.task]), [["ba", "analyze"]], "the old event on disk is untouched");
+		const d = lifecycle.aggregate({ ai, delivery: D1 }).deliveries[0];
+		assert.deepEqual(d.runs.map((r) => [r.phase, r.task]), [["explore", "analyse"]]);
+		const other = lifecycle.aggregate({ ai, delivery: D2 }).deliveries[0];
+		assert.deepEqual([other.runs[0].phase, other.runs[0].task], ["analyse", "analyse"], "an old ba / analyze event reads as analyse");
+		ok("shortcut phase: --phase scout and --task ba recorded as explore and analyse; an old ba event reads as analyse");
+	}
+
 	// --- headless runner: explicit run identity, outcomes, no prompt content ---------------
 	{
 		const { dir, ai } = workspace("headless");

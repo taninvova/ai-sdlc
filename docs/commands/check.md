@@ -10,7 +10,7 @@
 |---|---|
 | Claude name | `/fc:check` |
 | Codex name | `$fc-check` |
-| Kind | Plugin-level command — works in any repo |
+| Kind | Project task — loads `ai-factory/tasks/review.md` from your repo, so it needs an adopted workspace |
 | Description | Deprecated — use /fc:review. Runs the review task under its old name |
 | Arguments | `[working-tree\|branch\|supplied diff and context]` |
 

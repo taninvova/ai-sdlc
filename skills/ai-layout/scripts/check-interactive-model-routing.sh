@@ -263,6 +263,38 @@ try {
 		assert.notEqual(run(["record", "--dispatch", id, "--outcome", "failed", "--worker", "$(x)"]).status, 0);
 	});
 
+	check("shortcut names route to the target worker", () => {
+		// TASK_SHORTCUTS (ba, analyze → analyse; scout → explore) dispatch exactly like their target,
+		// with no deprecation notice, and the dispatch records name the target (AC15).
+		const ids = (out) => out.replace(/d-[0-9]{14}-[0-9a-f]{6}/g, "<dispatch>");
+		const pairs = Object.entries(models.TASK_SHORTCUTS);
+		assert.deepEqual(pairs, [["ba", "analyse"], ["analyze", "analyse"], ["scout", "explore"]]);
+		const mapped = config("true", "gateway/testing-claude-v2") + "    analyse:\n      claude: gateway/analysis-claude\n      codex: gateway/analysis-codex\n    explore:\n      claude: gateway/exploring-claude\n      codex: gateway/exploring-codex\n";
+		for (const [body, directive] of [[config("true", "gateway/testing-claude-v2"), "inherit"], [mapped, "route"]]) {
+			fs.writeFileSync(yaml, body);
+			sync();
+			for (const host of ["claude", "codex"]) {
+				for (const [shortcut, target] of pairs) {
+					const before = records().length;
+					const want = dispatch(host, target);
+					const got = dispatch(host, shortcut);
+					assert.equal(got.status, 0, got.stdout);
+					assert.equal(want.status, 0, want.stdout);
+					assert.match(got.stdout, new RegExp(`^fc model routing: ${target} / ${host}: `), `${shortcut} names ${target}`);
+					assert.match(got.stdout, new RegExp(`directive: ${directive}`));
+					assert.doesNotMatch(got.stdout, /deprecated/i);
+					assert.equal(ids(got.stdout), ids(want.stdout), `dispatch --task ${shortcut} equals dispatch --task ${target} on ${host}`);
+					if (directive === "route") assert.equal(agentOf(got.stdout), agentOf(want.stdout), `${shortcut} and ${target} launch the same worker`);
+					const added = records().slice(before);
+					assert.equal(added.length, 2, "one record per dispatch");
+					assert.ok(added.every((r) => r.task === target && r.host === host), `dispatch records for ${shortcut} say ${target}`);
+				}
+			}
+		}
+		fs.writeFileSync(yaml, config("true", "gateway/testing-claude-v2"));
+		sync();
+	});
+
 	check("disable, re-enable and adapter hygiene", () => {
 		fs.mkdirSync(path.join(root, ".claude/agents"), { recursive: true });
 		fs.writeFileSync(path.join(root, ".claude/agents/mine.md"), "---\nname: mine\ndescription: hand-authored\n---\nMine.\n");

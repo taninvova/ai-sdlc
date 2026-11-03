@@ -28,14 +28,14 @@ As a developer using the ai-sdlc plugin, I want short names (`/fc:ba`, `/fc:anal
 
 **Name clash**
 - **AC11.** Given a task file whose name is a shortcut (for example `ba.md`) in the tasks directory each tool reads, when `sync-claude-commands.js`, `sync-codex-skills.js` or `make/sync-adapters.js` runs, then it refuses with a message naming the file and its target, in the form `Task ba.md uses the shortcut name of analyse; rename the task file`, and writes no entry point for that file.
-- **AC12.** Given a task file whose name is a deprecated alias (`check.md`), when any of the three tools in AC11 runs, then it still refuses with today's "uses the deprecated name of review" message.
+- **AC12.** Given a task file whose name is a deprecated alias (`check.md`), when `sync-claude-commands.js` or `sync-codex-skills.js` runs, then it still refuses with today's "uses the deprecated name of review" message; and when an adopted repo's `make/sync-adapters.js` runs, then it keeps today's behaviour: it writes that project task's own `.codex/skills/fc-check/` skill, skips the alias skill, and adds no refusal.
 
 **Headless runner and routing**
 - **AC13.** Given `make ai TASK=ba`, `TASK=analyze` or `TASK=scout` with an `INPUT`, when the runner starts, then it runs the target task (`analyse` or `explore`) with that input and writes no deprecation line to stderr.
 - **AC14.** Given `make ai TASK=check`, when the runner starts, then it still writes `runner: TASK=check is deprecated; running TASK=review` to stderr and runs `review`.
 - **AC15.** Given `models.js dispatch --task <shortcut>` for each of the three shortcuts, when it runs against any `models.yaml`, then its directive is identical to `dispatch --task <target>`.
 - **AC16.** Given a `models.yaml` whose `routing.tasks` has a shortcut key (for example `scout:` with a tool mapping) and no key for its target, when `readModels` parses it, then the mapping is stored under the target (`routing.tasks.explore`), and the key is not added to `routing.aliased`.
-- **AC17.** Given a `models.yaml` whose `routing.tasks` maps a shortcut key and its target (for example `ba:` and `analyse:`), or two shortcuts of the same target (`ba:` and `analyze:`), when `readModels` parses it, then parsing fails with a duplicate-task error. The error names the target and says that the second key is its shortcut name, so only the target should be mapped. Headless and routed runs stop, as they do today for `check:` plus `review:`.
+- **AC17.** Given a `models.yaml` whose `routing.tasks` maps a shortcut key and its target (for example `ba:` and `analyse:`), or two shortcuts of the same target (`ba:` and `analyze:`), when `readModels` parses it, then parsing fails with a duplicate-task error. The error names the target and names the shortcut key (whichever of the two keys is the shortcut, in either order), so only the target should be mapped. Headless and routed runs stop, as they do today for `check:` plus `review:`.
 
 **Doctor**
 - **AC18.** Given the `models.yaml` of AC16, when doctor runs, then it outputs an `ok` line for the `routing` area that names the key and its target in the form `routing.tasks.scout read as explore`. It outputs no `finding` for that key, and the line does not contain the word "deprecated" or ask for the key to be renamed.
@@ -43,7 +43,7 @@ As a developer using the ai-sdlc plugin, I want short names (`/fc:ba`, `/fc:anal
 - **AC20.** Given a `models.yaml` whose `routing.tasks` has the key `check`, when doctor runs, then its output for that key is unchanged: a `finding` saying it uses the deprecated name of `review`.
 
 **Run log and cost**
-- **AC21.** Given the `log-task.js` hook, when the prompt starts with any of the forms below, then the hook writes the name shown to `.task.<session>`:
+- **AC21.** Given the `log-task.js` hook, whose regex is unchanged and matches the first command form anywhere in the prompt, when that first form is any of the forms below, then the hook writes the name shown to `.task.<session>`:
   - `/fc:ba`, `/fc:analyze`, `$fc-ba`, `$fc-analyze` or `$fc:fc-ba`: `analyse`
   - `/fc:scout`, `$fc-scout` or `$fc:fc-scout`: `explore`
   - `/fc:check` or `$fc-check`: `review`, as before
@@ -57,11 +57,12 @@ As a developer using the ai-sdlc plugin, I want short names (`/fc:ba`, `/fc:anal
 
 **User docs (ASD-003, on rebase)**
 These hold on this feature's branch after it is rebased onto a `main` that contains ASD-003.
-- **AC27.** Given `node skills/ai-layout/scripts/sync-docs.js`, when it runs, then it writes `docs/commands/ba.md`, `docs/commands/analyze.md` and `docs/commands/scout.md`, and each page marks the command as a shortcut for its target and links the target's page.
+- **AC27.** Given `node skills/ai-layout/scripts/sync-docs.js`, when it runs, then it writes `docs/commands/ba.md`, `docs/commands/analyze.md` and `docs/commands/scout.md`, and each page marks the command as a shortcut for its target and links the target's page. Each page's kind is taken from its target (a project task, since `analyse` and `explore` are project tasks), never "Plugin-level command"; the generated `docs/commands/check.md` likewise takes its kind from `review`.
 - **AC28.** Given `docs/commands/_notes/ba.md`, `docs/commands/_notes/analyze.md` and `docs/commands/_notes/scout.md`, when they are read, then each one contains a `## Usage` heading followed by non-empty content that points to the target command, and none of the other three headings that ASD-003 requires.
 - **AC29.** Given the shortcut notes files of AC28, when `node skills/ai-layout/scripts/sync-docs.js --check` runs, then it reports no notes failure for them, just as it reports none for `check.md`, and it still fails on a notes file of a non-shortcut command that lacks one of the four headings.
-- **AC30.** Given `ai-factory/docs/workflow.md`, when it is read, then every statement of the number of `/fc:*` commands says 28, matching the files in `commands/`.
-- **AC31.** Given the ASD-003 docs and checks that fix the command count at 25 (the `docs/commands/_notes/` count and the `sync-docs.js` checks), when they run after the rebase, then they expect 28 commands.
+- **AC29a.** Given `docs/commands/_notes/_groups.md`, when it is read, then `ba`, `analyze` and `scout` each appear in the "Decide before building" group, and `bash skills/ai-layout/scripts/check-docs.sh` exits 0 with no ungrouped-command failure.
+- **AC30.** Given the statements of the number of `/fc:*` commands in `README.md` (line 31 today), `ai-factory/docs/workflow.md` (lines 112 and 144 today), `docs/installation.md` (line 41 today) and `docs/README.md` (line 40 today), when they are read, then each states the number of files in `commands/` (28 after this change). Shortcuts count as commands but not as project task entry points, so the "project task entry points" count stays 18.
+- **AC31.** Given the command-count test in `skills/ai-layout/scripts/check-risk.sh` (today `command-counts-25`, a literal 25), when it runs, then it computes the expected count from the files in `commands/` instead of a literal, checks every statement named in AC30 against it, and passes after this change.
 
 **Checks and release**
 - **AC32.** Given the full check suite (`skills/ai-layout/scripts/check-*.sh` and `skills/ai-hooks/fixtures/check-*.sh`), when it runs after the change, then every check passes. This includes `check-adapters.sh` and `check-start-routing.sh`, which must count or accept the three shortcut entry points without a deprecation notice.
@@ -69,7 +70,7 @@ These hold on this feature's branch after it is rebased onto a `main` that conta
   - lists the three shortcuts and their targets, and says that they are not deprecated;
   - marks the template change **breaking for adopted repos**;
   - says that `TASK=<shortcut>`, `routing.tasks` shortcut keys and the project `$fc-<shortcut>` skills arrive only after `/fc:sync-sdlc`.
-- **AC34.** Given this feature's branch, when it is compared with `main`, then it branches from a `main` that already contains ASD-003's 5.0.1 release, and every version field that `skills/ai-layout/scripts/check-versions.sh` reads is `5.1.0`. That includes `.claude-plugin/plugin.json`, `.codex-plugin/plugin.json` and the plugin entries in `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json`, plus the `docs/README.md` version line that ASD-003 checks.
+- **AC34.** Given this feature's branch, when it is compared with `main`, then it branches from a `main` that already contains ASD-003's 5.0.1 release, and every version field that `skills/ai-layout/scripts/check-versions.sh` reads is `5.1.0`. That is `.claude-plugin/plugin.json`, `.codex-plugin/plugin.json` and the plugin entry in `.claude-plugin/marketplace.json`, plus the `docs/README.md` version line that ASD-003 checks. (`.agents/plugins/marketplace.json` carries no version field.)
 
 ## Out of scope
 - `/fc:start`: its classifier returns canonical names from `START_TASKS`, and it never returns a shortcut.
@@ -111,7 +112,13 @@ Risk categories:
 - Service ownership: **absent**. A single plugin repo, with no fleet boundary.
 
 ## Open questions
-1. Run `/fc:risk ai-factory/specs/ASD-004-command-shortcuts.md`.
+The open blocker and major findings of `ai-factory/risks/ASD-004-command-shortcuts.md`:
+1. R1 (major, blast radius): AC11 makes `/fc:sync-sdlc` refuse in any adopted repo that has a project task file named `ba.md`, `analyze.md` or `scout.md`, so that repo stops syncing until it renames the file. Mitigation: refusing is the right call, since such a file would shadow or collide with the new plugin `/fc:<name>`. The CHANGELOG entry (AC33) should name the refusal, its exact message and the rename step. Inference: a doctor finding before sync would let a repo see this coming; the spec does not require one.
+2. R2 (major, blast radius): AC12 says all three tools "still refuse" a `check.md` task file, but today only the two plugin generators refuse; `sync-adapters.js` writes the project task's own skill and skips the alias skill. Read literally, AC12 adds a new breaking refusal for adopted repos. Mitigation: before `/fc:plan`, amend AC12 to either (a) say the `sync-adapters.js` refusal for deprecated names is new and add it to AC33, or (b) limit AC12 to the two plugin generators and keep today's skip in `sync-adapters.js`. **Answered 2026-11-02 by the developer: (b).** AC12 is amended accordingly; no new refusal for adopted repos.
+3. R8 (major, blast radius): AC27–AC31 and AC34 depend on ASD-003 being merged to `main`, and ASD-003 fixes the command count at 25 in several places. Mitigation: the plan's first step should refuse to start until ASD-003's 5.0.1 is on `main`. Where ASD-003's checks allow it, derive the counts from `commands/` instead of the literal 28, so the next command change does not break them again. **Resolved 2026-11-02:** ASD-003 is on `main` (84ea88b, 5.0.1), so the reassessment marks R8 mitigated.
+4. R11 (major, blast radius, reassessment 2026-11-02): the command count is stated in more places than AC30 named, and `check-risk.sh` holds a literal 25. **Answered 2026-11-02 by the developer:** AC30 and AC31 now name every place and derive the count from `commands/`; shortcuts do not count as project task entry points.
+5. R12 (major, blast radius, reassessment 2026-11-02): ASD-006 (`/fc:current`) edits the same counts, groups, README, CHANGELOG and versions. **Answered 2026-11-02 by the developer:** ASD-004 lands first as 5.1.0; ASD-006 rebases onto it and ships as 5.2.0.
+6. R13 and R14 (minor, reassessment 2026-11-02): shortcut pages' kind, and their `_groups.md` entries. **Answered 2026-11-02 by the developer:** covered by the amended AC27 and the new AC29a.
 
 ## Data touched
 - `TASK_SHORTCUTS` (new) and `canonicalTask` in `make/models.js`. `TASK_ALIASES` is unchanged.

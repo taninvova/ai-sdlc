@@ -92,13 +92,21 @@ process.stdin.on('end', () => {
    for (const { host, task: entry, file } of direct) {
     const text = read(file);
     // A deprecated entry (/fc:check, $fc-check) dispatches the task it now names, and says so first.
+    // A shortcut entry (/fc:ba, $fc-scout) dispatches its target and never calls itself deprecated.
+    // Branch on the table the name comes from, so an alias that lost its notice still fails (R6).
     const task = m.canonicalTask(entry);
-    if (task !== entry) assert.ok(text.includes(m.aliasNotice(host, entry)), `${file} does not say it is deprecated`);
+    if (Object.hasOwn(m.TASK_ALIASES, entry)) assert.ok(text.includes(m.aliasNotice(host, entry)), `${file} does not say it is deprecated`);
+    else if (Object.hasOwn(m.TASK_SHORTCUTS, entry)) {
+     assert.throws(() => m.aliasNotice(host, entry), `${entry} has no deprecation notice to carry`);
+     // Every aliasNotice line says "is deprecated", so this also proves the notice is absent.
+     assert.doesNotMatch(text, /deprecated|old name of/i, `${file} is a shortcut, not a deprecated name`);
+    } else assert.equal(task, entry, `${file}: ${entry} resolves to ${task} through neither alias table`);
     assert.doesNotMatch(text, /validate-start|retained original input|destination dispatch|tasks\/start\.md/, file);
     assert.ok(text.includes(`dispatch --host ${host} --task ${task}\``), `${file} dispatches its own task`);
     assert.ok(text.includes(m.entryPreamble(host, task)), `${file} carries the unchanged shared preamble`);
    }
    assert.ok(direct.some(({ task }) => task === "check") && direct.some(({ task }) => task === "review"), "the deprecated and the current review entries are both routed");
+   for (const host of ["claude", "codex"]) for (const shortcut of Object.keys(m.TASK_SHORTCUTS)) assert.ok(direct.some(e => e.host === host && e.task === shortcut), `the ${host} shortcut entry ${shortcut} is routed`);
   });
  } else {
  fs.cpSync(template, path.join(root, "ai-factory"), { recursive: true });

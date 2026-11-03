@@ -1,5 +1,57 @@
 # Changelog
 
+## 5.1.0 — 2026-11-02
+
+Adds three short names for two existing tasks: `/fc:ba` and `/fc:analyze` run `/fc:analyse`, and
+`/fc:scout` runs `/fc:explore`. **Breaking for adopted repos:** the shortcuts change the
+`sync-adapters.js`, `runner.js` and `models.js` templates, the `models.yaml` comment and the
+`AGENTS.md` template's `Slash commands:` line; take them with `/fc:sync-sdlc`, and rename any task
+file called `ba.md`, `analyze.md` or `scout.md` first, because sync now refuses it.
+
+**Command shortcuts (spec ASD-004)**
+
+- **Three shortcuts, not deprecated.** `/fc:ba` and `/fc:analyze` (`$fc-ba`, `$fc-analyze` on
+  Codex) are shortcuts of `/fc:analyse`, and `/fc:scout` (`$fc-scout`) is a shortcut of
+  `/fc:explore`. They are not deprecated: each runs its target's task file with no notice, unlike
+  `/fc:check`, which still says it is the deprecated name of `/fc:review`. The plugin ships them
+  natively as Claude commands and Codex skills, so `/fc:ba`, `/fc:analyze` and `/fc:scout` work as
+  soon as the plugin is updated. `make/models.js` keeps one alias table in two kinds:
+  `TASK_ALIASES` for deprecated names and `TASK_SHORTCUTS` for shortcuts. Only deprecated names get
+  the notice.
+- **What arrives only after `/fc:sync-sdlc`.** In an adopted repo, `TASK=ba`, `TASK=analyze` and
+  `TASK=scout` headless runs, `routing.tasks` shortcut keys in `ai-factory/models.yaml` (read as
+  the target's key, and doctor reports them as `ok`), and the project `$fc-ba`, `$fc-analyze` and
+  `$fc-scout` skills under `.codex/skills/` all arrive only after `/fc:sync-sdlc`. Until then
+  `TASK=ba` fails because the repo has no `ba.md` task file, and a `ba:` routing key is read as a
+  task of its own that nothing runs, so it routes nothing. In `models.yaml`, map the canonical key
+  (`analyse`, `explore`) rather than a shortcut.
+- **Sync refuses a task file with a shortcut name (breaking).** `/fc:sync-sdlc`
+  (`make/sync-adapters.js`) and both plugin generators now refuse a task file named `ba.md`,
+  `analyze.md` or `scout.md` with `Task <name>.md uses the shortcut name of <target>; rename the
+  task file` (for example `Task ba.md uses the shortcut name of analyse; rename the task file`), and
+  write no adapters. Such a file would collide with the plugin's own `/fc:<name>`. An adopted repo
+  that has one must rename it in `ai-factory/tasks/` to a name that is not a shortcut, then run
+  `/fc:sync-sdlc` again.
+- **Duplicate routing keys stop every routed run.** A `models.yaml` that maps a shortcut and its
+  target (`ba:` and `analyse:`), or two shortcuts of one target (`ba:` and `analyze:`), fails to
+  parse with ``duplicate task `analyse`: `ba` is its shortcut name, so map only `analyse` ``,
+  and doctor reports it as a `models` finding. Headless and routed runs stop until it is fixed, as
+  they already do for `check:` with `review:`. The fix: delete the shortcut key and keep only the
+  target's key.
+- **`check.md` is unchanged.** An adopted repo's own `ai-factory/tasks/check.md` task syncs as
+  before: `sync-adapters.js` writes that task's `.codex/skills/fc-check/` skill, skips the alias
+  skill and adds no new refusal. The plugin generators still refuse it as the deprecated name of
+  `review`.
+- **Shortcuts are stable public names.** `/fc:ba`, `/fc:analyze` and `/fc:scout` are part of the
+  public `/fc:` and `$fc-` namespaces. Retiring one later goes through `TASK_ALIASES`: it moves
+  there and becomes a deprecated name with a notice, as `/fc:check` did, before it is removed.
+- **Logs record the target.** The task hook (`log-task.js`), cost reports and lifecycle events
+  attribute a shortcut run to its target, so `/fc:scout` rows say `explore`.
+- **Docs.** `docs/commands/ba.md`, `analyze.md` and `scout.md` mark each command as a shortcut and
+  link its target. `sync-docs.js` takes a shortcut's or a deprecated alias's kind from its target, so
+  `docs/commands/check.md` now says "Project task". Shortcut notes need only `## Usage`. The plugin
+  ships 28 commands; `check-risk.sh` now derives that count from `commands/` instead of a literal.
+
 ## 5.0.1 — 2026-11-02
 
 Releases the user documentation in `docs/` and the generator that keeps its command reference in

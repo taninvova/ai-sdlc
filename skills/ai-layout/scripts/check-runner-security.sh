@@ -22,6 +22,9 @@ fs.writeFileSync(path.join(payload, "tasks/chore.md"), "fixture task");
 fs.writeFileSync(path.join(payload, "tasks/review.md"), "fixture review");
 fs.writeFileSync(path.join(payload, "tasks/start.md"), "fixture classifier");
 fs.writeFileSync(path.join(payload, "tasks/continue.md"), "fixture continuation");
+// Targets of the TASK_SHORTCUTS names (ba, analyze → analyse; scout → explore).
+fs.writeFileSync(path.join(payload, "tasks/analyse.md"), "fixture analyse");
+fs.writeFileSync(path.join(payload, "tasks/explore.md"), "fixture explore");
 const fake = path.join(root, "fake cli");
 fs.writeFileSync(fake, `#!/usr/bin/env node
 const fs = require('node:fs'), path = require('node:path');
@@ -111,7 +114,11 @@ async function asyncRun(extra = {}) {
   // TASK=check is the deprecated name of TASK=review: the same model rules apply to both.
   for (const TASK of ["review", "check"]) {
    modelFile("claude: provider/alias\ncodex:\nreview: reviewer\npricing:\n  default: { input: 3, output: 15 }\n");
-   ok(invoke({TASK})); assert.equal(last().args[2], "reviewer");
+   const first = invoke({TASK}); ok(first); assert.equal(last().args[2], "reviewer");
+   // Only a TASK_ALIASES name is deprecated, and the runner says so on stderr (AC14).
+   if (TASK === "check") assert.ok(first.stderr.includes("runner: TASK=check is deprecated; running TASK=review\n"), first.stderr);
+   else assert.doesNotMatch(first.stderr, /deprecated/);
+   assert.equal(Buffer.from(last().input,"base64").toString(), "fixture review\n## Input\n");
    ok(invoke({MODEL:"explicit",TASK})); assert.equal(last().args[2], "explicit");
    ok(invoke({TASK}, ["MODEL="])); assert.equal(last().args.includes("--model"), false);
    modelFile("claude: provider/alias\nreview:\n");
@@ -233,6 +240,23 @@ async function asyncRun(extra = {}) {
   rejected({TASK:"plan",CLAUDE_CODE_SUBAGENT_MODEL:"other/model"});
   ok(invoke({TASK:"plan",TOOL:"codex",CLAUDE_CODE_SUBAGENT_MODEL:"other/model"}));
   noScratch();
+  // --- TASK_SHORTCUTS: a shortcut runs its target's task file and model rules, with no notice (AC13)
+  modelFile("claude: tool/claude\ncodex: tool/codex\nreview:\nrouting:\n  enabled: true\n  tasks:\n    analyse:\n      claude: gateway/analysis-claude\n      codex: gateway/analysis-codex\n    explore:\n      claude: gateway/exploring-claude\n      codex: gateway/exploring-codex\n");
+  for (const tool of ["claude","codex"]) {
+   const flag = tool === "codex" ? "-m" : "--model";
+   for (const [TASK,target] of [["ba","analyse"],["analyze","analyse"],["scout","explore"]]) {
+    const before=captures().length;
+    const result=invoke({TOOL:tool,TASK,INPUT:"shortcut input"});
+    ok(result);
+    assert.equal(captures().length,before+1,`TASK=${TASK}: exactly one launch`);
+    assert.equal(Buffer.from(last().input,"base64").toString(),`fixture ${target}\n## Input\nshortcut input`,`TASK=${TASK} reads tasks/${target}.md`);
+    assert.deepEqual(flagValues(last(),flag),[`gateway/${target==="analyse"?"analysis":"exploring"}-${tool}`],`TASK=${TASK} uses the ${target} mapping`);
+    assert.doesNotMatch(result.stderr,/deprecated/,`TASK=${TASK} is a shortcut, not a deprecated name`);
+    assert.ok(result.stderr.includes(`model: ${target} / ${tool}: `),result.stderr);
+    assert.equal(sidecarOf(result).task,target);
+   }
+  }
+  noScratch();
   // --- TASK=loop: INPUT is split into loop.js start arguments as data, never run by a shell ----
   fs.writeFileSync(path.join(payload,"tasks/loop.md"),"fixture loop");
   const loopBefore=captures().length;
@@ -249,7 +273,7 @@ async function asyncRun(extra = {}) {
   assert.equal(captures().length,loopBefore,"a refused or listing TASK=loop reached the CLI");
   assert.equal(fs.existsSync(path.join(runs,"tmp","loop")),false,"a refused TASK=loop left loop state");
   noScratch();
-  console.log("PASS: safe runner arguments, selection, input bytes, model precedence, private concurrent scratch, interruption, and symlink rejection; routed plan/test argv per tool through make, stderr and sidecar agree, reported identity kept apart, fallback disclosed, overrides win, one launch on failure, disabled and invalid routing");
+  console.log("PASS: safe runner arguments, selection, input bytes, model precedence, private concurrent scratch, interruption, and symlink rejection; routed plan/test argv per tool through make, stderr and sidecar agree, reported identity kept apart, fallback disclosed, overrides win, one launch on failure, disabled and invalid routing; shortcut task names run their target without a deprecation notice");
  } finally { fs.rmSync(scratch,{recursive:true,force:true}); }
 })().catch(error => { console.error(error); process.exitCode=1; });
 NODE

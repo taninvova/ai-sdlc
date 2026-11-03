@@ -5,7 +5,7 @@ One paragraph: what this project does and who uses it. Stack: {{stack}}. Scaffol
 
 ## Commands
 {{commands}}
-Slash commands: /fc:start /fc:continue /fc:fleet /fc:design /fc:adr /fc:analyse /fc:explore /fc:spec /fc:plan /fc:risk /fc:test /fc:run /fc:loop /fc:fix /fc:chore /fc:quick /fc:review /fc:report
+Slash commands: /fc:start /fc:continue /fc:fleet /fc:design /fc:adr /fc:analyse /fc:explore /fc:spec /fc:plan /fc:risk /fc:test /fc:run /fc:loop /fc:fix /fc:chore /fc:quick /fc:review /fc:report · shortcuts: /fc:ba and /fc:analyze for /fc:analyse, /fc:scout for /fc:explore
 Headless (CI only): make -f ai-factory/make/ai.mk ai TASK=<name> INPUT="…"
 
 ## Non-negotiable rules

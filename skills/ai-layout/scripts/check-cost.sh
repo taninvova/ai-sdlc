@@ -211,6 +211,27 @@ eq "two-tools.csv: the logged row still says check" \
 eq "two-tools.csv: a check row is grouped as review" "$(grp two-tools.csv task)" "review=1/900 run=1/1500"
 eq "two-tools.csv: only the task dimension is renamed" "$(grp two-tools.csv agent)" "(unattributed)=1/900 implementer=1/1500"
 
+# A row logged under a shortcut name is grouped under its target (ASD-004 AC23): `ba` and
+# `analyze` run analyse, `scout` runs explore. The fixture is inline, in scratch space, so the
+# checked-in fixtures and their byte-identity sums stay as they are. Input tokens are distinct
+# powers of ten so a row counted twice or dropped shows in the sum.
+SHORTCUTS_CSV=$SCRATCH/shortcuts.csv
+{
+  echo "$HEADER"
+  echo "2026-11-02T10:00:00Z,s1,session,tanin,main,ba,claude,,claude-opus-5,1,1,1,0,0,0.00,,"
+  echo "2026-11-02T10:01:00Z,s1,session,tanin,main,analyze,codex,,gpt-5,1,10,1,0,0,0.00,,"
+  echo "2026-11-02T10:02:00Z,s1,session,tanin,main,scout,claude,,claude-opus-5,1,100,1,0,0,0.00,,"
+  echo "2026-11-02T10:03:00Z,s1,session,tanin,main,analyse,claude,,claude-opus-5,1,1000,1,0,0,0.00,,"
+} > "$SHORTCUTS_CSV"
+eq "shortcuts: the inline fixture is four conforming rows" \
+  "$(node -e "const C = require('$COST'); const L = C.readLog('$SHORTCUTS_CSV'); console.log(L.rows.length + '|' + L.names.length);")" "4|17"
+eq "shortcuts: the logged rows still say the shortcut names" \
+  "$(node -e "const C = require('$COST'); const L = C.readLog('$SHORTCUTS_CSV'); console.log(L.rows.map(r => C.field(r, 'task')).join(' '));")" \
+  "ba analyze scout analyse"
+eq "shortcuts: ba, analyze and analyse group as analyse; scout as explore" \
+  "$(node -e "const C = require('$COST'); const A = C.aggregate(C.readLog('$SHORTCUTS_CSV')); console.log(A.groups.task.map(g => g.key + '=' + g.rows + '/' + g.input_tokens).join(' '));")" \
+  "analyse=3/1011 explore=1/100"
+
 # hit_rate is RECOMPUTED from the summed tokens, never averaged over rows. hit-rate.csv exists to
 # make the difference impossible to miss: its two rows are 100/(0+100+0) = 1.00 and
 # 100/(300+100+0) = 0.25, whose mean is 0.625, while the group's true rate is the summed
