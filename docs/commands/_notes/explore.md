@@ -1,0 +1,24 @@
+## Usage
+
+Use it before a spec when the request could be built more than one way, or touches a queue contract, a schema or a public API; there it is mandatory, and for small obvious changes it is optional. The `explorer` agent reads `ai-factory/AGENTS.md`, the architecture and coding standards, the relevant project skills and the code the request would touch, then writes the request restated, what exists today, two to four genuinely different options, a comparison table, one recommendation (with an effort rating and a risk-trigger triage for the recommended option), open questions and the `/fc:spec` line to run next. It decides **how** to build in a repo whose home is settled; where a capability lives is `/fc:design`.
+
+The report is the file path and the recommended option in one sentence.
+
+See also: [Exploration workflow](../workflows/exploration.md#explore-compare-implementation-options), [workflow.md §3](../../ai-factory/docs/workflow.md#3-which-command-do-i-want).
+
+## Examples
+
+```
+/fc:explore Export the filtered order list as CSV from the orders page
+/fc:explore Retry failed webhook deliveries with backoff instead of dropping them
+```
+
+## Writes
+
+One new `ai-factory/explorations/<ID>-<slug>.md`, created by the ID helper. No code, spec or plan.
+
+## Refuses or asks
+
+- With no input, asks what to explore, and stops. It never guesses from the branch name or the last commit.
+- When the request cannot be stated without inventing the feature, writes nothing and asks you that question; headless, it reports the question, says nothing was written, and stops.
+- With no ID prefix in the project yet, asks for the project name and a prefix interactively; headless, writes nothing and reports why.

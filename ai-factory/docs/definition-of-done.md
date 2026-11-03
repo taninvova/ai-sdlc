@@ -7,7 +7,8 @@
    `check-paths.sh` is the one that fails if a prompt reaches back for a pre-1.0.0 path.
 2. A prompt, skill or hook change has a before/after run linked in the MR.
 3. Template changes name the blast radius (which adopted repos, breaking or not) and are
-   recorded in CHANGELOG.md with the version bumped in every manifest —
+   recorded in CHANGELOG.md with the version bumped in every manifest and in the version line of
+   `docs/README.md` (line 3, `> For fc ai-sdlc <version>.`) —
    `bash skills/ai-layout/scripts/check-versions.sh` enforces it, after two silent drifts.
 4. Planned work updates the spec if behaviour changed and ticks verified plan steps. Quick work reports its acceptance checklist and relevant verification without requiring a spec or plan.
 5. `/fc:review` run; no `blocker` findings open.

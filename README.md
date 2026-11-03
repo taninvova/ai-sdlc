@@ -4,6 +4,8 @@ The operating-model half of AI-native delivery, as a Claude Code and Codex plugi
 
 **[ai-factory/docs/workflow.md](ai-factory/docs/workflow.md) — how to install it, what each command is for, and the order to run them in.**
 
+**[docs/README.md](docs/README.md) — user documentation: installation, how it works, workflows with diagrams, and every command.** <!-- path-scan-ok -->
+
 ## Workspace and runtime
 
 All plugin-owned project work lives in `ai-factory/`, including local Git rules and scratch

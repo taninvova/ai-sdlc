@@ -1,0 +1,32 @@
+## Usage
+
+Run it once per repo, from the repo root, to add the self-contained `ai-factory/` workspace. It asks once for the project name (suggesting the folder's name) and the artefact ID prefix (suggesting one, such as Pembina → `PMB`): two to five letters, not `AC` or `QC`, and fixed once written. Every spec, plan, exploration, analysis, design, ADR and risk file is then named `<PREFIX>-<NNN>-<slug>.md`. It detects the project's declared verification commands (today, the `build`, `lint`, `typecheck` (or `type-check`), `test` and `e2e` scripts in `package.json`; other stacks are reported as undetected), copies the layout and records the manifest. In a headless run it asks nothing and uses the folder's name and its suggested prefix.
+
+It then offers, once and only interactively, to declare an external documentation source (default: skip). Afterwards, fill in what adoption left as `TBD`, starting with `ai-factory/AGENTS.md`.
+
+See also: [Installation: adopt a repo](../installation.md#2-adopt-a-repo), [workflow.md §2](../../ai-factory/docs/workflow.md#2-set-a-repo-up-once-per-repo).
+
+## Examples
+
+```
+/fc:adopt-sdlc
+/fc:adopt-sdlc tanin
+```
+
+The optional argument is the owner recorded in the layout; without it the owner is `TBD`.
+
+## Writes
+
+- The whole `ai-factory/` layout, copied from the installed plugin's templates, with the complete agent payload.
+- `ai-factory/.sdlc.json`: the manifest of which layout version the repo holds.
+- `ai-factory/project.json`: the project name and ID prefix.
+- Only if you accept the offer: the knowledge-source declaration that `/fc:setup-knowledge` writes.
+
+Root files (`AGENTS.md`, `CLAUDE.md`, `Makefile`, Git configuration, tool directories) are preserved, no host adapters are generated, and nothing is committed.
+
+## Refuses or asks
+
+- Refuses if `ai-factory/` already exists, overwriting nothing; use `/fc:sync-sdlc` there.
+- Refuses a prefix that is not two to five letters, or is `AC` or `QC`, before anything is copied.
+- Asks for the project name and prefix once, before creating anything; asks nothing in a headless run.
+- Never scaffolds application code and invents no checks: commands it could not detect are reported as such.

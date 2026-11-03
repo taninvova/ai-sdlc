@@ -109,7 +109,7 @@ disable host protections or grant broad permissions to make tests pass.
 
 Working on the plugin itself, from its repo root: `claude --plugin-dir .`.  <!-- path-scan-ok -->
 
-The installed plugin exposes 22 `/fc:*` commands in every repo, including all 16 project
+The installed plugin exposes 25 `/fc:*` commands in every repo, including all 18 project
 task entry points. No `.claude/commands/` pointers are needed for built-in workflows.
 The commands are visible before adoption; a project workflow reports a missing workspace
 or task instead of silently scaffolding it. Hooks stay silent outside an adopted repo.
