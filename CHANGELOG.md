@@ -1,5 +1,43 @@
 # Changelog
 
+## 5.2.0 — 2026-11-02
+
+Adds `/fc:current` (`$fc-current` on Codex), which lists only the plans in progress, each with its
+progress and the next step to pick up. **Not breaking for adopted repos:** it is a plugin-level
+command, and nothing under `skills/ai-layout/templates/` changes, so there is nothing to take with
+`/fc:sync-sdlc`. It works as soon as the plugin is updated.
+
+**Plans in progress (spec ASD-006)**
+
+- **`/fc:current` and `$fc-current`.** A plugin-level, read-only command with no headless form
+  (there is no `TASK=current`). It runs `skills/ai-layout/scripts/current.js` once and shows one
+  table of the plans under `ai-factory/plans/` that are started but not finished: at least one step
+  ticked or started and at least one still open. Each row gives the plan's progress (ticked steps
+  out of the steps not withdrawn) and the next step: the first open step `/fc:loop` could start
+  now, or else the first open step. Plans not started yet, finished plans and `ai-factory/plans/done/`
+  are left out. A plan whose step lines cannot be interpreted is listed as `unreadable`, with the
+  reason. The step grammar and the runnable rule are the plugin's own `contracts.js` and `loop.js`,
+  loaded from the plugin, so the listing needs no adopted `ai-factory/make/` and agrees with
+  `/fc:loop`. `/fc:state` is unchanged.
+- **One argument: `--spec <id>`.** It keeps the plans whose `**Spec:**` line names that spec. Any
+  other argument, such as `--done`, a bare ID or a second `--spec`, is refused in one line naming
+  `--spec <id>`. With no plan in progress, no `ai-factory/plans/` directory or no plan for the spec,
+  the answer is one line instead of a table.
+- **Read-only, and narrow.** It edits no file, ticks no box, starts no step or agent and asks
+  nothing. The command's `allowed-tools` is `Bash(node:*)`, not `Bash`. Plan titles are treated as
+  data: control characters are stripped from every field, and the command does not act on them.
+  Symbolic links under `ai-factory/plans/` are skipped.
+- **Name collision: rename a task called `current`.** An adopted repo with its own
+  `ai-factory/tasks/current.md` still gets a project `.claude/commands/fc/current.md` pointer and a
+  `.codex/skills/fc-current/` skill from `/fc:sync-sdlc`, beside the plugin's `/fc:current`, and the
+  run log records both as `current`. The template's `nativeClaudeCommands` does not hold `current`
+  yet; a later template release will add it. Until then, rename that task file in
+  `ai-factory/tasks/` and run `/fc:sync-sdlc` again.
+- **Docs.** `docs/commands/current.md` is generated from the command and
+  `docs/commands/_notes/current.md`, and `current` joins the *Entry and resume* group. The plugin
+  ships 29 commands, 7 of them plugin-level; `README.md`, `docs/` and the workflow docs say so.
+  `check-current.sh` pins the listing, its arguments, its read-only behaviour and the command.
+
 ## 5.1.0 — 2026-11-02
 
 Adds three short names for two existing tasks: `/fc:ba` and `/fc:analyze` run `/fc:analyse`, and

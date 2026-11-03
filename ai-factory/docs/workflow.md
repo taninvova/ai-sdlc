@@ -109,7 +109,7 @@ disable host protections or grant broad permissions to make tests pass.
 
 Working on the plugin itself, from its repo root: `claude --plugin-dir .`.  <!-- path-scan-ok -->
 
-The installed plugin exposes 28 `/fc:*` commands in every repo, including all 18 project
+The installed plugin exposes 29 `/fc:*` commands in every repo, including all 18 project
 task entry points. No `.claude/commands/` pointers are needed for built-in workflows.
 The commands are visible before adoption; a project workflow reports a missing workspace
 or task instead of silently scaffolding it. Hooks stay silent outside an adopted repo.
@@ -141,7 +141,7 @@ that decides whether any of the rest is worth running:
 
 An agent with a placeholder `architecture.md` produces placeholder-quality work.
 
-Restart the session (or `/reload-plugins`) after a plugin update to load all 28 `/fc:*` commands.
+Restart the session (or `/reload-plugins`) after a plugin update to load all 29 `/fc:*` commands.
 
 ---
 
@@ -487,6 +487,7 @@ read `limitations` for the cause. Attested criteria stay in their own group, nev
 |---|---|---|
 | `/fc:adopt-sdlc` | adding the layout to an existing repo | the whole `ai-factory/` layout + `ai-factory/.sdlc.json` |
 | `/fc:state` | coming back to a repo and asking what is left, before picking a step up; `--delivery <id>` for one contract delivery's evidence | nothing — terminal output only |
+| `/fc:current` | asking which plans are in progress, how far each is and which step runs next; `--spec <id>` for one spec's plans | nothing — terminal output only |
 | `/fc:sync-sdlc` | after pulling a new plugin version, or when `/fc:*` are missing | reports drift; generates selected host pointers only on explicit request |
 
 #### Taking the 1.0.0 rename

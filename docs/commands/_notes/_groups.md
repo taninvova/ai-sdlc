@@ -12,7 +12,7 @@ command, `../choosing-a-workflow.md` for a narrative page and
 -->
 | Group | Commands |
 |---|---|
-| [Entry and resume](#entry-and-resume) | `start`, `continue`, `state` |
+| [Entry and resume](#entry-and-resume) | `start`, `continue`, `state`, `current` |
 | [Setup and maintenance](#setup-and-maintenance) | `adopt-sdlc`, `doctor`, `sync-sdlc`, `fleet`, `setup-tracker`, `setup-knowledge` |
 | [Decide before building](#decide-before-building) | `analyse`, `ba` (shortcut), `analyze` (shortcut), `design`, `adr`, `explore`, `scout` (shortcut), `risk` |
 | [Specify and plan](#specify-and-plan) | `spec`, `plan` |

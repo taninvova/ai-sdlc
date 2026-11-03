@@ -22,13 +22,14 @@ The file-edit guard is defense in depth; arbitrary shell commands remain governe
 - `/fc:adopt-sdlc` — add the `ai-factory/` layout to an existing repo (any stack). It asks once for the project name and the artefact ID prefix (Pembina → `PMB`), so every spec, plan and other artefact is named `PMB-001-…`, `PMB-002-…`
 - `/fc:doctor` — report what is wrong with this repo's setup and the command that fixes each thing. Read-only; run it first
 - `/fc:state` — list the specs and plans still outstanding here, each outstanding plan shown with its incomplete steps. `--done` lists only finished items; `--next` names the one to pick up, by git commit date; `--specs` or `--plans` narrows any of those to one kind, and `--spec <id>` to one spec with its plans (a letter-and-digit ID such as `DHW631` or a legacy number such as `0010`); `--delivery <id>` shows one contract delivery's evidence-derived status instead (see [Delivery status](#delivery-status)). Read-only; it lists the work and never starts any
+- `/fc:current` (`$fc-current` on Codex) — list the plans in progress here, each with its progress and the next runnable step; `--spec <id>` narrows it to one spec's plans. Read-only; it never starts a step
 - `/fc:setup-tracker` — point this repo at a tracker so `/fc:spec ABC-12` works, and prove it by resolving a key. Optional; skip it and nothing changes
 - `/fc:setup-knowledge` — declare an external documentation source (an MCP server already attached to your session) for the agents to consult, and prove it answers. Optional; `/fc:adopt-sdlc` offers it once, and the repo's own `ai-factory/docs/` stays the primary knowledge base
 - `/fc:sync-sdlc` — inspect workspace drift; generate selected host pointers only when explicitly requested
 
 `/fc:migrate-layout`, which moved a repo adopted before 1.0.0 onto `ai-factory/`, was **removed in 2.1.0**. A repo that never ran it runs it from an ai-sdlc checkout at 2.0.0 or earlier; its hooks keep working until then, because the fallback to the old directory name stays until 3.0.0.
 
-Claude Code and Codex use the same canonical task files. The plugin ships all 28 Claude
+Claude Code and Codex use the same canonical task files. The plugin ships all 29 Claude
 slash commands and the matching Codex workflow skills; strict mode needs no project
 pointers for built-in tasks. Explicit `--adapters=claude` sync removes old generated
 pointers for native commands and creates pointers only for project-specific tasks.
@@ -283,7 +284,7 @@ The `harness` group drives `--real` through a fake `codex` executable, with no m
 ## Install
 
 Claude Code uses `/fc:<task>`. Codex uses the bundled `$fc-<task>` skills, including
-`$fc-adopt-sdlc`, `$fc-doctor` and `$fc-state`; no project adapters are required for
+`$fc-adopt-sdlc`, `$fc-doctor`, `$fc-state` and `$fc-current`; no project adapters are required for
 native Codex discovery. Both hosts use the same project procedures. Codex plugin hooks
 support patch protection and session/agent accounting after review and trust in `/hooks`.
 

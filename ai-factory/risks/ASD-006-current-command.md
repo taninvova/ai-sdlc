@@ -1,0 +1,34 @@
+# ASD-006 — Current command
+Created: 2026-11-02T21:39:53.696Z
+
+Target: plan ai-factory/plans/ASD-006-current-command.md
+
+Assessed against the plan as committed in dd8cf32 on `feat/asd-006-current`, with its spec `ai-factory/specs/ASD-006-current-command.md` and the code the plan reuses or names (`skills/ai-layout/templates/ai-factory/make/loop.js`, `contracts.js`, `safe-files.js`, `sync-adapters.js`, `commands/state.md`, `skills/ai-layout/scripts/sync-codex-skills.js`, `skills/ai-hooks/scripts/log-task.js`, `.gitignore`). No code for ASD-006 exists yet, so every finding below is about the plan and stays `open` until its mitigation lands.
+
+## Categories assessed
+- authorization: assessed
+- data exposure: assessed
+- secrets: assessed
+- injection: assessed
+- dependency/supply chain: assessed (no manifest or lockfile exists in the repo, so no audit tool was run; inspected locally: the plan adds only Node stdlib and the plugin's own template modules)
+- migrations: assessed
+- rollback: assessed
+- blast radius: assessed
+
+## Findings
+
+| id | category | severity | status | evidence path | mitigation |
+|---|---|---|---|---|---|
+| R1 | authorization | major | open | ai-factory/plans/ASD-006-current-command.md:47; ai-factory/plans/ASD-006-current-command.md:198 | The plan gives `commands/current.md` `allowed-tools: Bash`, which pre-authorises any shell command for the whole turn, while plan titles from the inspected repo (which may come from a teammate's branch or a cloned third-party repo) enter the model's context. R-B strips control characters but not instruction text, and the "titles are data" sentence is a prompt-level control only. Narrow the grant to the one call the command needs, e.g. `allowed-tools: Bash(node:*)` or a pattern naming `current.js`, and add a `command` case in `check-current.sh` asserting that exact frontmatter value. (`commands/state.md:3` carries the same broad `Bash, Read` grant; that is the precedent, not a mitigation.) |
+| R2 | injection | minor | open | ai-factory/plans/ASD-006-current-command.md:49; ai-factory/plans/ASD-006-current-command.md:130 | The plan wraps each typed word in single quotes but does not say how a word that itself contains `'` is quoted, so `--spec "x'; touch pwned; '"` would leave the quotes (inference). The planned `ASD-900;touch pwned` case only proves the script's regex, since `;` is already inert inside single quotes. Specify the escaping (`'` → `'\''`) or tell the model to refuse any argument containing a quote without running anything, and add that argument to the Step 3 `args` / Step 4 `command` cases. |
+| R3 | data exposure | minor | open | ai-factory/plans/ASD-006-current-command.md:27; ai-factory/plans/ASD-006-current-command.md:43; skills/ai-layout/templates/ai-factory/make/safe-files.js:24 | The plan lists every `ai-factory/plans/*.md` "regular file" using `statSync`, which follows symlinks, so a symlinked plan pointing outside the repo would be read and its step-like lines printed (inference). loop.js's helpers refuse symlinks through `safe-files.js` `boundary`. Use `lstatSync` (or `boundary(root)`) and treat a symlink as `unreadable` with a reason, with a `list` case for it. |
+| R4 | blast radius | minor | open | ai-factory/plans/ASD-006-current-command.md:199; skills/ai-layout/templates/ai-factory/make/sync-adapters.js:39 | Name collision: `nativeClaudeCommands` lacks `current`, so an adopted repo with its own `ai-factory/tasks/current.md` gets a project `.claude/commands/fc/current.md` and `.codex/skills/fc-current/` beside the plugin's command, and `log-task.js` (skills/ai-hooks/scripts/log-task.js:28) records both as task `current`. AC27 forbids the template fix in 5.2.0. Planned mitigation: the Step 6 CHANGELOG entry and the Step 7 MR text name the collision and the rename; add `current` to `nativeClaudeCommands` in the next template release (ASD-007's 6.0.0 is the plan's candidate). |
+| R5 | dependency/supply chain | minor | open | ai-factory/plans/ASD-006-current-command.md:18; skills/ai-layout/templates/ai-factory/make/contracts.js:8; skills/ai-layout/templates/ai-factory/make/contracts.js:13 | `current.js` requires the plugin's `loop.js` and `contracts.js`, which at load time require `gate.js`, `safe-files.js` and `node:child_process` and run `realpathSync` on the templates directory. The plan's read-only source scan covers only `current.js`'s own text, not what it loads, and a template change in ASD-007 (6.0.0) can break this plugin-level command. Keep the AC23 hash case and the AC28 no-`make/` case as the behavioural proof, state in the plan that the scan is scoped to `current.js`, and keep `check-current.sh` in the full suite so a renamed export (`validatePlan`, `parsePlanSteps`, `explicit`) fails there (R-D). |
+| R6 | blast radius | minor | open | ai-factory/plans/ASD-006-current-command.md:13; ai-factory/plans/ASD-006-current-command.md:105 | `check-current.sh fixture <dir>` runs `git init` and writes files at a caller-supplied path, and ASD-007 calls it. The plan states the directory "must be empty or absent and lie under `ai-factory/runs/tmp/`" but names no enforcement and no check case. Make the builder refuse (non-zero, stderr, nothing written) a path that resolves outside `ai-factory/runs/tmp/` after `..` and symlink resolution, or a non-empty directory, and add cases for both. `ai-factory/runs/tmp/` is gitignored (ai-factory/.gitignore:7), so a correct path leaves the repo clean. |
+| R7 | rollback | minor | open | ai-factory/plans/ASD-006-current-command.md:10; ai-factory/plans/ASD-006-current-command.md:206 | Reverting 5.2.0 alone leaves no data or pipeline behind, but once ASD-007 (6.0.0) lands, it calls `current.js` and the fixture builder, so 5.2.0 can no longer be reverted on its own. The fixed names are a stable interface: changing them requires a coordinated change in ASD-007. Record that coupling in the 5.2.0 CHANGELOG entry or the MR text, and keep the R-J boundary diffs as final-phase commands, as planned. |
+
+## Residual risks
+- Prompt injection through plan titles cannot be eliminated in a model-rendered command. After R1 and the "titles are data" instruction, a hostile title can still mislead the rendered table text, but it can no longer use a pre-authorised shell beyond the narrowed grant.
+- Until a template release adds `current` to `nativeClaudeCommands`, an adopted repo with a `tasks/current.md` keeps two `current` entry points (R4); the CHANGELOG note relies on the adopter reading it.
+- `current.js` is coupled to the template modules' exports and load-time behaviour (R5); ASD-007's template changes must keep `check-current.sh` green.
+- Branch ordering (plan R-K): at dd8cf32, `feat/asd-006-current` does not contain ASD-007's `812ec66` (`git merge-base --is-ancestor 812ec66 HEAD` exits 1), so Step 1's gate holds today; it is checked again when Step 1 runs.
