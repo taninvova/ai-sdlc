@@ -2152,9 +2152,9 @@ test("procedures", "planner-effort-line", () => {
 	}
 });
 test("procedures", "implementer-worktree-line", () => {
-	// AC57: exactly one added line against the commit before plan 0022 (64ad3bc), in the source
+	// AC57: exactly one added line against the commit before plan 0022 (7a13b8b), in the source
 	// and in the adopted copy. Not `main`: once 0022 merged, main already holds the line.
-	const BASELINE = "64ad3bcd2c5a8df3d40a3046fc87df6d0278a8a5";
+	const BASELINE = "7a13b8b295ac143195a219e62572ff03ce899d46";
 	for (const rel of ["agents/implementer.md", `${TEMPLATE_AGENTS}/implementer.md`]) {
 		const diff = spawnSync("git", ["diff", "--no-color", "--unified=0", BASELINE, "--", rel], { env: ENV, encoding: "utf8" });
 		assert.equal(diff.status, 0, `git diff ${BASELINE} -- ${rel} failed: ${diff.stderr.trim()}`);

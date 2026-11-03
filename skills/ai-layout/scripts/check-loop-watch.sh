@@ -260,8 +260,13 @@ test("fields", "AC36-state-and-answers-unchanged", () => {
 });
 
 test("fields", "AC36-check-loop-unchanged", () => {
-	const run = spawnSync("git", ["diff", "--quiet", PRE_ASD007, "--", "skills/ai-layout/scripts/check-loop.sh"], { cwd: PLUGIN, env: ENV });
-	assert.equal(run.status, 0, `check-loop.sh differs from PRE_ASD007 (git diff exited ${run.status})`);
+	// The pre-0022 baseline commit check-loop.sh pins was repointed at this repo's own history
+	// (64ad3bc → 7a13b8b); that hash is the only difference allowed.
+	const rel = "skills/ai-layout/scripts/check-loop.sh";
+	const shown = spawnSync("git", ["show", `${PRE_ASD007}:${rel}`], { cwd: PLUGIN, env: ENV, encoding: "utf8" });
+	assert.equal(shown.status, 0, `git show ${PRE_ASD007}:${rel} failed: ${shown.stderr}`);
+	const baseline = (text) => text.replace(/\b(?:64ad3bc|7a13b8b)[0-9a-f]*\b/g, "<PRE_0022>");
+	assert.equal(baseline(fs.readFileSync(path.join(PLUGIN, rel), "utf8")), baseline(shown.stdout), "check-loop.sh differs from PRE_ASD007 beyond its baseline commit");
 });
 
 // ==== render (plan ASD-007 Step 3; AC1, AC18–AC32, AC36 usage, AC37–AC42, AC49, AC51, AC51a) =

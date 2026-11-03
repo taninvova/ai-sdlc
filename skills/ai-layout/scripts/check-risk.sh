@@ -236,7 +236,7 @@ test("agent", "agent-headless-no-question", () => {
 test("agent", "no-old-names", () => {
 	const { execFileSync } = require("node:child_process");
 	const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).split("\n").filter(Boolean);
-	const base = "64ad3bcd2c5a8df3d40a3046fc87df6d0278a8a5"; // the commit before plan 0023; merge-base with main is HEAD once merged
+	const base = "7a13b8b295ac143195a219e62572ff03ce899d46"; // the commit before plan 0023; merge-base with main is HEAD once merged
 	const added = [
 		...git("diff", "--name-only", "--diff-filter=A", base),
 		...git("ls-files", "--others", "--exclude-standard"),
@@ -676,7 +676,7 @@ function riskPassage(rel, text) {
 }
 const NO_ASSESSMENT = "No applicable assessment: nothing here changes.";
 // The commit before plan 0023 landed. Comparing against `main` stopped working once 0023 merged.
-const BASELINE = "64ad3bcd2c5a8df3d40a3046fc87df6d0278a8a5";
+const BASELINE = "7a13b8b295ac143195a219e62572ff03ce899d46";
 const atMain = (rel) => {
 	const shown = spawnSync("git", ["show", `${BASELINE}:${rel}`], { encoding: "utf8" });
 	assert.equal(shown.status, 0, `git show ${BASELINE}:${rel} failed: ${shown.stderr.trim()}`);
