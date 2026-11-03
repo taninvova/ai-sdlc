@@ -109,7 +109,7 @@ disable host protections or grant broad permissions to make tests pass.
 
 Working on the plugin itself, from its repo root: `claude --plugin-dir .`.  <!-- path-scan-ok -->
 
-The installed plugin exposes 29 `/fc:*` commands in every repo, including all 18 project
+The installed plugin exposes 30 `/fc:*` commands in every repo, including all 18 project
 task entry points. No `.claude/commands/` pointers are needed for built-in workflows.
 The commands are visible before adoption; a project workflow reports a missing workspace
 or task instead of silently scaffolding it. Hooks stay silent outside an adopted repo.
@@ -141,7 +141,7 @@ that decides whether any of the rest is worth running:
 
 An agent with a placeholder `architecture.md` produces placeholder-quality work.
 
-Restart the session (or `/reload-plugins`) after a plugin update to load all 29 `/fc:*` commands.
+Restart the session (or `/reload-plugins`) after a plugin update to load all 30 `/fc:*` commands.
 
 ---
 
@@ -234,6 +234,10 @@ Then commit as `ai(<task>): …` and open an MR labelled `ai-assisted`.
   - **Keep tools out of the worktrees.** Test, lint and typecheck tools must exclude
     `ai-factory/runs/tmp/worktrees/`, because a worktree holds a full copy of the repository.
     `/fc:review`, the review scope and the hooks already skip it.
+  - **Watching it.** The loop's watcher shows where a running loop stands: its plan, progress,
+    running and finished steps. `/fc:watch` prints one read-only snapshot in the session;
+    `make loop-watch` (`make -f ai-factory/make/ai.mk loop-watch FOLLOW=1`) follows it in a second
+    terminal until the loop ends. Neither changes the loop or its plan.
   - **After a stop.** Worktrees kept after a failure, conflict or timeout are yours to inspect
     and remove (`git worktree remove <path>`, then `git branch -D` its `fc-loop/…` branch). Resume
     the plan one step at a time with `/fc:run`, or with `/fc:continue <delivery id>`.
@@ -488,6 +492,7 @@ read `limitations` for the cause. Attested criteria stay in their own group, nev
 | `/fc:adopt-sdlc` | adding the layout to an existing repo | the whole `ai-factory/` layout + `ai-factory/.sdlc.json` |
 | `/fc:state` | coming back to a repo and asking what is left, before picking a step up; `--delivery <id>` for one contract delivery's evidence | nothing — terminal output only |
 | `/fc:current` | asking which plans are in progress, how far each is and which step runs next; `--spec <id>` for one spec's plans | nothing — terminal output only |
+| `/fc:watch` | a `/fc:loop` run is under way and you want to see its progress, running and finished steps; `--details` adds each step's saved output | nothing — terminal output only |
 | `/fc:sync-sdlc` | after pulling a new plugin version, or when `/fc:*` are missing | reports drift; generates selected host pointers only on explicit request |
 
 #### Taking the 1.0.0 rename

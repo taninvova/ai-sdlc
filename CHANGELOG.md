@@ -1,5 +1,75 @@
 # Changelog
 
+## 6.0.0 — 2026-11-02
+
+Adds a read-only watcher for `/fc:loop`: `loop.js watch` draws a running loop from its
+`state.json` (a progress bar for the plan and one line per step), reached through
+`make loop-watch`, `/fc:watch` and `$fc-watch` on Codex. **Breaking for adopted repos:** it changes
+three templates, `loop.js`, `ai.mk` and `tasks/loop.md`, which is why the release is major. Adopted
+repos pick it up with `/fc:sync-sdlc`; until then `make loop-watch` does not exist there, and
+`/fc:watch` answers with one line naming `/fc:sync-sdlc`.
+
+**Loop watcher (spec ASD-007)**
+
+- **`loop.js watch [<loop-id>] [--follow] [--details] [--width 40-500]`.** A new subcommand of
+  the loop's own script that only reads: it takes no lock, writes no file and starts, finishes or
+  ends nothing. It shows the plan path, a progress bar of ticked steps, and one line per step:
+  done, running (in the main tree or a worktree), applying, failed, timed out, waiting on the steps
+  it depends on, or ready, with elapsed time for a running step, the duration of a finished one,
+  the loop's total and its stop causes. With no loop ID it shows the newest running loop; when
+  every loop has ended it prints a table of them, newest first, and with no loop at all the one
+  line `no loops under ai-factory/runs/tmp/loop/`. A malformed loop ID, an unknown option or a
+  `--width` outside 40–500 is refused in one line plus usage, before any file is read (exit 2), as
+  is a loop ID with no state (`no loop state for <id>`, exit 2); a state that never parses within
+  the bounded rereads exits 1.
+- **Live and plain mode.** On a terminal it draws in colour and, with `--follow`, redraws in place
+  every second with the cursor hidden. Anywhere else — a pipe, CI, `TERM=dumb` or a non-empty
+  `NO_COLOR` — it is plain: no escape sequence, and with `--follow` a new snapshot only when the
+  state changes. `--follow` stops by itself when the loop ends (exit 0), on Ctrl-C (SIGINT, exit
+  0), on SIGTERM (143) or SIGHUP (129), and when the state file is gone after the bounded rereads
+  (`loop state for <id> is gone`, exit 1); the cursor is shown again in every case. A loop whose
+  state has not changed for longer than its `step_timeout` gets a `no update for …` line and is
+  followed until Ctrl-C.
+- **Width and text.** The width is `--width`, else `COLUMNS`, else the terminal's, else 100, and
+  no line is wider: titles are cut with `…` and the bar shrinks. Every string taken from the state
+  or the plan has its terminal control characters (C0 but LF, DEL, C1 and the bidirectional
+  controls) stripped by character, never by byte, so non-Latin text is kept intact.
+- **`--details` prints saved agent output.** With `--details`, each running step's worktree path
+  and each finished step's saved implementer output appear under its line. That output is
+  untrusted text and may hold anything the agent echoed: `--details` and `DETAILS=1` copy saved
+  agent output into your terminal or CI log, so ask for it only when you need it.
+- **`make loop-watch` with `LOOP`, `FOLLOW` and `DETAILS`.** `make -f ai-factory/make/ai.mk
+  loop-watch LOOP=<loop id>` runs `loop.js watch` with that ID (none without `LOOP`), adding
+  `--follow` for `FOLLOW=1` and `--details` for `DETAILS=1`. The three are captured with
+  `$(value …)` and reach Node only through the environment, each as one quoted argument, so a
+  value such as `$(shell …)` or `x; touch pwned` is never run and is refused as a malformed loop ID.
+  In CI, take a snapshot with `make -f ai-factory/make/ai.mk loop-watch LOOP=<loop id>` without
+  `FOLLOW`: a follow lasts until the loop ends.
+- **`/fc:watch` and `$fc-watch`.** A plugin-level, read-only command with no headless form. It
+  runs `node ai-factory/make/loop.js watch` once with the words you typed and shows its one
+  snapshot as printed; its `allowed-tools` is `Bash(node:*)`. It never follows (`/fc:watch --follow`
+  answers with one line pointing to `make loop-watch` in a terminal), launches no agent and asks
+  nothing, and it treats plan titles, causes and saved output as data.
+- **`started_at` and `finished_at` in the loop state.** `loop.js next` now records `started_at` on
+  each `running[]` entry, and `finish` copies it into the `finished[]` record and adds
+  `finished_at`. The change is additive: the state stays schema version 1, and every subcommand's
+  answer is unchanged apart from the `usage` text, which gains the `loop.js watch` line. States
+  written by a 5.x `loop.js` have neither field, so the watcher shows their elapsed time and
+  durations as `unknown`.
+- **One new line in `tasks/loop.md`.** After a loop starts, `/fc:loop` tells you that you can
+  follow it in a second terminal with `make -f ai-factory/make/ai.mk loop-watch LOOP=<loop id>
+  FOLLOW=1`. The line forbids the model to run it itself, since a follow lasts until the loop ends.
+- **Docs.** `docs/commands/watch.md` is generated from the command and
+  `docs/commands/_notes/watch.md`, and `watch` joins the *Build and verify* group next to `loop`.
+  The loop notes, `docs/headless-ci.md` and the workflow name the watcher. The plugin ships 30
+  commands, 8 of them plugin-level. `check-loop-watch.sh` pins the watcher, the fields, the make
+  target, the command and the docs.
+- **Rolling back.** Going back to a 5.x plugin removes `/fc:watch` at once, but an adopted repo
+  keeps the 6.0.0 templates, including the `tasks/loop.md` line that names `make loop-watch`, until
+  it resyncs: rolling back means resyncing with `/fc:sync-sdlc` from the older plugin. States with
+  the new fields stay readable by 5.x. The 6.0.0 number cannot be reused, so a fix is a later
+  release, not a re-release of 6.0.0.
+
 ## 5.2.0 — 2026-11-02
 
 Adds `/fc:current` (`$fc-current` on Codex), which lists only the plans in progress, each with its

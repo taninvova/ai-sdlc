@@ -42,6 +42,14 @@
 //     $FC_LOOP_RESULT (absolute) or ai-factory/runs/tmp/loop/<loop-id>/outcome.json. Causes are
 //     listed in the order they happened; the code is 4 (conflict, refused, snapshot), else 1
 //     (failed, timeout), else 5 (verdict), else 0. The subcommand itself exits 0.
+//   loop.js watch [<loop-id>] [--follow] [--details] [--width 40-500]
+//     Read-only (spec ASD-007): no lock is taken and nothing is written. Draws one snapshot of the
+//     loop on stdout, exit 0. With no loop ID it watches the newest running loop; when every loop
+//     has ended it prints a table of them, and with none one line. --details adds worktree paths
+//     and saved output. --follow redraws in place on a terminal (live mode) or prints a snapshot
+//     on each change (plain mode) until the loop ends (0); SIGINT exits 0, SIGTERM 143, SIGHUP
+//     129, a vanished state 1. A refused argument prints one line and the usage on stderr, exit 2,
+//     before any file is read; a missing state exits 2, an unreadable one 1.
 // Every subcommand but start holds an exclusive lock beside the loop's state (state.lock) from its
 // read to its write, git apply and ticking included; run them one at a time all the same.
 // A plan is selected by its ID in any spelling state.sh --spec accepts (a legacy number as 22 or
@@ -71,6 +79,7 @@ const USAGE = [
 	"       loop.js finish <loop-id> <step> --result met|failed|timeout [--output-file <file>] [--delivery <id> [--phase red|step|final]] [--dry]",
 	"       loop.js verdict <loop-id>   (the reviewer's JSON on stdin)",
 	"       loop.js end <loop-id>",
+	"       loop.js watch [<loop-id>] [--follow] [--details] [--width 40-500]",
 ].join("\n");
 const NOTES = {
 	codexSequential: "parallel steps run sequentially on Codex",
@@ -604,7 +613,8 @@ function readySteps(state) {
 // The steps to start now, up to the effective limit in plan order (AC21–AC23). A step runs in the
 // main tree only when it starts alone with nothing else running (AC7, AC15, AC17); otherwise each
 // runs in its own worktree. After a stop cause nothing new starts and running steps drain (AC41).
-function next(state) {
+// Each started step's running[] entry carries started_at, in created_at's format (ASD-007 AC33).
+function next(state, { now = new Date() } = {}) {
 	if (!state.pending) state.pending = [];
 	if (!state.ran) state.ran = [];
 	if (state.causes.length) {
@@ -620,7 +630,7 @@ function next(state) {
 		const mode = ready.length === 1 && state.running.length === 0 ? "main" : "worktree";
 		const steps = ready.map((step) => ({ number: step.number, mode }));
 		for (const step of steps) {
-			state.running.push({ step: step.number, mode: step.mode });
+			state.running.push({ step: step.number, mode: step.mode, started_at: now.toISOString() });
 			state.ran.push(step.number);
 		}
 		return { action: "start", steps };
@@ -640,7 +650,9 @@ function next(state) {
 // finish(state, number, result, { dry, root, git }) → { action: "finished", applied, applies,
 // ticked, causes, … }. `applied` lists the steps brought back cleanly and ticked; `applies` says
 // how each queued step's delta was brought back (plain, 3way, none, conflict or refused).
-function finish(state, number, result, { dry = false, root = null, git: run = git, output = null, contract = null, verify = verifyStep } = {}) {
+// The finished[] record copies the running entry's started_at when it has one (a state from
+// before ASD-007 has none) and always carries finished_at, the time finish ran (AC34, AC35).
+function finish(state, number, result, { dry = false, root = null, git: run = git, output = null, contract = null, verify = verifyStep, now = new Date() } = {}) {
 	if (!RESULTS.includes(result)) throw new UsageError(`--result '${result}' is not met, failed or timeout`);
 	if (contract) {
 		if (!DELIVERY.test(contract.delivery || "")) throw new UsageError(`--delivery '${contract.delivery || ""}' is not a delivery ID (d-YYYYMMDD-xxxxxx)`);
@@ -662,6 +674,8 @@ function finish(state, number, result, { dry = false, root = null, git: run = gi
 		throw new UsageError(`--delivery is for worktree steps only: Step ${number} ran in the main tree, where its implementer records its own contract evidence`);
 	state.running.splice(at, 1);
 	const record = { step: number, mode: entry.mode, result };
+	if (entry.started_at) record.started_at = entry.started_at;
+	record.finished_at = now.toISOString();
 	for (const key of ["worktree", "branch", "head", "snapshot"]) if (entry[key]) record[key] = entry[key];
 	// The implementer's output, relayed unchanged in the report of a failed step (AC42).
 	if (typeof output === "string") record.output = output;
@@ -1510,6 +1524,564 @@ function scheduleLocked(command, rest, root) {
 	return answer;
 }
 
+// --- watch ---------------------------------------------------------------------------------
+// The read-only watcher (spec ASD-007). Function definitions only: loading the module runs
+// none of it, and only main()'s `watch` branch reaches watchCli. It takes no lock and writes
+// nothing. watchFrame is pure (no I/O, no timers): the state, the plan's titles and a time in,
+// the frame's lines out, each at most `width` characters (SGR colouring not counted).
+// The watch line of USAGE, as the watcher's own usage.
+const WATCH_USAGE = "usage: loop.js watch [<loop-id>] [--follow] [--details] [--width 40-500]";
+const WATCH_MIN_WIDTH = 40;
+const WATCH_MAX_WIDTH = 500;
+const WATCH_DEFAULT_WIDTH = 100;
+const WATCH_BAR = 30;
+const WHOLE = /^[0-9]+$/;
+const WATCH_ICONS = { done: "✓", running: "●", applying: "↻", failed: "✗", timeout: "⊘", waiting: "·", ready: "○" };
+const WATCH_SGR = { done: "32", running: "36", applying: "33", failed: "31", timeout: "31", waiting: "2", ready: "0" };
+
+// Widths are counted in characters (code points), never bytes, so a cut never splits a letter.
+const watchLength = (text) => Array.from(text).length;
+function watchCut(text, width) {
+	const list = Array.from(text);
+	if (list.length <= width) return text;
+	return width > 0 ? `${list.slice(0, width - 1).join("")}…` : "";
+}
+const watchPad = (text, width) => text + " ".repeat(Math.max(0, width - watchLength(text)));
+// Stripping (AC45, R2, R3) works on decoded characters, never bytes, so `Л` (d0 9b) is a letter,
+// not a C1 CSI. Dropped: every C0 control but LF, DEL, C1 U+0080–U+009F and the bidirectional
+// controls. TAB becomes a space, and so does LF unless keepNewlines (a --details saved output).
+const WATCH_CONTROLS = /[\u0000-\u0008\u000B-\u001F\u007F-\u009F\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]/gu;
+function watchSanitize(value, { keepNewlines = false } = {}) {
+	const text = String(value === undefined || value === null ? "" : value).replace(/\t/g, " ").replace(WATCH_CONTROLS, "");
+	return keepNewlines ? text : text.replace(/\n/g, " ");
+}
+// Every string from the state or the plan is drawn on one line.
+const watchOneLine = (value) => watchSanitize(value);
+// A --details line is wrapped at the width, never cut, so none of it is lost (AC51a).
+function watchWrap(text, width) {
+	const list = Array.from(text);
+	const out = [];
+	for (let index = 0; index < list.length; index += width) out.push(list.slice(index, index + width).join(""));
+	return out.length ? out : [""];
+}
+
+// 37s, 4m12s, 1h04m12s; a time that cannot be computed is `unknown` (AC37, AC38, AC40).
+function watchDuration(ms) {
+	if (!Number.isFinite(ms) || ms < 0) return "unknown";
+	const total = Math.floor(ms / 1000);
+	const two = (n) => String(n).padStart(2, "0");
+	const hours = Math.floor(total / 3600);
+	const minutes = Math.floor((total % 3600) / 60);
+	const seconds = total % 60;
+	if (total < 60) return `${seconds}s`;
+	if (total < 3600) return `${minutes}m${two(seconds)}s`;
+	return `${hours}h${two(minutes)}m${two(seconds)}s`;
+}
+const watchTime = (iso) => (typeof iso === "string" ? Date.parse(iso) : NaN);
+const watchSpan = (from, toMs) => watchDuration(toMs - watchTime(from));
+
+// A step's status, in the spec's order: done, running, applying, failed, timeout, waiting, ready.
+function watchStatus(state, steps, step) {
+	if (step.done === true) return { kind: "done" };
+	const entry = state.running.find((item) => item && item.step === step.number);
+	if (entry) return { kind: "running", entry };
+	if (state.pending.includes(step.number)) return { kind: "applying" };
+	const results = state.finished.filter((item) => item && item.step === step.number).map((item) => item.result);
+	if (results.includes("failed")) return { kind: "failed" };
+	if (results.includes("timeout")) return { kind: "timeout" };
+	const open = waitsFor(steps, step)
+		.filter((ref) => !(steps.find((other) => other.number === ref) || { done: false }).done)
+		.sort((a, b) => a - b);
+	if (open.length) return { kind: "waiting", on: open };
+	return { kind: "ready" };
+}
+function watchLabel(status) {
+	if (status.kind === "running") return `running ${watchOneLine(status.entry.mode)}`.trimEnd();
+	if (status.kind === "waiting") return `waiting on ${status.on.join(", ")}`;
+	return status.kind;
+}
+// Running: elapsed since started_at. Finished (done, applying, failed, timeout): the duration of
+// its last finished[] record. A step ticked with no record (ticked before the loop) shows none.
+function watchStepTime(state, step, status, now) {
+	if (status.kind === "running") return watchSpan(status.entry.started_at, now);
+	if (!["done", "applying", "failed", "timeout"].includes(status.kind)) return "";
+	const records = state.finished.filter((item) => item && item.step === step.number);
+	if (!records.length) return "";
+	const record = records[records.length - 1];
+	return watchSpan(record.started_at, watchTime(record.finished_at));
+}
+
+// frame(state, titles, now, { details, color, width }) → lines. titles: Map step → title, or null
+// when the plan cannot be read (AC21). now: milliseconds. Step titles are cut with …, the bar
+// shrinks from 30 cells, and every other line is cut with … to fit the width (AC51a).
+function watchFrame(state, titles, now, { details = false, color = false, width = WATCH_DEFAULT_WIDTH } = {}) {
+	const fit = Math.max(WATCH_MIN_WIDTH, Math.floor(Number(width)) || WATCH_DEFAULT_WIDTH);
+	const view = {
+		running: Array.isArray(state.running) ? state.running : [],
+		pending: Array.isArray(state.pending) ? state.pending : [],
+		finished: Array.isArray(state.finished) ? state.finished : [],
+		causes: Array.isArray(state.causes) ? state.causes : [],
+	};
+	const steps = (Array.isArray(state.steps) ? state.steps : [])
+		.filter((step) => step && Number.isInteger(step.number))
+		.map((step) => ({ ...step, explicit: step.explicit === true, depends: Array.isArray(step.depends) ? step.depends : [] }));
+	const ended = state.ended && typeof state.ended === "object" ? state.ended : null;
+
+	const lines = [`/fc:loop ${watchOneLine(state.loop_id)}  ${watchOneLine(state.plan)}`];
+	lines.push(
+		ended
+			? `ended (code ${watchOneLine(ended.code)}) · ${watchSpan(state.created_at, watchTime(ended.at))}`
+			: `running · ${watchSpan(state.created_at, now)} elapsed`,
+	);
+	const ticked = steps.filter((step) => step.done === true).length;
+	const counter = ` ${ticked}/${steps.length} steps`;
+	const cells = Math.max(1, Math.min(WATCH_BAR, fit - 2 - watchLength(counter)));
+	const filled = steps.length ? Math.round((cells * ticked) / steps.length) : 0;
+	lines.push(`[${"█".repeat(filled)}${"░".repeat(cells - filled)}]${counter}`);
+	lines.push("");
+
+	const rows = steps.map((step) => {
+		const status = watchStatus(view, steps, step);
+		return {
+			status,
+			number: `S${step.number}`,
+			title: titles instanceof Map ? watchOneLine(titles.get(step.number)) : null,
+			label: watchLabel(status),
+			time: watchStepTime(view, step, status, now),
+		};
+	});
+	const widest = (key) => Math.max(0, ...rows.map((row) => watchLength(row[key] || "")));
+	const numberWidth = widest("number");
+	const labelWidth = widest("label");
+	const timeWidth = widest("time");
+	let titleWidth = 0;
+	if (titles instanceof Map) {
+		const room = fit - (2 + numberWidth) - 2 - (2 + labelWidth) - (timeWidth ? 2 + timeWidth : 0);
+		titleWidth = Math.max(0, Math.min(widest("title"), room));
+	}
+	const paint = (kind, text) => (color ? `\u001b[${WATCH_SGR[kind]}m${text}\u001b[0m` : text);
+	for (const row of rows) {
+		let line = watchPad(row.number, numberWidth);
+		if (titleWidth > 0) line += `  ${watchPad(watchCut(row.title, titleWidth), titleWidth)}`;
+		line += `  ${watchPad(row.label, labelWidth)}`;
+		if (row.time) line += `  ${row.time}`;
+		// The icon is the line's first character, so it survives any cut and is the only part painted.
+		lines.push({ icon: WATCH_ICONS[row.status.kind], kind: row.status.kind, rest: watchCut(line.trimEnd(), fit - 2) });
+		if (details) lines.push(...watchDetails(view, row, fit));
+	}
+	if (view.causes.length) {
+		lines.push("", "causes:");
+		for (const cause of view.causes) {
+			const kind = watchOneLine(cause && cause.kind);
+			const step = cause && Number.isInteger(cause.step) ? ` S${cause.step}` : "";
+			const message = cause && cause.message ? `: ${watchOneLine(cause.message)}` : "";
+			lines.push(`  ${kind}${step}${message}`);
+		}
+	}
+	return lines.map((line) => (typeof line === "string" ? watchCut(line, fit) : `${paint(line.kind, line.icon)} ${line.rest}`));
+}
+
+// --details (AC44): under a step's line, its worktree path, then the saved output of each of its
+// finished[] records, LFs kept as line breaks. Each line is indented and wrapped at the width.
+const WATCH_INDENT = "    ";
+function watchDetails(view, row, fit) {
+	const room = fit - WATCH_INDENT.length;
+	const lines = [];
+	const add = (text) => {
+		for (const part of watchWrap(text, room)) lines.push(WATCH_INDENT + part);
+	};
+	const entry = row.status.kind === "running" ? row.status.entry : null;
+	if (entry && typeof entry.worktree === "string" && entry.worktree) add(`worktree ${watchOneLine(entry.worktree)}`);
+	const number = Number(row.number.slice(1));
+	for (const record of view.finished) {
+		if (!record || record.step !== number || typeof record.output !== "string") continue;
+		for (const text of watchSanitize(record.output, { keepNewlines: true }).replace(/\n$/, "").split("\n")) add(text);
+	}
+	return lines;
+}
+
+// width({ arg, env, isTTY, columns }): --width, else COLUMNS when it is a whole number, else the
+// TTY's columns, else 100; below 40 is drawn at 40 (AC51a). Pure: called outside frame.
+function watchWidth({ arg = null, env = {}, isTTY = false, columns = null } = {}) {
+	let value = WATCH_DEFAULT_WIDTH;
+	const fromEnv = env && typeof env.COLUMNS === "string" && WHOLE.test(env.COLUMNS) ? Number(env.COLUMNS) : null;
+	if (Number.isInteger(arg)) value = arg;
+	else if (fromEnv !== null) value = fromEnv;
+	else if (isTTY && Number.isInteger(columns) && columns > 0) value = columns;
+	return Math.max(WATCH_MIN_WIDTH, value);
+}
+
+// Pure: argv after `watch` → { loopId, width, details, follow }; loopId is null when none is given (the
+// loop is then picked by watchSelect). Throws UsageError before any file is read (AC13). Each
+// argument is judged as given; only the copy printed in a refusal is stripped.
+function watchParseArgs(argv) {
+	let loopId = null;
+	let width = null;
+	let details = false;
+	let follow = false;
+	for (let index = 0; index < argv.length; index++) {
+		const arg = String(argv[index]);
+		const shown = watchOneLine(arg);
+		if (arg === "--details") details = true;
+		else if (arg === "--follow") follow = true;
+		else if (arg === "--width") {
+			if (index + 1 >= argv.length) throw new UsageError(`'--width' is refused: it needs a whole number from ${WATCH_MIN_WIDTH} to ${WATCH_MAX_WIDTH}`);
+			const value = String(argv[++index]);
+			const printed = watchOneLine(value);
+			if (width !== null) throw new UsageError(`--width '${printed}' is refused: --width is given more than once`);
+			if (!WHOLE.test(value) || Number(value) < WATCH_MIN_WIDTH || Number(value) > WATCH_MAX_WIDTH)
+				throw new UsageError(`--width '${printed}' is refused: it is not a whole number from ${WATCH_MIN_WIDTH} to ${WATCH_MAX_WIDTH}`);
+			width = Number(value);
+		} else if (arg.startsWith("-")) throw new UsageError(`'${shown}' is refused: it is not an option watch takes`);
+		else if (loopId !== null) throw new UsageError(`'${shown}' is refused: watch takes one loop ID`);
+		else if (!LOOP_ID.test(arg)) throw new UsageError(`'${shown}' is refused: it is not a loop ID (loop-YYYYMMDDTHHMMSSZ-xxxxxx)`);
+		else loopId = arg;
+	}
+	return { loopId, width, details, follow };
+}
+
+// The plan's step titles: the text after `Step N —`, with ** removed. Only a regular file whose
+// real path lies directly under ai-factory/plans/ or ai-factory/plans/done/ is read; anything
+// else, or a plan that cannot be read, gives null and no titles are drawn (AC20, AC21, R4).
+function watchTitles(root, plan) {
+	if (typeof plan !== "string" || !plan) return null;
+	try {
+		const plans = fs.realpathSync(path.join(root, PLANS));
+		const file = fs.realpathSync(path.resolve(root, plan));
+		const folder = path.dirname(file);
+		if (folder !== plans && folder !== path.join(plans, "done")) return null;
+		if (!fs.statSync(file).isFile()) return null;
+		// Controls are stripped before parsing: a CR inside a step line would otherwise end the
+		// line for the step parser and lose its title (AC45).
+		const text = watchSanitize(fs.readFileSync(file, "utf8"), { keepNewlines: true });
+		const lines = text.split("\n");
+		const titles = new Map();
+		for (const { number } of parsePlanSteps(text)) {
+			if (titles.has(number)) continue;
+			const index = stepLine(lines, number);
+			if (index === -1) continue;
+			const body = lines[index].replace(/\r$/, "").replace(/^- \[.?\]/, "").replace(/\*\*/g, "").trim();
+			const match = body.match(/^Step\s+0*[0-9]+(?![0-9])\s*(?:[—–:-]\s*)?(.*)$/u);
+			titles.set(number, match ? match[1].trim() : "");
+		}
+		return titles;
+	} catch {
+		return null;
+	}
+}
+
+// readState(root, loopId, { read, pause }) → { state }, { missing }, or { unreadable: <rel path> }.
+// No lock (AC53). writeState rewrites state.json in place, so a read can catch it half-written:
+// a read that does not parse is retried, at most WATCH_READS reads in all, WATCH_REREAD_MS apart
+// (AC15, AC16). A file that is not there is `missing` at once (AC14). A file that parses but is
+// not a loop state is unreadable without retrying. `read` and `pause` are seams for the check;
+// one-shot mode waits with the synchronous pause.
+const WATCH_READS = 5;
+const WATCH_REREAD_MS = 100;
+function watchReadState(root, loopId, { read = (file) => fs.readFileSync(file, "utf8"), pause: wait = pause } = {}) {
+	const rel = `${LOOP_DIR}/${loopId}/state.json`;
+	const file = path.join(root, rel);
+	for (let attempt = 1; ; attempt++) {
+		let text = null;
+		try {
+			text = String(read(file));
+		} catch (error) {
+			if (error && (error.code === "ENOENT" || error.code === "ENOTDIR")) return { missing: true };
+		}
+		if (text !== null) {
+			let parsed = false;
+			let state = null;
+			try {
+				state = JSON.parse(text);
+				parsed = true;
+			} catch {}
+			if (parsed) return state && state.schema === STATE_SCHEMA && Array.isArray(state.steps) ? { state } : { unreadable: rel };
+		}
+		if (attempt >= WATCH_READS) return { unreadable: rel };
+		wait(WATCH_REREAD_MS);
+	}
+}
+
+// select(root, { read, pause }) for `watch` with no loop ID: { pick: { loopId, state } } for the
+// newest running loop by created_at (AC10); { table: loops } newest first when every loop has
+// ended (AC11); { none: true } with no loop directory or no loop in it (AC12). R4: only directory
+// entries whose name is a loop ID, that lstat reports as a directory and whose state.json lstat
+// reports as a regular file are read; a symlink or anything else is skipped, and so is a state
+// that cannot be read.
+function watchSelect(root, options = {}) {
+	const folder = path.join(root, LOOP_DIR);
+	let names = [];
+	try {
+		names = fs.readdirSync(folder);
+	} catch {
+		names = [];
+	}
+	const loops = [];
+	for (const name of names) {
+		if (!LOOP_ID.test(name)) continue;
+		try {
+			if (!fs.lstatSync(path.join(folder, name)).isDirectory()) continue;
+			if (!fs.lstatSync(path.join(folder, name, "state.json")).isFile()) continue;
+		} catch {
+			continue;
+		}
+		const read = watchReadState(root, name, options);
+		if (read.state) loops.push({ loopId: name, state: read.state });
+	}
+	if (!loops.length) return { none: true };
+	const created = (loop) => {
+		const time = watchTime(loop.state.created_at);
+		return Number.isFinite(time) ? time : -Infinity;
+	};
+	// Newest first; equal times by loop ID, newest ID first.
+	loops.sort((a, b) => (created(a) === created(b) ? byteCompare(b.loopId, a.loopId) : created(b) > created(a) ? 1 : -1));
+	const running = loops.find((loop) => !(loop.state.ended && typeof loop.state.ended === "object"));
+	return running ? { pick: running } : { table: loops };
+}
+
+// The ended-loops table (AC11): a header and one row per loop, in the order given. The plan
+// column is cut with … so every line fits the width; no bar and no step line.
+function watchTable(loops, width = WATCH_DEFAULT_WIDTH) {
+	const fit = Math.max(WATCH_MIN_WIDTH, Math.floor(Number(width)) || WATCH_DEFAULT_WIDTH);
+	const header = ["loop", "plan", "status", "created"];
+	const rows = loops.map(({ loopId, state }) => [
+		loopId,
+		watchOneLine(state.plan),
+		state.ended && typeof state.ended === "object" ? `ended ${watchOneLine(state.ended.code)}` : "running",
+		watchOneLine(state.created_at),
+	]);
+	const widths = header.map((title, column) => Math.max(watchLength(title), ...rows.map((row) => watchLength(row[column]))));
+	const others = widths[0] + widths[2] + widths[3] + 6;
+	widths[1] = Math.max(1, Math.min(widths[1], fit - others));
+	const line = (row) =>
+		watchCut(row.map((cell, column) => (column === 3 ? cell : watchPad(watchCut(cell, widths[column]), widths[column]))).join("  ").trimEnd(), fit);
+	return [line(header), ...rows.map(line)];
+}
+
+// watch [<loop-id>] [--follow] [--details] [--width <n>]: one snapshot, the ended-loops table or
+// the no-loops line, and the exit code; with --follow on a loop that has not ended, a Promise of
+// the exit code (watchFollow). Refusals and errors go to stderr, output to stdout. A live-mode
+// snapshot is coloured; plain mode writes no escape sequence (AC49).
+function watchCli(argv, { root, stdout = process.stdout, stderr = process.stderr, env = process.env, read: reader, pause: wait } = {}) {
+	let args;
+	try {
+		args = watchParseArgs(argv);
+	} catch (error) {
+		if (!(error instanceof UsageError)) throw error;
+		stderr.write(`loop: ${error.message}\n${WATCH_USAGE}\n`);
+		return 2;
+	}
+	const seams = {};
+	if (reader) seams.read = reader;
+	if (wait) seams.pause = wait;
+	const width = () => watchWidth({ arg: args.width, env, isTTY: Boolean(stdout.isTTY), columns: stdout.columns });
+	let loopId = args.loopId;
+	let read;
+	if (loopId === null) {
+		const picked = watchSelect(root, seams);
+		if (picked.none) {
+			stdout.write(`no loops under ${LOOP_DIR}/\n`);
+			return 0;
+		}
+		if (picked.table) {
+			stdout.write(`${watchTable(picked.table, width()).join("\n")}\n`);
+			return 0;
+		}
+		loopId = picked.pick.loopId;
+		read = { state: picked.pick.state };
+	} else read = watchReadState(root, loopId, seams);
+	if (read.missing) {
+		stderr.write(`loop: no loop state for ${loopId}\n`);
+		return 2;
+	}
+	if (read.unreadable) {
+		stderr.write(`loop: loop state ${read.unreadable} is unreadable\n`);
+		return 1;
+	}
+	const live = watchMode({ isTTY: Boolean(stdout.isTTY), env }) === "live";
+	const draw = (state) => watchFrame(state, watchTitles(root, state.plan), Date.now(), { details: args.details, color: live, width: width() });
+	// AC51, AC52: without --follow, or on a loop that has already ended, one view and exit 0.
+	if (!args.follow || (read.state.ended && typeof read.state.ended === "object")) {
+		stdout.write(`${draw(read.state).join("\n")}\n`);
+		return 0;
+	}
+	return watchFollow({ root, loopId, state: read.state, live, draw, width, stdout, stderr });
+}
+
+// mode({ isTTY, env }): plain when stdout is not a TTY, TERM is dumb or NO_COLOR is non-empty;
+// live otherwise (AC49).
+function watchMode({ isTTY = false, env = {} } = {}) {
+	const noColor = env && typeof env.NO_COLOR === "string" && env.NO_COLOR !== "";
+	return isTTY && !(env && env.TERM === "dumb") && !noColor ? "live" : "plain";
+}
+
+// stall(state, since, now) → the stall line, or null: a loop that has not ended and whose state
+// has not changed since `since` (ms) for longer than its step_timeout minutes (30 by default)
+// (AC52b). Pure; the clock is passed in.
+function watchStall(state, since, now) {
+	if (!state || (state.ended && typeof state.ended === "object")) return null;
+	const limit = Number.isFinite(state.step_timeout) && state.step_timeout > 0 ? state.step_timeout : DEFAULTS.step_timeout;
+	const quiet = now - since;
+	if (!Number.isFinite(quiet) || quiet <= limit * 60 * 1000) return null;
+	return `no update for ${Math.floor(quiet / 60000)}m — the loop may have stopped; Ctrl-C to quit`;
+}
+
+// The follow loop (AC46–AC52b, R9, R10). Async timers only — never the blocking pause — so a
+// signal is handled at once. Every WATCH_POLL_MS the state is read; a read that finds no file or
+// does not parse is retried with AC16's bounds. A missing file after them is gone (exit 1,
+// AC52a); an interval whose reads never parse keeps the last view (AC17). Live mode hides the
+// cursor and redraws in place on every poll; plain mode prints a snapshot only when the bytes
+// change (AC50). The stall clock starts at the file's mtime and restarts on every change. The
+// cursor is shown again on the end of the loop, SIGINT (exit 0), SIGTERM and SIGHUP (128+n), a
+// gone state and process exit. Resolves to the exit code.
+const WATCH_POLL_MS = 1000;
+const WATCH_SIGNALS = { SIGINT: 0, SIGTERM: 128 + 15, SIGHUP: 128 + 1 };
+const WATCH_HIDE = "\u001b[?25l";
+const WATCH_SHOW = "\u001b[?25h";
+const WATCH_HOME = "\u001b[H\u001b[J";
+const watchSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function watchParse(text) {
+	try {
+		const state = JSON.parse(text);
+		return state && state.schema === STATE_SCHEMA && Array.isArray(state.steps) ? state : null;
+	} catch {
+		return null;
+	}
+}
+function watchFollow({ root, loopId, state, live, draw, width, stdout, stderr }) {
+	const file = path.join(root, LOOP_DIR, loopId, "state.json");
+	let shown = state;
+	let bytes = null;
+	let since = Date.now();
+	try {
+		bytes = fs.readFileSync(file);
+		since = fs.statSync(file).mtimeMs;
+	} catch {}
+	// The change baseline and the view come from the same read: if loop.js rewrote the state since
+	// the caller's read, show the newer one. Bytes that do not parse leave no baseline, so the first
+	// poll redraws instead of comparing equal to a state never shown.
+	if (bytes) {
+		const initial = watchParse(bytes.toString("utf8"));
+		if (initial) shown = initial;
+		else bytes = null;
+	}
+	let stallPrinted = false;
+	let hidden = false;
+	let stopped = false;
+	let busy = false;
+	let timer = null;
+	let settle = null;
+	const done = new Promise((resolve) => (settle = resolve));
+	const restore = () => {
+		if (!hidden) return;
+		hidden = false;
+		stdout.write(`${WATCH_SHOW}\n`);
+	};
+	const handlers = {};
+	const stop = (code, message = null) => {
+		if (stopped) return;
+		stopped = true;
+		if (timer) clearInterval(timer);
+		for (const [signal, handler] of Object.entries(handlers)) process.removeListener(signal, handler);
+		process.removeListener("exit", restore);
+		if (live) restore();
+		if (message) stderr.write(`loop: ${message}\n`);
+		settle(code);
+	};
+	let printed = 0;
+	const show = () => {
+		const lines = draw(shown);
+		const line = watchStall(shown, since, Date.now());
+		if (live) {
+			if (line) lines.push("", watchCut(line, width()));
+			stdout.write(`${WATCH_HOME}${lines.join("\n")}\n`);
+		} else stdout.write(`${printed++ ? "\n" : ""}${lines.join("\n")}\n`);
+	};
+	// Plain mode prints the stall line once when a stall begins (AC52b).
+	const plainStall = () => {
+		const line = watchStall(shown, since, Date.now());
+		if (!line || stallPrinted) return;
+		stallPrinted = true;
+		stdout.write(`${watchCut(line, width())}\n`);
+	};
+	// One poll: { same }, { changed, state, data }, { unparsed } or { gone }.
+	const poll = async () => {
+		let missing = false;
+		for (let attempt = 1; attempt <= WATCH_READS; attempt++) {
+			let data = null;
+			try {
+				data = await fs.promises.readFile(file);
+				missing = false;
+			} catch (error) {
+				missing = Boolean(error && (error.code === "ENOENT" || error.code === "ENOTDIR"));
+			}
+			if (stopped) return { same: true };
+			if (data) {
+				if (bytes && data.equals(bytes)) return { same: true };
+				const next = watchParse(data.toString("utf8"));
+				if (next) return { changed: true, state: next, data };
+			}
+			if (attempt < WATCH_READS) await watchSleep(WATCH_REREAD_MS);
+			if (stopped) return { same: true };
+		}
+		return missing ? { gone: true } : { unparsed: true };
+	};
+	const tick = async () => {
+		if (busy || stopped) return;
+		busy = true;
+		try {
+			const read = await poll();
+			if (stopped) return;
+			if (read.gone) return stop(1, `loop state for ${loopId} is gone`);
+			if (read.changed) {
+				shown = read.state;
+				bytes = read.data;
+				since = Date.now();
+				stallPrinted = false;
+				if (!live) show();
+			}
+			if (live) show();
+			if (shown.ended && typeof shown.ended === "object") return stop(0);
+			if (!live) plainStall();
+		} finally {
+			busy = false;
+		}
+	};
+	for (const [signal, code] of Object.entries(WATCH_SIGNALS)) {
+		handlers[signal] = () => stop(code);
+		process.on(signal, handlers[signal]);
+	}
+	process.on("exit", restore);
+	if (live) {
+		hidden = true;
+		stdout.write(WATCH_HIDE);
+	}
+	show();
+	if (shown.ended && typeof shown.ended === "object") return (stop(0), done);
+	if (!live) plainStall();
+	timer = setInterval(() => {
+		tick().catch((error) => {
+			stop(1, error && error.message ? error.message : String(error));
+		});
+	}, WATCH_POLL_MS);
+	return done;
+}
+
+// main()'s watch branch: a number is the exit code; a Promise (--follow) sets it when it settles.
+function watchSettle(result) {
+	if (typeof result === "number") return result;
+	result.then(
+		(code) => {
+			process.exitCode = code;
+		},
+		(error) => {
+			process.stderr.write(`loop: ${error && error.message ? error.message : error}\n`);
+			process.exitCode = 1;
+		},
+	);
+	return undefined;
+}
+
 function main(argv) {
 	const [command, ...rest] = argv;
 	if (["next", "prepare", "finish", "verdict", "end"].includes(command)) {
@@ -1524,6 +2096,8 @@ function main(argv) {
 			return 2;
 		}
 	}
+	if (command === "watch")
+		return watchSettle(watchCli(rest, { root: fs.realpathSync(path.resolve(ENTRY_DIRECTORY, "../..")), stdout: process.stdout, env: process.env }));
 	if (command !== "start") {
 		process.stdout.write(`${JSON.stringify({ action: "usage", message: `unknown subcommand '${command || ""}'`, usage: USAGE })}\n`);
 		process.stderr.write(`loop: unknown subcommand '${command || ""}'\n${USAGE}\n`);
@@ -1570,4 +2144,20 @@ module.exports = {
 	end,
 	outcome,
 	exitCode,
+	// The watcher's seams (spec ASD-007): the pure renderer and width, the plan titles, the
+	// argument parser, the character stripping, reading and picking the loop, the ended-loops
+	// table, the mode rules, the stall line and the CLI that main()'s watch branch calls.
+	watch: {
+		frame: watchFrame,
+		width: watchWidth,
+		titles: watchTitles,
+		parseArgs: watchParseArgs,
+		cli: watchCli,
+		sanitize: watchSanitize,
+		readState: watchReadState,
+		select: watchSelect,
+		table: watchTable,
+		mode: watchMode,
+		stall: watchStall,
+	},
 };

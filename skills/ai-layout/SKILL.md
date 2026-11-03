@@ -10,7 +10,7 @@ Use `node <installed-plugin>/skills/ai-layout/scripts/adopt.js .` for new adopti
 creates only `ai-factory/`, fills project placeholders, writes the project name and ID prefix
 (`--name`, `--prefix`; Pembina → PMB) to `ai-factory/project.json`, detects declared commands without
 running them, and refuses an existing workspace. Existing root and host files are preserved.
-The installed plugin supplies hooks and all 29 native Claude commands (one of them the deprecated
+The installed plugin supplies hooks and all 30 native Claude commands (one of them the deprecated
 /fc:check, which runs the review task); the workspace carries complete
 local task and agent procedures, runner scripts and project additions.
 

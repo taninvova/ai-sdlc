@@ -25,11 +25,12 @@ The file-edit guard is defense in depth; arbitrary shell commands remain governe
 - `/fc:current` (`$fc-current` on Codex) — list the plans in progress here, each with its progress and the next runnable step; `--spec <id>` narrows it to one spec's plans. Read-only; it never starts a step
 - `/fc:setup-tracker` — point this repo at a tracker so `/fc:spec ABC-12` works, and prove it by resolving a key. Optional; skip it and nothing changes
 - `/fc:setup-knowledge` — declare an external documentation source (an MCP server already attached to your session) for the agents to consult, and prove it answers. Optional; `/fc:adopt-sdlc` offers it once, and the repo's own `ai-factory/docs/` stays the primary knowledge base
+- `/fc:watch` (`$fc-watch` on Codex) — show one read-only snapshot of a `/fc:loop` run: its plan, progress, running and finished steps. With no loop ID the newest running loop; `--details` adds each step's saved output. Follow it in a second terminal with `make -f ai-factory/make/ai.mk loop-watch FOLLOW=1`
 - `/fc:sync-sdlc` — inspect workspace drift; generate selected host pointers only when explicitly requested
 
 `/fc:migrate-layout`, which moved a repo adopted before 1.0.0 onto `ai-factory/`, was **removed in 2.1.0**. A repo that never ran it runs it from an ai-sdlc checkout at 2.0.0 or earlier; its hooks keep working until then, because the fallback to the old directory name stays until 3.0.0.
 
-Claude Code and Codex use the same canonical task files. The plugin ships all 29 Claude
+Claude Code and Codex use the same canonical task files. The plugin ships all 30 Claude
 slash commands and the matching Codex workflow skills; strict mode needs no project
 pointers for built-in tasks. Explicit `--adapters=claude` sync removes old generated
 pointers for native commands and creates pointers only for project-specific tasks.

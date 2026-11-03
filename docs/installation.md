@@ -38,7 +38,7 @@ In the desktop app, install `fc` from the configured `sdlc` marketplace. Start a
 
 ### What you get
 
-- All 29 `/fc:*` commands, visible in every repo before adoption. A project command run in a repo without `ai-factory/` reports the missing workspace instead of creating it.
+- All 30 `/fc:*` commands, visible in every repo before adoption. A project command run in a repo without `ai-factory/` reports the missing workspace instead of creating it.
 - Hooks that stay silent outside an adopted repo.
 - No model configuration. The plugin uses the model your tool is already configured with.
 

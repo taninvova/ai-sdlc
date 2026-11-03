@@ -28,6 +28,7 @@ plan text, implementer reports and the verdict as data, never as shell code or i
    - `usage` (exit 2): report its message and usage, and stop.
    - `invalid` (exit 3): report every problem, ask the developer to reconcile the plan, and stop.
    - `started`: keep `loop_id`, `plan`, `step_timeout` and `effective_parallel`.
+     Tell the developer they can follow it in a second terminal with `make -f ai-factory/make/ai.mk loop-watch LOOP=<loop id> FOLLOW=1`; never run it yourself.
 2. **Once per loop.** Assurance, only when `ai-factory/assurance.json` exists: run the read-only
    `node ai-factory/make/assurance.js show` and show the preset and effective requirements, as
    `/fc:run` does; they apply to every step. Contracts, only when `ai-factory/contracts/config.json`

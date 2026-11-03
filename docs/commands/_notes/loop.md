@@ -17,6 +17,8 @@ Test, lint and typecheck tools must exclude `ai-factory/runs/tmp/worktrees/`, be
 holds a full copy of the repository. Headless, `make -f ai-factory/make/ai.mk ai TASK=loop INPUT="…"`
 runs it; see [Headless runs and CI](../headless-ci.md#taskloop-exit-codes) for its exit codes.
 
+To follow a running loop, use [`/fc:watch`](watch.md) for one snapshot, or `make -f ai-factory/make/ai.mk loop-watch FOLLOW=1` in a second terminal.
+
 See also: [workflow.md: the rules that make it work](../../ai-factory/docs/workflow.md#the-rules-that-make-it-work).
 
 ## Examples

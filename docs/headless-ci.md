@@ -19,7 +19,7 @@ flowchart LR
   G -- yes --> ENF["Pass only on valid<br/>approve, no blockers"]
 ```
 
-Targets on this page: [`ai`](#run-any-task) · [`review`](#the-review-gate) · [`TASK=loop`](#taskloop-exit-codes) · [contracts and report](#contract-gates) · [other targets](#other-targets)
+Targets on this page: [`ai`](#run-any-task) · [`review`](#the-review-gate) · [`TASK=loop`](#taskloop-exit-codes) · [`loop-watch`](#watching-a-loop) · [contracts and report](#contract-gates) · [other targets](#other-targets)
 
 ## Run any task
 
@@ -70,6 +70,20 @@ Runs `/fc:loop` headless. It asks nothing. A usage error or an invalid plan laun
 | `5` | With the review gate enforced (`GATE_ENFORCE=1` or the `strict` assurance preset), the review was not a valid `approve` with no blockers. |
 
 GNU make reports every recipe failure as 2. To tell causes apart, call the runner directly: `TASK=loop INPUT="…" node ai-factory/make/runner.js ai`. `INPUT` is split at whitespace with no quoting, so name a plan whose path holds a space by its number.
+
+### Watching a loop
+
+```
+make -f ai-factory/make/ai.mk loop-watch LOOP=<loop id>
+```
+
+Prints one read-only snapshot of the loop: its plan, progress, running and finished steps. In CI,
+take a snapshot like this, without `FOLLOW`: `FOLLOW=1` keeps following until the loop ends, so a
+loop that never records its end, or one whose step stalls, never returns and holds the job until its
+own timeout. `DETAILS=1` adds each step's saved agent output; it copies that output, which can hold
+anything an agent read or printed, into the CI log, so set it only where the log may carry that text.
+Without `LOOP` it picks the newest running loop. It exits 0 on a snapshot and nonzero on a refused
+argument, a loop ID with no state or a state it cannot read; make reports each failure as 2.
 
 ## Contract gates
 

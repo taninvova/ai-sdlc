@@ -19,6 +19,9 @@ override DELIVERY := $(value DELIVERY)
 override STEP := $(value STEP)
 override PHASE := $(value PHASE)
 override REQUIRE := $(value REQUIRE)
+override LOOP := $(value LOOP)
+override FOLLOW := $(value FOLLOW)
+override DETAILS := $(value DETAILS)
 
 export TOOL TASK MODEL CMD INPUT INPUT_FILE
 export SDLC_MODEL_EXPLICIT
@@ -26,8 +29,9 @@ export JSON
 export TSV
 export REVIEW_SCOPE GATE_ENFORCE
 export DELIVERY STEP PHASE REQUIRE
+export LOOP FOLLOW DETAILS
 
-.PHONY: ai review ai-sync log-flush clean-runs cost contracts verify delivery-report lifecycle lifecycle-export ids-check
+.PHONY: ai review ai-sync log-flush clean-runs cost contracts verify delivery-report lifecycle lifecycle-export ids-check loop-watch
 ai:
 	@node ai-factory/make/runner.js ai
 review:
@@ -52,3 +56,6 @@ lifecycle-export:
 	@node ai-factory/make/lifecycle.js export
 ids-check:
 	@node ai-factory/make/ids.js check
+# The shell reads LOOP, FOLLOW and DETAILS from the environment, each as one quoted argument.
+loop-watch:
+	@set --; [ -z "$$LOOP" ] || set -- "$$LOOP"; [ "$$FOLLOW" != 1 ] || set -- "$$@" --follow; [ "$$DETAILS" != 1 ] || set -- "$$@" --details; exec node ai-factory/make/loop.js watch "$$@"
