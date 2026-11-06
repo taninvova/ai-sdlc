@@ -186,7 +186,7 @@ function readConfig(ctx) {
 // The assurance policy over this configuration and the completion policy it makes effective.
 // The configuration itself is never rewritten. Without a selection the completion policy is the
 // configured one, unchanged; with one, each requirement is the stronger of the two, so a preset
-// can only add requirements. `policy` is null only where make/assurance.js is not installed.
+// can only add requirements. `policy` is null only where make/assurance-policy.js is not installed.
 function assurance(ctx, env = process.env) {
 	ctx.config = ctx.config || readConfig(ctx);
 	const helper = assuranceModule(ctx.root);
@@ -731,12 +731,18 @@ function readEvidence(ctx, id) {
 	}
 	return { records, problems };
 }
-// Evidence proves only what it recorded: its inputs and code must still be current.
-function checkEvidence(ctx, record, current, id, { code = true } = {}) {
+// What every evidence and attestation check starts from: a diagnostics list, `at()` adding one
+// against the record's file, and the record's own delivery_id checked against its directory.
+function recordCheck(ctx, record, id) {
 	const diagnostics = [];
 	const { file, shape, value } = record;
 	const at = (codeName, message, hint) => diagnostics.push(diag(ctx, codeName, file, message, hint));
 	if (value.delivery_id !== id) at("E_MALFORMED", "delivery_id does not match its directory");
+	return { diagnostics, at, shape, value };
+}
+// Evidence proves only what it recorded: its inputs and code must still be current.
+function checkEvidence(ctx, record, current, id, { code = true } = {}) {
+	const { diagnostics, at, shape, value } = recordCheck(ctx, record, id);
 	if (shape.kind !== "step" && (value.phase === "red" || value.expected === "fail"))
 		at("E_RED_NOT_FINAL", "a red (expected-failure) run cannot stand as final verification", "Run the final phase after the implementation.");
 	else if (
@@ -791,10 +797,7 @@ function checkEvidence(ctx, record, current, id, { code = true } = {}) {
 // A human statement about one criterion. It records who, when, why and against which content;
 // whether it may count toward completion is the report's policy decision, not the validator's.
 function checkAttestation(ctx, record, declared, current, id) {
-	const diagnostics = [];
-	const { file, shape, value } = record;
-	const at = (codeName, message, hint) => diagnostics.push(diag(ctx, codeName, file, message, hint));
-	if (value.delivery_id !== id) at("E_MALFORMED", "delivery_id does not match its directory");
+	const { diagnostics, at, shape, value } = recordCheck(ctx, record, id);
 	if (value.criterion !== shape.criterion) at("E_MALFORMED", "criterion does not match the file name");
 	for (const key of ["actor", "rationale", "source", "attested_at"])
 		if (typeof value[key] !== "string" || !value[key].trim()) at("E_MALFORMED", `${key} must be a non-empty string`);
@@ -810,90 +813,112 @@ function checkAttestation(ctx, record, declared, current, id) {
 function entry(ctx, file, kind, diagnostics) {
 	return { path: ctx.rel(file), kind, state: stateOf(diagnostics), diagnostics };
 }
+// One delivery's validation run: the sidecars it found, its evidence, the content digests the
+// checked artifacts produce and the evidence required so far. Each step below appends to artifacts.
 function validateDelivery(ctx, index, id, require = []) {
-	const artifacts = [];
 	const mine = index.sidecars.filter((sidecar) => sidecar.value?.delivery_id === id);
 	const byKind = (kind) => mine.filter((sidecar) => sidecar.kind === kind);
-	for (const kind of ["spec", "plan", "quick"])
-		if (byKind(kind).length > 1)
-			for (const sidecar of byKind(kind))
-				artifacts.push(entry(ctx, sidecar.file, kind, [diag(ctx, "E_DUP_ID", sidecar.file, `more than one ${kind} sidecar carries ${id}`, "Each delivery has one spec, one plan, or one quick checklist.")]));
-	if (artifacts.length) return artifacts;
-	const [specSidecar] = byKind("spec");
-	const [planSidecar] = byKind("plan");
-	const [quickSidecar] = byKind("quick");
-	const evidence = readEvidence(ctx, id);
-	for (const problem of evidence.problems)
-		artifacts.push(entry(ctx, problem.file, "evidence", [diag(ctx, problem.code, problem.file, problem.message, problem.hint)]));
+	const duplicates = duplicateSidecars(ctx, byKind, id);
+	if (duplicates.length) return duplicates;
+	const run = {
+		ctx,
+		id,
+		artifacts: [],
+		evidence: readEvidence(ctx, id),
+		current: {},
+		want: new Set(require),
+		spec: byKind("spec")[0],
+		plan: byKind("plan")[0],
+		quick: byKind("quick")[0],
+	};
+	for (const problem of run.evidence.problems)
+		run.artifacts.push(entry(ctx, problem.file, "evidence", [diag(ctx, problem.code, problem.file, problem.message, problem.hint)]));
 	if (!mine.length) {
-		artifacts.push({
+		run.artifacts.push({
 			path: `ai-factory/evidence/${id}`,
 			kind: "delivery",
 			state: "invalid",
 			diagnostics: [{ code: "E_UNKNOWN_REF", path: `ai-factory/evidence/${id}`, message: `no sidecar carries delivery ${id}`, hint: "Check the delivery ID, or run contracts.js init on its artifact." }],
 		});
-		return artifacts;
+		return run.artifacts;
 	}
-	if (quickSidecar && (specSidecar || planSidecar)) {
-		artifacts.push(entry(ctx, quickSidecar.file, "quick", [diag(ctx, "E_MALFORMED", quickSidecar.file, "a delivery is either planned (spec + plan) or quick, not both")]));
-		return artifacts;
+	if (run.quick && (run.spec || run.plan)) {
+		run.artifacts.push(entry(ctx, run.quick.file, "quick", [diag(ctx, "E_MALFORMED", run.quick.file, "a delivery is either planned (spec + plan) or quick, not both")]));
+		return run.artifacts;
 	}
-	const current = {};
-	const want = new Set(require);
-	if (quickSidecar) {
-		const quick = checkQuick(ctx, quickSidecar);
-		artifacts.push(entry(ctx, quickSidecar.file, "quick", quick.diagnostics));
-		if (quick.md) current.quick_sha256 = quick.md.sha256;
-		const all = quick.checks.ids.length && quick.checks.ids.every((qc) => quick.checks.ticked.includes(qc));
-		if (all) want.add("final");
-		const record = evidence.records.get("quick.json");
-		if (record) artifacts.push(entry(ctx, record.file, "evidence", checkEvidence(ctx, record, current, id)));
-		else if (want.has("final"))
-			artifacts.push(missingEvidence(ctx, id, "quick.json", all ? "every checklist item is ticked but no quick verification was recorded" : "quick verification is required"));
-	} else {
-		let spec = null;
-		if (specSidecar) {
-			const checked = checkSpec(ctx, specSidecar);
-			spec = { sidecar: specSidecar, md: checked.md };
-			artifacts.push(entry(ctx, specSidecar.file, "spec", checked.diagnostics));
-			if (checked.md) current.spec_sha256 = checked.md.sha256;
-		}
-		if (planSidecar) {
-			const plan = checkPlan(ctx, planSidecar, spec);
-			artifacts.push(entry(ctx, planSidecar.file, "plan", plan.diagnostics));
-			if (plan.md) current.plan_sha256 = plan.md.sha256;
-			const active = plan.steps.filter((step) => !step.withdrawn);
-			// A ticked box is a claim; only passing step evidence supports it.
-			for (const step of active) {
-				const record = evidence.records.get(`${step.id}-step.json`);
-				if (record)
-					artifacts.push(entry(ctx, record.file, "evidence", step.done ? checkEvidence(ctx, record, current, id, { code: false }) : quiet(checkEvidence(ctx, record, current, id, { code: false }))));
-				else if (step.done)
-					artifacts.push(missingEvidence(ctx, id, `${step.id}-step.json`, `Step ${step.number} is ticked but has no recorded verification`));
-				const red = evidence.records.get(`${step.id}-red.json`);
-				if (red) artifacts.push(entry(ctx, red.file, "evidence", checkEvidence(ctx, red, current, id)));
-			}
-			if (active.length && active.every((step) => step.done)) want.add("final");
-		}
-		const record = evidence.records.get("final.json");
-		if (record) artifacts.push(entry(ctx, record.file, "evidence", checkEvidence(ctx, record, current, id)));
-		else if (want.has("final"))
-			artifacts.push(missingEvidence(ctx, id, "final.json", "final verification is required but was not recorded"));
+	if (run.quick) validateQuick(run);
+	else validatePlanned(run);
+	validateShared(run);
+	return run.artifacts;
+}
+// A delivery has at most one sidecar of each kind; every duplicate is reported and stops the run.
+function duplicateSidecars(ctx, byKind, id) {
+	const artifacts = [];
+	for (const kind of ["spec", "plan", "quick"])
+		if (byKind(kind).length > 1)
+			for (const sidecar of byKind(kind))
+				artifacts.push(entry(ctx, sidecar.file, kind, [diag(ctx, "E_DUP_ID", sidecar.file, `more than one ${kind} sidecar carries ${id}`, "Each delivery has one spec, one plan, or one quick checklist.")]));
+	return artifacts;
+}
+// The named record checked against current content, or a not_run entry when it is required.
+function expectEvidence(run, name, required, message) {
+	const { ctx, id, evidence, current, artifacts } = run;
+	const record = evidence.records.get(name);
+	if (record) artifacts.push(entry(ctx, record.file, "evidence", checkEvidence(ctx, record, current, id)));
+	else if (required) artifacts.push(missingEvidence(ctx, id, name, message));
+}
+function validateQuick(run) {
+	const { ctx, current, want, artifacts } = run;
+	const quick = checkQuick(ctx, run.quick);
+	artifacts.push(entry(ctx, run.quick.file, "quick", quick.diagnostics));
+	if (quick.md) current.quick_sha256 = quick.md.sha256;
+	const all = quick.checks.ids.length && quick.checks.ids.every((qc) => quick.checks.ticked.includes(qc));
+	if (all) want.add("final");
+	expectEvidence(run, "quick.json", want.has("final"), all ? "every checklist item is ticked but no quick verification was recorded" : "quick verification is required");
+}
+function validatePlanned(run) {
+	const { ctx, current, want, artifacts } = run;
+	let spec = null;
+	if (run.spec) {
+		const checked = checkSpec(ctx, run.spec);
+		spec = { sidecar: run.spec, md: checked.md };
+		artifacts.push(entry(ctx, run.spec.file, "spec", checked.diagnostics));
+		if (checked.md) current.spec_sha256 = checked.md.sha256;
 	}
-	const declared = quickSidecar?.value?.checks || specSidecar?.value?.criteria || [];
+	if (run.plan) {
+		const plan = checkPlan(ctx, run.plan, spec);
+		artifacts.push(entry(ctx, run.plan.file, "plan", plan.diagnostics));
+		if (plan.md) current.plan_sha256 = plan.md.sha256;
+		const active = plan.steps.filter((step) => !step.withdrawn);
+		for (const step of active) validateStep(run, step);
+		if (active.length && active.every((step) => step.done)) want.add("final");
+	}
+	expectEvidence(run, "final.json", want.has("final"), "final verification is required but was not recorded");
+}
+// A ticked box is a claim; only passing step evidence supports it.
+function validateStep(run, step) {
+	const { ctx, id, evidence, current, artifacts } = run;
+	const record = evidence.records.get(`${step.id}-step.json`);
+	if (record)
+		artifacts.push(entry(ctx, record.file, "evidence", step.done ? checkEvidence(ctx, record, current, id, { code: false }) : quiet(checkEvidence(ctx, record, current, id, { code: false }))));
+	else if (step.done)
+		artifacts.push(missingEvidence(ctx, id, `${step.id}-step.json`, `Step ${step.number} is ticked but has no recorded verification`));
+	const red = evidence.records.get(`${step.id}-red.json`);
+	if (red) artifacts.push(entry(ctx, red.file, "evidence", checkEvidence(ctx, red, current, id)));
+}
+// Attestations, the review and stray evidence: the same for planned and quick deliveries.
+function validateShared(run) {
+	const { ctx, id, evidence, current, want, artifacts } = run;
+	const declared = run.quick?.value?.checks || run.spec?.value?.criteria || [];
 	for (const record of evidence.records.values())
 		if (record.shape.kind === "attest")
 			artifacts.push(entry(ctx, record.file, "attestation", checkAttestation(ctx, record, declared, current, id)));
-	const review = evidence.records.get("review.json");
-	if (review) artifacts.push(entry(ctx, review.file, "evidence", checkEvidence(ctx, review, current, id)));
-	else if (want.has("review"))
-		artifacts.push(missingEvidence(ctx, id, "review.json", "an independent review was required but none was recorded"));
+	expectEvidence(run, "review.json", want.has("review"), "an independent review was required but none was recorded");
 	// Evidence for a scope this delivery does not have proves nothing and is reported.
 	const seen = new Set(artifacts.map((item) => item.path));
 	for (const record of evidence.records.values())
 		if (!seen.has(ctx.rel(record.file)))
 			artifacts.push(entry(ctx, record.file, "evidence", [diag(ctx, "E_UNKNOWN_REF", record.file, "evidence for a step or scope this delivery does not declare", "Remove it, or restore the step it verified.")]));
-	return artifacts;
 }
 // An unticked step's failed attempt is ordinary progress, not a broken chain.
 function quiet(diagnostics) {
@@ -1405,6 +1430,83 @@ function parseArgs(args, env) {
 		if (!["final", "review"].includes(item)) throw new Invocation("contracts: --require takes final and/or review");
 	return options;
 }
+// --- command handlers: each prints its own output and returns the exit code -------------------
+function validateCommand(ctx, options, { out, err }) {
+	ctx.config = readConfig(ctx);
+	if (options.positional.length > 1) throw new Invocation("contracts: validate takes one delivery ID or path");
+	if (!options.positional.length && options.delivery && !options.all && !DELIVERY.test(options.delivery))
+		throw new Invocation("contracts: DELIVERY must be d-YYYYMMDD-xxxxxx");
+	const target = options.positional[0] || (options.all ? undefined : options.delivery);
+	const doc = validate({ ctx, target, require: options.require });
+	if (options.json) out(JSON.stringify(doc, null, 2));
+	else (doc.status === "valid" ? out : err)(summary(doc));
+	return doc.status === "valid" ? 0 : 1;
+}
+function snapshotCommand(ctx, options, { out }) {
+	ctx.config = readConfig(ctx);
+	const snap = snapshot(ctx, ctx.config);
+	if (!snap) throw new Invocation("contracts: the code snapshot needs a Git repository");
+	const doc = { schema: SCHEMAS.snapshot, version: VERSION, ...snap };
+	out(options.json ? JSON.stringify(doc, null, 2) : `snapshot ${snap.snapshot_sha256} — ${snap.files} files${snap.head ? ` at ${snap.head.slice(0, 12)}` : ""}`);
+	return 0;
+}
+function initCommand(ctx, options, { out, err }) {
+	const [kind, target] = options.positional;
+	if (!["spec", "plan", "quick"].includes(kind)) throw new Invocation("contracts: init takes spec, plan or quick");
+	const result = init(kind, target, { ctx, spec: options.spec, tracker: options.tracker });
+	for (const note of result.notes) err(`note: ${note}`);
+	// init answers for the artifact it wrote; dependents going stale is reported, not failed.
+	const mine = result.doc.artifacts.find((item) => item.path === ctx.rel(result.sidecar));
+	const status = mine ? mine.state : "invalid";
+	if (options.json) out(JSON.stringify({ sidecar: ctx.rel(result.sidecar), delivery_id: result.value.delivery_id, artifact_state: status, ...result.doc }, null, 2));
+	else {
+		out(`contracts: wrote ${ctx.rel(result.sidecar)} (${result.value.delivery_id}) — ${status}`);
+		(status === "valid" ? out : err)(summary(result.doc));
+	}
+	return status === "valid" ? 0 : 1;
+}
+async function recordCommand(ctx, options, { out, err }) {
+	const result = await record({ ctx, delivery: options.delivery, step: options.step, phase: options.phase, notRun: options.notRun, reason: options.reason });
+	const line = `contracts: recorded ${result.evidence.status} (${result.evidence.phase}, expected ${result.evidence.expected}) → ${ctx.rel(result.file)}`;
+	if (options.json) out(JSON.stringify(result.evidence, null, 2));
+	else (result.ok ? out : err)(line);
+	return result.interrupted ? 130 : result.ok ? 0 : 1;
+}
+function attestCommand(ctx, options, { out }) {
+	const result = attest({ ctx, delivery: options.delivery, criterion: options.criterion, actor: options.actor, rationale: options.rationale, source: options.source });
+	out(`contracts: attested ${result.value.criterion} by ${result.value.actor} → ${ctx.rel(result.file)} (counts toward completion only where policy allows)`);
+	return 0;
+}
+function enableCommand(ctx, options, { out }) {
+	const result = enable({ ctx });
+	out(`contracts: ${result.created ? "enabled" : "already enabled"} — ${ctx.rel(result.file)}${result.capability ? "; capability recorded in ai-factory/.sdlc.json" : ""}`);
+	return 0;
+}
+function migrateCommand(ctx, options, { out }) {
+	const actions = migrate({ ctx, write: options.write });
+	if (options.json) out(JSON.stringify({ write: Boolean(options.write), actions }, null, 2));
+	else {
+		if (!actions.length) out("contracts: nothing to migrate — every artifact already has a sidecar");
+		for (const action of actions) {
+			out(`${action.action}: ${action.path}${action.reason ? ` — ${action.reason}` : ""}`);
+			if (action.criteria) out(`  extracted criteria: ${action.criteria.join(", ")}`);
+			if (action.steps) out(`  extracted steps: ${action.steps.join("; ")}`);
+		}
+		if (actions.some((item) => item.action !== "skipped"))
+			out("Drafts are legacy_unverified until reviewed: check each ID and command, then rerun contracts.js init on the Markdown.");
+		if (!options.write && actions.length) out("Dry run; pass --write to create the drafts.");
+	}
+	return 0;
+}
+const COMMANDS = {
+	validate: validateCommand,
+	snapshot: snapshotCommand,
+	init: initCommand,
+	record: recordCommand,
+	attest: attestCommand,
+	enable: enableCommand,
+	migrate: migrateCommand,
+};
 async function main(argv = process.argv.slice(2), env = process.env, root) {
 	const [command, ...rest] = argv;
 	const out = (text) => process.stdout.write(`${text}\n`);
@@ -1412,74 +1514,9 @@ async function main(argv = process.argv.slice(2), env = process.env, root) {
 	try {
 		const options = parseArgs(rest, env);
 		const ctx = context(root);
-		if (command === "validate") {
-			ctx.config = readConfig(ctx);
-			if (options.positional.length > 1) throw new Invocation("contracts: validate takes one delivery ID or path");
-			if (!options.positional.length && options.delivery && !options.all && !DELIVERY.test(options.delivery))
-				throw new Invocation("contracts: DELIVERY must be d-YYYYMMDD-xxxxxx");
-			const target = options.positional[0] || (options.all ? undefined : options.delivery);
-			const doc = validate({ ctx, target, require: options.require });
-			if (options.json) out(JSON.stringify(doc, null, 2));
-			else (doc.status === "valid" ? out : err)(summary(doc));
-			return doc.status === "valid" ? 0 : 1;
-		}
-		if (command === "snapshot") {
-			ctx.config = readConfig(ctx);
-			const snap = snapshot(ctx, ctx.config);
-			if (!snap) throw new Invocation("contracts: the code snapshot needs a Git repository");
-			const doc = { schema: SCHEMAS.snapshot, version: VERSION, ...snap };
-			out(options.json ? JSON.stringify(doc, null, 2) : `snapshot ${snap.snapshot_sha256} — ${snap.files} files${snap.head ? ` at ${snap.head.slice(0, 12)}` : ""}`);
-			return 0;
-		}
-		if (command === "init") {
-			const [kind, target] = options.positional;
-			if (!["spec", "plan", "quick"].includes(kind)) throw new Invocation("contracts: init takes spec, plan or quick");
-			const result = init(kind, target, { ctx, spec: options.spec, tracker: options.tracker });
-			for (const note of result.notes) err(`note: ${note}`);
-			// init answers for the artifact it wrote; dependents going stale is reported, not failed.
-			const mine = result.doc.artifacts.find((item) => item.path === ctx.rel(result.sidecar));
-			const status = mine ? mine.state : "invalid";
-			if (options.json) out(JSON.stringify({ sidecar: ctx.rel(result.sidecar), delivery_id: result.value.delivery_id, artifact_state: status, ...result.doc }, null, 2));
-			else {
-				out(`contracts: wrote ${ctx.rel(result.sidecar)} (${result.value.delivery_id}) — ${status}`);
-				(status === "valid" ? out : err)(summary(result.doc));
-			}
-			return status === "valid" ? 0 : 1;
-		}
-		if (command === "record") {
-			const result = await record({ ctx, delivery: options.delivery, step: options.step, phase: options.phase, notRun: options.notRun, reason: options.reason });
-			const line = `contracts: recorded ${result.evidence.status} (${result.evidence.phase}, expected ${result.evidence.expected}) → ${ctx.rel(result.file)}`;
-			if (options.json) out(JSON.stringify(result.evidence, null, 2));
-			else (result.ok ? out : err)(line);
-			return result.interrupted ? 130 : result.ok ? 0 : 1;
-		}
-		if (command === "attest") {
-			const result = attest({ ctx, delivery: options.delivery, criterion: options.criterion, actor: options.actor, rationale: options.rationale, source: options.source });
-			out(`contracts: attested ${result.value.criterion} by ${result.value.actor} → ${ctx.rel(result.file)} (counts toward completion only where policy allows)`);
-			return 0;
-		}
-		if (command === "enable") {
-			const result = enable({ ctx });
-			out(`contracts: ${result.created ? "enabled" : "already enabled"} — ${ctx.rel(result.file)}${result.capability ? "; capability recorded in ai-factory/.sdlc.json" : ""}`);
-			return 0;
-		}
-		if (command === "migrate") {
-			const actions = migrate({ ctx, write: options.write });
-			if (options.json) out(JSON.stringify({ write: Boolean(options.write), actions }, null, 2));
-			else {
-				if (!actions.length) out("contracts: nothing to migrate — every artifact already has a sidecar");
-				for (const action of actions) {
-					out(`${action.action}: ${action.path}${action.reason ? ` — ${action.reason}` : ""}`);
-					if (action.criteria) out(`  extracted criteria: ${action.criteria.join(", ")}`);
-					if (action.steps) out(`  extracted steps: ${action.steps.join("; ")}`);
-				}
-				if (actions.some((item) => item.action !== "skipped"))
-					out("Drafts are legacy_unverified until reviewed: check each ID and command, then rerun contracts.js init on the Markdown.");
-				if (!options.write && actions.length) out("Dry run; pass --write to create the drafts.");
-			}
-			return 0;
-		}
-		throw new Invocation("usage: contracts.js <validate|snapshot|init|record|attest|enable|migrate> …");
+		if (!Object.hasOwn(COMMANDS, command))
+			throw new Invocation("usage: contracts.js <validate|snapshot|init|record|attest|enable|migrate> …");
+		return await COMMANDS[command](ctx, options, { out, err });
 	} catch (error) {
 		if (error instanceof Invocation) {
 			err(error.message);
@@ -1512,6 +1549,7 @@ module.exports = {
 	parseCriteria,
 	parseChecks,
 	parsePlanSteps,
+	unfenced,
 	draftVerify,
 	contentDigest,
 	snapshot,

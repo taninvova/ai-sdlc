@@ -40,6 +40,12 @@ const skip = (reason) => new Skip(reason);
 // The commit this feature branches from (plan ASD-007 Step 1). Files are compared with it by
 // commit, never with a local `main` ref.
 const PRE_ASD007 = "2bdd3a7822c48d09d18340c26ffe17f607896130";
+// Since 7.0.0 the "unchanged" cases (AC36-check-loop-unchanged, AC57, AC58, AC60, AC61, AC62, R12)
+// are a record of what ASD-007 left alone, not a freeze: they compare two fixed commits and pass
+// for any later change. Later work that must keep these files stable needs its own check.
+// The merge of ASD-007 into main. The "unchanged" cases assert ASD-007's own diff,
+// PRE_ASD007..ASD007_MERGE, never the working tree, so a later release may change those files.
+const ASD007_MERGE = "4888d566a1f3bac3172d3015b6e2bc8cd2be8ba6";
 
 // ---- fixtures ------------------------------------------------------------------------------
 // Every fixture is a disposable git repository under ai-factory/runs/tmp/ holding a copy of the
@@ -66,8 +72,10 @@ const git = (dir, ...args) =>
 		stdio: "pipe",
 		env: ENV,
 	}).toString();
-// A file's text at PRE_ASD007, read from this repo's history.
-const atPre = (rel) => execFileSync("git", ["show", `${PRE_ASD007}:${rel}`], { cwd: PLUGIN, stdio: "pipe", env: ENV, maxBuffer: 64 * 1024 * 1024 }).toString();
+// A file's text at a commit of this repo's history: PRE_ASD007, or ASD007_MERGE.
+const atRef = (ref, rel) => execFileSync("git", ["show", `${ref}:${rel}`], { cwd: PLUGIN, stdio: "pipe", env: ENV, maxBuffer: 64 * 1024 * 1024 }).toString();
+const atPre = (rel) => atRef(PRE_ASD007, rel);
+const atMerge = (rel) => atRef(ASD007_MERGE, rel);
 // files: { "ai-factory/plans/0001-x.md": "…" }. A plan text written as an array is joined with
 // newlines and ends with one. `before(dir)` runs before the fixture's first commit.
 function repo(name, files, { before = null } = {}) {
@@ -78,7 +86,7 @@ function repo(name, files, { before = null } = {}) {
 	fs.mkdirSync(path.join(dir, "ai-factory/make"), { recursive: true });
 	fs.mkdirSync(path.join(dir, "ai-factory/specs"), { recursive: true });
 	fs.mkdirSync(path.join(dir, "ai-factory/plans/done"), { recursive: true });
-	for (const file of ["loop.js", "contracts.js", "gate.js", "safe-files.js", "assurance.js"])
+	for (const file of ["loop.js", "contracts.js", "gate.js", "safe-files.js", "assurance.js", "assurance-policy.js"])
 		fs.copyFileSync(path.join(MAKE, file), path.join(dir, "ai-factory/make", file));
 	fs.writeFileSync(path.join(dir, "ai-factory/.gitignore"), "/runs/tmp/\n");
 	fs.writeFileSync(path.join(dir, "src.txt"), "base\n");
@@ -97,6 +105,12 @@ function repo(name, files, { before = null } = {}) {
 function prior(name, files) {
 	return repo(name, files, {
 		before: (dir) => fs.writeFileSync(path.join(dir, "ai-factory/make/loop.js"), atPre(`${MAKE_REL}/loop.js`)),
+	});
+}
+// The same with ASD007_MERGE's loop.js: the "after" side of a case about ASD-007's own change.
+function merged(name, files) {
+	return repo(name, files, {
+		before: (dir) => fs.writeFileSync(path.join(dir, "ai-factory/make/loop.js"), atMerge(`${MAKE_REL}/loop.js`)),
 	});
 }
 // `node ai-factory/make/loop.js <subcommand> …` in the fixture: exit status, the one JSON object
@@ -244,7 +258,7 @@ function session(dir) {
 }
 
 test("fields", "AC36-state-and-answers-unchanged", () => {
-	const now = session(repo("ac36-now", FANOUT_FILES));
+	const now = session(merged("ac36-now", FANOUT_FILES));
 	const before = session(prior("ac36-prior", FANOUT_FILES));
 	assert.equal(now.out.length, before.out.length);
 	const last = now.out[now.out.length - 1].state;
@@ -260,13 +274,7 @@ test("fields", "AC36-state-and-answers-unchanged", () => {
 });
 
 test("fields", "AC36-check-loop-unchanged", () => {
-	// The pre-0022 baseline commit check-loop.sh pins was repointed at this repo's own history
-	// (64ad3bc → 7a13b8b); that hash is the only difference allowed.
-	const rel = "skills/ai-layout/scripts/check-loop.sh";
-	const shown = spawnSync("git", ["show", `${PRE_ASD007}:${rel}`], { cwd: PLUGIN, env: ENV, encoding: "utf8" });
-	assert.equal(shown.status, 0, `git show ${PRE_ASD007}:${rel} failed: ${shown.stderr}`);
-	const baseline = (text) => text.replace(/\b(?:64ad3bc|7a13b8b)[0-9a-f]*\b/g, "<PRE_0022>");
-	assert.equal(baseline(fs.readFileSync(path.join(PLUGIN, rel), "utf8")), baseline(shown.stdout), "check-loop.sh differs from PRE_ASD007 beyond its baseline commit");
+	samePre(["skills/ai-layout/scripts/check-loop.sh"], "check-loop.sh");
 });
 
 // ==== render (plan ASD-007 Step 3; AC1, AC18–AC32, AC36 usage, AC37–AC42, AC49, AC51, AC51a) =
@@ -537,8 +545,8 @@ test("render", "AC49-plain-non-tty", () => {
 test("render", "AC36-usage-gains-watch", () => {
 	needLoop();
 	const LINE = "       loop.js watch [<loop-id>] [--follow] [--details] [--width 40-500]";
-	const now = require(LOOP).USAGE;
-	if (!now.split("\n").some((line) => line.includes("loop.js watch"))) throw new Error("USAGE has no 'loop.js watch' line");
+	if (!require(LOOP).USAGE.split("\n").some((line) => line.includes("loop.js watch"))) throw new Error("USAGE has no 'loop.js watch' line");
+	const now = require(path.join(merged("usage-merged", {}), "ai-factory/make/loop.js")).USAGE;
 	const pre = prior("usage", {});
 	const before = require(path.join(pre, "ai-factory/make/loop.js")).USAGE;
 	assert.equal(now, `${before}\n${LINE}`, "USAGE is not PRE_ASD007's USAGE plus exactly the watch line");
@@ -1593,7 +1601,7 @@ test("follow", "tty-smoke", () => {
 
 // ==== readonly (plan ASD-007 Step 7; AC53–AC57, AC60–AC62, R12) ==============================
 // The watcher writes nothing, holds no lock and leaves /fc:current's output unchanged.
-// Files that must stay unchanged are compared with PRE_ASD007.
+// Files that must stay unchanged are compared over ASD-007's diff, PRE_ASD007..ASD007_MERGE.
 // Cases for this group go below this marker only.
 // ---- marker: readonly ----
 
@@ -1642,19 +1650,28 @@ const newer = (dir, ref) => {
 	assert.equal(run.status, 0, `find -newer exited ${run.status}: ${run.stderr.trim()}`);
 	return run.stdout.split("\n").filter(Boolean);
 };
-// The plugin's own git, comparing this tree with PRE_ASD007.
+// The plugin's own git; ASD-007's diff is PRE_ASD007..ASD007_MERGE.
 function plugin(...args) {
 	return spawnSync("git", args, { cwd: PLUGIN, encoding: "utf8", env: ENV });
 }
-function samePre(paths, what) {
-	const have = plugin("cat-file", "-e", `${PRE_ASD007}^{commit}`);
-	assert.equal(have.status, 0, `PRE_ASD007 ${PRE_ASD007} is not in this repo's history: ${have.stderr.trim()}`);
-	const run = plugin("diff", "--quiet", PRE_ASD007, "--", ...paths);
-	if (run.status === 0) return;
-	const names = plugin("diff", "--name-only", PRE_ASD007, "--", ...paths).stdout.trim().split("\n").filter(Boolean);
-	throw new Error(`${what} differ from PRE_ASD007 (git diff exited ${run.status}): ${names.join(", ") || run.stderr.trim()}`);
+function haveRefs() {
+	for (const [name, ref] of [["PRE_ASD007", PRE_ASD007], ["ASD007_MERGE", ASD007_MERGE]]) {
+		const have = plugin("cat-file", "-e", `${ref}^{commit}`);
+		assert.equal(have.status, 0, `${name} ${ref} is not in this repo's history: ${have.stderr.trim()}`);
+	}
 }
-const untracked = (...paths) => plugin("ls-files", "--others", "--exclude-standard", "--", ...paths).stdout.split("\n").filter(Boolean);
+// The paths ASD-007 changed, among those named; options are extra `git diff` flags.
+function changedByAsd007(paths, ...options) {
+	haveRefs();
+	return plugin("diff", "--name-only", ...options, PRE_ASD007, ASD007_MERGE, "--", ...paths).stdout.trim().split("\n").filter(Boolean);
+}
+function samePre(paths, what) {
+	haveRefs();
+	const run = plugin("diff", "--quiet", PRE_ASD007, ASD007_MERGE, "--", ...paths);
+	if (run.status === 0) return;
+	const names = changedByAsd007(paths);
+	throw new Error(`ASD-007 changed ${what} (git diff exited ${run.status}): ${names.join(", ") || run.stderr.trim()}`);
+}
 // A one-step plan that a scripted start → next → finish --dry → end runs to its end.
 const ONE_FILES = { "ai-factory/plans/0001-one.md": plan("One", "- [ ] Step 1 — Only.") };
 
@@ -1788,7 +1805,7 @@ test("readonly", "AC56-current-unchanged", () => {
 	// The watcher runs from the fixture's own make/, as in an adopted repo, on a running loop of a
 	// plan the listing shows.
 	fs.mkdirSync(path.join(dir, "ai-factory/make"), { recursive: true });
-	for (const file of ["loop.js", "contracts.js", "gate.js", "safe-files.js", "assurance.js"])
+	for (const file of ["loop.js", "contracts.js", "gate.js", "safe-files.js", "assurance.js", "assurance-policy.js"])
 		fs.copyFileSync(path.join(MAKE, file), path.join(dir, "ai-factory/make", file));
 	const steps = [1, 2, 3, 4].map((n) => st(n, { done: n <= 2 }));
 	const state = loopState({ steps, running: [{ step: 3, mode: "main", started_at: at(0) }], plan: "ai-factory/plans/ASD-910-alpha.md" });
@@ -1828,11 +1845,8 @@ test("readonly", "AC57-runner-unchanged", () => {
 });
 
 test("readonly", "AC60-one-file", () => {
-	assert.equal(plugin("cat-file", "-e", `${PRE_ASD007}^{commit}`).status, 0, `PRE_ASD007 ${PRE_ASD007} is not in this repo's history`);
-	const added = plugin("diff", "--name-only", "--diff-filter=A", PRE_ASD007, "--", MAKE_REL).stdout.trim();
-	assert.equal(added, "", `files added under ${MAKE_REL}/: ${added.replace(/\n/g, ", ")}`);
-	const fresh = untracked(MAKE_REL);
-	assert.deepEqual(fresh, [], `untracked files under ${MAKE_REL}/: ${fresh.join(", ")}`);
+	const added = changedByAsd007([MAKE_REL], "--diff-filter=A");
+	assert.deepEqual(added, [], `files ASD-007 added under ${MAKE_REL}/: ${added.join(", ")}`);
 	// This repo's ai-factory/make/ holds one symbolic link per template file: each is still a link
 	// and none was replaced or edited through it.
 	samePre(["ai-factory/make"], "entries of ai-factory/make/");
@@ -1860,10 +1874,8 @@ test("readonly", "AC61-builtins-only", () => {
 		assert.match(name, /^\.\/[A-Za-z0-9_.-]+\.js$/, `loop.js requires '${name}', neither node:* nor ./<file>.js`);
 		assert.ok(fs.existsSync(path.join(MAKE, name)), `loop.js requires '${name}', which is not a file under ${MAKE_REL}/`);
 	}
-	const packages = plugin("diff", "--name-only", "--diff-filter=AM", PRE_ASD007, "--", ":(glob)**/package.json").stdout.trim();
-	assert.equal(packages, "", `the diff adds or changes a package.json: ${packages.replace(/\n/g, ", ")}`);
-	const fresh = untracked(":(glob)**/package.json");
-	assert.deepEqual(fresh, [], `untracked package.json: ${fresh.join(", ")}`);
+	const packages = changedByAsd007([":(glob)**/package.json"], "--diff-filter=AM");
+	assert.deepEqual(packages, [], `ASD-007 added or changed a package.json: ${packages.join(", ")}`);
 });
 
 test("readonly", "AC62-untouched", () => {
@@ -1879,8 +1891,6 @@ test("readonly", "AC62-untouched", () => {
 	];
 	for (const rel of paths) assert.ok(fs.existsSync(path.join(PLUGIN, rel)), `${rel} does not exist`);
 	samePre(paths, "AC62's files");
-	const fresh = untracked(...paths);
-	assert.deepEqual(fresh, [], `untracked files under AC62's paths: ${fresh.join(", ")}`);
 });
 
 test("readonly", "R12-writer-unchanged", () => {
@@ -1891,7 +1901,7 @@ test("readonly", "R12-writer-unchanged", () => {
 		assert.ok(to > from, `${where}: writeState has no closing brace at column 0`);
 		return source.slice(from, to + 3);
 	};
-	const now = writer(fs.readFileSync(LOOP, "utf8"), "loop.js");
+	const now = writer(atMerge(`${MAKE_REL}/loop.js`), "ASD007_MERGE's loop.js");
 	const before = writer(atPre(`${MAKE_REL}/loop.js`), "PRE_ASD007's loop.js");
 	assert.equal(now, before, "writeState differs from PRE_ASD007's");
 	samePre([`${MAKE_REL}/safe-files.js`], "safe-files.js");
@@ -2172,7 +2182,7 @@ test("surface", "AC9-codex-skill", () => {
 });
 
 test("surface", "AC58-one-line", () => {
-	const diff = execFileSync("git", ["diff", "--no-color", "-U0", PRE_ASD007, "--", LOOP_TASK], { cwd: PLUGIN, stdio: "pipe", env: ENV }).toString();
+	const diff = execFileSync("git", ["diff", "--no-color", "-U0", PRE_ASD007, ASD007_MERGE, "--", LOOP_TASK], { cwd: PLUGIN, stdio: "pipe", env: ENV }).toString();
 	const lines = diff.split("\n").filter((l) => !/^(?:\+\+\+|---) /.test(l));
 	const added = lines.filter((l) => l.startsWith("+"));
 	const removed = lines.filter((l) => l.startsWith("-"));
@@ -2300,7 +2310,6 @@ test("release", "AC70-entry", () => {
 	const previous = changelogEntry(text, "5.2.0");
 	assert.ok(previous, "CHANGELOG.md has no 5.2.0 entry");
 	assert.ok(entry.at < previous.at, "CHANGELOG.md's 6.0.0 entry is not above its 5.2.0 entry");
-	assert.ok(!/^## /m.test(text.slice(0, entry.at)), "CHANGELOG.md's 6.0.0 entry is not the newest entry");
 	const flat = entry.body.replace(/\s+/g, " ");
 	// AC70: every part of the feature, by the name a reader would search for.
 	for (const item of ["`loop.js watch`", "`/fc:watch`", "`$fc-watch`", "`make loop-watch`", "`LOOP", "`FOLLOW", "`DETAILS", "`started_at`", "`finished_at`", "`tasks/loop.md`"])

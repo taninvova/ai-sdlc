@@ -36,7 +36,7 @@ The plugin registers these hooks globally (hooks/hooks.json). Every script:
 | PreToolUse Edit/Write | guard-paths.js | nothing; exit 2 + stderr reason when the target matches ai-factory/docs/dont-touch.md |
 | PreToolUse Bash | log-flush.js | on `git commit` only: moves the rows in ai-factory/runs/log.pending.csv into ai-factory/runs/log.csv and stages it |
 | PostToolUse Edit/Write | log-edit.js | ai-factory/runs/edits.jsonl: session_id, ts, file |
-| PostToolUse Bash | log-cmd.js | ai-factory/runs/cmds.jsonl when the command ran a test, lint or e2e command (vitest, jest, biome, playwright, pnpm/npm test|lint|e2e|check) |
+| PostToolUse Bash | log-cmd.js | ai-factory/runs/cmds.jsonl when the command ran a test, lint, type-check or format-check command of any stack (e.g. vitest, biome, pytest, ruff, go test, cargo clippy, gradle test, dotnet test, make test|lint|verify) |
 | Stop | session-stop.js | one line to ai-factory/runs/log.pending.csv, `source=session`: tokens, cache hit rate, cost — the increment since this session's previous row |
 | SubagentStop | subagent-stop.js | one line to ai-factory/runs/log.pending.csv, `source=agent`: one row per concluded subagent, summed from that agent's own transcript and carrying its name in the `agent` column |
 

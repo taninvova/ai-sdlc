@@ -10,7 +10,8 @@
 // transcript would surface as a failed turn.
 const fs = require("fs");
 const path = require("path");
-const { boundary, identifier } = require("./_common");
+const { identifier } = require("./_common");
+const { boundary, withLogLock } = require("./_safe-files");
 
 // A newline-delimited ledger of what this session has already counted, kept beside the run log
 // as `.counted.<session_id>` and gitignored. Two kinds of claim share it: `u:<message uuid>` for
@@ -125,4 +126,75 @@ function price(ai, model) {
 	return { rate, approx };
 }
 
-module.exports = { claims, sumTranscript, price };
+// Both Stop hooks run under the run-log lock, with the two files a usage row can touch checked
+// against the workspace boundary before anything is read or written.
+function withUsageLog(ai, fn) {
+	return withLogLock(ai, (safe) => {
+		for (const name of ["log.pending.csv", "log.previous.csv"])
+			safe.assertPath(path.join(ai, "runs", name));
+		return fn(safe);
+	});
+}
+
+// The usage row both Stop hooks write: sum the transcript under the session's claim ledger, price
+// it, append one row to log.pending.csv, then link the usage into lifecycle. Returns without a row
+// when the transcript carries no unclaimed turn. `safe` is the boundary withLogLock hands in;
+// `source` is "session" or "agent", and `agent` the agent's name (empty on a session row).
+function appendUsageRow({ ai, ev, safe, ledger, transcript, source, agent, taskName, cwd, extraClaims = [] }) {
+	const { user, branch } = require("./_common");
+	const sum =
+		ev.host === "codex"
+			? require("./_codex-usage").sumCodexTranscript
+			: sumTranscript;
+	const summed = sum(transcript, ledger);
+	const { turns, inp, out, cr, cw, model: transcriptModel } = summed;
+	const model = transcriptModel || ev.model || "";
+	if (turns === 0) return;
+
+	const { rate, approx } = price(ai, model);
+	const cost =
+		(inp * rate.input +
+			out * rate.output +
+			cr * rate.cache_read +
+			cw * rate.cache_write) /
+		1e6;
+	const hit = (cr / (inp + cr + cw || 1)).toFixed(2);
+	const costCell = ev.host === "codex" ? "" : approx + cost.toFixed(4);
+
+	// Into log.pending.csv, never straight into the committed log.csv — log-flush.js moves the rows
+	// when the session commits, so the log changes only inside the commit that produced the work.
+	const { ensureSchema, csv } = require("./_log-schema");
+	const file = path.join(ai, "runs", "log.pending.csv");
+	ensureSchema(file);
+	safe.append(
+		file,
+		[
+			new Date().toISOString(),
+			ev.session_id,
+			source,
+			user(cwd),
+			branch(cwd),
+			// `task` is the `/fc:` command the session last ran (log-task.js), empty when it ran none;
+			// on an agent row it is still the session's, never a static agent→task map. `tool` is
+			// `claude` or `codex`, unsplit; `agent` carries the agent's name beside it.
+			taskName,
+			ev.host === "codex" ? "codex" : "claude",
+			agent,
+			model,
+			turns,
+			inp,
+			out,
+			cr,
+			cw,
+			hit,
+			costCell,
+			"",
+		]
+			.map(csv)
+			.join(",") + "\n",
+	);
+	// After the row, never instead of it: the run log is written whatever lifecycle does.
+	require("./_lifecycle").linkUsage(ai, ev, { source, agent, model, sum: summed, costCell, extraClaims });
+}
+
+module.exports = { claims, sumTranscript, price, withUsageLog, appendUsageRow };

@@ -197,6 +197,9 @@ function selectionRecord(output, selection, { command, args, outcome, reason }) 
 function assurancePreflight(env = process.env) {
 	const preset = selectedPreset(ROOT);
 	if (preset === null) return null;
+	// gate.js has already found assurance-policy.js; a partial copy may still lack the CLI module.
+	if (!fs.existsSync(path.join(__dirname, "assurance.js")))
+		throw new Error("ai-factory/assurance.json selects a preset, but make/assurance.js is missing; run /fc:sync-sdlc to receive it");
 	const assurance = require("./assurance.js");
 	const policy = assurance.show({ root: ROOT, env });
 	process.stderr.write(`${assurance.describe(policy)}\n`);
@@ -281,6 +284,51 @@ function removeLoopState(started) {
 
 async function run(options = {}) {
 	const env = options.env || process.env;
+	const { tool, task, taskFile } = resolveTask(options, env);
+	const input = runInput(options, env);
+	let loopRun = null;
+	if (task === "loop" && !options.review) {
+		const preflight = loopPreflight(tool, input);
+		if (preflight.listing) return { task, tool, loopListing: preflight.listing };
+		loopRun = preflight.started;
+	}
+	const { selection, model, command, scratch } = prepareRun(options, env, tool, task, loopRun);
+	const lifecycle = lifecycleRun(env, task, tool, model);
+	const identity = `${new Date().toISOString().replace(/[:.]/g, "-")}-${crypto.randomUUID()}-${tool}-${task}`;
+	const output = path.join(RUNS, `${identity}.json`);
+	// One run's state, shared by its launch, success and failure steps.
+	const state = {
+		options,
+		tool,
+		task,
+		selection,
+		model,
+		command,
+		lifecycle,
+		loopRun,
+		// The loop's outcome record: in this run's private scratch, written by `loop.js end`.
+		loopRecord: loopRun ? path.join(scratch, "loop-outcome.json") : null,
+		loopResult: null,
+		output,
+		sidecar: `${output}.last.txt`,
+		fd: undefined,
+		launched: false,
+		args: undefined,
+	};
+	try {
+		await launchRun(state, taskFile, input, scratch);
+		return finishRun(state);
+	} catch (error) {
+		failRun(state, error);
+		throw error;
+	} finally {
+		if (state.fd !== undefined) fs.closeSync(state.fd);
+		safe.removeScratch(scratch);
+	}
+}
+
+// The tool and task a run names, refused before anything is read when either cannot run headless.
+function resolveTask(options, env) {
 	const tool = options.tool || env.TOOL || "claude";
 	const requested = options.task || env.TASK || "chore";
 	// A deprecated task name (TASK_ALIASES) runs the task it now names, and says so. A shortcut
@@ -296,6 +344,10 @@ async function run(options = {}) {
 		throw new Error(`Unsupported tool: ${tool}`);
 	if (!/^[a-z][a-z0-9-]*$/.test(task))
 		throw new Error("TASK must name an existing workspace task");
+	return { tool, task, taskFile: taskFilePath(task) };
+}
+
+function taskFilePath(task) {
 	const taskFile = fs.realpathSync(path.join(WORKSPACE, "tasks", `${task}.md`));
 	const relativeTask = path.relative(ROOT, taskFile);
 	if (
@@ -307,149 +359,156 @@ async function run(options = {}) {
 	}
 	if (!fs.statSync(taskFile).isFile())
 		throw new Error("TASK must select a regular task file");
-	let input = options.input;
-	if (input === undefined) {
-		if (env.INPUT_FILE) {
-			const inputFile = path.resolve(ROOT, env.INPUT_FILE);
-			if (!fs.statSync(inputFile).isFile())
-				throw new Error("INPUT_FILE must select a regular file");
-			input = fs.readFileSync(inputFile);
-		} else input = Buffer.from(env.INPUT || "", "utf8");
+	return taskFile;
+}
+
+// The task input: given by the caller, else INPUT_FILE, else INPUT.
+function runInput(options, env) {
+	if (options.input !== undefined) return options.input;
+	if (env.INPUT_FILE) {
+		const inputFile = path.resolve(ROOT, env.INPUT_FILE);
+		if (!fs.statSync(inputFile).isFile())
+			throw new Error("INPUT_FILE must select a regular file");
+		return fs.readFileSync(inputFile);
 	}
-	let loopRun = null;
-	if (task === "loop" && !options.review) {
-		const preflight = loopPreflight(tool, input);
-		if (preflight.listing) return { task, tool, loopListing: preflight.listing };
-		loopRun = preflight.started;
-	}
-	let selection, model, command, scratch;
+	return Buffer.from(env.INPUT || "", "utf8");
+}
+
+function prepareRun(options, env, tool, task, loopRun) {
 	try {
 		// Resolved once, before anything launches; a configuration error stops the run here.
 		assurancePreflight(env);
-		selection = models.selectModel({
+		const selection = models.selectModel({
 			root: ROOT,
 			tool,
 			task: options.review ? "review" : task,
 			env,
 		});
-		model = selection.model;
+		const model = selection.model;
 		if (selection.routing_enabled && model && tool === "claude" && env.CLAUDE_CODE_SUBAGENT_MODEL)
 			throw new Error(
 				`CLAUDE_CODE_SUBAGENT_MODEL overrides the subagents of this ${selection.task} run, so ${model} would not apply to them; unset it or disable routing`,
 			);
-		command = executable(tool, env);
+		const command = executable(tool, env);
 		process.stderr.write(`model: ${models.describe(selection)}\n`);
 		safe.mkdir(RUNS);
 		for (const name of ["log.csv", "log.previous.csv"])
 			safe.assertPath(path.join(RUNS, name));
-		scratch = safe.scratch(path.join(RUNS, "tmp"));
+		const scratch = safe.scratch(path.join(RUNS, "tmp"));
+		return { selection, model, command, scratch };
 	} catch (error) {
 		// Nothing launched: a loop started by the preflight leaves no state behind.
 		removeLoopState(loopRun);
 		throw error;
 	}
-	const lifecycle = lifecycleRun(env, task, tool, model);
-	// The loop's outcome record: in this run's private scratch, written by `loop.js end`.
-	const loopRecord = loopRun ? path.join(scratch, "loop-outcome.json") : null;
-	let loopResult = null;
-	const identity = `${new Date().toISOString().replace(/[:.]/g, "-")}-${crypto.randomUUID()}-${tool}-${task}`;
-	const output = path.join(RUNS, `${identity}.json`);
-	const sidecar = `${output}.last.txt`;
-	let fd;
-	let launched = false;
-	let args;
-	try {
-		const prompt = Buffer.concat([
-			fs.readFileSync(taskFile),
-			Buffer.from("\n## Input\n"),
-			Buffer.from(input),
-			...(loopRun ? [Buffer.from(loopInstructions(loopRun, path.relative(ROOT, loopRecord)))] : []),
-		]);
-		safe.write(path.join(scratch, "prompt.txt"), prompt, { exclusive: true });
-		fd = safe.open(
-			output,
-			fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL,
+}
+
+// Writes the prompt, opens the output and launches the host once.
+async function launchRun(state, taskFile, input, scratch) {
+	const { tool, loopRun, loopRecord, lifecycle } = state;
+	const prompt = Buffer.concat([
+		fs.readFileSync(taskFile),
+		Buffer.from("\n## Input\n"),
+		Buffer.from(input),
+		...(loopRun ? [Buffer.from(loopInstructions(loopRun, path.relative(ROOT, loopRecord)))] : []),
+	]);
+	safe.write(path.join(scratch, "prompt.txt"), prompt, { exclusive: true });
+	state.fd = safe.open(
+		state.output,
+		fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL,
+	);
+	state.args = hostArgs(tool, state.model, state.sidecar);
+	// The child's hooks read FC_LIFECYCLE_RUN, so its usage links name this run explicitly.
+	// One launch only: a rejected model, failed login or refused request is the result.
+	state.launched = true;
+	const childEnv = lifecycle || loopRun ? { ...process.env } : process.env;
+	if (lifecycle) childEnv.FC_LIFECYCLE_RUN = lifecycle.id;
+	if (loopRun) Object.assign(childEnv, { FC_LOOP_ID: loopRun.loop_id, FC_LOOP_RESULT: loopRecord });
+	await launch(state.command, state.args, prompt, state.fd, childEnv);
+	fs.closeSync(state.fd);
+	state.fd = undefined;
+	if (loopRun) state.loopResult = loopOutcome(loopRecord, loopRun.loop_id);
+}
+
+// The host's arguments; codex also gets its empty last-message sidecar here.
+function hostArgs(tool, model, sidecar) {
+	const args =
+		tool === "codex" ? ["exec", "--json", "--skip-git-repo-check"] : ["-p"];
+	if (model) args.push(tool === "codex" ? "-m" : "--model", model);
+	if (tool === "codex") {
+		safe.write(sidecar, "", { exclusive: true });
+		args.push("-o", sidecar, "-");
+	} else args.push("--output-format", "json");
+	return args;
+}
+
+// A launched host's evidence: output checks, hashes, scope, run-log row and selection record.
+function finishRun(state) {
+	const { options, tool, task, output, sidecar, model, selection, lifecycle, loopRun } = state;
+	safe.assertPath(output, { allowMissing: false });
+	if (!fs.statSync(output).size)
+		throw new Error("CLI produced empty output; no successful run logged");
+	if (tool === "codex") safe.assertPath(sidecar, { allowMissing: false });
+	const outputHash = digest(fs.readFileSync(output));
+	const sidecarHash =
+		tool === "codex" ? digest(fs.readFileSync(sidecar)) : undefined;
+	if (options.scope)
+		safe.write(
+			`${output}.scope.json`,
+			`${JSON.stringify(options.scope, null, 2)}\n`,
+			{ exclusive: true },
 		);
-		args =
-			tool === "codex" ? ["exec", "--json", "--skip-git-repo-check"] : ["-p"];
-		if (model) args.push(tool === "codex" ? "-m" : "--model", model);
-		if (tool === "codex") {
-			safe.write(sidecar, "", { exclusive: true });
-			args.push("-o", sidecar, "-");
-		} else args.push("--output-format", "json");
-		// The child's hooks read FC_LIFECYCLE_RUN, so its usage links name this run explicitly.
-		// One launch only: a rejected model, failed login or refused request is the result.
-		launched = true;
-		const childEnv = lifecycle || loopRun ? { ...process.env } : process.env;
-		if (lifecycle) childEnv.FC_LIFECYCLE_RUN = lifecycle.id;
-		if (loopRun) Object.assign(childEnv, { FC_LOOP_ID: loopRun.loop_id, FC_LOOP_RESULT: loopRecord });
-		await launch(command, args, prompt, fd, childEnv);
-		fs.closeSync(fd);
-		fd = undefined;
-		if (loopRun) loopResult = loopOutcome(loopRecord, loopRun.loop_id);
-		safe.assertPath(output, { allowMissing: false });
-		if (!fs.statSync(output).size)
-			throw new Error("CLI produced empty output; no successful run logged");
-		if (tool === "codex") safe.assertPath(sidecar, { allowMissing: false });
-		const outputHash = digest(fs.readFileSync(output));
-		const sidecarHash =
-			tool === "codex" ? digest(fs.readFileSync(sidecar)) : undefined;
-		if (options.scope)
-			safe.write(
-				`${output}.scope.json`,
-				`${JSON.stringify(options.scope, null, 2)}\n`,
-				{ exclusive: true },
-			);
-		withLogLock(WORKSPACE, () => {
-			for (const name of ["log.csv", "log.previous.csv"])
-				safe.assertPath(path.join(RUNS, name));
-			const row = execFileSync(
-				process.execPath,
-				[path.join(__dirname, "log.js"), output, task, tool, model],
-				{
-					cwd: ROOT,
-					shell: false,
-					encoding: "utf8",
-					stdio: ["ignore", "pipe", "inherit"],
-				},
-			);
-			safe.append(path.join(RUNS, "log.csv"), row);
-			lifecycle?.usage(row);
-		});
-		selectionRecord(output, selection, { command, args, outcome: "succeeded" });
-		lifecycle?.end("succeeded");
-		return {
-			output,
-			sidecar: tool === "codex" ? sidecar : undefined,
-			outputHash,
-			sidecarHash,
-			model,
-			selection,
-			tool,
-			task,
-			scope: options.scope,
-			loop: loopRun ? { loop_id: loopRun.loop_id, ...loopResult } : undefined,
-		};
-	} catch (error) {
-		// A host that fails after `loop.js end` wrote a valid outcome record: the record's code is
-		// the result, and the host's failure is still reported.
-		if (launched && loopRun) {
-			const recorded = loopResult || loopOutcome(loopRecord, loopRun.loop_id);
-			if (recorded.record) error.loop = { loop_id: loopRun.loop_id, ...recorded };
-		}
-		if (launched) {
-			try {
-				selectionRecord(output, selection, { command, args, outcome: "failed", reason: error.message });
-			} catch (recordError) {
-				process.stderr.write(`runner: selection not recorded — ${recordError.message}\n`);
-			}
-		}
-		lifecycle?.end(/SIGINT|SIGTERM|SIGKILL/.test(error.message) ? "interrupted" : "failed", error.message);
-		throw error;
-	} finally {
-		if (fd !== undefined) fs.closeSync(fd);
-		safe.removeScratch(scratch);
+	withLogLock(WORKSPACE, () => logRun(state));
+	selectionRecord(output, selection, { command: state.command, args: state.args, outcome: "succeeded" });
+	lifecycle?.end("succeeded");
+	return {
+		output,
+		sidecar: tool === "codex" ? sidecar : undefined,
+		outputHash,
+		sidecarHash,
+		model,
+		selection,
+		tool,
+		task,
+		scope: options.scope,
+		loop: loopRun ? { loop_id: loopRun.loop_id, ...state.loopResult } : undefined,
+	};
+}
+
+// Under the log lock: one run-log row from log.js, and its usage for lifecycle telemetry.
+function logRun({ output, task, tool, model, lifecycle }) {
+	for (const name of ["log.csv", "log.previous.csv"])
+		safe.assertPath(path.join(RUNS, name));
+	const row = execFileSync(
+		process.execPath,
+		[path.join(__dirname, "log.js"), output, task, tool, model],
+		{
+			cwd: ROOT,
+			shell: false,
+			encoding: "utf8",
+			stdio: ["ignore", "pipe", "inherit"],
+		},
+	);
+	safe.append(path.join(RUNS, "log.csv"), row);
+	lifecycle?.usage(row);
+}
+
+function failRun(state, error) {
+	const { launched, loopRun, loopRecord, output, selection, lifecycle } = state;
+	// A host that fails after `loop.js end` wrote a valid outcome record: the record's code is
+	// the result, and the host's failure is still reported.
+	if (launched && loopRun) {
+		const recorded = state.loopResult || loopOutcome(loopRecord, loopRun.loop_id);
+		if (recorded.record) error.loop = { loop_id: loopRun.loop_id, ...recorded };
 	}
+	if (launched) {
+		try {
+			selectionRecord(output, selection, { command: state.command, args: state.args, outcome: "failed", reason: error.message });
+		} catch (recordError) {
+			process.stderr.write(`runner: selection not recorded — ${recordError.message}\n`);
+		}
+	}
+	lifecycle?.end(/SIGINT|SIGTERM|SIGKILL/.test(error.message) ? "interrupted" : "failed", error.message);
 }
 
 function git(args, options = {}) {
@@ -719,7 +778,6 @@ module.exports = {
 	git,
 	main,
 	ROOT,
-	WORKSPACE,
 	RUNS,
 	safe,
 };

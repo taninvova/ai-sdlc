@@ -86,7 +86,7 @@ function repo(name, files) {
 	fs.mkdirSync(path.join(dir, "ai-factory/make"), { recursive: true });
 	fs.mkdirSync(path.join(dir, "ai-factory/specs"), { recursive: true });
 	fs.mkdirSync(path.join(dir, "ai-factory/plans/done"), { recursive: true });
-	for (const file of ["loop.js", "contracts.js", "gate.js", "safe-files.js", "assurance.js"])
+	for (const file of ["loop.js", "contracts.js", "gate.js", "safe-files.js", "assurance.js", "assurance-policy.js"])
 		fs.copyFileSync(path.join(MAKE, file), path.join(dir, "ai-factory/make", file));
 	fs.writeFileSync(path.join(dir, "ai-factory/.gitignore"), "/runs/tmp/\n");
 	fs.writeFileSync(path.join(dir, "src.txt"), "base\n");

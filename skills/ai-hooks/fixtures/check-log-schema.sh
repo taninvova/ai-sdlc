@@ -106,16 +106,15 @@ diff <(guard "$SCHEMA") <(guard "$MAKE") >/dev/null || fail "the shared schema g
 $(diff <(guard "$SCHEMA") <(guard "$MAKE") | head -20)"
 if grep -q 'shared schema guard' "$HOOK"; then fail "$HOOK carries its own copy of the guard; it must require $SCHEMA"; fi
 
-# 4b. a third copy: the reader, templates/ai-factory/make/cost.js, runs in an adopted repo and
-# cannot require $SCHEMA either. It needs only the record-reading half of the guard — it never
-# rewrites the log — so what is pinned is the records()/width() pair, byte for byte. Two copies
-# held together and a third left loose is how a reader starts tearing rows the writers keep whole.
+# 4b. the reader, templates/ai-factory/make/cost.js, runs in an adopted repo and cannot require
+# $SCHEMA either. It needs only the record-reading half of the guard — it never rewrites the log —
+# so it takes the records()/width() pair from $MAKE rather than carrying a third copy that could
+# drift loose and tear rows the writers keep whole. Pinned: it requires the pair from log.js, and
+# holds no copy of its own; the pair in $MAKE is pinned to $SCHEMA below.
 pair() { awk '/^\/\/ Two ways the file goes wrong/ || /--- end shared schema guard ---/{p=0} /^\/\/ Records, not lines/{p=1} p' "$1"; }
-[ -n "$(guard "$COST")" ] || fail "no shared schema guard markers found in $COST"
 [ -n "$(pair "$SCHEMA")" ] || fail "could not read the records()/width() pair from $SCHEMA"
-[ -n "$(pair "$COST")" ] || fail "could not read the records()/width() pair from $COST"
-diff <(pair "$SCHEMA") <(pair "$COST") >/dev/null || fail "the records()/width() pair has drifted between $SCHEMA and the reader:
-$(diff <(pair "$SCHEMA") <(pair "$COST") | head -20)"
+grep -q 'const { records, width } = require("./log.js");' "$COST" || fail "$COST does not take the records()/width() pair from make/log.js"
+if grep -q '^function records\|^function width\|shared schema guard' "$COST"; then fail "$COST carries its own copy of the records()/width() pair; it must require it from make/log.js"; fi
 diff <(pair "$SCHEMA") <(pair "$MAKE") >/dev/null || fail "the records()/width() pair has drifted between $SCHEMA and $MAKE:
 $(diff <(pair "$SCHEMA") <(pair "$MAKE") | head -20)"
 if grep -q 'fs.writeFileSync\|fs.appendFileSync\|fs.rmSync\|fs.unlinkSync' "$COST"; then fail "$COST writes to the filesystem; the reader is read-only over the log"; fi

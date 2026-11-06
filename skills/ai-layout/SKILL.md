@@ -47,7 +47,7 @@ ai-factory/risks/                     /fc:risk output: one file per spec (its pl
 ai-factory/plans/  ai-factory/plans/done/     plans in flight / merged
 ai-factory/runs/log.csv               header only; the Stop hook and ai-factory/make/log.js append the same 17 columns
 ai-factory/make/ai.mk                 headless runner for CI (make ai / review / contracts / verify / ids-check)
-ai-factory/make/runner.js  models.js  gate.js  contracts.js  delivery-report.js  delivery-status.js  continue.js  assurance.js  ids.js  loop.js  lifecycle.js  lifecycle-events.js  safe-files.js  log.js  cost.js  sync-adapters.js  sync-adapters.sh
+ai-factory/make/runner.js  models.js  gate.js  contracts.js  delivery-report.js  delivery-status.js  continue.js  assurance.js  assurance-policy.js  ids.js  loop.js  lifecycle.js  lifecycle-events.js  safe-files.js  log.js  cost.js  sync-adapters.js  sync-adapters.sh
                                       models.js parses models.yaml and resolves each task's model — runner, routed dispatch, sync and doctor share it
                                       cost.js reads log.csv for `make cost` — read-only, 17 columns by name
                                       contracts.js validates spec/plan/quick sidecars and records evidence (opt-in)

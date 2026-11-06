@@ -1910,7 +1910,6 @@ module.exports = {
 	promptFor,
 	validate,
 	loadOracle,
-	completionOf,
 	evaluateRun,
 	settings,
 	runConditions,
@@ -1920,7 +1919,5 @@ module.exports = {
 	unknownCost,
 	pairRuns,
 	linkLifecycleCost,
-	buildReport,
-	renderReport,
 	summarizeRun,
 };

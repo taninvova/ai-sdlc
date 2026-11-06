@@ -47,7 +47,7 @@ let projects = 0;
 function project({ config, selection, manifest = true } = {}) {
 	const dir = path.join(base, `p${++projects}`);
 	fs.mkdirSync(path.join(dir, "ai-factory/make"), { recursive: true });
-	for (const file of ["assurance.js", "contracts.js", "gate.js", "safe-files.js"])
+	for (const file of ["assurance.js", "assurance-policy.js", "contracts.js", "gate.js", "safe-files.js"])
 		if (fs.existsSync(path.join(MAKE, file)))
 			fs.copyFileSync(path.join(MAKE, file), path.join(dir, "ai-factory/make", file));
 	if (manifest) writeJson(dir, "ai-factory/.sdlc.json", { version: "fixture" });
@@ -697,16 +697,36 @@ check("runtime", "legacy-runtime-unchanged", () => {
 check("runtime", "missing-helper-with-selection", () => {
 	const dir = workspace("planned", { preset: "standard" });
 	const id = delivery(dir);
-	fs.rmSync(path.join(dir, "ai-factory/make/assurance.js"));
+	fs.rmSync(path.join(dir, "ai-factory/make/assurance-policy.js"));
 	const output = path.join(dir, "ai-factory/review-output.json");
 	fs.writeFileSync(output, JSON.stringify({ result: JSON.stringify({ verdict: "request_changes", findings: [], summary: "x" }) }));
-	assert.match(expectExit(gate(dir, output), 2, "gate without the helper").stderr, /assurance\.js is missing/);
+	assert.match(expectExit(gate(dir, output), 2, "gate without the helper").stderr, /assurance-policy\.js is missing/);
 	const report = spawnSync(process.execPath, [path.join(dir, "ai-factory/make/delivery-report.js"), id], { cwd: dir, env: bare, encoding: "utf8" });
 	assert.equal(report.status, 2, "a selection that cannot be read stops the report");
-	assert.match(report.stderr, /assurance\.js is missing/);
+	assert.match(report.stderr, /assurance-policy\.js is missing/);
 	const before = launches(dir);
 	assert.notEqual(runner(dir, "ai", { TASK: "quick", INPUT: "edit" }).status, 0);
 	assert.equal(launches(dir), before, "no host runs while the selection cannot be applied");
+});
+
+check("runtime", "missing-cli-with-selection", () => {
+	// assurance.js and assurance-policy.js ship together; a partial copy of either names /fc:sync-sdlc.
+	const dir = workspace("planned", { preset: "standard" });
+	fs.rmSync(path.join(dir, "ai-factory/make/assurance.js"));
+	const before = launches(dir);
+	const run = runner(dir, "ai", { TASK: "quick", INPUT: "edit" });
+	assert.notEqual(run.status, 0, "a runner without make/assurance.js must not run under a preset");
+	assert.match(`${run.stdout}${run.stderr}`, /make\/assurance\.js is missing; run \/fc:sync-sdlc/);
+	assert.equal(launches(dir), before, "no host runs while assurance.js is missing");
+});
+
+check("runtime", "missing-policy-cli", () => {
+	const dir = workspace("planned", { preset: "standard" });
+	fs.rmSync(path.join(dir, "ai-factory/make/assurance-policy.js"));
+	const show = spawnSync(process.execPath, [path.join(dir, "ai-factory/make/assurance.js"), "show"], { cwd: dir, env: bare, encoding: "utf8" });
+	assert.equal(show.status, 2, "assurance.js without its policy module exits 2");
+	assert.match(show.stderr, /make\/assurance-policy\.js is missing; run \/fc:sync-sdlc/);
+	assert.doesNotMatch(show.stderr, /MODULE_NOT_FOUND/);
 });
 
 // --- procedures (Step 3): task behavior, review coordination, risk routing and legacy ----------
@@ -951,7 +971,7 @@ check("docs", "docs-preset-table", () => {
 });
 
 check("docs", "docs-codes-and-claims", () => {
-	const sources = ["assurance.js", "delivery-report.js", "gate.js", "contracts.js"].map((file) => fs.readFileSync(path.join(MAKE, file), "utf8")).join("\n");
+	const sources = ["assurance.js", "assurance-policy.js", "delivery-report.js", "gate.js", "contracts.js"].map((file) => fs.readFileSync(path.join(MAKE, file), "utf8")).join("\n");
 	for (const code of ["U_CONTRACTS_NOT_ENABLED", "E_GATE_CONFLICT", "E_GATE_INVALID", "REVIEW_NOT_INDEPENDENT"]) {
 		assert.ok(sources.includes(code), `${code} is documented but not produced by make/`);
 		says(doc("contracts"), code, DOCS.contracts);

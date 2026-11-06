@@ -159,35 +159,41 @@ function parseRun(text) {
 	return r; // cost stays "" — codex reports none, and a guessed price is worse than none
 }
 
-const [file, task, tool, model] = process.argv.slice(2);
-boundary(path.dirname(path.dirname(file))).assertPath(file, {
-	allowMissing: false,
-});
-const run = parseRun(fs.readFileSync(file, "utf8"));
-const { inp, out, cr, cw } = run;
-const hit = (cr / (inp + cr + cw || 1)).toFixed(2);
+// make/cost.js reads the log with this file's records()/width() pair rather than a copy of it.
+module.exports = { HEADER, records, width };
 
-ensureSchema(path.join(path.dirname(file), "log.csv"));
-process.stdout.write(
-	[
-		new Date().toISOString(),
-		run.id,
-		"make",
-		process.env.GITLAB_USER || git(["config", "user.name"]) || "unknown",
-		git(["rev-parse", "--abbrev-ref", "HEAD"]),
-		task,
-		tool,
-		"",
-		model || "", // a headless run has no subagent, so `agent` is empty
-		run.turns,
-		inp,
-		out,
-		cr,
-		cw,
-		hit,
-		run.cost,
-		"",
-	]
-		.map(csv)
-		.join(",") + "\n",
-);
+// Only when run (runner.js: `node log.js <output> <task> <tool> <model>`), never when required.
+if (require.main === module) {
+	const [file, task, tool, model] = process.argv.slice(2);
+	boundary(path.dirname(path.dirname(file))).assertPath(file, {
+		allowMissing: false,
+	});
+	const run = parseRun(fs.readFileSync(file, "utf8"));
+	const { inp, out, cr, cw } = run;
+	const hit = (cr / (inp + cr + cw || 1)).toFixed(2);
+
+	ensureSchema(path.join(path.dirname(file), "log.csv"));
+	process.stdout.write(
+		[
+			new Date().toISOString(),
+			run.id,
+			"make",
+			process.env.GITLAB_USER || git(["config", "user.name"]) || "unknown",
+			git(["rev-parse", "--abbrev-ref", "HEAD"]),
+			task,
+			tool,
+			"",
+			model || "", // a headless run has no subagent, so `agent` is empty
+			run.turns,
+			inp,
+			out,
+			cr,
+			cw,
+			hit,
+			run.cost,
+			"",
+		]
+			.map(csv)
+			.join(",") + "\n",
+	);
+}

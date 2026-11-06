@@ -390,4 +390,4 @@ if (require.main === module) {
 	}
 }
 
-module.exports = { ACTIONS, inspect, validateResult, resultProblem, parseAnswer, answersProblem, destinationInput, handoff, finish, main };
+module.exports = { inspect, validateResult, parseAnswer, destinationInput, handoff, finish, main };

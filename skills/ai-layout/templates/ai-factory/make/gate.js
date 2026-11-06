@@ -86,10 +86,11 @@ function readReview(options) {
 	return parseVerdict(JSON.stringify(result));
 }
 
-// The assurance helper ships beside this file. Where it is absent (a partial copy) behavior is
-// legacy, but a selection it cannot read is never silently ignored.
+// The assurance policy (assurance-policy.js) ships beside this file. Where it is absent (a partial
+// copy) behavior is legacy, but a selection it cannot read is never silently ignored. It is a leaf
+// module, so loading it here, from contracts.js or from delivery-report.js closes no cycle.
 function assuranceModule(root) {
-	const file = path.join(__dirname, "assurance.js");
+	const file = path.join(__dirname, "assurance-policy.js");
 	if (fs.existsSync(file)) return require(file);
 	const selection = path.join(root, "ai-factory", "assurance.json");
 	let present = false;
@@ -98,7 +99,7 @@ function assuranceModule(root) {
 		present = true;
 	} catch {}
 	if (present)
-		throw new Error("ai-factory/assurance.json selects a preset, but make/assurance.js is missing; run /fc:sync-sdlc to receive it");
+		throw new Error("ai-factory/assurance.json selects a preset, but make/assurance-policy.js is missing; run /fc:sync-sdlc to receive it");
 	return null;
 }
 // The selected preset, or null when none is selected. A malformed selection throws.
@@ -113,7 +114,7 @@ function gateMode(enforce, preset = null) {
 			return { error: "GATE_ENFORCE must be 0, 1, or unset" };
 		return { mode: enforce === "1" ? "enforced" : "advisory", preset };
 	}
-	const resolved = require("./assurance.js").enforcement({ preset, env: { GATE_ENFORCE: enforce } });
+	const resolved = require("./assurance-policy.js").enforcement({ preset, env: { GATE_ENFORCE: enforce } });
 	if (resolved.conflicts.length)
 		return { error: resolved.conflicts.map((item) => `${item.code} ${item.message}. ${item.hint}`).join("\n") };
 	return { mode: resolved.mode, preset };
@@ -126,7 +127,7 @@ function evaluate(options, enforce = process.env.GATE_ENFORCE, preset = null) {
 	const label = `${strict ? "enforced" : "advisory"}${preset ? ` (preset ${preset})` : ""}`;
 	// Under a preset an advisory exit is never mistaken for approval.
 	const advisoryNote =
-		preset && !strict && require("./assurance.js").PRESETS[preset].review_required
+		preset && !strict && require("./assurance-policy.js").PRESETS[preset].review_required
 			? "; an advisory exit is not approval, and completion stays non-ready until an approving independent review is recorded"
 			: "";
 	let verdict;

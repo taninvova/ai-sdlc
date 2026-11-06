@@ -5,6 +5,8 @@
 1b. Every `check-*.sh` under `skills/ai-layout/scripts/` and `skills/ai-hooks/fixtures/` exits 0,
    run directly — not piped, which would report `tail`'s status instead of the check's.
    `check-paths.sh` is the one that fails if a prompt reaches back for a pre-1.0.0 path.
+   `check-fallow.sh` fails on any `fallow dead-code` or `fallow dupes` finding (it skips where
+   fallow is not installed); record a deliberate exception in `.fallowrc.jsonc` with its reason.
 2. A prompt, skill or hook change has a before/after run linked in the MR.
 3. Template changes name the blast radius (which adopted repos, breaking or not) and are
    recorded in CHANGELOG.md with the version bumped in every manifest and in the version line of

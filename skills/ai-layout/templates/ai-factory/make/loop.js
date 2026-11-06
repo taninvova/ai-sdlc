@@ -60,7 +60,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { boundary } = require("./safe-files.js");
-const { parsePlanSteps } = require("./contracts.js");
+const { parsePlanSteps, unfenced } = require("./contracts.js");
 // Preserve the invoked workspace when its entry point is a source-repo symlink (see runner.js).
 const ENTRY_DIRECTORY =
 	require.main === module ? path.dirname(process.argv[1]) : __dirname;
@@ -883,20 +883,10 @@ const topOf = (root, run) => fs.realpathSync(run(["rev-parse", "--show-toplevel"
 
 // The `- [ ] Step N` line of a plan, outside fenced code, as an index into text.split("\n").
 function stepLine(lines, number) {
-	let fence = 0;
-	let char = "";
-	for (let index = 0; index < lines.length; index++) {
-		const line = lines[index].replace(/\r$/, "");
-		const open = line.trimStart().match(/^(`{3,}|~{3,})/);
-		if (open) {
-			if (!fence) {
-				fence = open[1].length;
-				char = open[1][0];
-			} else if (open[1][0] === char && open[1].length >= fence && !line.trimStart().slice(open[1].length).trim()) fence = 0;
-			continue;
-		}
-		if (fence) continue;
-		const match = line.match(/^- \[(.?)\](.*)$/);
+	// Fenced lines come back blank, so they never match; indexes stay aligned with `lines`.
+	const visible = unfenced(lines.join("\n"));
+	for (let index = 0; index < visible.length; index++) {
+		const match = visible[index].match(/^- \[(.?)\](.*)$/);
 		if (!match || !" xX~".includes(match[1] || "?")) continue;
 		const bold = match[2].match(/^[^*]*\*\*([^*]*)\*\*/);
 		const step = (bold ? bold[1] : match[2]).trim().match(/^Step\s+0*(\d+)(?![0-9])/);
@@ -2128,10 +2118,7 @@ module.exports = {
 	DEFAULTS,
 	NOTES,
 	HEADER,
-	UsageError,
-	parseOptions,
 	listing,
-	planRows,
 	matchPlans,
 	validatePlan,
 	createState,

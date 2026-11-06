@@ -17,7 +17,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const MAKE = path.join(__dirname, "..", "templates", "ai-factory", "make");
-const { parsePlanSteps } = require(path.join(MAKE, "contracts.js"));
+const { parsePlanSteps, unfenced } = require(path.join(MAKE, "contracts.js"));
 const { validatePlan } = require(path.join(MAKE, "loop.js"));
 
 const PLANS = "ai-factory/plans";
@@ -52,23 +52,6 @@ function idOf(name) {
 	const letters = name.match(/^([A-Za-z]{3}[0-9]{3})(?:[-.].*)?$/);
 	if (letters) return letters[1].toUpperCase();
 	return "-";
-}
-
-// contracts.js's unfenced: fenced code is example text, blanked line for line.
-function unfenced(text) {
-	let fence = 0;
-	let char = "";
-	return text.split(/\r?\n/).map((line) => {
-		const open = line.trimStart().match(/^(`{3,}|~{3,})/);
-		if (open) {
-			if (!fence) {
-				fence = open[1].length;
-				char = open[1][0];
-			} else if (open[1][0] === char && open[1].length >= fence && !line.trimStart().slice(open[1].length).trim()) fence = 0;
-			return "";
-		}
-		return fence ? "" : line;
-	});
 }
 
 // The step's title after `Step N — ` (or ` – `, ` - `), bold stripped.

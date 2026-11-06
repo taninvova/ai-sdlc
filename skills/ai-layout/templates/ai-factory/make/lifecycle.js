@@ -68,26 +68,35 @@ function prunedMarkers(ai) {
 		return [];
 	}
 }
-function aggregate(options = {}) {
-	const ai = options.ai || workspace(options.root);
-	const now = options.now ?? Date.now();
-	const read = store.read(ai);
-	// Events are immutable on disk: one recorded under a deprecated task name (phase `check`, before
-	// it was renamed `review`) is read under the name it has now, so both group as one phase.
-	const renamed = (event) => {
-		const out = { ...event };
-		for (const key of ["phase", "task"]) if (typeof out[key] === "string") out[key] = canonicalTask(out[key]);
-		return out;
-	};
-	const ordered = read.events.map(renamed).sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || (a.event_id < b.event_id ? -1 : 1));
+// Events are immutable on disk: one recorded under a deprecated task name (phase `check`, before
+// it was renamed `review`) is read under the name it has now, so both group as one phase.
+function renamed(event) {
+	const out = { ...event };
+	for (const key of ["phase", "task"]) if (typeof out[key] === "string") out[key] = canonicalTask(out[key]);
+	return out;
+}
+// The first start and the first end of one attempt or wait win; later ones are ignored.
+function recordPair(map, idKey, id, side, event) {
+	if (!map.has(id)) map.set(id, { [idKey]: id, started: null, ended: null });
+	const pair = map.get(id);
+	if (!pair[side]) pair[side] = event;
+}
+// A run's own start and end: a second one is an anomaly and the first is kept.
+function recordRunBoundary(r, side, event, anomalies) {
+	const kept = side === "started" ? "start" : "end";
+	if (r[side]) anomalies.push({ run_id: r.run_id, issue: `run ${side} twice; the first ${kept} is kept` });
+	else r[side] = event;
+}
+// Sort events into runs (with their attempts and waits), usage records and session bindings.
+function collect(ordered) {
 	const runs = new Map();
 	const anomalies = [];
+	const usages = [];
+	const bindings = [];
 	const run = (id) => {
 		if (!runs.has(id)) runs.set(id, { run_id: id, started: null, ended: null, attempts: new Map(), waits: new Map(), bindings: [] });
 		return runs.get(id);
 	};
-	const usages = [];
-	const bindings = [];
 	for (const event of ordered) {
 		if (event.type === "usage_linked") {
 			usages.push(event);
@@ -98,61 +107,52 @@ function aggregate(options = {}) {
 			continue;
 		}
 		const r = run(event.run_id);
-		if (event.type === "run_started") {
-			if (r.started) anomalies.push({ run_id: r.run_id, issue: "run started twice; the first start is kept" });
-			else r.started = event;
-		} else if (event.type === "run_ended") {
-			if (r.ended) anomalies.push({ run_id: r.run_id, issue: "run ended twice; the first end is kept" });
-			else r.ended = event;
-		} else if (event.type === "phase_started" || event.type === "phase_ended") {
-			if (!r.attempts.has(event.attempt_id)) r.attempts.set(event.attempt_id, { attempt_id: event.attempt_id, started: null, ended: null });
-			const attempt = r.attempts.get(event.attempt_id);
-			const key = event.type === "phase_started" ? "started" : "ended";
-			if (!attempt[key]) attempt[key] = event;
-		} else if (event.type === "wait_started" || event.type === "wait_ended") {
-			if (!r.waits.has(event.wait_id)) r.waits.set(event.wait_id, { wait_id: event.wait_id, started: null, ended: null });
-			const wait = r.waits.get(event.wait_id);
-			const key = event.type === "wait_started" ? "started" : "ended";
-			if (!wait[key]) wait[key] = event;
-		}
+		if (event.type === "run_started") recordRunBoundary(r, "started", event, anomalies);
+		else if (event.type === "run_ended") recordRunBoundary(r, "ended", event, anomalies);
+		else if (event.type === "phase_started" || event.type === "phase_ended") recordPair(r.attempts, "attempt_id", event.attempt_id, event.type === "phase_started" ? "started" : "ended", event);
+		else if (event.type === "wait_started" || event.type === "wait_ended") recordPair(r.waits, "wait_id", event.wait_id, event.type === "wait_started" ? "started" : "ended", event);
 	}
-	const summaries = new Map();
-	for (const r of runs.values()) {
-		const t = timing(r.started, r.ended);
-		const start = r.started || {};
-		const attempts = [...r.attempts.values()].map((a) => ({ ...a, timing: timing(a.started, a.ended), phase: a.started?.phase || start.phase || null, step: a.started?.step || start.step || null, outcome: a.ended?.outcome || null }));
-		const waits = [...r.waits.values()].map((w) => ({ ...w, timing: timing(w.started, w.ended) }));
-		summaries.set(r.run_id, {
-			run_id: r.run_id,
-			delivery_id: start.delivery_id || r.ended?.delivery_id || null,
-			parent_run_id: start.parent_run_id || null,
-			host: start.host || null,
-			task: start.task || null,
-			phase: start.phase || null,
-			step: start.step || null,
-			session_id: start.session_id || null,
-			started_at: r.started?.at || null,
-			ended_at: r.ended?.at || null,
-			outcome: r.ended?.outcome || null,
-			status: t.quality === "open" ? "open" : t.quality === "missing_start" ? "missing_start" : t.quality === "invalid_clock" ? "invalid_clock" : "closed",
-			elapsed_s: t.duration_s,
-			open_age_s: t.quality === "open" && t.start_ms !== null ? round(Math.max(0, now - t.start_ms) / 1000) : null,
-			timing_quality: t.quality,
-			window: t.start_ms === null ? null : [t.start_ms, t.end_ms],
-			attempts,
-			waits,
-		});
-	}
-	// An explicitly delegated child belongs to its parent's delivery; nothing else is inferred.
-	const deliveryOf = (summary, seen = new Set()) => {
-		if (summary.delivery_id) return summary.delivery_id;
-		if (!summary.parent_run_id || seen.has(summary.run_id)) return null;
-		seen.add(summary.run_id);
-		const parent = summaries.get(summary.parent_run_id);
-		return parent ? deliveryOf(parent, seen) : null;
+	return { runs, anomalies, usages, bindings };
+}
+function runStatus(quality) {
+	return quality === "open" || quality === "missing_start" || quality === "invalid_clock" ? quality : "closed";
+}
+function summarizeRun(r, now) {
+	const t = timing(r.started, r.ended);
+	const start = r.started || {};
+	const attempts = [...r.attempts.values()].map((a) => ({ ...a, timing: timing(a.started, a.ended), phase: a.started?.phase || start.phase || null, step: a.started?.step || start.step || null, outcome: a.ended?.outcome || null }));
+	const waits = [...r.waits.values()].map((w) => ({ ...w, timing: timing(w.started, w.ended) }));
+	return {
+		run_id: r.run_id,
+		delivery_id: start.delivery_id || r.ended?.delivery_id || null,
+		parent_run_id: start.parent_run_id || null,
+		host: start.host || null,
+		task: start.task || null,
+		phase: start.phase || null,
+		step: start.step || null,
+		session_id: start.session_id || null,
+		started_at: r.started?.at || null,
+		ended_at: r.ended?.at || null,
+		outcome: r.ended?.outcome || null,
+		status: runStatus(t.quality),
+		elapsed_s: t.duration_s,
+		open_age_s: t.quality === "open" && t.start_ms !== null ? round(Math.max(0, now - t.start_ms) / 1000) : null,
+		timing_quality: t.quality,
+		window: t.start_ms === null ? null : [t.start_ms, t.end_ms],
+		attempts,
+		waits,
 	};
-	for (const summary of summaries.values()) summary.delivery = deliveryOf(summary);
-	// Session bindings: runs that declared their session, plus hook-observed `lifecycle.js start`.
+}
+// An explicitly delegated child belongs to its parent's delivery; nothing else is inferred.
+function deliveryOf(summaries, summary, seen = new Set()) {
+	if (summary.delivery_id) return summary.delivery_id;
+	if (!summary.parent_run_id || seen.has(summary.run_id)) return null;
+	seen.add(summary.run_id);
+	const parent = summaries.get(summary.parent_run_id);
+	return parent ? deliveryOf(summaries, parent, seen) : null;
+}
+// Session bindings: runs that declared their session, plus hook-observed `lifecycle.js start`.
+function sessionBindings(summaries, bindings) {
 	const bound = new Map();
 	const bind = (session, runId) => {
 		if (!session || !summaries.has(runId)) return;
@@ -161,7 +161,30 @@ function aggregate(options = {}) {
 	};
 	for (const summary of summaries.values()) bind(summary.session_id, summary.run_id);
 	for (const binding of bindings) bind(binding.session_id, binding.run_id);
-	// Usage: unique source records counted once; a headless envelope also seen by hooks drops out.
+	return bound;
+}
+// Which run a usage record belongs to: the run it names, else the one bound run whose window it
+// falls in; with the reason when there is none.
+function usageOwner(usage, summaries, bound) {
+	if (usage.run_id) {
+		if (summaries.has(usage.run_id)) return { owner: usage.run_id, method: "explicit", reason: null };
+		return { owner: null, method: null, reason: "names a run with no recorded events" };
+	}
+	const at = Date.parse(usage.at);
+	const first = Date.parse(usage.usage.first_at ?? usage.at);
+	const last = Date.parse(usage.usage.last_at ?? usage.at);
+	const candidates = [...(bound.get(usage.session_id) || [])].filter((id) => {
+		const window = summaries.get(id).window;
+		if (!window) return false;
+		const end = window[1] === null ? Number.POSITIVE_INFINITY : window[1];
+		return (Number.isNaN(first) ? at : first) <= end && (Number.isNaN(last) ? at : last) >= window[0];
+	});
+	if (candidates.length === 1) return { owner: candidates[0], method: "session_binding", reason: null };
+	const reason = candidates.length ? `ambiguous: ${candidates.length} runs bound to this session overlap it` : usage.session_id && bound.has(usage.session_id) ? "outside every bound run's window" : "no run is bound to this session";
+	return { owner: null, method: null, reason };
+}
+// Usage: unique source records counted once; a headless envelope also seen by hooks drops out.
+function linkUsages(usages, summaries, bound) {
 	const seenKeys = new Set();
 	const hookSessions = new Set(usages.filter((u) => u.usage.source !== "headless").map((u) => u.session_id).filter(Boolean));
 	const linked = [];
@@ -177,31 +200,12 @@ function aggregate(options = {}) {
 			superseded++;
 			continue;
 		}
-		const at = Date.parse(usage.at);
-		const first = Date.parse(usage.usage.first_at ?? usage.at);
-		const last = Date.parse(usage.usage.last_at ?? usage.at);
-		let owner = null;
-		let method = null;
-		let reason = null;
-		if (usage.run_id) {
-			if (summaries.has(usage.run_id)) {
-				owner = usage.run_id;
-				method = "explicit";
-			} else reason = "names a run with no recorded events";
-		} else {
-			const candidates = [...(bound.get(usage.session_id) || [])].filter((id) => {
-				const window = summaries.get(id).window;
-				if (!window) return false;
-				const end = window[1] === null ? Number.POSITIVE_INFINITY : window[1];
-				return (Number.isNaN(first) ? at : first) <= end && (Number.isNaN(last) ? at : last) >= window[0];
-			});
-			if (candidates.length === 1) {
-				owner = candidates[0];
-				method = "session_binding";
-			} else reason = candidates.length ? `ambiguous: ${candidates.length} runs bound to this session overlap it` : usage.session_id && bound.has(usage.session_id) ? "outside every bound run's window" : "no run is bound to this session";
-		}
-		linked.push({ usage, owner, method, reason });
+		linked.push({ usage, ...usageOwner(usage, summaries, bound) });
 	}
+	return { linked, duplicates, superseded };
+}
+// Runs and linked usage grouped by delivery; whatever has no delivery is kept apart.
+function groupByDelivery(summaries, linked) {
 	const deliveries = new Map();
 	const deliveryEntry = (id) => {
 		if (!deliveries.has(id)) deliveries.set(id, { runs: [], usage: [] });
@@ -215,6 +219,20 @@ function aggregate(options = {}) {
 		if (summary?.delivery) deliveryEntry(summary.delivery).usage.push(item);
 		else unattributed.usage.push({ ...item, reason: item.reason || "its run belongs to no delivery" });
 	}
+	return { deliveries, unattributed };
+}
+function aggregate(options = {}) {
+	const ai = options.ai || workspace(options.root);
+	const now = options.now ?? Date.now();
+	const read = store.read(ai);
+	const ordered = read.events.map(renamed).sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || (a.event_id < b.event_id ? -1 : 1));
+	const { runs, anomalies, usages, bindings } = collect(ordered);
+	const summaries = new Map();
+	for (const r of runs.values()) summaries.set(r.run_id, summarizeRun(r, now));
+	for (const summary of summaries.values()) summary.delivery = deliveryOf(summaries, summary);
+	const bound = sessionBindings(summaries, bindings);
+	const { linked, duplicates, superseded } = linkUsages(usages, summaries, bound);
+	const { deliveries, unattributed } = groupByDelivery(summaries, linked);
 	const pruned = prunedMarkers(ai);
 	const wanted = options.delivery ? [options.delivery] : [...deliveries.keys()].sort();
 	const report = {
@@ -247,37 +265,38 @@ function publicRun(summary) {
 	const { window, attempts, waits, delivery, ...rest } = summary;
 	return { ...rest, delivery_id: delivery || rest.delivery_id, attempts: attempts.length, waits: waits.length };
 }
-function deliveryMetrics(id, entry, pruned) {
+// Runs that are not closed lower the delivery's quality, in this order.
+function runQuality(runs) {
 	const quality = [];
-	const runs = entry.runs.slice().sort((a, b) => (a.started_at || "") < (b.started_at || "") ? -1 : 1);
-	const closedWindows = runs.filter((r) => r.status === "closed").map((r) => r.window);
 	for (const status of ["open", "invalid_clock", "missing_start"])
 		if (runs.some((r) => r.status === status)) quality.push(status === "open" ? "open_runs" : status);
-	const complete = runs.length > 0 && runs.every((r) => r.status === "closed");
-	const elapsedKnown = total(closedWindows) / 1000;
-	// Waits: explicit intervals only, clipped to the measured run windows.
-	const waitIntervals = [];
-	let openWaits = false;
+	return quality;
+}
+// Waits: explicit intervals only. One open or unmeasurable wait makes waiting unknown.
+function waitIntervalsOf(runs) {
+	const intervals = [];
+	let open = false;
 	for (const r of runs)
 		for (const w of r.waits) {
-			if (w.timing.quality === "open" || w.timing.quality === "missing_start" || w.timing.quality === "invalid_clock") openWaits = true;
-			else waitIntervals.push([w.timing.start_ms, w.timing.end_ms]);
+			if (w.timing.quality === "open" || w.timing.quality === "missing_start" || w.timing.quality === "invalid_clock") open = true;
+			else intervals.push([w.timing.start_ms, w.timing.end_ms]);
 		}
-	if (openWaits) quality.push("open_or_invalid_waits");
-	const clippedWaits = clipTo(waitIntervals, closedWindows.length ? closedWindows : waitIntervals);
-	const waitingKnown = total(clippedWaits) / 1000;
-	// Active: union of recorded execution intervals minus recorded waits.
-	const attemptIntervals = [];
-	let incompleteAttempts = false;
+	return { intervals, open };
+}
+// Execution intervals of every measured attempt; an unmeasured one makes active time unknown.
+function attemptIntervalsOf(runs) {
+	const intervals = [];
+	let incomplete = false;
 	for (const r of runs)
 		for (const a of r.attempts) {
-			if (a.timing.quality === "monotonic" || a.timing.quality === "wall_clock") attemptIntervals.push([a.timing.start_ms, a.timing.end_ms]);
-			else incompleteAttempts = true;
+			if (a.timing.quality === "monotonic" || a.timing.quality === "wall_clock") intervals.push([a.timing.start_ms, a.timing.end_ms]);
+			else incomplete = true;
 		}
-	if (incompleteAttempts) quality.push("incomplete_attempts");
-	const active = !incompleteAttempts && attemptIntervals.length && !openWaits ? (total(attemptIntervals) - overlap(attemptIntervals, clippedWaits)) / 1000 : null;
-	// Retries: another attempt of the same phase/step after a failure. After an interruption or
-	// an attempt left open it is a resumption, and after a success a rerun — neither is a retry.
+	return { intervals, incomplete };
+}
+// Retries: another attempt of the same phase/step after a failure. After an interruption or
+// an attempt left open it is a resumption, and after a success a rerun — neither is a retry.
+function attemptCounts(runs) {
 	const groups = new Map();
 	for (const r of runs)
 		for (const a of r.attempts) {
@@ -285,26 +304,27 @@ function deliveryMetrics(id, entry, pruned) {
 			if (!groups.has(key)) groups.set(key, []);
 			groups.get(key).push({ ...a, start: a.timing.start_ms ?? Number.POSITIVE_INFINITY });
 		}
-	let retries = 0;
-	let resumed = 0;
-	let reruns = 0;
+	const counts = { retries: 0, resumed: 0, reruns: 0 };
 	for (const list of groups.values()) {
 		list.sort((a, b) => a.start - b.start);
 		for (let index = 1; index < list.length; index++) {
 			const previous = list[index - 1].outcome;
-			if (previous === "failed") retries++;
-			else if (previous === "succeeded") reruns++;
-			else resumed++;
+			if (previous === "failed") counts.retries++;
+			else if (previous === "succeeded") counts.reruns++;
+			else counts.resumed++;
 		}
 	}
-	// Agent effort: measured agent execution windows, allowed to exceed elapsed time.
-	const agentWindows = entry.usage.filter((item) => item.usage.usage.source === "agent" && item.usage.usage.first_at && item.usage.usage.last_at);
-	const agentEffort = agentWindows.length ? agentWindows.reduce((sum, item) => sum + Math.max(0, Date.parse(item.usage.usage.last_at) - Date.parse(item.usage.usage.first_at)), 0) / 1000 : null;
-	const usages = entry.usage.map((item) => item.usage);
-	const tokens = tokenTotals(usages);
-	// Money: a known subtotal plus the unknown remainder. Zero-priced is known; unpriced is unknown.
+	return counts;
+}
+// Agent effort: measured agent execution windows, allowed to exceed elapsed time.
+function agentEffortOf(items) {
+	const agentWindows = items.filter((item) => item.usage.usage.source === "agent" && item.usage.usage.first_at && item.usage.usage.last_at);
+	return agentWindows.length ? agentWindows.reduce((sum, item) => sum + Math.max(0, Date.parse(item.usage.usage.last_at) - Date.parse(item.usage.usage.first_at)), 0) / 1000 : null;
+}
+// Money: a known subtotal plus the unknown remainder. Zero-priced is known; unpriced is unknown.
+function costOf(usages) {
 	const priced = usages.filter((u) => u.usage.cost_usd !== null);
-	const cost = {
+	return {
 		known_usd: priced.length ? round(priced.reduce((sum, u) => sum + u.usage.cost_usd, 0)) : null,
 		total_usd: usages.length && priced.length === usages.length ? round(priced.reduce((sum, u) => sum + u.usage.cost_usd, 0)) : null,
 		priced_records: priced.length,
@@ -312,23 +332,49 @@ function deliveryMetrics(id, entry, pruned) {
 		unknown_records: usages.length - priced.length,
 		provenance: countBy(usages.map((u) => u.usage.cost_provenance || "unknown")),
 	};
+}
+// The time and attempt metrics; with no runs at all every one of them is unknown.
+function timeMetrics(runs, measured) {
+	const { complete, elapsedKnown, waitingKnown, openWaits, active, agentEffort, counts } = measured;
+	const open = runs.filter((r) => r.status === "open");
+	return {
+		elapsed_s: complete ? round(elapsedKnown) : null,
+		elapsed_known_s: runs.length ? round(elapsedKnown) : null,
+		open_run_age_s: open.length ? Math.max(...open.map((r) => r.open_age_s ?? 0)) : null,
+		waiting_s: runs.length && !openWaits ? round(waitingKnown) : null,
+		active_s: round(active),
+		agent_effort_s: round(agentEffort),
+		retries: runs.length ? counts.retries : null,
+		resumed: runs.length ? counts.resumed : null,
+		reruns: runs.length ? counts.reruns : null,
+	};
+}
+function deliveryMetrics(id, entry, pruned) {
+	const runs = entry.runs.slice().sort((a, b) => (a.started_at || "") < (b.started_at || "") ? -1 : 1);
+	const quality = runQuality(runs);
+	const closedWindows = runs.filter((r) => r.status === "closed").map((r) => r.window);
+	const complete = runs.length > 0 && runs.every((r) => r.status === "closed");
+	const elapsedKnown = total(closedWindows) / 1000;
+	// Waits: explicit intervals only, clipped to the measured run windows.
+	const waits = waitIntervalsOf(runs);
+	if (waits.open) quality.push("open_or_invalid_waits");
+	const clippedWaits = clipTo(waits.intervals, closedWindows.length ? closedWindows : waits.intervals);
+	const waitingKnown = total(clippedWaits) / 1000;
+	// Active: union of recorded execution intervals minus recorded waits.
+	const attempts = attemptIntervalsOf(runs);
+	if (attempts.incomplete) quality.push("incomplete_attempts");
+	const active = !attempts.incomplete && attempts.intervals.length && !waits.open ? (total(attempts.intervals) - overlap(attempts.intervals, clippedWaits)) / 1000 : null;
+	const agentEffort = agentEffortOf(entry.usage);
+	const usages = entry.usage.map((item) => item.usage);
+	const tokens = tokenTotals(usages);
+	const cost = costOf(usages);
 	if (pruned.some((marker) => (marker.deliveries || []).includes(id))) quality.push("detail_pruned");
 	const outcomes = countBy(runs.map((r) => r.outcome || r.status));
 	return {
 		delivery_id: id,
 		runs: runs.map(publicRun),
 		outcomes,
-		metrics: {
-			elapsed_s: complete ? round(elapsedKnown) : null,
-			elapsed_known_s: runs.length ? round(elapsedKnown) : null,
-			open_run_age_s: runs.some((r) => r.status === "open") ? Math.max(...runs.filter((r) => r.status === "open").map((r) => r.open_age_s ?? 0)) : null,
-			waiting_s: runs.length && !openWaits ? round(waitingKnown) : null,
-			active_s: round(active),
-			agent_effort_s: round(agentEffort),
-			retries: runs.length ? retries : null,
-			resumed: runs.length ? resumed : null,
-			reruns: runs.length ? reruns : null,
-		},
+		metrics: timeMetrics(runs, { complete, elapsedKnown, waitingKnown, openWaits: waits.open, active, agentEffort, counts: attemptCounts(runs) }),
 		tokens,
 		cost,
 		attribution: countBy(entry.usage.map((item) => item.method)),

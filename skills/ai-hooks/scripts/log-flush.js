@@ -45,7 +45,7 @@ require("./_common").runHook(() => {
 	const cwd = ev.cwd || process.cwd();
 	const pending = path.join(ai, "runs", "log.pending.csv");
 	const log = path.join(ai, "runs", "log.csv");
-	return require("./_common").withLogLock(ai, (safe) => {
+	return require("./_safe-files").withLogLock(ai, (safe) => {
 		for (const name of ["log.pending.csv", "log.csv", "log.previous.csv"])
 			safe.assertPath(path.join(ai, "runs", name));
 		if (!fs.existsSync(pending)) return;

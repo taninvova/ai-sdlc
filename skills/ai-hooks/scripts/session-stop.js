@@ -1,24 +1,14 @@
 #!/usr/bin/env node
 require("./_common").runHook(() => {
-	const {
-		readEvent,
-		logDir,
-		user,
-		branch,
-		task,
-		fs,
-		path,
-	} = require("./_common");
-	const { claims, sumTranscript, price } = require("./_usage");
+	const { readEvent, logDir, task, fs } = require("./_common");
+	const { claims, withUsageLog, appendUsageRow } = require("./_usage");
 	const ev = readEvent();
 	const ai = logDir(ev);
 	if (!ai) return;
 	const cwd = ev.cwd || process.cwd();
 	if (!ev.transcript_path || !fs.existsSync(ev.transcript_path)) return;
 
-	return require("./_common").withLogLock(ai, (safe) => {
-		for (const name of ["log.pending.csv", "log.previous.csv"])
-			safe.assertPath(path.join(ai, "runs", name));
+	return withUsageLog(ai, (safe) => {
 		// The session's claim ledger, shared with the subagent rows so a record copied into an agent
 		// transcript is counted once across the two kinds of row. Claims are both recorded and ENFORCED:
 		// only records this session has not already counted are summed, so the row below is the increment
@@ -33,66 +23,23 @@ require("./_common").runHook(() => {
 		// each other's claims to a read-modify-write, so the claim lands as the sum walks the file. The
 		// cost is that an append failure below is diagnosed but leaves those records claimed with no row carrying
 		// them, and later deltas will not re-report them.
-		const taskName = task(ai, ev.session_id);
-		const ledger = claims(ai, ev.session_id);
-		const sum =
-			ev.host === "codex"
-				? require("./_codex-usage").sumCodexTranscript
-				: sumTranscript;
-		const summed = sum(ev.transcript_path, ledger);
-		const { turns, inp, out, cr, cw, model: transcriptModel } = summed;
-		const model = transcriptModel || ev.model || "";
-		if (turns === 0) return;
-
-		const { rate, approx } = price(ai, model);
-		const cost =
-			(inp * rate.input +
-				out * rate.output +
-				cr * rate.cache_read +
-				cw * rate.cache_write) /
-			1e6;
-		const hit = (cr / (inp + cr + cw || 1)).toFixed(2);
-		const costCell = ev.host === "codex" ? "" : approx + cost.toFixed(4);
-
 		// Rows go to log.pending.csv, which is gitignored, not to the committed log.csv. A Stop fires
 		// after every turn, so writing straight into a tracked file kept it dirty for the whole session
 		// and refused every `git checkout`. log-flush.js moves the rows into log.csv when the session
 		// commits, so the log changes only inside the commit that produced the work.
-		const { ensureSchema, csv } = require("./_log-schema");
-		const file = path.join(ai, "runs", "log.pending.csv");
-		try {
-			ensureSchema(file);
-			safe.append(
-				file,
-				[
-					new Date().toISOString(),
-					ev.session_id,
-					"session",
-					user(cwd),
-					branch(cwd),
-					// `task` is the `/fc:` command this session last ran, from the file log-task.js writes, and
-					// empty when it ran none. `agent` is empty on a session row: the subagent rows carry their own
-					// name.
-					taskName,
-					ev.host === "codex" ? "codex" : "claude",
-					"",
-					model,
-					turns,
-					inp,
-					out,
-					cr,
-					cw,
-					hit,
-					costCell,
-					"",
-				]
-					.map(csv)
-					.join(",") + "\n",
-			);
-		} catch (error) {
-			throw error;
-		}
-		// After the row, never instead of it: the run log is written whatever lifecycle does.
-		require("./_lifecycle").linkUsage(ai, ev, { source: "session", agent: "", model, sum: summed, costCell });
+		const taskName = task(ai, ev.session_id);
+		const ledger = claims(ai, ev.session_id);
+		appendUsageRow({
+			ai,
+			ev,
+			safe,
+			ledger,
+			transcript: ev.transcript_path,
+			source: "session",
+			// Empty on a session row: the subagent rows carry their own name.
+			agent: "",
+			taskName,
+			cwd,
+		});
 	});
 });

@@ -185,8 +185,6 @@ module.exports = {
 	appendJsonl,
 	identifier,
 	runHook,
-	withLogLock,
-	boundary,
 	fs,
 	path,
 };

@@ -4,54 +4,13 @@
 // the rows quarantined there are cumulative snapshots from before spec 0007's collection change,
 // and reading them would reinterpret them.
 // This file runs inside an adopted repo, so it cannot require the plugin's
-// skills/ai-hooks/scripts/_log-schema.js; it carries a byte-identical copy of the record-reading
-// pair below, and fixtures/check-log-schema.sh pins the copies together.
+// skills/ai-hooks/scripts/_log-schema.js; it reads records with make/log.js's pair, which
+// fixtures/check-log-schema.sh pins to the hook's copy.
 const fs = require("fs");
 
-// --- shared schema guard: the records()/width() pair, byte-identical with the two writers, pinned by fixtures/check-log-schema.sh ---
-// Records, not lines: csv() quotes any field holding a comma or a newline, so a line-based
-// read would tear one row in two and then judge both of the halves malformed.
-function records(body) {
-	const out = [];
-	let cur = null,
-		q = false;
-	for (const line of body.split("\n")) {
-		cur = cur === null ? line : cur + "\n" + line;
-		for (let i = 0; i < line.length; i++) {
-			const c = line[i];
-			if (q) {
-				if (c === '"') {
-					if (line[i + 1] === '"') i++;
-					else q = false;
-				}
-			} else if (c === '"') q = true;
-		}
-		if (!q) {
-			out.push(cur);
-			cur = null;
-		}
-	}
-	if (cur !== null) out.push(cur);
-	return out;
-}
-// Commas inside quotes do not separate fields. An unclosed quote is not a row that can be
-// measured at all, so it reports -1 and gets moved aside rather than counted as some width.
-function width(rec) {
-	let n = 1,
-		q = false;
-	for (let i = 0; i < rec.length; i++) {
-		const c = rec[i];
-		if (q) {
-			if (c === '"') {
-				if (rec[i + 1] === '"') i++;
-				else q = false;
-			}
-		} else if (c === '"') q = true;
-		else if (c === ",") n++;
-	}
-	return q ? -1 : n;
-}
-// --- end shared schema guard ---
+// The records()/width() pair is the writer's own (make/log.js): one copy, so the reader can never
+// tear a row the writers keep whole. log.js only defines it there; requiring it writes nothing.
+const { records, width } = require("./log.js");
 
 // The inverse of the writers' csv(): a quoted field keeps its commas and newlines, and a doubled
 // quote inside one is a single quote. Only called on a record width() could measure.
@@ -554,18 +513,11 @@ module.exports = {
 	readLog,
 	aggregate,
 	day,
-	UNATTRIBUTED,
-	DIMENSIONS,
 	METRICS,
 	exportDoc,
 	exportTsv,
-	renderTable,
 	status,
-	emptyMessage,
 	main,
 	SCHEMA,
 	VERSION,
-	EXPORT_METRICS,
-	TSV_COLUMNS,
-	TABLE_DIMENSIONS,
 };

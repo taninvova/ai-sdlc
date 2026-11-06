@@ -527,4 +527,4 @@ if (require.main === module) {
 	}
 }
 
-module.exports = { next, create, check, init, project, suggest, normalise };
+module.exports = { next, create, check, init, project, suggest };

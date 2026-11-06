@@ -1,0 +1,89 @@
+// fallow configuration for this repo, auto-discovered from the root:
+//   fallow dead-code
+//   fallow dupes
+//   fallow health
+// skills/ai-layout/scripts/check-fallow.sh runs dead-code and dupes in the check suite and fails on
+// any finding; health is advisory. Record a deliberate exception here, with its reason.
+{
+  "$schema": "https://fallow.tools/schema.json",
+
+  // Real code only: what runs in a user's session or ships to an adopted repo.
+  //   - plugin hooks (skills/ai-hooks/scripts/),
+  //   - plugin commands' scripts (adopt.js for /fc:adopt-sdlc, current.js for /fc:current,
+  //     manifest.js for /fc:sync-sdlc),
+  //   - the make scripts every adopted repo receives (templates/ai-factory/make/).
+  // No package.json here: every runtime root is a script started as `node <file>`
+  // (hooks.json, Makefile, commands, bash checks). `_*.js` files are require()-only helpers and
+  // stay out of `entry`, so fallow can still report one that nothing loads any more.
+  "entry": [
+    "skills/ai-hooks/scripts/[!_]*.js",
+    "skills/ai-layout/scripts/adopt.js",
+    "skills/ai-layout/scripts/current.js",
+    "skills/ai-layout/scripts/manifest.js",
+    "skills/ai-layout/templates/ai-factory/make/*.js"
+  ],
+
+  "ignorePatterns": [
+    // Symlinks to skills/ai-layout/templates/ai-factory/make/: analysing both doubles every file.
+    "ai-factory/make/**",
+    // Throwaway repos the check scripts copy into temp dirs, not maintained code.
+    "skills/ai-layout/fixtures/**",
+    // Maintainer tooling for this repo, never run by a user or shipped: the small-task
+    // benchmark, and the generators that rebuild commands/, codex-skills/, docs/commands/,
+    // this repo's own workspace links and the agent payload.
+    "skills/ai-layout/scripts/benchmark-small-tasks.js",
+    "skills/ai-layout/scripts/sync-*.js",
+    "skills/ai-layout/scripts/_frontmatter.js",
+    "skills/ai-layout/scripts/materialize-agents.js",
+    ".fallow/**"
+  ],
+
+  // Leave includeEntryExports off: the check-*.sh scripts load the CLIs' exports from
+  // inline `node -e` / heredoc JS that fallow cannot see. For a one-off audit, run with
+  // --include-entry-exports and confirm each hit with `git grep -w <name>`.
+
+  // Test seams of require()-only helpers, used only from that inline JS. Each is pinned by name.
+  "ignoreExports": [
+    // check-usage.sh calls U.price() and U.sumTranscript() directly.
+    { "file": "skills/ai-hooks/scripts/_usage.js", "exports": ["price", "sumTranscript"] }
+  ],
+
+  "duplicates": {
+    "ignoreSymlinks": true,
+    // Byte-identical copies by design: the hooks run in the plugin and cannot load an adopted
+    // repo's make/ templates, so each carries its own copy. Checks pin every pair equal
+    // (check-lifecycle.sh, check-write-boundary.sh, check-log-schema.sh), so a clone report
+    // here only restates that. Still analysed by dead-code and health.
+    "ignore": [
+      "skills/ai-hooks/scripts/_lifecycle-events.js",
+      "skills/ai-hooks/scripts/_safe-files.js",
+      "skills/ai-hooks/scripts/_log-schema.js"
+    ],
+    // Reviewed idioms, not shared logic; a content change re-reports them.
+    "ignoredClones": [
+      // Hook preamble: require _common/_usage, readEvent(), logDir(), bail outside a workspace.
+      "dup:60206bcc:2",
+      // Symlink-safe ROOT from the invoked entry point (runner.js explains it), per CLI.
+      "dup:06d05925:2",
+      // A CLI main(): split the command, out()/err() writers, try.
+      "dup:84ff7504:2",
+      // cost.js fields() and log.js width() walk quotes the same way but return different things;
+      // width() sits in the schema guard pinned byte-identical to the hook's _log-schema.js.
+      "dup:7a4490d0:2"
+    ]
+  },
+
+  // `fallow health` thresholds, stated rather than defaulted, so new and changed code is held to
+  // them. Functions above them are known debt (the worst, cyclomatic 40+, were split in 7.0.0).
+  "health": {
+    "maxCyclomatic": 20,
+    "maxCognitive": 15,
+    "maxUnitSize": 60
+  },
+
+  "rules": {
+    // Not configured in this repo; off states that rather than reporting zeros.
+    "boundary-violation": "off",
+    "policy-violation": "off"
+  }
+}

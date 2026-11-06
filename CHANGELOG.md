@@ -1,5 +1,96 @@
 # Changelog
 
+## 7.0.0 — 2026-11-04
+
+Makes the base layer stack-agnostic and cleans up the code `fallow` flags, so dead code,
+duplication and the worst complexity no longer hide in the scripts adopted repos run.
+**Breaking for adopted repos:** these templates change, which is why the release is major:
+- `ai-factory/docs/coding-standards.md`;
+- in `ai-factory/make/`: `assurance.js`, `gate.js`, `contracts.js`, `delivery-report.js`,
+  `lifecycle.js`, `lifecycle-events.js`, `runner.js`, `models.js`, `loop.js`, `log.js`, `cost.js`,
+  `continue.js` and `ids.js`;
+- a new `ai-factory/make/assurance-policy.js`.
+
+Adopted repos pick them up with `/fc:sync-sdlc`. A repo that has edited its `coding-standards.md`
+is reported as locally modified and keeps its own text; a TypeScript repo that relied on the
+removed rules should restate them in its own coding standards or its overlay. Every make CLI prints
+the same output and exits with the same code as before.
+
+**Stack-agnostic base**
+
+- **`coding-standards.md` names no tool or language.** "The linter (Biome) owns formatting" becomes
+  "the repo's configured formatter and linter own style". The TypeScript-only rules are now general
+  ones: no `any` or `@ts-ignore` becomes "use the strictest type checking the stack offers; never
+  silence the checker without a reason". "Use the path alias" becomes "use the stack's module or
+  alias mechanism". `.env.example` and `.env` become "one committed example or schema" and "local
+  secret files never committed". TypeScript-specific rules belong in the framework overlay, as
+  `ai-factory/docs/architecture.md` already requires.
+- **`log-cmd.js` records check commands of any stack.** `ai-factory/runs/cmds.jsonl` used to log only
+  the JavaScript and TypeScript tools (vitest, jest, biome, playwright, tsc and npm, pnpm or yarn
+  scripts). It now also logs:
+  - JavaScript: bun, eslint, `prettier --check`, mocha, cypress and fallow.
+  - Python: pytest, `python -m pytest|unittest`, ruff, mypy, pyright, flake8, pylint, tox and nox.
+  - Go: `go test|vet`, golangci-lint and staticcheck.
+  - Rust: `cargo test|clippy|check|nextest|fmt --check`.
+  - JVM: `gradle|gradlew test|check` and `mvn test|verify`.
+  - .NET: `dotnet test` and `dotnet format --verify-no-changes`.
+  - Ruby and PHP: rspec, rubocop, phpunit and phpstan.
+  - Any stack: `make test|lint|check|verify|typecheck`.
+
+  Every pattern, tools and check verbs alike, is matched only in command position: at the start or
+  after a shell separator, past env assignments, `time`, `timeout N`, `sudo` or `nice`, and past a
+  runner such as `npx`, `bun x`, `npm exec`, `yarn`, `pnpm` (bare, `exec`, `dlx` or `--filter X`),
+  `uv run` or `bundle exec`. Every command the old pattern logged as a check still is; a check named
+  inside another command is no longer logged (`grep -rn pytest docs`, `echo go test`, a commit
+  message mentioning `make lint`), where the old pattern logged it. The new
+  `skills/ai-hooks/fixtures/check-log-cmd.sh` pins both lists. The hook itself is a plugin script,
+  so it needs no sync.
+
+**fallow cleanup**
+
+- **No require() cycles (spec ASD-011).** `gate.js` and `contracts.js` needed `assurance.js`'s
+  presets, and `assurance.js` needed `contracts.js` and `delivery-report.js` for its command line.
+  The presets, their rules and `readSelection` now live in the new leaf module
+  `assurance-policy.js`. `assurance.js` keeps the `show`, `set` and `complete` commands and still
+  exports everything it did. A partially synced repo whose `gate.js` cannot find
+  `assurance-policy.js` behaves as before when no preset is selected. With a preset selected it
+  stops with `make/assurance-policy.js is missing; run /fc:sync-sdlc` (exit 2); the old message
+  named `make/assurance.js`. `assurance.js` and `assurance-policy.js` must be synced together: a
+  copy holding only one of them gets the same `/fc:sync-sdlc` message (exit 2 from `assurance.js`,
+  and `make ai` refuses to launch under a preset), never a `MODULE_NOT_FOUND`.
+- **Narrower exports (spec ASD-010).** 20 names that nothing outside their own file uses are no
+  longer exported from `continue.js`, `cost.js`, `delivery-report.js`, `ids.js`, `loop.js` and
+  `runner.js`, plus the benchmark script. Adopter code that `require`s one of them, for example
+  `cost.js`'s `renderTable` or `runner.js`'s `WORKSPACE`, must use its own copy.
+- **One copy of shared logic:**
+  - `cost.js` reads the log with `log.js`'s `records()`/`width()` instead of a third copy.
+    `log.js` now writes its row only when run directly, never when required.
+  - `loop.js` and `/fc:current` use `contracts.js`'s `unfenced()`.
+  - The two Stop hooks write their usage rows through one `_usage.js` function, with the same
+    columns and claim order as before.
+  - `skills/ai-hooks/scripts/_common.js` no longer re-exports `boundary` and `withLogLock`; the
+    hooks require them from `_safe-files.js`, which defines them. Plugin-internal, not a template.
+- **Complexity:** the 12 functions at cyclomatic complexity 40 or more are split into helpers, all
+  at 20 or below:
+  - `delivery-report.js`: `evaluate` (96), `build` and `renderMarkdown`;
+  - `lifecycle.js`: `aggregate` (70) and `deliveryMetrics`;
+  - `lifecycle-events.js`: `problem`, kept byte-identical with the hook copy;
+  - `runner.js`: `run`;
+  - `models.js`: `parseModels`;
+  - `contracts.js`: `main` and `validateDelivery`;
+  - `assurance.js`: `main`.
+
+  The highest complexity left is 39. The `fallow health` score goes from 53 (D) to 80 (B).
+- **ASD-007's "unchanged" checks are now history.** In `check-loop-watch.sh` the cases that froze
+  `runner.js`, the hooks, `check-loop.sh`, `make/`'s file list and `package.json` compare ASD-007's
+  own diff (its base to its merge) instead of the working tree, so later work, this release
+  included, may change those files. The assertion that 6.0.0 is the newest CHANGELOG entry is
+  removed. These cases can no longer fail; work that needs those files stable adds its own check.
+- **`.fallowrc.jsonc`** scopes fallow to the code users actually run or receive. It excludes the
+  maintainer generators and the benchmark, and records with reasons the clones that are
+  deliberate, mirrored copies or idioms. It also states the health thresholds (cyclomatic
+  complexity 20, cognitive 15, 60-line functions) that new code is held to.
+
 ## 6.0.0 — 2026-11-02
 
 Adds a read-only watcher for `/fc:loop`: `loop.js watch` draws a running loop from its

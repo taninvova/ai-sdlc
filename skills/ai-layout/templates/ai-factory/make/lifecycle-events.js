@@ -43,6 +43,40 @@ const ORIGIN = process.hrtime.bigint();
 const newId = (prefix) => `${prefix}-${crypto.randomBytes(8).toString("hex")}`;
 const hashId = (...parts) => `e-${crypto.createHash("sha256").update(parts.join("\0")).digest("hex").slice(0, 32)}`;
 
+// --- validation ----------------------------------------------------------------------------
+// Each rule is [is this wrong?, what to say]; the first rule that fires is the problem, so the
+// order below is the order problems are reported in.
+const given = (value) => value !== undefined && value !== null;
+const needs = (types, key) => (event) => types.includes(event.type) && !event[key];
+const EVENT_RULES = [
+	[(event) => !event || typeof event !== "object" || Array.isArray(event), "not an object"],
+	[(event) => event.schema !== SCHEMA, "unknown schema"],
+	[(event) => event.version !== VERSION, (event) => `unsupported version ${JSON.stringify(event.version)}`],
+	[(event) => !TYPES.includes(event.type), (event) => `unknown type ${JSON.stringify(event.type)}`],
+	[(event) => !HOSTS.includes(event.host), "unknown host"],
+	[(event) => typeof event.at !== "string" || Number.isNaN(Date.parse(event.at)), "at must be an ISO timestamp"],
+	...Object.entries(PATTERNS).map(([key, pattern]) => [(event) => given(event[key]) && !(typeof event[key] === "string" && pattern.test(event[key])), `invalid ${key}`]),
+	[(event) => !event.event_id, "missing event_id"],
+	[(event) => given(event.clock) && !(event.clock && /^p-[0-9a-f]{16}$/.test(event.clock.process) && Number.isFinite(event.clock.mono_ms)), "invalid clock"],
+	[(event) => given(event.outcome) && !OUTCOMES.includes(event.outcome), "unknown outcome"],
+	[(event) => given(event.reason) && (typeof event.reason !== "string" || event.reason.length > 200), "reason must be a short string"],
+	[needs(["run_started", "phase_started", "phase_ended", "run_ended", "wait_started", "wait_ended"], "run_id"), "missing run_id"],
+	[needs(["phase_started", "phase_ended"], "attempt_id"), "missing attempt_id"],
+	[needs(["wait_started", "wait_ended"], "wait_id"), "missing wait_id"],
+	[(event) => event.type === "session_bound" && !(event.session_id && event.run_id), "session_bound needs session_id and run_id"],
+];
+// Checked only on a usage_linked event, against its `usage` object.
+const USAGE_RULES = [
+	[(usage) => !usage || typeof usage !== "object", "usage_linked needs usage"],
+	...["turns", "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens"].map((key) => [(usage) => !(Number.isInteger(usage[key]) && usage[key] >= 0), `usage.${key} must be a non-negative integer`]),
+	[(usage) => usage.cost_usd !== null && !(typeof usage.cost_usd === "number" && Number.isFinite(usage.cost_usd) && usage.cost_usd >= 0), "usage.cost_usd must be a number or null"],
+	[(usage) => typeof usage.record_key !== "string" || !/^[0-9a-f]{64}$/.test(usage.record_key), "usage.record_key must be a SHA-256"],
+];
+function firstProblem(rules, value) {
+	for (const [wrong, message] of rules) if (wrong(value)) return typeof message === "function" ? message(value) : message;
+	return null;
+}
+
 module.exports = function lifecycleEvents({ boundary }) {
 	const directory = (ai) => path.join(ai, "runs", "lifecycle", "events");
 	// Opt-in lives beside the artifact contracts: ai-factory/contracts/config.json `lifecycle`.
@@ -64,31 +98,9 @@ module.exports = function lifecycleEvents({ boundary }) {
 		return { enabled: lifecycle.enabled === true, retention_days: days ?? 90 };
 	}
 	function problem(event) {
-		if (!event || typeof event !== "object" || Array.isArray(event)) return "not an object";
-		if (event.schema !== SCHEMA) return "unknown schema";
-		if (event.version !== VERSION) return `unsupported version ${JSON.stringify(event.version)}`;
-		if (!TYPES.includes(event.type)) return `unknown type ${JSON.stringify(event.type)}`;
-		if (!HOSTS.includes(event.host)) return "unknown host";
-		if (typeof event.at !== "string" || Number.isNaN(Date.parse(event.at))) return "at must be an ISO timestamp";
-		for (const [key, pattern] of Object.entries(PATTERNS))
-			if (event[key] !== undefined && event[key] !== null && !(typeof event[key] === "string" && pattern.test(event[key]))) return `invalid ${key}`;
-		if (!event.event_id) return "missing event_id";
-		if (event.clock !== null && event.clock !== undefined && !(event.clock && /^p-[0-9a-f]{16}$/.test(event.clock.process) && Number.isFinite(event.clock.mono_ms))) return "invalid clock";
-		if (event.outcome !== undefined && event.outcome !== null && !OUTCOMES.includes(event.outcome)) return "unknown outcome";
-		if (event.reason !== undefined && event.reason !== null && (typeof event.reason !== "string" || event.reason.length > 200)) return "reason must be a short string";
-		if (["run_started", "phase_started", "phase_ended", "run_ended", "wait_started", "wait_ended"].includes(event.type) && !event.run_id) return "missing run_id";
-		if (["phase_started", "phase_ended"].includes(event.type) && !event.attempt_id) return "missing attempt_id";
-		if (["wait_started", "wait_ended"].includes(event.type) && !event.wait_id) return "missing wait_id";
-		if (event.type === "session_bound" && !(event.session_id && event.run_id)) return "session_bound needs session_id and run_id";
-		if (event.type === "usage_linked") {
-			const usage = event.usage;
-			if (!usage || typeof usage !== "object") return "usage_linked needs usage";
-			for (const key of ["turns", "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens"])
-				if (!(Number.isInteger(usage[key]) && usage[key] >= 0)) return `usage.${key} must be a non-negative integer`;
-			if (usage.cost_usd !== null && !(typeof usage.cost_usd === "number" && Number.isFinite(usage.cost_usd) && usage.cost_usd >= 0)) return "usage.cost_usd must be a number or null";
-			if (typeof usage.record_key !== "string" || !/^[0-9a-f]{64}$/.test(usage.record_key)) return "usage.record_key must be a SHA-256";
-		}
-		return null;
+		const found = firstProblem(EVENT_RULES, event);
+		if (found || event.type !== "usage_linked") return found;
+		return firstProblem(USAGE_RULES, event.usage);
 	}
 	// Idempotent: the event ID is the file name, so a replayed hook finds its event already there.
 	// Staged under a private name, then renamed, so a reader never sees half an event.

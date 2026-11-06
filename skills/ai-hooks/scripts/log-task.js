@@ -18,10 +18,10 @@ require("./_common").runHook(() => {
 	const {
 		readEvent,
 		logDir,
-		withLogLock,
 		identifier,
 		path,
 	} = require("./_common");
+	const { withLogLock } = require("./_safe-files");
 	const ev = readEvent();
 	const ai = logDir(ev);
 	if (!ai) return;

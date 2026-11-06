@@ -96,114 +96,140 @@ function model(raw, line) {
 // `routing` (enabled + tasks.<task>.<tool>), two spaces per level. Anything else is an error
 // naming its line, so a typo can never quietly select a different model.
 function parseModels(content) {
-	const result = {
-		routing: { present: false, enabled: false, tasks: {}, aliased: [], shortcuts: [] },
-		digest: digest(content),
+	const state = {
+		result: {
+			routing: { present: false, enabled: false, tasks: {}, aliased: [], shortcuts: [] },
+			digest: digest(content),
+		},
+		seen: new Set(),
+		section: null,
+		routingKeys: undefined,
+		inTasks: false,
+		task: null,
+		taskKeys: undefined,
+		// The key that first mapped each task, so a duplicate can name the shortcut whichever came first.
+		taskKeyNames: undefined,
 	};
-	const seen = new Set();
-	let section = null;
-	let routingKeys;
-	let inTasks = false;
-	let task = null;
-	let taskKeys;
-	// The key that first mapped each task, so a duplicate can name the shortcut whichever came first.
-	let taskKeyNames;
-	const fail = (line, message) => {
-		throw new Error(`models.yaml line ${line}: ${message}`);
-	};
-	for (const [index, line] of content.split(/\r?\n/).entries()) {
-		const n = index + 1;
-		if (/^\s*(#.*)?$/.test(line)) continue;
-		const indent = /^[ \t]*/.exec(line)[0];
-		if (indent.includes("\t")) fail(n, "tabs are not supported; indent with spaces");
-		if (!indent.length) {
-			const match = line.match(/^([A-Za-z0-9_-]+):(?:\s+(.*))?$/);
-			if (!match) fail(n, "expected `key: value`");
-			const [, key, raw = ""] = match;
-			if (!TOP_LEVEL.includes(key)) fail(n, `unknown setting \`${key}\``);
-			if (seen.has(key)) fail(n, `duplicate setting \`${key}\``);
-			seen.add(key);
-			section = null;
-			if (key === "pricing" || key === "routing") {
-				if (raw.trim() && !raw.trim().startsWith("#"))
-					fail(n, `${key} must be an indented mapping`);
-				section = key;
-				if (key === "routing") {
-					result.routing.present = true;
-					routingKeys = new Set();
-					inTasks = false;
-					task = null;
-				}
-			} else result[key] = model(raw, n);
-			continue;
-		}
-		if (section === "pricing" && indent.length === 2) continue;
-		if (section !== "routing") fail(n, "unexpected indentation");
-		if (indent.length === 2) {
-			const match = line.match(/^ {2}([A-Za-z0-9_-]+):(?:\s+(.*))?$/);
-			if (!match) fail(n, "expected `enabled:` or `tasks:` under routing");
-			const [, key, raw = ""] = match;
-			if (!["enabled", "tasks"].includes(key))
-				fail(n, `unknown routing setting \`${key}\``);
-			if (routingKeys.has(key)) fail(n, `duplicate routing setting \`${key}\``);
-			routingKeys.add(key);
-			inTasks = key === "tasks";
-			task = null;
-			const value = raw.replace(/(^|\s+)#.*$/, "").trim();
-			if (key === "enabled") {
-				if (value !== "true" && value !== "false")
-					fail(n, "routing.enabled must be true or false");
-				result.routing.enabled = value === "true";
-			} else if (value) fail(n, "routing.tasks must be an indented mapping");
-			else {
-				taskKeys = new Set();
-				taskKeyNames = new Map();
-			}
-		} else if (indent.length === 4) {
-			if (!inTasks) fail(n, "unexpected indentation");
-			const match = line.match(/^ {4}([^\s:#]+):(?:\s+(.*))?$/);
-			if (!match) fail(n, "expected `<task>:` under routing.tasks");
-			const [, name, raw = ""] = match;
-			if (!TASK_NAME.test(name)) fail(n, `invalid task name \`${name}\``);
-			// A deprecated name or a shortcut maps the task it stands for; mapping both is ambiguous.
-			const canonical = canonicalTask(name);
-			if (taskKeys.has(canonical)) {
-				const first = taskKeyNames.get(canonical);
-				const shortcut = Object.hasOwn(TASK_SHORTCUTS, name)
-					? name
-					: Object.hasOwn(TASK_SHORTCUTS, first)
-						? first
-						: null;
-				fail(
-					n,
-					shortcut
-						? `duplicate task \`${canonical}\`: \`${shortcut}\` is its shortcut name, so map only \`${canonical}\``
-						: canonical === name
-							? `duplicate task \`${name}\``
-							: `duplicate task \`${canonical}\`: \`${name}\` is its deprecated name, so map only \`${canonical}\``,
-				);
-			}
-			if (raw.trim() && !raw.trim().startsWith("#"))
-				fail(n, `routing.tasks.${name} must be an indented mapping of tool: model`);
-			taskKeys.add(canonical);
-			taskKeyNames.set(canonical, name);
-			if (Object.hasOwn(TASK_ALIASES, name)) result.routing.aliased.push(name);
-			if (Object.hasOwn(TASK_SHORTCUTS, name)) result.routing.shortcuts.push(name);
-			task = canonical;
-			result.routing.tasks[canonical] = {};
-		} else if (indent.length === 6) {
-			if (!task) fail(n, "unexpected indentation");
-			const match = line.match(/^ {6}([^\s:#]+):(?:\s+(.*))?$/);
-			if (!match) fail(n, "expected `claude:` or `codex:`");
-			const [, tool, raw = ""] = match;
-			if (!TOOLS.includes(tool))
-				fail(n, `unknown tool \`${tool}\` for task ${task}; use claude or codex`);
-			if (Object.hasOwn(result.routing.tasks[task], tool))
-				fail(n, `duplicate ${tool} model for task ${task}`);
-			result.routing.tasks[task][tool] = model(raw, n);
-		} else fail(n, "unsupported indentation; use two spaces per level");
+	for (const [index, line] of content.split(/\r?\n/).entries()) parseModelsLine(state, line, index + 1);
+	return state.result;
+}
+
+function yamlFail(line, message) {
+	throw new Error(`models.yaml line ${line}: ${message}`);
+}
+
+// A value after `key:` that is neither empty nor a comment, where a nested mapping must follow.
+function hasInlineValue(raw) {
+	return raw.trim() && !raw.trim().startsWith("#");
+}
+
+// One line of models.yaml: skipped when blank or a comment, otherwise handed to its level.
+function parseModelsLine(state, line, n) {
+	if (/^\s*(#.*)?$/.test(line)) return;
+	const indent = /^[ \t]*/.exec(line)[0];
+	if (indent.includes("\t")) yamlFail(n, "tabs are not supported; indent with spaces");
+	if (!indent.length) return parseTopLevel(state, line, n);
+	if (state.section === "pricing" && indent.length === 2) return;
+	if (state.section !== "routing") yamlFail(n, "unexpected indentation");
+	if (indent.length === 2) parseRoutingSetting(state, line, n);
+	else if (indent.length === 4) parseTaskKey(state, line, n);
+	else if (indent.length === 6) parseToolModel(state, line, n);
+	else yamlFail(n, "unsupported indentation; use two spaces per level");
+}
+
+// A top-level `key: value`: a model scalar, or the start of the pricing or routing section.
+function parseTopLevel(state, line, n) {
+	const match = line.match(/^([A-Za-z0-9_-]+):(?:\s+(.*))?$/);
+	if (!match) yamlFail(n, "expected `key: value`");
+	const [, key, raw = ""] = match;
+	if (!TOP_LEVEL.includes(key)) yamlFail(n, `unknown setting \`${key}\``);
+	if (state.seen.has(key)) yamlFail(n, `duplicate setting \`${key}\``);
+	state.seen.add(key);
+	state.section = null;
+	if (key !== "pricing" && key !== "routing") {
+		state.result[key] = model(raw, n);
+		return;
 	}
-	return result;
+	if (hasInlineValue(raw)) yamlFail(n, `${key} must be an indented mapping`);
+	state.section = key;
+	if (key === "routing") {
+		state.result.routing.present = true;
+		state.routingKeys = new Set();
+		state.inTasks = false;
+		state.task = null;
+	}
+}
+
+// `enabled:` or `tasks:` under routing.
+function parseRoutingSetting(state, line, n) {
+	const match = line.match(/^ {2}([A-Za-z0-9_-]+):(?:\s+(.*))?$/);
+	if (!match) yamlFail(n, "expected `enabled:` or `tasks:` under routing");
+	const [, key, raw = ""] = match;
+	if (!["enabled", "tasks"].includes(key))
+		yamlFail(n, `unknown routing setting \`${key}\``);
+	if (state.routingKeys.has(key)) yamlFail(n, `duplicate routing setting \`${key}\``);
+	state.routingKeys.add(key);
+	state.inTasks = key === "tasks";
+	state.task = null;
+	const value = raw.replace(/(^|\s+)#.*$/, "").trim();
+	if (key === "enabled") {
+		if (value !== "true" && value !== "false")
+			yamlFail(n, "routing.enabled must be true or false");
+		state.result.routing.enabled = value === "true";
+	} else if (value) yamlFail(n, "routing.tasks must be an indented mapping");
+	else {
+		state.taskKeys = new Set();
+		state.taskKeyNames = new Map();
+	}
+}
+
+// One `<task>:` key under routing.tasks.
+function parseTaskKey(state, line, n) {
+	if (!state.inTasks) yamlFail(n, "unexpected indentation");
+	const match = line.match(/^ {4}([^\s:#]+):(?:\s+(.*))?$/);
+	if (!match) yamlFail(n, "expected `<task>:` under routing.tasks");
+	const [, name, raw = ""] = match;
+	if (!TASK_NAME.test(name)) yamlFail(n, `invalid task name \`${name}\``);
+	// A deprecated name or a shortcut maps the task it stands for; mapping both is ambiguous.
+	const canonical = canonicalTask(name);
+	if (state.taskKeys.has(canonical))
+		yamlFail(n, duplicateTaskMessage(name, canonical, state.taskKeyNames.get(canonical)));
+	if (hasInlineValue(raw))
+		yamlFail(n, `routing.tasks.${name} must be an indented mapping of tool: model`);
+	state.taskKeys.add(canonical);
+	state.taskKeyNames.set(canonical, name);
+	const routing = state.result.routing;
+	if (Object.hasOwn(TASK_ALIASES, name)) routing.aliased.push(name);
+	if (Object.hasOwn(TASK_SHORTCUTS, name)) routing.shortcuts.push(name);
+	state.task = canonical;
+	routing.tasks[canonical] = {};
+}
+
+// Why a second key for the same task is refused, naming the shortcut or deprecated name involved.
+function duplicateTaskMessage(name, canonical, first) {
+	const shortcut = Object.hasOwn(TASK_SHORTCUTS, name)
+		? name
+		: Object.hasOwn(TASK_SHORTCUTS, first)
+			? first
+			: null;
+	if (shortcut)
+		return `duplicate task \`${canonical}\`: \`${shortcut}\` is its shortcut name, so map only \`${canonical}\``;
+	if (canonical === name) return `duplicate task \`${name}\``;
+	return `duplicate task \`${canonical}\`: \`${name}\` is its deprecated name, so map only \`${canonical}\``;
+}
+
+// One `claude:` or `codex:` model under routing.tasks.<task>.
+function parseToolModel(state, line, n) {
+	const task = state.task;
+	if (!task) yamlFail(n, "unexpected indentation");
+	const match = line.match(/^ {6}([^\s:#]+):(?:\s+(.*))?$/);
+	if (!match) yamlFail(n, "expected `claude:` or `codex:`");
+	const [, tool, raw = ""] = match;
+	if (!TOOLS.includes(tool))
+		yamlFail(n, `unknown tool \`${tool}\` for task ${task}; use claude or codex`);
+	const mapping = state.result.routing.tasks[task];
+	if (Object.hasOwn(mapping, tool)) yamlFail(n, `duplicate ${tool} model for task ${task}`);
+	mapping[tool] = model(raw, n);
 }
 
 function digest(content) {
