@@ -5,6 +5,7 @@ const path = require("node:path");
 const { readEvent } = require("./_common");
 const allowed = new Set([
 	"session-start",
+	"ponytail",
 	"log-task",
 	"guard-paths",
 	"log-flush",

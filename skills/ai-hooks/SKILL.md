@@ -25,13 +25,17 @@ Task attribution accepts `/fc:<task>`, `$fc-<task>` and `$fc:fc-<task>`.
 The plugin registers these hooks globally (hooks/hooks.json). Every script:
 - reads the hook event JSON from stdin (session_id, transcript_path, cwd, tool_name, tool_input);
 - exits 0 silently if `ai-factory/` does not exist in cwd, so the plugin is safe to enable everywhere;
-- prints NOTHING to stdout. Text printed from SessionStart or UserPromptSubmit
-  hooks enters the model's context and breaks the cached prefix. Only
-  guard-paths.js writes to stderr, and only when blocking (exit 2).
+- prints NOTHING to stdout, except `ponytail.js`. Text printed from SessionStart or
+  UserPromptSubmit enters the model's context. Logging and the guard stay silent so they
+  do not change the cached prefix. `ponytail.js` is the one writer: on SessionStart and
+  SubagentStart it loads `ai-factory/docs/ponytail.md` into that context. The text is the
+  file, and it is the same every time, so the prefix stays stable. Only guard-paths.js
+  writes to stderr, and only when blocking (exit 2).
 
 | Event | Script | Writes |
 |---|---|---|
 | SessionStart | session-start.js | ai-factory/runs/sessions.jsonl: session_id, ts, user, branch, plan_in_flight |
+| SessionStart, SubagentStart | ponytail.js | nothing on disk. Stdout is the text of `ai-factory/docs/ponytail.md` (Ponytail, MIT), or the copy shipped in the plugin when the repo has none yet. Hook JSON for Codex and for SubagentStart. Silent when the layout is absent |
 | UserPromptSubmit | log-task.js | ai-factory/runs/.task.&lt;session_id&gt;: the bare name of the `/fc:` command the prompt carried (`spec`, not `/fc:spec`; a deprecated name is written as the task it now names, so `/fc:check` writes `review`, and a shortcut as its target, so `/fc:ba` and `/fc:analyze` write `analyse` and `/fc:scout` writes `explore`), for the rows written later; nothing at all when it carried none |
 | PreToolUse Edit/Write | guard-paths.js | nothing; exit 2 + stderr reason when the target matches ai-factory/docs/dont-touch.md |
 | PreToolUse Bash | log-flush.js | on `git commit` only: moves the rows in ai-factory/runs/log.pending.csv into ai-factory/runs/log.csv and stages it |

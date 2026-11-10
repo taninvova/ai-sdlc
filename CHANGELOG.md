@@ -2,42 +2,28 @@
 
 ## 8.0.0 — 2026-11-10
 
-Adds a **smallest complete change** rule to the coding standards every task and agent already
-reads, adapted from [Ponytail](https://github.com/DietrichGebert/ponytail) (MIT). Only its prompt
-rules are taken: no plugin, hook, command, mode switch or dependency. **Breaking for adopted repos,
-as every template change is:** `ai-factory/docs/coding-standards.md` and `ai-factory/tasks/chore.md`
-change. Adopted repos pick them up with `/fc:sync-sdlc`; a repo that has edited its
-`coding-standards.md` is reported as locally modified and keeps its own text, and can paste the new
-section in by hand.
+Loads Ponytail's instruction file into every session. The file is
+[skills/ponytail/SKILL.md](https://github.com/DietrichGebert/ponytail/blob/main/skills/ponytail/SKILL.md)
+(MIT), shipped as `ai-factory/docs/ponytail.md`. `ponytail.js` writes that text on SessionStart and
+SubagentStart. A repo without the file yet gets the copy shipped in the plugin. **Breaking for adopted repos, as every template change is:** `coding-standards.md`,
+`docs/ponytail.md` and `tasks/chore.md` change. `/fc:sync-sdlc` updates an unmodified copy; a repo
+that has edited `coding-standards.md` keeps its own text.
 
-**Smallest complete change**
+**Smallest complete change — the Ponytail instruction file, loaded by a hook**
 
-- **Where it lands.** A new `## Smallest complete change` section in the template
-  `coding-standards.md`. The implementer (`/fc:run`, `/fc:loop`), `/fc:quick` and `/fc:fix` already
-  read the coding standards, and the reviewer already checks the diff against them, so the rule
-  reaches code writing and review without touching an agent prompt. `/fc:chore` now reads the
-  coding standards too.
-- **What it says.** Scope first: list every caller, test, fixture, config and export the change must
-  reach. Then the first option that fully works: skip what nobody asked for and name it; reuse
-  what the codebase has; then the standard library; then an installed dependency; otherwise the
-  minimum code. No speculative abstraction, option or config. Bug fixes find every caller and fix
-  the root cause once. The report ends with one line naming what was skipped or not checked.
-- **What it never relaxes.** Validation at trust boundaries, error handling against data loss,
-  security, accessibility and anything requested stay. Ponytail's "trivial changes need no test" is
-  not taken: this repo's "every behaviour change ships with a test" and each phase's declared checks
-  win, and the section says it never removes a required test or check.
-- **Not taken from Ponytail:** the `lite`/`full`/`ultra` levels, the always-on session hooks, the
-  status band, `/ponytail-review`, `/ponytail-audit`, `/ponytail-debt` and the `shortcut:` comment
-  ledger. They overlap `/fc:review` and `/fc:risk` or need runtime the base does not ship.
-- **Expected effect.** Ponytail's own agentic benchmark (Claude Code, Opus 5.5, 39 tasks, 585
-  sessions, 2026-10-07) reports, against the same agent with no skill, 53% fewer lines of code, 45%
-  fewer output tokens, 26% lower cost and 41% less time, with hidden correctness checks level
-  (87/90 against 86/90). Independent tests report smaller gains. Most of a session's bill is input
-  and cache, so the cost saving is smaller than the output-token saving, and this repo's agents
-  carry long procedures that the rule does not shorten. These are Ponytail's measurements on the
-  full skill, not this repo's: no before/after model run on this plugin's own fixtures was made.
-- **This repo.** `ai-factory/docs/coding-standards.md` gets the same rule, worded for prompts, copies
-  and checks.
+- **The mechanism.** Ponytail is one prompt, `skills/ponytail/SKILL.md`. This plugin ships that
+  text as `ai-factory/docs/ponytail.md` (MIT, Dietrich Gebert). `ponytail.js` reads that file on
+  SessionStart and SubagentStart and writes it into the model context. A missing layout or a
+  missing file prints nothing. Codex and SubagentStart get hook JSON; Claude's SessionStart gets
+  the text. No mode flag, statusline, band, map or extra command.
+- **What it does not relax.** The hook adds one line after the file: a test or check that a task,
+  a plan step or a contract requires still runs. The file's own "trivial changes need none" does
+  not remove it.
+- **Not taken.** The status band, the board, `/ponytail-review`, `/ponytail-audit`,
+  `/ponytail-debt` and `/ponytail-gain`. Level switching stays text in the file; the hook always
+  loads the whole file at `full`.
+- **Coding standards.** The template and this repo now point at the file instead of restating the
+  ladder. `/fc:chore` still reads the coding standards.
 
 ## 7.0.0 — 2026-11-04
 
