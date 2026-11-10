@@ -6,6 +6,17 @@ task must NOT do — most drift comes from a missing prohibition. Every task end
 the file path it wrote and what it could not resolve. Keep a task under two pages.
 Frontmatter `description:` is what a developer sees in the slash menu — write it for them.
 
+## Smallest complete change
+Adapted from Ponytail (MIT, https://github.com/DietrichGebert/ponytail); the same rule adopted
+repos receive in their coding standards. Before writing, list every place the change must reach:
+callers, copies (templates, agent payloads, Codex skills, docs), checks and fixtures. Then take the
+first option that fully works: skip what nobody asked for and name it in the report; reuse an
+existing script, helper or check; then Node's stdlib or a shell builtin; otherwise the minimum
+code or prose that works. Be lazy about the solution, never about the change: update every copy
+and check it breaks. No option, flag or "for later" code nobody asked for; deletion beats
+addition. Never cut security, guard behaviour, or a required check. End the report with one line:
+what was skipped or not checked, and any risk to know.
+
 ## Templates
 A change to `skills/ai-layout/templates/` reaches every adopted repo on its next
 /fc:adopt-sdlc or /fc:sync-sdlc. Placeholders are `{{name}}`; every one must be substituted or

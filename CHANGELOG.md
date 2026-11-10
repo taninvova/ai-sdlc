@@ -1,5 +1,44 @@
 # Changelog
 
+## 8.0.0 — 2026-11-10
+
+Adds a **smallest complete change** rule to the coding standards every task and agent already
+reads, adapted from [Ponytail](https://github.com/DietrichGebert/ponytail) (MIT). Only its prompt
+rules are taken: no plugin, hook, command, mode switch or dependency. **Breaking for adopted repos,
+as every template change is:** `ai-factory/docs/coding-standards.md` and `ai-factory/tasks/chore.md`
+change. Adopted repos pick them up with `/fc:sync-sdlc`; a repo that has edited its
+`coding-standards.md` is reported as locally modified and keeps its own text, and can paste the new
+section in by hand.
+
+**Smallest complete change**
+
+- **Where it lands.** A new `## Smallest complete change` section in the template
+  `coding-standards.md`. The implementer (`/fc:run`, `/fc:loop`), `/fc:quick` and `/fc:fix` already
+  read the coding standards, and the reviewer already checks the diff against them, so the rule
+  reaches code writing and review without touching an agent prompt. `/fc:chore` now reads the
+  coding standards too.
+- **What it says.** Scope first: list every caller, test, fixture, config and export the change must
+  reach. Then the first option that fully works: skip what nobody asked for and name it; reuse
+  what the codebase has; then the standard library; then an installed dependency; otherwise the
+  minimum code. No speculative abstraction, option or config. Bug fixes find every caller and fix
+  the root cause once. The report ends with one line naming what was skipped or not checked.
+- **What it never relaxes.** Validation at trust boundaries, error handling against data loss,
+  security, accessibility and anything requested stay. Ponytail's "trivial changes need no test" is
+  not taken: this repo's "every behaviour change ships with a test" and each phase's declared checks
+  win, and the section says it never removes a required test or check.
+- **Not taken from Ponytail:** the `lite`/`full`/`ultra` levels, the always-on session hooks, the
+  status band, `/ponytail-review`, `/ponytail-audit`, `/ponytail-debt` and the `shortcut:` comment
+  ledger. They overlap `/fc:review` and `/fc:risk` or need runtime the base does not ship.
+- **Expected effect.** Ponytail's own agentic benchmark (Claude Code, Opus 5.5, 39 tasks, 585
+  sessions, 2026-10-07) reports, against the same agent with no skill, 53% fewer lines of code, 45%
+  fewer output tokens, 26% lower cost and 41% less time, with hidden correctness checks level
+  (87/90 against 86/90). Independent tests report smaller gains. Most of a session's bill is input
+  and cache, so the cost saving is smaller than the output-token saving, and this repo's agents
+  carry long procedures that the rule does not shorten. These are Ponytail's measurements on the
+  full skill, not this repo's: no before/after model run on this plugin's own fixtures was made.
+- **This repo.** `ai-factory/docs/coding-standards.md` gets the same rule, worded for prompts, copies
+  and checks.
+
 ## 7.0.0 — 2026-11-04
 
 Makes the base layer stack-agnostic and cleans up the code `fallow` flags, so dead code,
