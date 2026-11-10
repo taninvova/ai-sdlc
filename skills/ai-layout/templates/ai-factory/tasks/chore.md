@@ -2,7 +2,7 @@
 description: Small maintenance change with tests and no behaviour drift
 argument-hint: <what to change>
 ---
-Read ai-factory/AGENTS.md. Make the change described below with the smallest diff.
+Read ai-factory/AGENTS.md and ai-factory/docs/coding-standards.md. Make the change described below with the smallest diff.
 Do not touch behaviour beyond the request. Run affected checks and the project's required completion checks (see ai-factory/AGENTS.md); run the full required suite once at completion. Prose-only changes need applicable document checks, not invented runtime tests.
 
 Assurance, only when `ai-factory/assurance.json` exists: first run `node ai-factory/make/assurance.js show`

@@ -5,8 +5,8 @@ A Claude Code and Codex plugin loaded from `.claude-plugin/plugin.json` and
 `.codex-plugin/plugin.json`. Nothing runs as a service. Three surfaces reach a developer: plugin
 commands (`commands/*.md` → `/fc:*`, mirrored as Codex skills in `codex-skills/`), skills
 (`skills/*/SKILL.md`, model-invoked), and the step agents (`agents/*.md`).
-Hooks in `hooks/hooks.json` fire on SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop
-and SubagentStop — the second remembering which `/fc:` command the session is running, so the rows
+Hooks in `hooks/hooks.json` fire on SessionStart, SubagentStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop
+and SubagentStop — SessionStart also loads `docs/ponytail.md`, UserPromptSubmit remembers which `/fc:` command the session is running, so the rows
 written later can be grouped by task, and the last writing one run-log row per concluded subagent,
 from that agent's own transcript.
 

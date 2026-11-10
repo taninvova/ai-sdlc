@@ -11,6 +11,11 @@ Use the strictest type checking the stack offers. Never silence the checker with
 ## Structure
 One responsibility per file; modules own their data access; cross-cutting concerns in one place. Do not reach across module boundaries with relative imports — use the stack's module or alias mechanism.
 
+## Smallest complete change
+The rule is `ai-factory/docs/ponytail.md` (Ponytail, MIT). The session hook loads that file into
+the session and into each subagent. Follow the file. A required test or check in the task, the
+plan or the contracts stays; the file does not remove one.
+
 ## Errors
 Typed results or framework exceptions at the boundary; never swallow errors; log unexpected failures with context and a request id, never secrets or PII.
 

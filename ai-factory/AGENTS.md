@@ -26,7 +26,7 @@ The layout exists here so plugin changes run through the loop they prescribe.
 ## Non-negotiable rules
 - Never edit paths listed in ai-factory/docs/dont-touch.md
 - A prompt, skill or hook change ships with a before/after run linked in the MR
-- Hook scripts never print to stdout (cache-neutral) and no-op outside a repo with `ai-factory/`
+- Logging and guard hooks never print to stdout and no-op outside a repo with `ai-factory/`. `ponytail.js` is the exception: it loads `ai-factory/docs/ponytail.md` on SessionStart and SubagentStart
 - Template changes are breaking for every adopted repo — say so in the MR and CHANGELOG
 - Keep plugin-owned project work in ai-factory/; follow docs/workspace-boundary.md. Preserve existing external entry files; create no new ones without an explicit request.
 

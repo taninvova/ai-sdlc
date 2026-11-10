@@ -6,6 +6,11 @@ task must NOT do — most drift comes from a missing prohibition. Every task end
 the file path it wrote and what it could not resolve. Keep a task under two pages.
 Frontmatter `description:` is what a developer sees in the slash menu — write it for them.
 
+## Smallest complete change
+The rule is `ai-factory/docs/ponytail.md`, the same file as
+`skills/ai-layout/templates/ai-factory/docs/ponytail.md`. The session hook loads the workspace
+copy. Keep the two files identical. A required check stays; the file does not remove one.
+
 ## Templates
 A change to `skills/ai-layout/templates/` reaches every adopted repo on its next
 /fc:adopt-sdlc or /fc:sync-sdlc. Placeholders are `{{name}}`; every one must be substituted or

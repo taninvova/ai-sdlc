@@ -164,7 +164,7 @@ Worked examples: [workflow, *Delivery status*](ai-factory/docs/workflow.md#deliv
 - `explorer`, `specifier`, `planner`, `implementer` — the four loop steps, `/fc:explore` `/fc:spec` `/fc:plan` `/fc:run`, each run in its own agent from its artefacts alone; the session keeps the questions and the report
 
 ## Hooks
-Registered plugin-wide; no-op in repos without `ai-factory/`; never print to stdout (cache-neutral).
+Registered plugin-wide; no-op in repos without `ai-factory/`. Logging and the guard print nothing. `ponytail.js` is the exception: on session start and subagent start it loads `ai-factory/docs/ponytail.md` into the model context.
 Claude Code uses `hooks/hooks.json`. Codex uses `hooks/codex.json`, once you have reviewed and trusted it in `/hooks`.
 
 - **Dont-touch guard** — blocks edits to the paths in `ai-factory/docs/dont-touch.md`. It checks the real target, including Codex patch targets, rename destinations, symlinks and nested directories. If an adopted repo's policy is missing or malformed, the guard blocks edits instead of allowing them.

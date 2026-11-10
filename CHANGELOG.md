@@ -1,5 +1,30 @@
 # Changelog
 
+## 8.0.0 — 2026-11-10
+
+Loads Ponytail's instruction file into every session. The file is
+[skills/ponytail/SKILL.md](https://github.com/DietrichGebert/ponytail/blob/main/skills/ponytail/SKILL.md)
+(MIT), shipped as `ai-factory/docs/ponytail.md`. `ponytail.js` writes that text on SessionStart and
+SubagentStart. A repo without the file yet gets the copy shipped in the plugin. **Breaking for adopted repos, as every template change is:** `coding-standards.md`,
+`docs/ponytail.md` and `tasks/chore.md` change. `/fc:sync-sdlc` updates an unmodified copy; a repo
+that has edited `coding-standards.md` keeps its own text.
+
+**Smallest complete change — the Ponytail instruction file, loaded by a hook**
+
+- **The mechanism.** Ponytail is one prompt, `skills/ponytail/SKILL.md`. This plugin ships that
+  text as `ai-factory/docs/ponytail.md` (MIT, Dietrich Gebert). `ponytail.js` reads that file on
+  SessionStart and SubagentStart and writes it into the model context. A missing layout or a
+  missing file prints nothing. Codex and SubagentStart get hook JSON; Claude's SessionStart gets
+  the text. No mode flag, statusline, band, map or extra command.
+- **What it does not relax.** The hook adds one line after the file: a test or check that a task,
+  a plan step or a contract requires still runs. The file's own "trivial changes need none" does
+  not remove it.
+- **Not taken.** The status band, the board, `/ponytail-review`, `/ponytail-audit`,
+  `/ponytail-debt` and `/ponytail-gain`. Level switching stays text in the file; the hook always
+  loads the whole file at `full`.
+- **Coding standards.** The template and this repo now point at the file instead of restating the
+  ladder. `/fc:chore` still reads the coding standards.
+
 ## 7.0.0 — 2026-11-04
 
 Makes the base layer stack-agnostic and cleans up the code `fallow` flags, so dead code,
